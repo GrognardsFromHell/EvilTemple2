@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/">
+        <file>console/down.png</file>
+        <file>console/style.css</file>
+        <file>console/up.png</file>
+    </qresource>
+</RCC>
