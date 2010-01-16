@@ -7,6 +7,8 @@
 #include "geometrymeshobject.h"
 #include "util.h"
 #include "game.h"
+#include "skeleton.h"
+#include "animationcontroller.h"
 
 namespace EvilTemple {
 
@@ -51,8 +53,8 @@ namespace EvilTemple {
 
     void GeometryMeshObject::draw(const Game &game, QGLContext *context)
     {
-		Q_UNUSED(game);
-		Q_UNUSED(context);
+        Q_UNUSED(game);
+        Q_UNUSED(context);
 
         // Update the world matrix if neccessary
         if (!_worldMatrixValid)
@@ -60,13 +62,8 @@ namespace EvilTemple {
 
         // Load the model if neccessary
         // TODO: Use a QFuture here if possible!
-        if (!_model) {
-            _model = _modelSource->get();
-
-            // Loading the model can fail
-            if (!_model)
-                return;
-        }
+        if (!assertModel())
+            return;
 
         glMatrixMode(GL_MODELVIEW);
         glPushMatrix();
@@ -74,12 +71,24 @@ namespace EvilTemple {
 
         if (!_model->skeleton()) {
             _model->draw();
-        } else {            
+        } else {
+            if (!animation) {
+                playAnimation("item_idle");
+            }
+
             if (!skeletonState) {
                 skeletonState.reset(new SkeletonState(_model->skeleton()));
                 // Copy the default state from every bone of the skeleon
                 foreach (const Bone &bone, _model->skeleton()->bones()) {
                     skeletonState->getBoneMatrix(bone.id) = bone.defaultPoseWorld;
+                }
+            }
+
+            if (animation) {
+                animation->update();
+                int i = 0;
+                foreach (const QMatrix4x4 &matrix, animation->boneMatrices()) {
+                    skeletonState->getBoneMatrix(i++) = matrix;
                 }
             }
 
@@ -101,16 +110,9 @@ namespace EvilTemple {
         if (!_worldMatrixValid)
             updateWorldMatrix();
 
-        if (!_model)
-        {
-            _model = _modelSource->get();
-
-            // Loading the model can fail but should not lead to a crash.
-            if (!_model)
-            {
-                _boundingBox.setNull();
-                return _boundingBox;
-            }
+        if (!assertModel()) {
+            _boundingBox.setNull();
+            return _boundingBox;
         }
 
         if (_boundingBoxValid)
@@ -127,12 +129,8 @@ namespace EvilTemple {
 
     bool GeometryMeshObject::intersects(const QLine3D &ray, float &distance)
     {
-        if (!_model)
-        {
-            _model = _modelSource->get();
-            if (!_model)
-                return false;
-        }
+        if (!assertModel())
+            return false;
 
         // Transform the ray into object space, so we don't have to        
         // transform every vertex.
@@ -171,8 +169,8 @@ namespace EvilTemple {
                         // Do a transparency check for the material
                         // if (!faceGroup->material() || faceGroup->material()->hitTest(tu, tv))
                         // {
-                            foundDistance = triangleDistance;
-                            found = true;
+                        foundDistance = triangleDistance;
+                        found = true;
                         // }
                     }
                 }
@@ -184,6 +182,41 @@ namespace EvilTemple {
         }
 
         return found;
+    }
+
+    bool GeometryMeshObject::playAnimation(const QString &name, bool loop)
+    {
+        if (!assertModel())
+            return false; // No associated model or model loading failed
+
+        const Skeleton *skeleton = _model->skeleton();
+
+        if (!skeleton)
+            return false; // Model has no skeleton
+
+        const Animation *newAnimation = skeleton->findAnimation(name);
+
+        if (!newAnimation)
+            return false; // Unknown animation
+
+        animation.reset(new AnimationController(skeleton, *newAnimation));
+
+        return true;
+    }
+
+    void GeometryMeshObject::stopAnimation()
+    {
+        animation.reset(0);
+    }
+
+    inline bool GeometryMeshObject::assertModel() {
+        if (!_model) {
+            _model = _modelSource->get();
+            if (!_model)
+                return false;
+        }
+
+        return true;
     }
 
 }

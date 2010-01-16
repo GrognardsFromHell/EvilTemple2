@@ -6,6 +6,12 @@
 namespace EvilTemple
 {
 
+    AnimationStream *Animation::openStream(const Skeleton *skeleton) const
+    {
+        int boneCount = skeleton->bones().size();
+        return new AnimationStream(_keyFramesData, _keyFramesDataStart, boneCount);
+    }
+
     class SkeletonData
     {
     private:
@@ -63,6 +69,7 @@ namespace EvilTemple
             relativeWorld.setToIdentity();
             relativeWorld.translate(translation.x(), translation.y(), translation.z());
             relativeWorld.rotate(QQuaternion(rotation.w(), rotation.x(), rotation.y(), rotation.z()));
+            relativeWorld.scale(scale.x(), scale.y(), scale.z());
 
             // Calculate the full world matrix for the default pose
             QMatrix4x4 fullWorld;
@@ -121,6 +128,8 @@ namespace EvilTemple
             animation.setFrames(frames);
             animation.setFrameRate(frameRate);
             animation.setDps(dps);
+
+            animationMap.insert(animation.name().toLower(), &animation);
 
             // Read Events
             loadEvents(animation, eventCount, animDataStart + eventOffset);
@@ -206,6 +215,16 @@ namespace EvilTemple
         return d_ptr->animations;
     }
 
+    const Animation *Skeleton::findAnimation(const QString &name) const
+    {
+        QHash<QString,Animation*>::const_iterator it = d_ptr->animationMap.find(name.toLower());
+        if (it == d_ptr->animationMap.end()) {
+            return 0;
+        } else {
+            return it.value();
+        }
+    }
+
     void Skeleton::draw() const {
         const QVector<Bone> &bones = d_ptr->bones;
 
@@ -282,10 +301,13 @@ namespace EvilTemple
         stream.setByteOrder(QDataStream::LittleEndian);
         stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
 
+        stream.device()->seek(dataStart);
+
         // Read float scaling factors once
         stream >> scaleFactor >> translationFactor;
 
         _boneStates.resize(countBones()); // Avoid memory reallocation
+        memset(_boneMap.data(), 0, sizeof(AnimationBoneState*) * boneCount);
 
         rewind();
     }
@@ -308,9 +330,86 @@ namespace EvilTemple
         return bones;
     }
 
-    void AnimationStream::nextFrame()
+    void AnimationStream::readNextFrame()
     {
+        if (nextFrameId == -1) {
+            // Make all "next states" current and keep them forever
+            for (int i = 0; i < _boneStates.size(); ++i) {
+                AnimationBoneState &state = _boneStates[i];
+                state.scale = state.nextScale;
+                state.scaleFrame = state.nextScaleFrame;
+                state.rotation = state.nextRotation;
+                state.rotationFrame = state.nextRotationFrame;
+                state.translation = state.nextTranslation;
+                state.translationFrame = state.nextTranslationFrame;
+            }
 
+            return;
+        }
+
+        qint16 boneHeader;
+
+        // Read Bone Chunks of Key Frame
+        stream >> boneHeader;
+
+        // The LSB is the flag whether this is a bone-chunk or the id of the next frame
+        while ((boneHeader & 1) == 1) {
+            int boneId = boneHeader >> 4;
+
+            // Get a pointer to the bone state affected by this key frame chunk
+            AnimationBoneState *state = _boneMap[boneId];
+
+            Q_ASSERT(state);
+
+            // Scale Delta Frame
+            if ((boneHeader & 8) == 8) {
+                state->scale = state->nextScale;
+                state->scaleFrame = state->nextScaleFrame;
+
+                qint16 nextFrame, x, y, z;
+                stream >> nextFrame >> x >> y >> z;
+
+                state->nextScaleFrame = nextFrame;
+                state->nextScale.setX(x * scaleFactor);
+                state->nextScale.setY(y * scaleFactor);
+                state->nextScale.setZ(z * scaleFactor);
+            }
+
+            // Rotation Delta Frame
+            if ((boneHeader & 4) == 4) {
+                state->rotation = state->nextRotation;
+                state->rotationFrame = state->nextRotationFrame;
+
+                qint16 nextFrame, x, y, z, w;                
+                stream >> nextFrame >> x >> y >> z >> w;
+
+                state->nextRotationFrame = nextFrame;
+                state->rotation.setX(x * rotationFactor);
+                state->rotation.setY(y * rotationFactor);
+                state->rotation.setZ(z * rotationFactor);
+                state->rotation.setScalar(w * rotationFactor);
+            }
+
+            // Translation Delta Frame
+            if ((boneHeader & 2) == 2) {
+                state->translation = state->nextTranslation;
+                state->translationFrame = state->nextTranslationFrame;
+
+                qint16 nextFrame, x, y, z;
+                stream >> nextFrame >> x >> y >> z;
+
+                state->nextTranslationFrame = nextFrame;
+                state->nextTranslation.setX(x * translationFactor);
+                state->nextTranslation.setY(y * translationFactor);
+                state->nextTranslation.setZ(z * translationFactor);
+            }
+
+            // Read header of next chunk
+            stream >> boneHeader;
+        }
+
+        // Store the header for the next key frame
+        nextFrameId = boneHeader >> 1;
     }
 
     void AnimationStream::rewind()
@@ -326,21 +425,25 @@ namespace EvilTemple
 
         while (boneId != -2) {
 
-            AnimationBoneState &boneState = _boneStates[i];
-            _boneMap[boneId] = &boneState; // Save a pointer to the bone state for faster lookups
+            AnimationBoneState &boneState = _boneStates[i++];
+            _boneMap[boneId] = &boneState;
 
+            boneState.boneId = boneId;
+            
             stream >> x >> y >> z; // Scale
             boneState.scale.setX(x * scaleFactor);
             boneState.scale.setY(y * scaleFactor);
-            boneState.scale.setZ(z * scaleFactor);
+            boneState.scale.setZ(z * scaleFactor);            
             boneState.scaleFrame = 0;
             boneState.nextScaleFrame = 0;
+            boneState.nextScale = boneState.scale;
 
             stream >> x >> y >> z >> w; // Rotation
             boneState.rotation.setVector(x * rotationFactor, y * rotationFactor, z * rotationFactor);
             boneState.rotation.setScalar(w * rotationFactor);
             boneState.rotationFrame = 0;
             boneState.nextRotationFrame = 0;
+            boneState.nextRotation = boneState.rotation;
 
             stream >> x >> y >> z; // Translation
             boneState.translation.setX(x * translationFactor);
@@ -348,11 +451,21 @@ namespace EvilTemple
             boneState.translation.setZ(z * translationFactor);            
             boneState.translationFrame = 0;
             boneState.nextTranslationFrame = 0;
+            boneState.nextTranslation = boneState.translation;
 
             stream >> boneId;
         }
 
         stream >> nextFrameId;
+
+        readNextFrame();
+    }
+
+    void AnimationStream::seek(int frame)
+    {
+        while (nextFrameId < frame && nextFrameId > 0) {
+            readNextFrame();
+        }
     }
 
 }

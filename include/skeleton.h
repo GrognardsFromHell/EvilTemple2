@@ -7,6 +7,7 @@
 namespace EvilTemple
 {
 
+    class Skeleton;
     class SkeletonData;
     class MeshModel;
 
@@ -67,7 +68,7 @@ namespace EvilTemple
 
         const AnimationBoneState *getBoneState(quint16 boneId) const;
 
-        void nextFrame();
+        void seek(int frame);
         void rewind();
 
     private:
@@ -89,6 +90,7 @@ namespace EvilTemple
         static const float rotationFactor; // ToEE uses a static factor for rotations
         qint16 nextFrameId; // Id of next key frame
 
+        void readNextFrame();
         int countBones();
     };
 
@@ -187,7 +189,11 @@ namespace EvilTemple
             _keyFramesDataStart = dataStart;
         }
 
-        AnimationStream openStream() const;
+        /**
+          Opens a stream for the key frames of this animation.
+          The caller takes ownership of the returned object.
+          */
+        AnimationStream *openStream(const Skeleton *skeleton) const;
 
     private:
         QString _name;
@@ -215,6 +221,13 @@ namespace EvilTemple
 
         const QVector<Bone> &bones() const;
         const QVector<Animation> &animations() const;
+
+        /**
+          Finds the animation with the given name.
+          @param name The name of the animation. Comparison is performed case insensitive.
+          @returns Null if no animation with the given name could be found.
+          */
+        const Animation *findAnimation(const QString &name) const;
 
         /**
           Draw a debugging representation of this skeleton's bones.

@@ -7,6 +7,7 @@
 
 #include "modelsource.h"
 #include "qbox3d.h"
+#include "skeleton.h"
 
 namespace EvilTemple
 {
@@ -14,6 +15,7 @@ namespace EvilTemple
     class Game;
     class MeshModel;
     class SkeletonState;
+    class AnimationController;
 
     /**
       This class represents a scene object that displays a geometry mesh object.
@@ -105,7 +107,25 @@ namespace EvilTemple
           */
         bool intersects(const QLine3D &ray, float &distance);
 
-    protected:
+        /**
+          Plays the animation with the given name.
+
+          @param The name of the animation. Case-insensitive.
+          @returns False if the animation couldn't be played. This happens for instance if no animation
+            with the given name exists.
+          */
+        bool playAnimation(const QString &name, bool loop = false);
+
+        /**
+          Stops the current animation.
+
+          Does nothing if there is no animation playing.
+          */
+        void stopAnimation();
+
+    private:
+
+        bool assertModel();
 
         void invalidateWorldMatrix();
         virtual void updateWorldMatrix();
@@ -124,6 +144,7 @@ namespace EvilTemple
         QBox3D _boundingBox; // An AABB already transformed by the world matrix
 
         QScopedPointer<SkeletonState> skeletonState;
+        QScopedPointer<AnimationController> animation;
 
         Q_DISABLE_COPY(GeometryMeshObject);
     };

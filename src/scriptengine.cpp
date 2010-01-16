@@ -1,39 +1,138 @@
 
-#include <QtScript/QtScript>
 #include <QVector2D>
 
 #include "scriptengine.h"
 #include "game.h"
 
-namespace EvilTemple {
+namespace EvilTemple {   
 
-
-
-    static QScriptValue constructQVector2D(QScriptContext *context, QScriptEngine *engine)
+    QVector2DClass::QVector2DClass(QScriptEngine *engine) : QObject(engine), QScriptClass(engine)
     {
-        if (!context->isCalledAsConstructor())
-            return context->throwError(QScriptContext::SyntaxError, "please use the 'new' operator.");
+        qScriptRegisterMetaType<QVector2D>(engine, toScriptValue, fromScriptValue);
 
-        if (context->argumentCount() != 2) {
-            return context->throwError(QScriptContext::SyntaxError, "takes 2 arguments: x, y");
+        x = engine->toStringHandle(QLatin1String("x"));
+        y = engine->toStringHandle(QLatin1String("y"));
+
+        proto = engine->newObject(); // Vector has no prototype
+
+        QScriptValue global = engine->globalObject();        
+        proto.setPrototype(global.property("Object").property("prototype"));
+
+        ctor = engine->newFunction(construct, proto);
+        ctor.setData(qScriptValueFromValue(engine, this));
+    }
+
+    QVector2DClass::~QVector2DClass()
+    {
+    }
+
+    QScriptValue QVector2DClass::newInstance(const QVector2D &vector)
+    {
+        QScriptValue data = engine()->newVariant(qVariantFromValue(vector));
+        return engine()->newObject(this, data);
+    }
+
+    QScriptValue QVector2DClass::newInstance(qreal x, qreal y)
+    {
+        return newInstance(QVector2D(x, y));
+    }
+
+    QScriptValue QVector2DClass::construct(QScriptContext *ctx, QScriptEngine *)
+    {
+        QVector2DClass *cls = qscriptvalue_cast<QVector2DClass*>(ctx->callee().data());
+        if (!cls)
+            return QScriptValue();
+        QScriptValue arg = ctx->argument(0);
+        if (arg.instanceOf(ctx->callee()))
+            return cls->newInstance(qscriptvalue_cast<QVector2D>(arg));                
+        qsreal x = arg.toNumber();
+        qsreal y = ctx->argument(1).toNumber();
+        return cls->newInstance(x, y);
+    }
+
+    QScriptClass::QueryFlags QVector2DClass::queryProperty(const QScriptValue &object,
+                                                           const QScriptString &name,
+                                                           QueryFlags flags, uint *id)
+    {
+        Q_UNUSED(object)
+        Q_UNUSED(id)
+
+        if (name == x || name == y) {
+            return flags;
+        } else {
+            if (flags & HandlesReadAccess)
+                flags &= ~HandlesReadAccess;
+            return flags;
+        }
+    }
+
+    QScriptValue QVector2DClass::property(const QScriptValue &object, const QScriptString &name, QueryFlags flags,
+                                          uint *id)
+    {
+        Q_UNUSED(id)
+        Q_UNUSED(flags)
+
+        QVector2D vector = qscriptvalue_cast<QVector2D>(object.data());
+        if (name == x) {
+            return vector.x();
+        } else if (name == y) {
+            return vector.y();
+        }
+        return QScriptValue();
+    }
+
+    void QVector2DClass::setProperty(QScriptValue &object,
+                                     const QScriptString &name,
+                                     uint id, const QScriptValue &value)
+    {
+        QVector2D vector = qscriptvalue_cast<QVector2D>(object.data());
+
+        if (name == x) {
+            vector.setX(value.toNumber());
+        } else if (name == y) {
+            vector.setY(value.toNumber());
         }
 
-        qsreal x = context->argument(0).toNumber();
-        qsreal y = context->argument(1).toNumber();
-
-        return engine->newVariant(context->thisObject(), qVariantFromValue( QVector2D(x, y) ) );
+        object.setData(engine()->newVariant(qVariantFromValue(vector)));
     }
 
-    QScriptValue qvector2d_x(QScriptContext *context, QScriptEngine *)
+    QScriptValue::PropertyFlags QVector2DClass::propertyFlags(
+            const QScriptValue &/*object*/, const QScriptString &name, uint /*id*/)
     {
-        QVector2D vector = qscriptvalue_cast<QVector2D>(context->thisObject());
-        return vector.x();
+        if (name == x || name == y) {
+            return QScriptValue::Undeletable
+                    | QScriptValue::SkipInEnumeration;
+        }
+        return QScriptValue::Undeletable;
     }
 
-    QScriptValue qvector2d_y(QScriptContext *context, QScriptEngine *)
+    QString QVector2DClass::name() const
     {
-        QVector2D vector = qscriptvalue_cast<QVector2D>(context->thisObject());
-        return vector.y();
+        return QLatin1String("QVector2D");
+    }
+
+    QScriptValue QVector2DClass::prototype() const
+    {
+        return proto;
+    }
+
+    QScriptValue QVector2DClass::constructor()
+    {
+        return ctor;
+    }
+
+    QScriptValue QVector2DClass::toScriptValue(QScriptEngine *eng, const QVector2D &ba)
+    {
+        QScriptValue ctor = eng->globalObject().property("QVector2D");
+        QVector2DClass *cls = qscriptvalue_cast<QVector2DClass*>(ctor.data());
+        if (!cls)
+            return eng->newVariant(qVariantFromValue(ba));
+        return cls->newInstance(ba);
+    }
+
+    void QVector2DClass::fromScriptValue(const QScriptValue &obj, QVector2D &ba)
+    {
+        ba = qvariant_cast<QVector2D>(obj.data().toVariant());
     }
 
     class ScriptEngineData {
@@ -50,12 +149,8 @@ namespace EvilTemple {
             global.setProperty("game", gameObject);
 
             // Register conversion functions for frequently used data types
-            QScriptValue qvector2dPrototype = engine->newObject();
-            qvector2dPrototype.setProperty("x", engine->newFunction(qvector2d_x));
-            qvector2dPrototype.setProperty("y", engine->newFunction(qvector2d_y));
-            QScriptValue qvector2d_ctor = engine->newFunction(constructQVector2D, qvector2dPrototype);
-            global.setProperty("QVector2D", qvector2d_ctor);
-            engine->setDefaultPrototype(qMetaTypeId<QVector2D>(), qvector2dPrototype);
+            QVector2DClass *qv2Class = new QVector2DClass(engine);
+            global.setProperty("QVector2D", qv2Class->constructor());
         }
     };
 
@@ -74,3 +169,5 @@ namespace EvilTemple {
     }
 
 }
+
+Q_DECLARE_METATYPE(EvilTemple::QVector2DClass*)

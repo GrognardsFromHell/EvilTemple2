@@ -2,6 +2,8 @@
 #define ANIMATIONCONTROLLER_H
 
 #include <QObject>
+#include <QVector>
+#include <QMatrix4x4>
 
 namespace EvilTemple
 {
@@ -12,7 +14,7 @@ namespace EvilTemple
 
     class AnimationController : public QObject
     {
-    Q_OBJECT
+        Q_OBJECT
     public:
         explicit AnimationController(const Skeleton *skeleton, const Animation &animation, QObject *parent = 0);
         ~AnimationController();
@@ -45,6 +47,13 @@ namespace EvilTemple
           @param degrees How much the character was rotated in degrees. Use incremental updates.
           */
         void rotated(float degrees);
+
+        /**
+          Gets the full bone transformation matrix for every bone.
+          The matrix for every bone is equal to fullWorldMatrix(animated) * fullWorldInverseMatrix
+          and can be multiplied with a vertex position directly to receive an animated vertex.
+          */
+        const QVector<QMatrix4x4> &boneMatrices() const;
 
     private:
 
