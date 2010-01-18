@@ -54,11 +54,13 @@ namespace EvilTemple {
         QTimer *animTimer = new QTimer(this);
         animTimer->setInterval(5);
         animTimer->setSingleShot(false);
-        connect(animTimer, SIGNAL(timeout()), this, SLOT(rotate()));
+        connect(animTimer, SIGNAL(timeout()), this, SLOT(update()));
         animTimer->start();
 
         // Update the console whenever the scene rect changes
         connect(this, SIGNAL(sceneRectChanged(QRectF)), this, SLOT(resizeConsole(QRectF)));
+
+        roty = 180;
     }
 
     GameGraphicsScene::~GameGraphicsScene() {

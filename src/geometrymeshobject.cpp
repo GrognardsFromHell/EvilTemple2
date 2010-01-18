@@ -73,7 +73,9 @@ namespace EvilTemple {
             _model->draw();
         } else {
             if (!animation) {
-                playAnimation("item_idle");
+                if (!playAnimation("item_idle")) {
+                    playAnimation("unarmed_unarmed_idle");
+                }
             }
 
             if (!skeletonState) {

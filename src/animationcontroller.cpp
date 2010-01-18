@@ -24,8 +24,6 @@ namespace EvilTemple
 
         void update();
 
-        void nextFrame();
-
         void updateBoneMatrices();
         void updateBoneMatrix(const Bone &bone, const QMatrix4x4 &worldForward);
     };
@@ -55,8 +53,6 @@ namespace EvilTemple
             return;
         }
 
-        int frameBeforeUpdate = (int)currentFrame;
-
         int elapsed = lastUpdate.restart(); // Miliseconds
         currentFrame += animation.frameRate() * (elapsed / 1000.0f);
 
@@ -66,14 +62,8 @@ namespace EvilTemple
         while (currentFrame >= animation.frames())
             currentFrame -= animation.frames();
 
-        if ((int)currentFrame != frameBeforeUpdate) {
-            animationStream->seek((int)currentFrame);
-            updateBoneMatrices();
-        }
-    }
-
-    void AnimationControllerPrivate::nextFrame() {
-
+        animationStream->seek((int)currentFrame);
+        updateBoneMatrices();
     }
 
     void AnimationControllerPrivate::updateBoneMatrices()
@@ -119,6 +109,7 @@ namespace EvilTemple
             Q_ASSERT(boneState->boneId == bone.id);
 
             QMatrix4x4 relativeWorld;
+
             // Interpolate
             float weight = getEndWeight(boneState->translationFrame, boneState->nextTranslationFrame, currentFrame);
             relativeWorld.translate(interpolateLinear(boneState->translation, boneState->nextTranslation, weight));
