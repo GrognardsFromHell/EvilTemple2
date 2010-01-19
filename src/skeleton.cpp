@@ -384,10 +384,10 @@ namespace EvilTemple
                 stream >> nextFrame >> x >> y >> z >> w;
 
                 state->nextRotationFrame = nextFrame;
-                state->rotation.setX(x * rotationFactor);
-                state->rotation.setY(y * rotationFactor);
-                state->rotation.setZ(z * rotationFactor);
-                state->rotation.setScalar(w * rotationFactor);
+                state->nextRotation.setX(x * rotationFactor);
+                state->nextRotation.setY(y * rotationFactor);
+                state->nextRotation.setZ(z * rotationFactor);
+                state->nextRotation.setScalar(w * rotationFactor);
             }
 
             // Translation Delta Frame

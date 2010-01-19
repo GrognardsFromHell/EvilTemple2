@@ -123,7 +123,7 @@ namespace EvilTemple
           */
         void stopAnimation();
 
-    private:
+    protected:
 
         bool assertModel();
 

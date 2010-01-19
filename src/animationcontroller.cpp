@@ -115,8 +115,7 @@ namespace EvilTemple
             relativeWorld.translate(interpolateLinear(boneState->translation, boneState->nextTranslation, weight));
 
             weight = getEndWeight(boneState->rotationFrame, boneState->nextRotationFrame, currentFrame);
-            QQuaternion rotation = (1 - weight) * boneState->rotation + weight * boneState->nextRotation;
-            rotation.normalize();
+            QQuaternion rotation(QQuaternion::slerp(boneState->rotation, boneState->nextRotation, weight));
             relativeWorld.rotate(rotation);
 
             weight = getEndWeight(boneState->scaleFrame, boneState->nextScaleFrame, currentFrame);

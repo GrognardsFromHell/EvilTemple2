@@ -68,12 +68,17 @@ namespace EvilTemple
                 break;
             }
 
+            item->setText(2, QString("%1").arg(animation.frames()));
+            item->setText(3, QString("%1").arg(animation.frameRate(), 0, 'g', 2));
+
             tableItems.append(item);
         }
 
         ui->animationTree->addTopLevelItems(tableItems);
         ui->animationTree->setColumnWidth(0, 200);
         ui->animationTree->setColumnWidth(1, 100);
+        ui->animationTree->setColumnWidth(2, 100);
+        ui->animationTree->setColumnWidth(3, 100);
     }       
 
     MeshDialog::~MeshDialog()

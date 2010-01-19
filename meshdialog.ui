@@ -104,21 +104,6 @@
      <attribute name="headerStretchLastSection">
       <bool>true</bool>
      </attribute>
-     <attribute name="headerCascadingSectionResizes">
-      <bool>false</bool>
-     </attribute>
-     <attribute name="headerDefaultSectionSize">
-      <number>50</number>
-     </attribute>
-     <attribute name="headerShowSortIndicator" stdset="0">
-      <bool>false</bool>
-     </attribute>
-     <attribute name="headerHighlightSections">
-      <bool>false</bool>
-     </attribute>
-     <attribute name="headerStretchLastSection">
-      <bool>true</bool>
-     </attribute>
      <column>
       <property name="text">
        <string>Name</string>
@@ -133,6 +118,16 @@
      <column>
       <property name="text">
        <string>Drive Type</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Frames</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Framerate</string>
       </property>
      </column>
     </widget>
