@@ -90,6 +90,6 @@ include(qt3d/qt3d.pri)
 win32:SOURCES += src/io/basepathfinder_win32.cpp
 else:SOURCES += src/io/basepathfinder.cpp
 win32-g++:message("Enabling extended warnings.")
-win32:LIBS += -ladvapi32
+win32:LIBS += -ladvapi32 -lpsapi
 FORMS += meshdialog.ui
 RESOURCES += resources/resources.qrc

@@ -178,7 +178,6 @@ namespace EvilTemple {
             glDisable(GL_LIGHTING);
             glDisable(GL_CULL_FACE);
             glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color buffer writing
-            //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
             glDisable(GL_TEXTURE_2D);
 
             foreach (GeometryMeshObject *object, zoneTemplate->clippingGeometry())

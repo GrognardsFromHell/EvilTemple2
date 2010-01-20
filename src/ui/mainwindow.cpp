@@ -11,6 +11,11 @@
 #include "game.h"
 #include "glext.h"
 
+// Used to display the memory usage in the title bar
+#if defined(Q_OS_WIN32)
+#include <Psapi.h>
+#endif
+
 namespace EvilTemple {
 
     inline void dumpgl(const QGLFormat &format)
@@ -57,10 +62,24 @@ namespace EvilTemple {
     void MainWindow::updateTitle()
     {
         QVector2D centeredOn = game.camera()->centeredOn();
-        setWindowTitle(QString("EvilTemple (Pos: %1,%2 | Objects: %3) %4 fps").arg((int)centeredOn.x())
-                       .arg((int)centeredOn.y())
-                       .arg(scene->objectsDrawn())
-                       .arg((int)scene->fps()));
+        QString windowTitle = QString("EvilTemple (Pos: %1,%2 | Objects: %3) %4 fps").arg((int)centeredOn.x())
+                               .arg((int)centeredOn.y())
+                               .arg(scene->objectsDrawn())
+                               .arg((int)scene->fps());
+
+#if defined(Q_OS_WIN32)
+        // Open a handle to the current process
+        HANDLE hProcess = GetCurrentProcess();
+
+        PROCESS_MEMORY_COUNTERS pmc;
+
+        if (GetProcessMemoryInfo(hProcess, &pmc, sizeof(pmc))) {
+            windowTitle.append(QString(" %1 MB").arg(int(pmc.WorkingSetSize / (1024 * 1024))));
+        }
+#endif
+
+        setWindowTitle(windowTitle);
+
     }
 
     void MainWindow::readSettings() {
