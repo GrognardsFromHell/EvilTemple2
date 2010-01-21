@@ -135,6 +135,12 @@ namespace EvilTemple {
         ba = qvariant_cast<QVector2D>(obj.data().toVariant());
     }
 
+    QScriptValue gameToScriptValue(QScriptEngine *engine, Game* const &in)
+     { return engine->newQObject(in); }
+
+     void gameFromScriptValue(const QScriptValue &object, Game* &out)
+     { out = qobject_cast<Game*>(object.toQObject()); }
+
     class ScriptEngineData {
     public:
         QScriptEngine *engine; // Owned by the parent, not this class
@@ -151,6 +157,10 @@ namespace EvilTemple {
             // Register conversion functions for frequently used data types
             QVector2DClass *qv2Class = new QVector2DClass(engine);
             global.setProperty("QVector2D", qv2Class->constructor());
+
+            // Some standard meta types used as arguments throughout the code
+            qRegisterMetaType<EvilTemple::Game*>("Game*");
+            qScriptRegisterMetaType(engine, gameToScriptValue, gameFromScriptValue);
         }
     };
 
@@ -171,3 +181,4 @@ namespace EvilTemple {
 }
 
 Q_DECLARE_METATYPE(EvilTemple::QVector2DClass*)
+

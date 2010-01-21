@@ -1,6 +1,7 @@
 
 #include <QTime>
 #include <QMatrix4x4>
+#include <QColor>
 
 #include "materials.h"
 #include "material.h"
@@ -153,6 +154,7 @@ namespace EvilTemple {
         bool disableAlphaBlending;
         GLenum sourceBlendFactor;
         GLenum destBlendFactor;
+        QColor color;
 
         TextureStageInfo textureStages[LegacyTextureStages];
     };
@@ -289,6 +291,9 @@ namespace EvilTemple {
 
         if (sourceBlendFactor || destBlendFactor)
             glBlendFunc(sourceBlendFactor, destBlendFactor);
+
+        if (color.isValid())
+            glColor4f(color.redF(), color.greenF(), color.blueF(), 0);
     }
 
     void MdfMaterial::unbind(QGLContext *context) {
@@ -344,6 +349,9 @@ namespace EvilTemple {
 
         if (sourceBlendFactor || destBlendFactor)
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+        if (color.isValid())
+            glColor4f(1, 1, 1, 1);
     }
 
     bool MdfMaterial::processCommand(VirtualFileSystem *vfs, const QString &command, const QStringList &args) {
@@ -368,9 +376,6 @@ namespace EvilTemple {
             } else {
                 return false; // More arguments than needed
             }
-
-            // TODO: This will break if the filename contains a whitespace. A tokenizer should be used.
-            texture = texture.replace(QRegExp("^\"(.*)\"$"), "\\1");
 
             QByteArray data = vfs->openFile(texture);
             if (!data.isNull()) {
@@ -593,6 +598,32 @@ namespace EvilTemple {
         } else if (!command.compare("Textured", Qt::CaseInsensitive)) {
             // Unused
             return true;
+        } else if (!command.compare("Color", Qt::CaseInsensitive)) {
+            if (!args.count() == 4) {
+                qWarning("Color needs 4 arguments: %s", qPrintable(args.join(" ")));
+                return false;
+            }
+
+            int rgba[4];            
+            for (int i = 0; i < 4; ++i) {
+                bool ok;
+                rgba[i] = args[i].toUInt(&ok);
+                if (!ok) {
+                    qWarning("Color argument %d is invalid: %s", i, qPrintable(args[i]));
+                    return false;
+                }
+                if (rgba[i] > 255) {
+                    qWarning("Color argument %d is out of range (0-255): %d", i, rgba[i]);
+                    return false;
+                }
+            }
+
+            color.setRed(rgba[0]);
+            color.setGreen(rgba[1]);
+            color.setBlue(rgba[2]);
+            color.setAlpha(rgba[3]);
+
+            return true;
         } else {
             return false; // Unknown command
         }
@@ -607,8 +638,28 @@ namespace EvilTemple {
 
         QStringList lines = content.split('\n', QString::SkipEmptyParts);
 
-        foreach (QString line, lines) {
-            QStringList args = line.split(QRegExp("\\s+"), QString::SkipEmptyParts);
+        foreach (QString line, lines) {            
+            QStringList args;
+            bool inQuotes = false; // No escape characters allowed
+            QString buffer;
+            foreach (QChar ch, line) {                
+                if (ch.isSpace() && !inQuotes) {
+                    if (!buffer.isEmpty())
+                        args.append(buffer);
+                    buffer.clear();
+                } else if (ch == '"') {
+                    if (inQuotes) {
+                        args.append(buffer);
+                        buffer.clear();
+                    }
+                    inQuotes = !inQuotes;
+                } else {
+                    buffer.append(ch);
+                }
+            }
+            if (!buffer.isEmpty()) {
+                args.append(buffer);
+            }
 
             if (args.isEmpty())
                 continue;

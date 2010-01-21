@@ -46,8 +46,12 @@ public slots:
 
 private:
     QScopedPointer<GameData> d_ptr;
+
+    Q_DISABLE_COPY(Game)
 };
 
 }
+
+Q_DECLARE_METATYPE(EvilTemple::Game*)
 
 #endif // GAME_H

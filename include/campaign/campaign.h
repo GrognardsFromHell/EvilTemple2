@@ -19,8 +19,12 @@ namespace EvilTemple
     {
     Q_OBJECT
     public:
-        explicit Campaign(QObject *parent = 0);
+        explicit Campaign(Game *game);
         ~Campaign();
+
+    signals:
+
+    public slots:
 
         /**
           Gets the current zone.
@@ -30,16 +34,12 @@ namespace EvilTemple
         /**
           Returns a list of zones that were visited during the campaign.
           */
-        const QList<Zone> &visitedZones() const;
+        const QList<Zone*> &visitedZones() const;
 
         /**
           Loads a map.
           */
-        void loadMap(const Game &game, quint32 id);
-
-    signals:
-
-    public slots:
+        void loadMap(quint32 id);
 
     private:
         QScopedPointer<CampaignData> d_ptr;

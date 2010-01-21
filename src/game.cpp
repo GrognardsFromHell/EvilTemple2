@@ -171,8 +171,9 @@ namespace EvilTemple {
     {
         delete d_ptr->campaign;
         d_ptr->campaign = new Campaign(this);
+        d_ptr->campaign->setObjectName("campaign"); // This is neccessary for scripting
 
-        d_ptr->campaign->loadMap(*this, 5001);
+        d_ptr->campaign->loadMap(5001);
     }
 
 }

@@ -41,6 +41,7 @@ namespace EvilTemple
         const QSharedPointer<ZoneTemplate> &zoneTemplate() const;
 
     private:
+        Q_DISABLE_COPY(Zone);
         QScopedPointer<ZoneData> d_ptr;
 
     };
