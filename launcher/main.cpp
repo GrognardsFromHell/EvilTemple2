@@ -10,10 +10,7 @@
 #include "model.h"
 #include "game.h"
 
-// Import the NS if it's defined
-#if !defined(EVILTEMPLE_NO_NS)
 using namespace EvilTemple;
-#endif
 
 int main(int argc, char *argv[])
 {       
