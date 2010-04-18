@@ -1,4 +1,6 @@
 
+DEFINES += QT_COORD_TYPE=float
+
 CONFIG += debug_and_release
 DESTDIR += ../bin/
 
@@ -14,7 +16,7 @@ LIBS += -L../bin/
 
 # Add game libraries
 contains(TEMPLE_LIBS,qt3d) {
-    INCLUDEPATH += ../qt3d/math3d/ ../qt3d/enablers/
+    INCLUDEPATH += ../3rdparty/qt3d/math3d/ ../3rdparty/qt3d/enablers/
     CONFIG(debug, debug|release) {
         LIBS += -lqt3d_d
     } else {
@@ -23,10 +25,72 @@ contains(TEMPLE_LIBS,qt3d) {
 }
 
 contains(TEMPLE_LIBS,game) {
-    INCLUDEPATH += ../game/include
+    INCLUDEPATH += ../game
     CONFIG(debug, debug|release) {
         LIBS += -lgame_d
     } else {
         LIBS += -lgame
+    }
+}
+
+contains(TEMPLE_LIBS,troikaformats) {
+    INCLUDEPATH += ../troikaformats
+    CONFIG(debug, debug|release) {
+        LIBS += -ltroikaformats_d
+    } else {
+        LIBS += -ltroikaformats
+    }
+}
+
+contains(TEMPLE_LIBS,minizip) {
+    INCLUDEPATH += ../3rdparty/minizip
+    CONFIG(debug, debug|release) {
+        LIBS += -lminizip_d
+    } else {
+        LIBS += -lminizip
+    }
+}
+
+contains(TEMPLE_LIBS,model) {
+    INCLUDEPATH += ../model
+    CONFIG(debug, debug|release) {
+        LIBS += -lmodel_d
+    } else {
+        LIBS += -lmodel
+    }
+}
+
+contains(TEMPLE_LIBS,audioengine) {
+    INCLUDEPATH += ../audioengine
+    CONFIG(debug, debug|release) {
+        LIBS += -laudioengine_d
+    } else {
+        LIBS += -laudioengine
+    }
+}
+
+# Add game libraries
+contains(TEMPLE_LIBS,binkplayer) {
+    INCLUDEPATH += ../binkplayer/
+    CONFIG(debug, debug|release) {
+        LIBS += -lbinkplayer_d
+    } else {
+        LIBS += -lbinkplayer
+    }
+}
+
+contains(TEMPLE_LIBS,openal) {
+    INCLUDEPATH += ../3rdparty/freealut-1.1.0/include/
+    win32 {
+        INCLUDEPATH += ../3rdparty/openal-1.1/include
+        LIBS += ../3rdparty/openal-1.1/libs/Win32/OpenAL32.lib
+    } else {
+        LIBS += -lopenal
+    }
+
+    CONFIG(debug, debug|release) {
+        LIBS += -lfreealut_d
+    } else {
+        LIBS += -lfreealut
     }
 }

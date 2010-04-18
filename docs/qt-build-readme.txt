@@ -1,6 +1,6 @@
 To build Qt, the following command-line was used:
 
-configure -no-rtti -graphicssystem opengl -no-qt3support -no-stl -ltcg -debug-and-release -no-s60 -no-style-motif -no-style-cde -openvg -D QT_COORD_TYPE=float -buildkey qt-coords-float -openssl
+configure -no-rtti -graphicssystem opengl -no-qt3support -no-stl -ltcg -debug-and-release -no-s60 -no-style-motif -no-style-cde -D QT_COORD_TYPE=float -buildkey qt-coords-float -openssl-linked
 
 In addition, the examples and demo directories were renamed to greatly reduce the build time.
 
@@ -15,6 +15,6 @@ What the command line does:
 - Disable two unused styles (Motif+CDE)
 - !IMPORTANT! Define QT_COORD_TYPE as float, effectively making QMatrix and other 3d classes use float
 - Since qreal is redefined, also redefine the buildkey to prevent plugin incompatibility
-- Enable SSL support
+- Enable SSL support (Also export OPENSSL_LIBS)
 
 All changes are optional. EvilTemple should build with the default library.

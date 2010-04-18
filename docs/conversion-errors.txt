@@ -1,0 +1,8 @@
+Images:
+Unable to load image art/interface/inventory/LightX-bow.tga (TGA).
+Unable to load image art/meshes/Items/lamia_Toy_Icon.tga (TGA).
+Unable to load image art/meshes/Monsters/Lamia_T/lamia_Toy_Icon.tga (TGA).
+Unable to load image art/meshes/Monsters/Salamander/SalamanderGlow.tga (TGA).
+Unable to load image art/meshes/wands/rod1_icon.tga (TGA).
+Unable to load image art/meshes/wands/wand1_icon.tga (TGA).
+Unable to load image art/meshes/wands/wand2_icon.tga (TGA).

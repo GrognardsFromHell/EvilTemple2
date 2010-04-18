@@ -1,0 +1,3 @@
+The convert application tries to bring the ToEE data files to a newer, more compatible format.
+
+The most important change is repackaging all troika archives as zip files, allowing a much better integration into the QFile system.

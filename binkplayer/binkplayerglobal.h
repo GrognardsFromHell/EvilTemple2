@@ -1,0 +1,12 @@
+#ifndef BINKPLAYERGLOBAL_H
+#define BINKPLAYERGLOBAL_H
+
+#include <QtCore/QtGlobal>
+
+#if defined(BINKPLAYER_LIBRARY)
+#define BINKPLAYER_EXPORT Q_DECL_EXPORT
+#else
+#define BINKPLAYER_EXPORT Q_DECL_IMPORT
+#endif
+
+#endif // BINKPLAYERGLOBAL_H

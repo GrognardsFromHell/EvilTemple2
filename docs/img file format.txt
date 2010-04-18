@@ -1,0 +1,16 @@
+The IMG file format is used to separate bigger images into textures by the ToEE UI system.
+
+Examples are the splash screen (art/splash/legal0322.img) and other images used as window backgrounds.
+
+The img file contains only 4 byte:
+
+struct ImageFile {
+	short width; // pixels
+	short height; // pixels
+}
+
+
+The actual image data is stored in TGA files.
+
+If the name of the IMG file is legal0322.img, the image data is contained in the same folder in legal0322_<X>_<Y>.tga, where <X> and <Y> are
+indices. so legal0322_0_0.tga is the first image (all images have 256x256 pixel dimensions). The origin of the coordinate system is the lower left corner.
