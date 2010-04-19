@@ -33,7 +33,7 @@ void MainWindow::changeEvent(QEvent *e)
 void MainWindow::on_pushButton_clicked()
 {
     SharedSound sound(WaveReader::read("sample.wav"));
-    mEngine->playSound(sound.data());
+    mEngine->playSound(sound.data(), SoundCategory_Other);
 }
 
 void MainWindow::on_pushButton_2_clicked()
