@@ -15,8 +15,7 @@ DEFINES += MINIZIP_LIBRARY
 SOURCES += ioapi.c \
     unzip.c \
     zip.c \
-    zipwriter.cpp \
-    zipreader.cpp
+    zipwriter.cpp
 
 win32:SOURCES += iowin32.c
 
@@ -27,7 +26,6 @@ HEADERS += crypt.h \
     zlib.h \
     zconf.h \
     zipwriter.h \
-    zipreader.h \
     minizipglobal.h
 
 win32:HEADERS += iowin32.h

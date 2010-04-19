@@ -20,7 +20,8 @@ HEADERS += \
     isound.h \
     isoundhandle.h \
     mp3reader.h \
-    wavereader.h
+    wavereader.h \
+    scripting.h
 
 SOURCES += \
     audioengine.cpp \
@@ -28,6 +29,8 @@ SOURCES += \
     isoundsource.cpp \
     isoundhandle.cpp \
     mp3reader.cpp \
-    wavereader.cpp
+    wavereader.cpp \
+    soundformat.cpp \
+    scripting.cpp
 
 include(../base.pri)

@@ -1,6 +1,9 @@
 
 #include "audioengine.h"
 
+#include "wavereader.h"
+#include "mp3reader.h"
+
 #include <AL/alut.h>
 
 #include <QFile>
@@ -324,7 +327,7 @@ qreal AudioEngine::volume(SoundCategory category) const
     return d_ptr->categoryVolume[i];
 }
 
-SharedSoundHandle AudioEngine::playSound(ISound *sound, bool looping)
+SharedSoundHandle AudioEngine::playSound(ISound *sound, SoundCategory category, bool looping)
 {
     // Try to create a sample source
     QScopedPointer<ISoundSource> soundSource(sound->open());
@@ -335,6 +338,8 @@ SharedSoundHandle AudioEngine::playSound(ISound *sound, bool looping)
     }
 
     SharedAudioEngineHandle result(new AudioEngineHandle(soundSource.take()));
+
+    result->setCategory(category);
 
     if (looping) {
         result->setLooping(looping);
@@ -349,6 +354,25 @@ SharedSoundHandle AudioEngine::playSound(ISound *sound, bool looping)
 const QString &AudioEngine::errorString() const
 {
     return d_ptr->lastError;
+}
+
+bool AudioEngine::playSoundOnce(const QString &filename, SoundCategory category)
+{
+    QScopedPointer<ISound> sound;
+
+    if (filename.endsWith(".wav", Qt::CaseInsensitive)) {
+        sound.reset(WaveReader::read(filename));
+    } else if (filename.endsWith(".mp3", Qt::CaseInsensitive)) {
+        sound.reset(MP3Reader::read(filename));
+    }
+
+    if (!sound) {
+        return false;
+    }
+
+    playSound(sound.data(), category);
+    return true;
+
 }
 
 AudioEngineThread::AudioEngineThread(qreal *_categoryVolume, bool *_categoryVolumeChanged)

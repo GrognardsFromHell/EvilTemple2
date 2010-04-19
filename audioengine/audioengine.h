@@ -62,9 +62,10 @@ public slots:
         Plays a sound and returns a handle to it, that can be used to alter the sound.
         @param sound The sound to play. The engine will hold no reference to this object, while the
         returned handle might.
+        @param category The category for the sound. This determines which volume setting to use for the sound.
         @return Null if the sound cannot be played, or a shared pointer to the sound handle.
       */
-    SharedSoundHandle playSound(ISound *sound, bool looping = false);
+    SharedSoundHandle playSound(ISound *sound, SoundCategory category, bool looping = false);
 
     /**
       Changes the overall volume for all sounds.
@@ -104,6 +105,17 @@ public slots:
       Returns whether sounds are currently paused (except the interface and movie category).
       */
     bool paused() const;
+
+    /**
+      Plays a sound file once at full volume, with the given category.
+
+      @param filename A filename pointing to either a MP3 file on the disk or a WAV file on either the
+      disk or in the virtual file system.
+      @param category A category for the sound. This is used to modify the volume of the sound based on
+      user-defined volume settings.
+      @returns True if the sound was sucessfully loaded.
+      */
+    bool playSoundOnce(const QString &filename, SoundCategory category);
 
 private:
     QScopedPointer<AudioEngineData> d_ptr;

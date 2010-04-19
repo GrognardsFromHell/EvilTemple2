@@ -1,4 +1,5 @@
 
+#include <errno.h>
 #include <QtTest/QtTest>
 
 #include "zipwriter.h"
