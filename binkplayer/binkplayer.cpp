@@ -210,8 +210,6 @@ bool BinkPlayer::open(const QString &filename)
     return true;
 }
 
-#include <windows.h>
-
 void BinkPlayer::play()
 {
     int error;
@@ -313,7 +311,8 @@ void BinkPlayer::play()
 
                 int64_t sleep = nextFrame - av_gettime();
                 if (sleep > 0) {
-                    Sleep(sleep / 1000);
+                    // TODO: Fix
+                    // Sleep(sleep / 1000);
                 }
 
                 nextFrame = av_gettime() + frameTime;
