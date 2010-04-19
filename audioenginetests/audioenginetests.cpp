@@ -2,7 +2,6 @@
 #include <QThread>
 #include <QApplication>
 
-
 #include "mainwindow.h"
 
 #include "audioengine.h"

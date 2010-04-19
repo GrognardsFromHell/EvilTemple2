@@ -5,6 +5,8 @@ TEMPLE_LIBS += audioengine
 
 CONFIG += console
 
+QT += script
+
 SOURCES += audioenginetests.cpp \
     mainwindow.cpp
 

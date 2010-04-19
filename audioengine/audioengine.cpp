@@ -327,7 +327,7 @@ qreal AudioEngine::volume(SoundCategory category) const
     return d_ptr->categoryVolume[i];
 }
 
-SharedSoundHandle AudioEngine::playSound(ISound *sound, SoundCategory category, bool looping)
+SharedSoundHandle AudioEngine::playSound(SharedSound sound, SoundCategory category, bool looping)
 {
     // Try to create a sample source
     QScopedPointer<ISoundSource> soundSource(sound->open());
@@ -358,21 +358,26 @@ const QString &AudioEngine::errorString() const
 
 bool AudioEngine::playSoundOnce(const QString &filename, SoundCategory category)
 {
-    QScopedPointer<ISound> sound;
+    SharedSound sound = readSound(filename);
 
-    if (filename.endsWith(".wav", Qt::CaseInsensitive)) {
-        sound.reset(WaveReader::read(filename));
-    } else if (filename.endsWith(".mp3", Qt::CaseInsensitive)) {
-        sound.reset(MP3Reader::read(filename));
-    }
-
-    if (!sound) {
+    if (sound) {
+        playSound(sound, category);
+        return true;
+    } else {
         return false;
     }
 
-    playSound(sound.data(), category);
-    return true;
+}
 
+SharedSound AudioEngine::readSound(const QString &filename) const
+{
+    if (filename.endsWith(".wav", Qt::CaseInsensitive)) {
+        return SharedSound(WaveReader::read(filename));
+    } else if (filename.endsWith(".mp3", Qt::CaseInsensitive)) {
+        return SharedSound(MP3Reader::read(filename));
+    } else {
+        return SharedSound();
+    }
 }
 
 AudioEngineThread::AudioEngineThread(qreal *_categoryVolume, bool *_categoryVolumeChanged)

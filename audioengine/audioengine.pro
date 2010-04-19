@@ -6,6 +6,8 @@ DEFINES += AUDIOENGINE_LIBRARY
 
 TEMPLE_LIBS += openal
 
+QT += script
+
 win32:INCLUDEPATH += ../3rdparty/libavcodec/include
 LIBS += -L../3rdparty/libavcodec/lib -lavcodec -lavformat -lavutil
 
@@ -21,7 +23,8 @@ HEADERS += \
     isoundhandle.h \
     mp3reader.h \
     wavereader.h \
-    scripting.h
+    scripting.h \
+    scripting_p.h
 
 SOURCES += \
     audioengine.cpp \

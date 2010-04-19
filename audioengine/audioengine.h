@@ -21,6 +21,8 @@ class AUDIOENGINE_EXPORT AudioEngine : public QObject
 {
 Q_OBJECT
 Q_PROPERTY(QStringList devices READ devices)
+Q_PROPERTY(bool paused READ paused WRITE setPaused)
+Q_PROPERTY(qreal volume READ volume WRITE setVolume)
 public:
     explicit AudioEngine(QObject *parent = 0);
     ~AudioEngine();
@@ -65,7 +67,7 @@ public slots:
         @param category The category for the sound. This determines which volume setting to use for the sound.
         @return Null if the sound cannot be played, or a shared pointer to the sound handle.
       */
-    SharedSoundHandle playSound(ISound *sound, SoundCategory category, bool looping = false);
+    SharedSoundHandle playSound(SharedSound sound, SoundCategory category, bool looping = false);
 
     /**
       Changes the overall volume for all sounds.
@@ -105,6 +107,14 @@ public slots:
       Returns whether sounds are currently paused (except the interface and movie category).
       */
     bool paused() const;
+
+    /**
+      Reads a WAV or MP3 file.
+
+      @return A shared pointer to the read sound file. If the sound file cannot be read, the returned shared pointer
+      is null.
+      */
+    SharedSound readSound(const QString &filename) const;
 
     /**
       Plays a sound file once at full volume, with the given category.

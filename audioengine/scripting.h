@@ -1,9 +1,16 @@
 #ifndef SCRIPTING_H
 #define SCRIPTING_H
 
-#include <QScriptable>
+#include "audioengineglobal.h"
+
+#include <QScriptEngine>
 
 namespace EvilTemple {
+
+    /**
+      Registers the audio engine scripting interface with a QScriptEngine.
+      */
+    AUDIOENGINE_EXPORT void registerAudioEngine(QScriptEngine *engine);
 
 }
 

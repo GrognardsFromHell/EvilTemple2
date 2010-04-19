@@ -9,7 +9,7 @@
 
 namespace EvilTemple {
 
-class AUDIOENGINE_EXPORT MP3Reader
+class MP3Reader
 {
 public:
     static ISound *read(const QString &filename);
