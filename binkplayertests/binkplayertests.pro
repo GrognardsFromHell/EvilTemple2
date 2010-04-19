@@ -1,7 +1,7 @@
 
 TEMPLATE = app
 
-TEMPLE_LIBS += binkplayer game
+TEMPLE_LIBS += binkplayer audioengine
 
 SOURCES += \
     main.cpp \

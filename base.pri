@@ -79,18 +79,17 @@ contains(TEMPLE_LIBS,binkplayer) {
     }
 }
 
-contains(TEMPLE_LIBS,openal) {
-    INCLUDEPATH += ../3rdparty/freealut-1.1.0/include/
+contains(TEMPLE_LIBS,openal) {    
     win32 {
-        INCLUDEPATH += ../3rdparty/openal-1.1/include
+        INCLUDEPATH += ../3rdparty/openal-1.1/include ../3rdparty/freealut-1.1.0/include/
         LIBS += ../3rdparty/openal-1.1/libs/Win32/OpenAL32.lib
-    } else {
-        LIBS += -lopenal
-    }
 
-    CONFIG(debug, debug|release) {
-        LIBS += -lfreealut_d
+        CONFIG(debug, debug|release) {
+            LIBS += -lfreealut_d
+        } else {
+            LIBS += -lfreealut
+        }
     } else {
-        LIBS += -lfreealut
+        LIBS += -lopenal -lalut
     }
 }
