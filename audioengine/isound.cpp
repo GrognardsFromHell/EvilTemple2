@@ -11,4 +11,4 @@ ISound::~ISound()
 
 }
 
-Q_DECLARE_METATYPE(SharedSound)
+Q_DECLARE_METATYPE(EvilTemple::SharedSound)

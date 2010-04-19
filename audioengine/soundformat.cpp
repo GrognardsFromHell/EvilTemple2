@@ -3,4 +3,4 @@
 
 #include "soundformat.h"
 
-Q_DECLARE_METATYPE(SoundFormat)
+Q_DECLARE_METATYPE(EvilTemple::SoundFormat)
