@@ -4,6 +4,7 @@
 #include <QFile>
 #include <QHash>
 #include <QFSFileEngine>
+#include <QDateTime>
 
 #include "datafileengine.h"
 #include "unzip.h"
