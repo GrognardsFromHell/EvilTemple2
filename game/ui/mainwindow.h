@@ -5,6 +5,7 @@
 
 #include <QMainWindow>
 #include <QDeclarativeView>
+#include <QVariant>
 
 class QGraphicsView;
 class QDeclarativeItem;
