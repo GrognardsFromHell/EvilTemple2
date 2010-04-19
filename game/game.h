@@ -4,6 +4,7 @@
 #include "gameglobal.h"
 
 #include <QObject>
+#include <QMetaType>
 
 namespace EvilTemple {
 
