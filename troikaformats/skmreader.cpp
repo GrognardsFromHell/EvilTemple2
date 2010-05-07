@@ -47,7 +47,7 @@ namespace Troika
 
             if (skmData.isNull() || skaData.isNull()) {
                 qWarning("Unknown model file: %s", qPrintable(filename));
-                return new MeshModel(QList< QSharedPointer<FaceGroup> >(), QVector<Vertex>());
+                return NULL;
             }
 
             QDataStream stream(skmData);

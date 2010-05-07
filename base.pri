@@ -1,6 +1,4 @@
 
-DEFINES += QT_COORD_TYPE=float
-
 CONFIG += debug_and_release
 DESTDIR += ../bin/
 
@@ -92,4 +90,9 @@ contains(TEMPLE_LIBS,openal) {
     } else {
         LIBS += -lopenal -lalut
     }
+}
+
+
+contains(TEMPLE_LIBS,eigen) {
+    INCLUDEPATH += ../3rdparty/eigen/
 }

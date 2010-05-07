@@ -29,8 +29,8 @@ namespace EvilTemple
         static const float farPlane;
     };
 	
-	const float CameraData::nearPlane = 0;
-	const float CameraData::farPlane = 3628;
+    const float CameraData::nearPlane = 0;
+    const float CameraData::farPlane = 3628;
 
     CameraData::CameraData()
     {
@@ -92,18 +92,17 @@ namespace EvilTemple
 
     void Camera::activate(bool billboard) const
     {
-
         glMatrixMode(GL_PROJECTION);
-        glLoadMatrixf(d_ptr->projectionMatrix.data());
+        glLoadMatrixd(d_ptr->projectionMatrix.data());
 
         glMatrixMode(GL_MODELVIEW);
         if (billboard)
         {
-            glLoadMatrixf(d_ptr->billboardViewMatrix.data());
+            glLoadMatrixd(d_ptr->billboardViewMatrix.data());
         }
         else
         {
-            glLoadMatrixf(d_ptr->viewMatrix.data());
+            glLoadMatrixd(d_ptr->viewMatrix.data());
         }
     }
 

@@ -101,6 +101,11 @@ public:
 
         foreach (const QString &imagePath, images) {
 
+            if (QDir::toNativeSeparators(imagePath).startsWith(QDir::toNativeSeparators("art/meshes/"),
+                                                               Qt::CaseInsensitive)) {
+                continue;
+            }
+
             if (excludePaths.contains(imagePath)) {
                 qDebug("Skipping %s because it is excluded.", qPrintable(imagePath));
                 continue;

@@ -103,6 +103,11 @@ namespace Troika
             rawName[64] = 0;
             stream.readRawData(rawName, 64);
 
+            // TODO: remove this special handling for tree1.skm
+            if (!rawName[0]) {
+                return;
+            }
+
             animation.setName(QString::fromLatin1(rawName));
 
             quint8 driveType;
@@ -119,7 +124,14 @@ namespace Troika
             stream  >> driveType >> loopable >> eventCount >> eventOffset >> streamCount
                     >> frames >> variationId >> frameRate >> dps >> dataOffset;
 
-            Q_ASSERT(streamCount == 1); // Only one stream is supported
+            Q_ASSERT(streamCount == 0 || streamCount == 1); // Only one stream is supported
+
+            // TODO: Special handling for "empty" animations
+            if (streamCount == 0) {
+                frames = 0;
+                variationId = -1;
+            }
+
             Q_ASSERT(variationId == -1); // Variations are unsupported
 
             animation.setDriveType( static_cast<Animation::DriveType>(driveType) );
