@@ -1,12 +1,13 @@
 
-#ifndef RENDERSTATE_H
-#define RENDERSTATE_H
+#ifndef RENDERSTATES_H
+#define RENDERSTATES_H
 
 #include "matrix4.h"
 
 using namespace GameMath;
 
 namespace EvilTemple {
+
 /**
  * Encapsulates various render state settings that influence the rendering of the scene.
  */
