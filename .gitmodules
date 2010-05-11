@@ -1,0 +1,3 @@
+[submodule "3rdparty/game-math"]
+	path = 3rdparty/game-math
+	url = git://gitorious.org/game-math/game-math.git

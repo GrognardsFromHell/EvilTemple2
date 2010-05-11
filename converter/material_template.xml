@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<material xmlns="http://hartte.de/eviltemple/material.xsd">
+
+  <pass>
+    <shader>
+      <vertexShader>
+        <code>
+          <![CDATA[
+#version 120
+
+uniform mat4 worldViewProjectionMatrix;
+uniform mat4 worldViewMatrix;
+const vec4 invertedLightDirection = vec4(0, 0.89, 0.447, 0);
+
+attribute vec4 vertexPosition;
+attribute vec4 vertexNormal;
+attribute vec2 vertexTexCoord;
+
+varying vec4 normal;
+varying vec2 texCoord;
+varying vec4 light;
+
+void main() {
+        light = worldViewMatrix * invertedLightDirection;
+        normal = worldViewMatrix * vertexNormal;
+
+        gl_Position = worldViewProjectionMatrix * vertexPosition;
+        texCoord = vertexTexCoord; // Pass through texture coordinates
+}
+]]>
+        </code>
+      </vertexShader>
+
+      <fragmentShader>
+        <code>
+        <![CDATA[
+#version 120
+
+varying vec4 normal;
+varying vec2 texCoord;
+varying vec4 light;
+
+{{SAMPLERS}}
+
+const vec4 globalAmbient = vec4(0.1, 0.1, 0.1, 1);
+const vec4 diffuseLightColor = vec4(0.9, 0.9, 0.9, 1);
+const vec4 materialDiffuse = vec4({{MATERIAL_DIFFUSE}});
+
+void main(void)
+{
+   float cosTheta = max(dot(normal,light), 0.0);
+   vec4 Idiff = materialDiffuse * diffuseLightColor * cosTheta + globalAmbient;
+   Idiff = clamp(Idiff, 0.0, 1.0);
+
+   {{PIXEL_TERM}}
+}
+]]>
+        </code>
+      </fragmentShader>
+
+      <attribute name="vertexPosition" buffer="positions" />
+      <attribute name="vertexNormal" buffer="normals" />
+      <attribute name="vertexTexCoord" buffer="texCoords" components="2" />
+      <uniform name="worldViewProjectionMatrix" semantic="WorldViewProjection" />
+      <uniform name="worldViewMatrix" semantic="WorldView" />
+      {{SAMPLER_UNIFORMS}}
+    </shader>
+
+    {{TEXTURES}}
+
+    <cullFace>{{CULL_FACE}}</cullFace>
+    <blend>{{BLEND}}</blend>
+    <blendFunc src="{{BLEND_SRC}}" dest="{{BLEND_DEST}}" />
+    <depthWrite>{{DEPTH_WRITE}}</depthWrite>
+  </pass>
+
+<!--
+    Shadow pass
+-->
+  <pass>
+    <shader>
+      <vertexShader>
+        <code>
+          <![CDATA[
+#version 120
+
+uniform mat4 viewProjectionMatrix;
+uniform mat4 worldMatrix;
+const vec4 invertedLightDirection = vec4(0, 0.89, 0.447, 0);
+
+attribute vec4 vertexPosition;
+
+void main() {
+  vec4 v = worldMatrix * vertexPosition;
+
+  float lambda = v.y / invertedLightDirection.y; // y must be non-zero
+  v.y = 0;
+  v.x -= invertedLightDirection.x * lambda;
+  v.z -= invertedLightDirection.z * lambda;
+
+  gl_Position = viewProjectionMatrix * v;
+}
+]]>
+        </code>
+      </vertexShader>
+
+      <fragmentShader>
+        <code>
+          <![CDATA[
+#version 120
+
+void main(void)
+{
+   gl_FragColor = vec4(0, 0, 0, 0.75);
+}
+]]>
+        </code>
+      </fragmentShader>
+
+      <attribute name="vertexPosition" buffer="positions" />
+      <uniform name="viewProjectionMatrix" semantic="ViewProjection" />
+      <uniform name="worldMatrix" semantic="World" />
+    </shader>
+
+    <depthWrite>false</depthWrite>
+  </pass>
+
+</material>

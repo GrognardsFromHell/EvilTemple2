@@ -1,5 +1,8 @@
 #include "modelwriter.h"
 
+#include "material.h"
+using namespace Troika;
+
 static const uint MAGIC = 0x4C444F4D; // MODL
 static const uint VERSION = 1;
 static const uint RESERVED = 0;
@@ -49,18 +52,29 @@ void ModelWriter::writeChunk(uint chunk, bool required, const QByteArray &data)
     chunks++;
 }
 
-void ModelWriter::writeMaterials(const QList<Troika::Material> &materials)
+void ModelWriter::writeTextures(const QList<QByteArray> &textures)
 {
-    if (materials.size() == 0) {
-        return;
+    startChunk(Textures, true);
+
+    stream << (uint)textures.size() << RESERVED << RESERVED << RESERVED;
+
+    foreach (const QByteArray &texture, textures) {
+        stream << (uint)texture.size();
+        stream.writeRawData(texture.data(), texture.size());
     }
 
+    finishChunk();
+}
+
+void ModelWriter::writeMaterials(const QList<QByteArray> &materialScripts)
+{
     startChunk(Materials, true);
 
-    stream << (uint)materials.size() << RESERVED << RESERVED << RESERVED;
+    stream << (uint)materialScripts.size() << RESERVED << RESERVED << RESERVED;
 
-    foreach (const Troika::Material &material, materials) {
-
+    foreach (const QByteArray &materialScript, materialScripts) {
+        stream << (uint)materialScript.size();
+        stream.writeRawData(materialScript.data(), materialScript.size());
     }
 
     finishChunk();
@@ -90,14 +104,17 @@ void ModelWriter::writeVertices(const QVector<Troika::Vertex> &vertices)
     finishChunk();
 }
 
-void ModelWriter::writeFaces(const QList<QSharedPointer<Troika::FaceGroup> > &faceGroups)
+void ModelWriter::writeFaces(const QList<QSharedPointer<Troika::FaceGroup> > &faceGroups, const QHash<QString,int> &materialMapping)
 {
     startChunk(Faces, true);
 
     stream << (uint)faceGroups.size() << RESERVED << RESERVED << RESERVED;
 
     foreach (const QSharedPointer<Troika::FaceGroup> &faceGroup, faceGroups) {
-        uint materialId = 0;
+        int materialId = -1;
+        if (faceGroup->material()) {
+            materialId = materialMapping[faceGroup->material()->name()];
+        }
         uint elementSize = sizeof(quint16);
         stream << materialId << (uint)(faceGroup->faces().size() * 3) << elementSize << RESERVED;
         foreach (const Troika::Face &face, faceGroup->faces()) {

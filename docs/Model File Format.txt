@@ -1,0 +1,76 @@
+Start of File:
+
+Offsets are hexadecimal
+
+There is an additional constraint: Chunks must be present in ascending order
+of their type. This is required for interdependent chunks.
+
+Offset Data
+  0000 MODL Magic (4 byte)
+  0004 Version (4 byte unsigned integer)
+  0008 CRC32 (4-byte hash value)
+  000C Number of chunks (4-byte unsigned integer)
+  0010 First Chunk
+
+// Chunks MUST start on 16-byte boundaries relating to the start of the file
+
+Chunk Header:
+  00000000 Type (32-bit unsigned integer)
+  00000004 Flags (32-bit unsigned integer) (0x1 indicates *required* chunk)
+  00000008 Reserved (32-bit unsigned integer)
+  0000000C Size (32-bit unsigned integer) (Constraint: Multiple of 16)
+
+Materials Chunk (Type: 1)
+  Contains materials used by the faces of this mesh. It's pre-cooked, containing all the textures/shaders used by this mesh.
+  Having a material chunk with count == 0 is equivalent to having no material chunk at all.
+
+  Header:
+  00000000 Material Count
+  00000004 Unused 1
+  00000008 Unused 2
+  0000000A Unused 3
+
+  Followed by the following structure for each Material:
+  00000000 Type
+  
+
+Geometry Chunk (Type: 2)
+  Contains vertices and their attributes
+
+  Header:
+  00000000 Number of vertices (32-bit unsigned integer)
+  00000004 Unused 1 (32-bit unsigned integer)
+  00000008 Unused 2 (32-bit unsigned integer)
+  0000000A Unused 3 (32-bit unsigned integer)
+
+  Followed by one position for each vertex:
+  00000000 X coordinate (32-bit float)
+  00000004 Y coordinate (32-bit float)
+  00000008 Z coordinate (32-bit float)
+  0000000A W coordinate (32-bit float, MUST BE 1.0)
+
+  Followed by one normal for each vertex (MUST BE normalized):
+  00000000 X coordinate (32-bit float)
+  00000004 Y coordinate (32-bit float)
+  00000008 Z coordinate (32-bit float)
+  0000000A W coordinate (32-bit float, MUST BE 0.0)
+
+  Followed by one texture coordinate for each vertex:
+  00000000 U coordinate (32-bit float, [0,1])
+  00000004 V coordinate (32-bit float, [0,1])
+
+Face Chunk (Type: 3)
+  Contains triangles grouped by their material (for drawing with fewer context switches), called face groups.
+
+  Header:
+  00000000 Number of face groups (32-bit unsigned integer)
+  00000004 Unused 1 (32-bit unsigned integer)
+  00000008 Unused 2 (32-bit unsigned integer)
+  0000000A Unused 3 (32-bit unsigned integer)
+
+  Followed by the following structure for each face group:
+  00000000 Index of used material. -1 for none. Related to Materials chunk. (32-bit signed integer)
+  00000004 Number of indices (Number of triangles in group * 3) (32-bit unsigned integer)
+  00000008 Size of an index in byte. i.E. 2 for unsigned short. (32-bit unsigned integer)
+  0000000A Unused (32-bit unsigned integer)
+  00000010 Index data (Element Size * Element Count bytes, unpadded)

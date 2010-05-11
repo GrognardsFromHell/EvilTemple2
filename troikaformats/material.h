@@ -29,6 +29,17 @@ namespace Troika {
             Wavey, // Like drift but with a cosine/sine acceleration pattern
         };
 
+        enum BlendType
+        {
+            Modulate,
+            Add,
+            TextureAlpha,
+            CurrentAlpha,
+            CurrentAlphaAdd
+        };
+
+        BlendType blendType;
+
         QString filename;
         QImage image;
 
@@ -111,6 +122,10 @@ namespace Troika {
             return disableAlphaBlending;
         }
 
+        bool isDepthWriteDisabled() const {
+            return disableDepthWrite;
+        }
+
         GLenum getSourceBlendFactor() const {
             return sourceBlendFactor;
         }
@@ -135,6 +150,7 @@ namespace Troika {
         bool disableFaceCulling;
         bool disableLighting;
         bool disableDepthTest;
+        bool disableDepthWrite;
         bool linearFiltering;
         bool disableAlphaBlending;
         GLenum sourceBlendFactor;

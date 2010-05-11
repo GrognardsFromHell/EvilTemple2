@@ -11,7 +11,7 @@ TEMPLATE = lib
 
 TARGET = game
 
-TEMPLE_LIBS += qt3d minizip model
+TEMPLE_LIBS += qt3d minizip model game-math
 
 DEFINES += GAME_LIBRARY
 
@@ -23,7 +23,9 @@ SOURCES += \
     camera.cpp \
     ui/consolewidget.cpp \
     scriptengine.cpp \
-    datafileengine.cpp
+    datafileengine.cpp \
+    material.cpp \
+    renderstates.cpp
 HEADERS += \
     ui/mainwindow.h \
     ui/gamegraphicsscene.h \
@@ -36,7 +38,9 @@ HEADERS += \
     ui/consolewidget.h \
     scriptengine.h \
     datafileengine.h \
-    gameglobal.h
+    gameglobal.h \
+    material.h \
+    renderstates.h
 OTHER_FILES +=
 
 INCLUDEPATH += .

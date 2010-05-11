@@ -8,6 +8,8 @@ namespace Troika
 
     class ZoneTemplateData {
     public:
+        ZoneTemplateData() : dayBackground(0), nightBackground(0) {}
+
         quint32 id;
         ZoneBackgroundMap *dayBackground;
         ZoneBackgroundMap *nightBackground;

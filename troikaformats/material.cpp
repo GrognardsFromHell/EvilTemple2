@@ -13,8 +13,10 @@ namespace Troika {
         disableDepthTest(false),
         linearFiltering(false),
         disableAlphaBlending(false),
-        sourceBlendFactor(0),
-        destBlendFactor(0) {
+        sourceBlendFactor(GL_SRC_ALPHA),
+        destBlendFactor(GL_ONE_MINUS_SRC_ALPHA),
+        disableDepthWrite(false),
+        color(255, 255, 255, 255) {
 
     }
 
@@ -99,12 +101,15 @@ namespace Troika {
             QByteArray data = vfs->openFile(texture);
             if (!data.isNull()) {
                 textureStages[unit].filename = texture;
-                textureStages[unit].image.loadFromData(data, "tga");
+                //textureStages[unit].image.loadFromData(data, "tga");
             } else {
                 qWarning("Unknown texture %s referenced in %s.", qPrintable(texture), qPrintable(name()));
             }
 
             return true;
+
+        } else if (!command.compare("ColorFillOnly", Qt::CaseInsensitive)) {
+            disableDepthWrite = true;
 
         } else if (!command.compare("BlendType", Qt::CaseInsensitive)) {
 
@@ -136,14 +141,17 @@ namespace Troika {
                 stage.colorOperand1 = GL_SRC_COLOR;
                 stage.alphaArg1 = GL_PREVIOUS;
                 stage.alphaOperand1 = GL_SRC_ALPHA;
+                stage.blendType = TextureStageInfo::Modulate;
             }
             else if (!type.compare("add", Qt::CaseInsensitive))
             {
+                stage.blendType = TextureStageInfo::Add;
                 qWarning("Unsupported type: %s", qPrintable(type));
             }
             else if (!type.compare("texturealpha", Qt::CaseInsensitive))
             {
                 qWarning("Unsupported type: %s", qPrintable(type));
+                stage.blendType = TextureStageInfo::TextureAlpha;
             }
             else if (!type.compare("currentalpha", Qt::CaseInsensitive))
             {
@@ -151,6 +159,7 @@ namespace Troika {
 
                 stage.alphaOp = GL_REPLACE;
                 stage.alphaArg0 = GL_PRIMARY_COLOR;
+                stage.blendType = TextureStageInfo::CurrentAlpha;
             }
             else if (!type.compare("currentalphaadd", Qt::CaseInsensitive))
             {
@@ -169,6 +178,8 @@ namespace Troika {
 
                 stage.alphaOp = GL_REPLACE;
                 stage.alphaArg0 = GL_PRIMARY_COLOR;
+
+                stage.blendType = TextureStageInfo::CurrentAlphaAdd;
             }
             else
             {
@@ -353,6 +364,8 @@ namespace Troika {
        transformType = None;
        speedu = 0;
        speedv = 0;
+
+       blendType = Modulate;
 
        // By default modulation takes place (Texture Color * Fragment Color for first stage)
        colorOp = GL_MODULATE;

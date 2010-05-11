@@ -14,7 +14,8 @@ SOURCES += converter.cpp \
     materialconverter.cpp \
     interfaceconverter.cpp \
     modelwriter.cpp \
-    exclusions.cpp
+    exclusions.cpp \
+    mapconverter.cpp
 
 HEADERS += \
     util.h \
@@ -23,11 +24,15 @@ HEADERS += \
     materialconverter.h \
     interfaceconverter.h \
     modelwriter.h \
-    exclusions.h
+    exclusions.h \
+    mapconverter.h
 
 include(../base.pri)
+include(../3rdparty/squish-1.10/squish.pri)
+include(../3rdparty/jpeg-8a/jpeg-8a.pri)
 
 RESOURCES += \
     resources.qrc
 
-OTHER_FILES += exclusions.txt
+OTHER_FILES += exclusions.txt \
+    material_template.xml

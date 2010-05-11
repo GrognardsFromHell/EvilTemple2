@@ -10,7 +10,6 @@
 #include <iostream>
 
 #include "zipwriter.h"
-
 #include "virtualfilesystem.h"
 #include "messagefile.h"
 #include "troikaarchive.h"
@@ -24,6 +23,7 @@
 #include "model.h"
 #include "material.h"
 #include "exclusions.h"
+#include "mapconverter.h"
 
 #include "util.h"
 #include "converter.h"
@@ -98,9 +98,15 @@ public:
 
     bool convertMaps()
     {
+        ZipWriter writer(mOutputPath + "maps.zip");
+        MapConverter converter(vfs.data(), &writer);
+
         // Convert all maps
         foreach (quint32 mapId, zoneTemplates->mapIds()) {
             QScopedPointer<Troika::ZoneTemplate> zoneTemplate(zoneTemplates->load(mapId));
+
+
+            converter.convert(zoneTemplate.data());
 
             if (zoneTemplate) {
                 Troika::ZoneBackgroundMap *background = zoneTemplate->dayBackground();
@@ -121,6 +127,8 @@ public:
                 qWarning("Unable to load zone template for map id %d.", mapId);
             }
         }
+
+        writer.close();
 
         return true;
     }
@@ -179,24 +187,6 @@ public:
         InterfaceConverter converter(&zip, vfs.data());
 
         return converter.convert();
-    }
-
-    bool convertMaterials() {
-
-        // Search for all mdf files
-        QStringList materialFiles = vfs->listAllFiles("*.mdf");
-
-        ZipWriter writer(mOutputPath + "materials.zip");
-
-        foreach (const QString &materialFile, materialFiles) {
-            qDebug("Converting material %s.", qPrintable(materialFile));
-            MaterialConverter converter(vfs.data(), &writer, materialFile);
-            if (!converter.convert()) {
-                qWarning("Failed conversion of %s.", qPrintable(materialFile));
-            }
-        }
-
-        return true;
     }
 
     void addMeshesMesReferences()
@@ -272,8 +262,31 @@ public:
     {
         ModelWriter writer(stream);
 
+        QHash< QString, QSharedPointer<Troika::Material> > groupedMaterials;
+
+        MaterialConverter converter(vfs.data());
+
+        // Convert materials used by the model
+        foreach (const QSharedPointer<Troika::FaceGroup> &faceGroup, model->faceGroups()) {
+            if (!faceGroup->material())
+                continue;
+            groupedMaterials[faceGroup->material()->name()] = faceGroup->material();
+        }
+
+        QHash<QString,int> materialMapping;
+        int i = 0;
+
+        foreach (const QString &materialName, groupedMaterials.keys()) {
+            qDebug("Converting %s.", qPrintable(materialName));
+            converter.convert(groupedMaterials[materialName].data());
+            materialMapping[materialName] = i++;
+        }
+
+        writer.writeTextures(converter.textures());
+        writer.writeMaterials(converter.materialScripts());
+
         writer.writeVertices(model->vertices());
-        writer.writeFaces(model->faceGroups());
+        writer.writeFaces(model->faceGroups(), materialMapping);
 
         writer.finish();
 

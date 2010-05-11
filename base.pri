@@ -22,6 +22,10 @@ contains(TEMPLE_LIBS,qt3d) {
     }
 }
 
+contains(TEMPLE_LIBS,game-math) {
+    include($${PWD}/3rdparty/game-math/game-math.pri);
+}
+
 contains(TEMPLE_LIBS,game) {
     INCLUDEPATH += ../game
     CONFIG(debug, debug|release) {
