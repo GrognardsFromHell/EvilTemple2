@@ -110,7 +110,7 @@ bool Model::open(const QString &filename, const RenderStates &renderState)
                     continue;
 		}
 
-                AlignedScopedPointer<char> chunkData((char*)ALIGNED_MALLOC(chunkHeader.size));
+                AlignedPointer chunkData((char*)ALIGNED_MALLOC(chunkHeader.size));
 		
                 if (!file.read(chunkData.data(), chunkHeader.size)) {
                     mError.append(QString("Unable to read data of chunk %1 in %2.").arg(i).arg(filename));

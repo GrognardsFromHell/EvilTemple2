@@ -48,16 +48,18 @@ public:
 	const QString &error() const;
 
 private:
-        QScopedArrayPointer<MaterialState> materialState;
-	
-        AlignedScopedPointer<char> vertexData;
-        AlignedScopedPointer<char> faceData;
-        AlignedScopedPointer<char> textureData;
-	
-	void loadVertexData();
-	void loadFaceData();
+    QScopedArrayPointer<MaterialState> materialState;
 
-	QString mError;
+    typedef QScopedPointer<char, AlignedDeleter> AlignedPointer;
+
+    AlignedPointer vertexData;
+    AlignedPointer faceData;
+    AlignedPointer textureData;
+
+    void loadVertexData();
+    void loadFaceData();
+
+    QString mError;
 };
 
 inline const QString &Model::error() const
