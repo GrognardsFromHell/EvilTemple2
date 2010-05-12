@@ -193,7 +193,8 @@ namespace EvilTemple {
         HANDLE_GL_ERROR
 
         if (!d->modelLoaded) {
-            if (!d->model.open("meshes/monsters/demon/demon.model", d->renderStates)) {
+            // if (!d->model.open("meshes/monsters/demon/demon.model", d->renderStates)) {
+            if (!d->model.open("meshes/scenery/portals/stairs-down.model", d->renderStates)) {
                 qWarning("Unable to open model file: %s", qPrintable(d->model.error()));
             }
             d->modelLoaded = true;
@@ -217,7 +218,7 @@ namespace EvilTemple {
         glDisable(GL_ALPHA_TEST); HANDLE_GL_ERROR
         glAlphaFunc(GL_ALWAYS, 0); HANDLE_GL_ERROR
         glDisable(GL_BLEND); HANDLE_GL_ERROR
-
+/*
         glDisable(GL_TEXTURE_2D);
         glDisable(GL_DEPTH_TEST);
         glDisable(GL_LIGHTING);
@@ -251,24 +252,20 @@ namespace EvilTemple {
         glVertex3f(8180, -8708, -1);
         glVertex3f(8180, -18712, -1);
         glVertex3f(-8180, -18712, -1);
-
-        //        glVertex2i(-8180, -8708);
-        //        glVertex2i(8180, -8708);
-        //        glVertex2i(8180, -18172);
-        //        glVertex2i(-8180, -18172);
         glEnd();
 
         glPointSize(5);
         glColor3f(1, 0, 0);
         glBegin(GL_POINTS);
         glVertex3f(19.9999352f, -13454.0, -1);
+        glVertex3f(480 * 28.2842703f, 0, 480 * 28.2842703f);
         glEnd();
 
         glLoadIdentity();HANDLE_GL_ERROR
         glMatrixMode(GL_PROJECTION);HANDLE_GL_ERROR
         glLoadIdentity();HANDLE_GL_ERROR
         glMatrixMode(GL_MODELVIEW);HANDLE_GL_ERROR
-
+*/
         glClear(GL_DEPTH_BUFFER_BIT);HANDLE_GL_ERROR
     }
 

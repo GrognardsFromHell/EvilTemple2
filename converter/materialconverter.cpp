@@ -37,8 +37,14 @@ public:
 
         // TODO: Only perform if lighting is enabled
         if (material->isLightingDisabled()) {
+            QRegExp lightingBlocks("\\{\\{LIGHTING_ON\\}\\}.+\\{\\{\\/LIGHTING_ON\\}\\}");
+            lightingBlocks.setMinimal(true);
+            materialFile.replace(lightingBlocks, "");
+
             pixelTerm.append("vec4 diffuseColor = materialDiffuse;\n");
         } else {
+            materialFile.replace("{{LIGHTING_ON}}", "");
+            materialFile.replace("{{/LIGHTING_ON}}", "");
             pixelTerm.append("vec4 diffuseColor = Idiff;\n");
         }
         pixelTerm.append("gl_FragColor = diffuseColor;\n");

@@ -9,20 +9,25 @@
 #version 120
 
 uniform mat4 worldViewProjectionMatrix;
-uniform mat4 worldViewMatrix;
 const vec4 invertedLightDirection = vec4(0, 0.89, 0.447, 0);
 
 attribute vec4 vertexPosition;
-attribute vec4 vertexNormal;
 attribute vec2 vertexTexCoord;
 
+{{LIGHTING_ON}}
+uniform mat4 worldViewMatrix;
+attribute vec4 vertexNormal;
 varying vec4 normal;
-varying vec2 texCoord;
 varying vec4 light;
+{{/LIGHTING_ON}}
+
+varying vec2 texCoord;
 
 void main() {
+{{LIGHTING_ON}}
         light = worldViewMatrix * invertedLightDirection;
         normal = worldViewMatrix * vertexNormal;
+{{/LIGHTING_ON}}
 
         gl_Position = worldViewProjectionMatrix * vertexPosition;
         texCoord = vertexTexCoord; // Pass through texture coordinates
@@ -36,21 +41,26 @@ void main() {
         <![CDATA[
 #version 120
 
+{{LIGHTING_ON}}
 varying vec4 normal;
-varying vec2 texCoord;
 varying vec4 light;
-
-{{SAMPLERS}}
+{{/LIGHTING_ON}}
 
 const vec4 globalAmbient = vec4(0.1, 0.1, 0.1, 1);
 const vec4 diffuseLightColor = vec4(0.9, 0.9, 0.9, 1);
 const vec4 materialDiffuse = vec4({{MATERIAL_DIFFUSE}});
 
+varying vec2 texCoord;
+
+{{SAMPLERS}}
+
 void main(void)
 {
+{{LIGHTING_ON}}
    float cosTheta = max(dot(normal,light), 0.0);
    vec4 Idiff = materialDiffuse * diffuseLightColor * cosTheta + globalAmbient;
    Idiff = clamp(Idiff, 0.0, 1.0);
+{{/LIGHTING_ON}}
 
    {{PIXEL_TERM}}
 }
@@ -59,10 +69,14 @@ void main(void)
       </fragmentShader>
 
       <attribute name="vertexPosition" buffer="positions" />
+      {{LIGHTING_ON}}
       <attribute name="vertexNormal" buffer="normals" />
+      {{/LIGHTING_ON}}
       <attribute name="vertexTexCoord" buffer="texCoords" components="2" />
       <uniform name="worldViewProjectionMatrix" semantic="WorldViewProjection" />
+      {{LIGHTING_ON}}
       <uniform name="worldViewMatrix" semantic="WorldView" />
+      {{/LIGHTING_ON}}
       {{SAMPLER_UNIFORMS}}
     </shader>
 
