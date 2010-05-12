@@ -13,6 +13,7 @@ class GameView : public QGraphicsView
     Q_OBJECT
 public:
     explicit GameView(QWidget *parent = 0);
+    ~GameView();
 
     QDeclarativeEngine *uiEngine();
 

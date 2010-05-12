@@ -181,6 +181,10 @@ namespace EvilTemple {
         setMouseTracking(true);
     }
 
+    GameView::~GameView()
+    {
+    }
+
     void GameView::drawBackground(QPainter *painter, const QRectF &rect)
     {
         Q_UNUSED(painter);
@@ -221,25 +225,30 @@ namespace EvilTemple {
        // glTranslatef(d->renderStates.viewMatrix()(0, 3), d->renderStates.viewMatrix()(1, 3), 0);
 
         glDisable(GL_TEXTURE_2D);
-              glDisable(GL_DEPTH_TEST);
-              glDisable(GL_LIGHTING);
+      glDisable(GL_DEPTH_TEST);
+      glDisable(GL_LIGHTING);
 
         // Draw a line-stippled version of the bounding box
         glLineWidth(10);
         glColor3f(1, 1, 1);
         glBegin(GL_LINE_LOOP);
-        glVertex2i(0, 0);
-        glVertex2i(100, 0);
-        glVertex2i(100, 100);
-        glVertex2i(0, 100);
+        glVertex3f(-8180, 8708, -1);
+        glVertex3f(8180, 8708, -1);
+        glVertex3f(8180, 18712, -1);
+        glVertex3f(-8180, 18712, -1);
+
+        //        glVertex2i(-8180, -8708);
+        //        glVertex2i(8180, -8708);
+        //        glVertex2i(8180, -18172);
+        //        glVertex2i(-8180, -18172);
         glEnd();
 
-        glLoadIdentity();
-        glMatrixMode(GL_PROJECTION);
-        glLoadIdentity();
-        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();HANDLE_GL_ERROR
+        glMatrixMode(GL_PROJECTION);HANDLE_GL_ERROR
+        glLoadIdentity();HANDLE_GL_ERROR
+        glMatrixMode(GL_MODELVIEW);HANDLE_GL_ERROR
 
-        glClear(GL_DEPTH_BUFFER_BIT);
+        glClear(GL_DEPTH_BUFFER_BIT);HANDLE_GL_ERROR
     }
 
     void GameView::showView(const QString &url)
