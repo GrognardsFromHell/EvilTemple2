@@ -218,15 +218,31 @@ namespace EvilTemple {
         glAlphaFunc(GL_ALWAYS, 0); HANDLE_GL_ERROR
         glDisable(GL_BLEND); HANDLE_GL_ERROR
 
-        glMatrixMode(GL_PROJECTION);
-        glLoadMatrixf(d->renderStates.projectionMatrix().data());
-        glMatrixMode(GL_MODELVIEW);
-        glLoadIdentity();
-        glTranslatef(d->renderStates.viewMatrix()(0, 3), d->renderStates.viewMatrix()(1, 3), 0);
-
         glDisable(GL_TEXTURE_2D);
         glDisable(GL_DEPTH_TEST);
         glDisable(GL_LIGHTING);
+
+        glMatrixMode(GL_PROJECTION);
+        glLoadMatrixf(d->renderStates.projectionMatrix().data());
+
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
+        glLoadMatrixf(d->renderStates.viewMatrix().data());
+
+        glBegin(GL_LINES);
+        glColor3f(1, 0, 0);
+        glVertex3f(0, 0, 0);
+        glVertex3f(100, 0, 0);
+        glColor3f(0, 1, 0);
+        glVertex3f(0, 0, 0);
+        glVertex3f(0, 100, 0);
+        glColor3f(0, 0, 1);
+        glVertex3f(0, 0, 0);
+        glVertex3f(0, 0, 100);
+        glEnd();
+
+        glLoadIdentity();
+        glTranslatef(d->renderStates.viewMatrix()(0, 3), d->renderStates.viewMatrix()(1, 3), 0);
 
         // Draw a line-stippled version of the bounding box
         glColor3f(1, 1, 1);
