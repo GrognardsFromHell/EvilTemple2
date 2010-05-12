@@ -74,8 +74,12 @@ public:
         texCoordBuffer.release();
 
         static const short indices[6] = {0, 1, 3, 3, 2, 0};
-        indexBuffer.create();
-        indexBuffer.bind();
+        if (!indexBuffer.create()) {
+            qWarning("Unable to create index buffer.");
+        }
+        if (!indexBuffer.bind()) {
+            qWarning("Unable to bind index buffer.");
+        }
         indexBuffer.allocate(indices, sizeof(indices));
         indexBuffer.release();
     }

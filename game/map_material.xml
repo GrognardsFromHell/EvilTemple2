@@ -19,14 +19,15 @@ uniform int tilePos[2];
 varying vec2 texCoord;
 
 void main() {
-  vertexPosition.x += 256 * tilePos[0];
-  vertexPosition.y -= 256 * tilePos[1];
+  vec4 transformedPosition = vertexPosition;
+  transformedPosition.x += 256 * tilePos[0];
+  transformedPosition.y -= 256 * tilePos[1];
 
   // Apply view matrix translation
-  vertexPosition.x += viewMatrix[3][0];
-  vertexPosition.y += viewMatrix[3][1];
+  transformedPosition.x += viewMatrix[3][0];
+  transformedPosition.y += viewMatrix[3][1];
 
-  gl_Position = projMatrix * vertexPosition;
+  gl_Position = projMatrix * transformedPosition;
   texCoord = vertexTexCoord;
 }
 ]]>
