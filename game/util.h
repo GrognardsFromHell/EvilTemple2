@@ -6,8 +6,32 @@
 
 #include "qbox3d.h"
 
+#include "gamemath.h"
+
 namespace EvilTemple
 {
+    /**
+      Custom deleter for QScopedPointer that uses aligned free.
+      */
+    struct ScopedPointerAlignedDeleter
+    {
+        static inline void cleanup(void *pointer)
+        {
+            ALIGNED_FREE(pointer);
+        }
+    };
+
+    // QScopedPointer using an aligned free operation
+    template <typename T, typename Cleanup = ScopedPointerAlignedDeleter >
+    class AlignedScopedPointer : public QScopedPointer<T, Cleanup>
+    {
+    public:
+        explicit inline AlignedScopedPointer(T *p = 0) : QScopedPointer(p)
+        {
+        }
+    private:
+        Q_DISABLE_COPY(AlignedScopedPointer)
+    };
 
     const float Pi = 3.14159265358979323846f;
 

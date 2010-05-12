@@ -31,6 +31,18 @@ contains(TEMPLE_LIBS,game) {
     }
 }
 
+contains(TEMPLE_LIBS,glew) {
+    # GLEW is not a system library on windows,
+    # so use the packaged one
+    win32 {
+        INCLUDEPATH += $${PWD}/3rdparty/glew-1.5.4/include
+        LIBS += $${PWD}/3rdparty/glew-1.5.4/lib/glew32s.lib
+        DEFINES += GLEW_STATIC
+    } else {
+        LIBS += -lGLEW
+    }
+}
+
 contains(TEMPLE_LIBS,troikaformats) {
     INCLUDEPATH += ../troikaformats
     CONFIG(debug, debug|release) {

@@ -17,9 +17,9 @@ Rectangle {
         console.log("Main Menu showing");
         state = 'shown'
 
-        for (var f in lg.canceled) {
-            console.log("Member: " + f);
-        }
+        //for (var f in lg.canceled) {
+        //    console.log("Member: " + f);
+        //}
     }
 
     Rectangle {
@@ -49,7 +49,9 @@ Rectangle {
                 id: newGameButton
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: 'New Game'
-                onClicked: rootRectangle.state = 'splashScreen'
+                onClicked: {
+                    rootRectangle.visible = false;
+                }
             }
 
             MainMenuButton {
@@ -63,7 +65,6 @@ Rectangle {
                 id: exitButton
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: 'Exit Game'
-                onClicked: Qt.quit()
             }
 
         }
@@ -72,11 +73,6 @@ Rectangle {
     function backToMainMenu() {
         state = 'shown';
     }
-
-    LoadGame {
-        id: lg
-    }
-
 
     Loader {
         id: otherScreen

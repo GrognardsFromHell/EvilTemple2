@@ -28,7 +28,6 @@ HEADERS += \
     mapconverter.h
 
 include(../base.pri)
-include(../3rdparty/squish-1.10/squish.pri)
 include(../3rdparty/jpeg-8a/jpeg-8a.pri)
 
 RESOURCES += \

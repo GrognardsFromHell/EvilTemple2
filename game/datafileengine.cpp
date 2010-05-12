@@ -98,13 +98,13 @@ public:
         if (!engine.isRelativePath()) {
             QString nativePath = QDir::toNativeSeparators(filename); // Make sure all separators are native.
             if (nativePath.startsWith(absoluteDataPath)) {
-                path = filename.right(filename.length() - absoluteDataPath.length());
+                path = nativePath.right(nativePath.length() - absoluteDataPath.length());
             } else {
                 return 0;
             }
 
         } else {
-            path = filename;
+            path = QDir::toNativeSeparators(filename);
         }
 
         ArchiveEntries::const_iterator it = archiveEntries.find(path.toLower());
@@ -112,7 +112,7 @@ public:
         if (it != archiveEntries.end()) {
             DataFileEngine *result = new DataFileEngine(this);
             result->setFileName(path);
-            qDebug("Loading %s from zip archive.", qPrintable(path));
+            //qDebug("Loading %s from zip archive.", qPrintable(path));
             return result;
         }
 
@@ -137,7 +137,7 @@ public:
 
     QByteArray getArchiveFile(const QString &filename)
     {
-        ArchiveEntries::const_iterator entry = archiveEntries.find(filename.toLower());
+        ArchiveEntries::const_iterator entry = archiveEntries.find(QDir::toNativeSeparators(filename).toLower());
 
         if (entry == archiveEntries.end()) {
             return 0;
@@ -277,7 +277,7 @@ private:
             entry.compressedSize = fileInfo.compressed_size;
             entry.compressionMethod = fileInfo.compression_method;
 
-            archiveEntries[filename.toLower()] = entry;
+            archiveEntries[QDir::toNativeSeparators(filename).toLower()] = entry;
 
             error = unzGoToNextFile(archiveHandle);
         } while (error == UNZ_OK);

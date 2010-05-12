@@ -1,4 +1,6 @@
 
+#include <GL/glew.h>
+
 #include <QtOpenGL>
 #include <QMainWindow>
 #include <QGraphicsWebView>
@@ -6,294 +8,404 @@
 #include <cmath>
 #include <limits>
 
-#include "glext.h"
 #include "ui/gamegraphicsscene.h"
 #include "game.h"
 #include "util.h"
 #include "camera.h"
-#include "ui/consolewidget.h"
 
 #include "qline3d.h"
 
+#include "renderstates.h"
+#include "modelfile.h"
+
 namespace EvilTemple {
 
-    GameGraphicsScene::GameGraphicsScene(const Game &game, QObject *parent) :
-            QGraphicsScene(parent),            
-            dragging(false),
-            totalTime(0),
-            totalFrames(0),
-            game(game),
-            roty(0),
-            _objectsDrawn(0)
+    #define HANDLE_GL_ERROR handleGlError(__FILE__, __LINE__);
+    inline static void handleGlError(const char *file, int line) {
+        QString error;
+
+        GLenum glErr = glGetError();
+        while (glErr != GL_NO_ERROR) {
+            error.append(QString::fromLatin1((char*)gluErrorString(glErr)));
+            error.append('\n');
+            glErr = glGetError();
+        }
+
+        if (error.length() > 0) {
+            qWarning("OpenGL error @ %s:%d: %s", file, line);
+        }
+    }
+
+    void Draw(Model *model) {
+        for (int faceGroupId = 0; faceGroupId < model->faces; ++faceGroupId) {
+            const FaceGroup &faceGroup = model->faceGroups[faceGroupId];
+            MaterialState *material = faceGroup.material;
+
+            if (!material)
+                    continue;
+
+            for (int i = 0; i < material->passCount; ++i) {
+                    MaterialPassState &pass = material->passes[i];
+
+                    pass.program.bind(); HANDLE_GL_ERROR
+
+                    // Bind texture samplers
+                    for (int j = 0; j < pass.textureSamplers.size(); ++j) {
+                            pass.textureSamplers[j].bind(); HANDLE_GL_ERROR
+                    }
+
+                    // Bind uniforms
+                    for (int j = 0; j < pass.uniforms.size(); ++j) {
+                            pass.uniforms[j].bind(); HANDLE_GL_ERROR
+                    }
+
+                    // Bind attributes
+                    for (int j = 0; j < pass.attributes.size(); ++j) {
+                            MaterialPassAttributeState &attribute = pass.attributes[j];
+
+                            // Bind the correct buffer
+                            switch (attribute.bufferType) {
+                            case 0:
+                                    glBindBuffer(GL_ARRAY_BUFFER, model->positionBuffer);
+                                    break;
+                            case 1:
+                                    glBindBuffer(GL_ARRAY_BUFFER, model->normalBuffer);
+                                    break;
+                            case 2:
+                                    glBindBuffer(GL_ARRAY_BUFFER, model->texcoordBuffer);
+                                    break;
+                            }
+
+                            // Assign the attribute
+                            glEnableVertexAttribArray(attribute.location);
+                            glVertexAttribPointer(attribute.location, attribute.binding.components(), attribute.binding.type(),
+                                    attribute.binding.normalized(), attribute.binding.stride(), (GLvoid*)attribute.binding.offset());
+                            HANDLE_GL_ERROR
+                    }
+
+                    // Set render states
+                    foreach (const SharedMaterialRenderState &state, pass.renderStates) {
+                            state->enable();
+                    }
+
+                    // Draw the actual model
+                    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, faceGroup.buffer); HANDLE_GL_ERROR
+                    glDrawElements(GL_TRIANGLES, faceGroup.elementCount, GL_UNSIGNED_SHORT, 0); HANDLE_GL_ERROR
+
+                    // Reset render states to default
+                    foreach (const SharedMaterialRenderState &state, pass.renderStates) {
+                            state->disable();
+                    }
+
+                    // Unbind textures
+                    for (int j = 0; j < pass.textureSamplers.size(); ++j) {
+                            pass.textureSamplers[j].unbind();
+                    }
+
+                    // Unbind attributes
+                    for (int j = 0; j < pass.attributes.size(); ++j) {
+                            MaterialPassAttributeState &attribute = pass.attributes[j];
+                            glDisableVertexAttribArray(attribute.location); HANDLE_GL_ERROR
+                    }
+
+                    pass.program.unbind();
+                }
+        }
+    }
+
+    class GameGraphicsSceneData
     {
-        // Whenever the view changes, update the scene
-        connect(game.camera(), SIGNAL(positionChanged()), this, SLOT(update()));
+    public:
+        GameGraphicsSceneData()
+            : dragging(false),
+                totalTime(0),
+                totalFrames(0),
+                objectsDrawn(0),
+                initialized(false),
+                modelLoaded(false)
+        {
+        }
 
-        console = new ConsoleWidget(game);
-        console->setVisible(false);
-        addWidget(console);
+        bool initialized;
+        Model model;
+        bool modelLoaded;
 
+        RenderStates renderStates;
+
+        bool dragging;
+        QTime timer;
+
+        int totalTime;
+        int totalFrames;
+
+        int objectsDrawn;
+        QVector2D lastMousePos;
+    };
+
+    GameGraphicsScene::GameGraphicsScene(const Game &game, QObject *parent) :
+            QGraphicsScene(parent),
+            d_ptr(new GameGraphicsSceneData)
+    {
         QTimer *animTimer = new QTimer(this);
         animTimer->setInterval(5);
         animTimer->setSingleShot(false);
-        connect(animTimer, SIGNAL(timeout()), this, SLOT(update()));
+        connect(animTimer, SIGNAL(timeout()), this, SLOT(invalidate()));
         animTimer->start();
-
-        // Update the console whenever the scene rect changes
-        connect(this, SIGNAL(sceneRectChanged(QRectF)), this, SLOT(resizeConsole(QRectF)));
-
-        roty = 180;
     }
 
     GameGraphicsScene::~GameGraphicsScene() {
     }
 
-    void GameGraphicsScene::rotate()
-    {
-        roty += 1;
+//    void GameGraphicsScene::drawBackground(QPainter *painter, const QRectF &rect)
+//    {
+//        Q_UNUSED(painter); // We use the QGL Context directly in this method
 
-        invalidate(sceneRect(), AllLayers);
-    }
+//        glEnable(GL_DEPTH_TEST);
+//        glEnable(GL_CULL_FACE);
+//        glEnable(GL_ALPHA_TEST);
+//        glAlphaFunc(GL_NOTEQUAL, 0);
+//        glEnable(GL_BLEND);
+//        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    void GameGraphicsScene::toggleConsole()
-    {
-        if (console->isVisible()) {
-            QPropertyAnimation *hideAnim = new QPropertyAnimation(console, "size");
-            hideAnim->setDuration(250);
-            hideAnim->setStartValue(QSize(width(), console->height()));
-            hideAnim->setEndValue(QSize(width(), 0));
-            hideAnim->setEasingCurve(QEasingCurve::OutQuad);
-            hideAnim->start(QAbstractAnimation::DeleteWhenStopped);
+//        if (!d_ptr->initialized) {
+//            if (!d_ptr->model.open("meshes/monsters/demon/demon.model", d_ptr->renderStates)) {
+//                qWarning("Unable to open model file: %s", qPrintable(d_ptr->model.error()));
+//            }
+//            d_ptr->initialized = true;
+//        }
 
-            connect(hideAnim, SIGNAL(finished()), console, SLOT(hide()));
-        } else {
-            console->show();
+//        glClearColor(0.25, 0.25, 0.25, 0);
+//        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
-            QPropertyAnimation *showAnim = new QPropertyAnimation(console, "size");
-            showAnim->setDuration(250);
-            showAnim->setStartValue(QSize(width(), 0));
-            showAnim->setEndValue(QSize(width(), height() * 0.4));
-            showAnim->setEasingCurve(QEasingCurve::OutQuad);
-            showAnim->start(QAbstractAnimation::DeleteWhenStopped);
-        }
-    }
+//        // TODO: Convert this to Matrix4-only code (don't use the GL matrix stack)
+//        glMatrixMode(GL_PROJECTION);
+//        glLoadIdentity();
+//        //gluPerspective(45, (float)w / (float)h, 1, 200);
+//        int w = 800;
+//        int h = 600;
+//        glOrtho(-w/2, w/2, -h/2, h/2, 1, 3628);
+//        Matrix4 projectionMatrix;
+//        glGetFloatv(GL_PROJECTION_MATRIX, projectionMatrix.data());
+//        d_ptr->renderStates.setProjectionMatrix(projectionMatrix);
+//        glLoadIdentity();
+//        glMatrixMode(GL_MODELVIEW);
 
-    void GameGraphicsScene::resizeConsole(const QRectF &viewport)
-    {
-        //console->resize(viewport.width(), 0.4 * viewport.height());
-    }
+//        Vector4 eyeVector(250.0, 500, 500, 0);
+//        Vector4 centerVector(0, 10, 0, 0);
+//        Vector4 upVector(0, 1, 0, 0);
+//        Matrix4 viewMatrix = Matrix4::lookAt(eyeVector, centerVector, upVector);
 
-    void GameGraphicsScene::drawBackground(QPainter *painter, const QRectF &rect)
-    {
-        Q_UNUSED(painter); // We use the QGL Context directly in this method
+//        d_ptr->renderStates.setViewMatrix(viewMatrix);
 
-        timer.start();
+//        Draw(&d_ptr->model);
 
-        QGLContext *context = const_cast<QGLContext*>(QGLContext::currentContext());
+//        return;
 
-        glMatrixMode(GL_PROJECTION);
-        glPushMatrix();
+//        d_ptr->timer.start();
 
-        glMatrixMode(GL_MODELVIEW);
-        glPushMatrix();
+//        QGLContext *context = const_cast<QGLContext*>(QGLContext::currentContext());
 
-        glPushClientAttrib(GL_CLIENT_ALL_ATTRIB_BITS);
-        glPushAttrib(GL_ALL_ATTRIB_BITS); // Save all attrib states so QGraphicsView can do what it wants        
+//        glMatrixMode(GL_PROJECTION);
+//        glPushMatrix();
 
-        // Clear screen
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+//        glMatrixMode(GL_MODELVIEW);
+//        glPushMatrix();
 
-        glEnable(GL_TEXTURE_2D);
+//        glPushClientAttrib(GL_CLIENT_ALL_ATTRIB_BITS);
+//        glPushAttrib(GL_ALL_ATTRIB_BITS); // Save all attrib states so QGraphicsView can do what it wants
 
-        // Ensure that the Z-Buffer is used
-        glEnable(GL_DEPTH_TEST);
-        glDepthFunc(GL_LEQUAL);
+//        // Clear screen
+//        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+//        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
-        // Enable culling of back faces
-        glEnable(GL_CULL_FACE);
+//        glEnable(GL_TEXTURE_2D);
 
-        // By default, blending is active
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glEnable(GL_BLEND);
+//        // Ensure that the Z-Buffer is used
+//        glEnable(GL_DEPTH_TEST);
+//        glDepthFunc(GL_LEQUAL);
 
-        // Transparent pixels mess up the depth buffer, so discard any fragments
-        // that are entirely transparent.
-        glAlphaFunc(GL_GREATER, 0);
-        glEnable(GL_ALPHA_TEST);
+//        // Enable culling of back faces
+//        glEnable(GL_CULL_FACE);
 
-        // Enable anti aliasing
-        glEnable(GL_LINE_SMOOTH); // For lines
-        glEnable(GL_MULTISAMPLE); // And for everything else
+//        // By default, blending is active
+//        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+//        glEnable(GL_BLEND);
 
-        // Default blending attributes for textures
-        glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA, GL_REPLACE);
-        glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_ALPHA, GL_TEXTURE);
-        glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA, GL_SRC_ALPHA);
+//        // Transparent pixels mess up the depth buffer, so discard any fragments
+//        // that are entirely transparent.
+//        glAlphaFunc(GL_GREATER, 0);
+//        glEnable(GL_ALPHA_TEST);
 
-        // This should probably only be set whenever the viewport changes
-        game.camera()->setViewport(QRectF(- rect.width() / 2, - rect.height() / 2, rect.width(), rect.height()));       
+//        // Enable anti aliasing
+//        glEnable(GL_LINE_SMOOTH); // For lines
+//        glEnable(GL_MULTISAMPLE); // And for everything else
 
-        QBox3D aabbFrustum = game.camera()->viewFrustum();
+//        // Default blending attributes for textures
+//        glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA, GL_REPLACE);
+//        glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_ALPHA, GL_TEXTURE);
+//        glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA, GL_SRC_ALPHA);
 
-        _objectsDrawn = 0; // Reset number of objects drawn.
+//        // This should probably only be set whenever the viewport changes
+//        // game.camera()->setViewport(QRectF(- rect.width() / 2, - rect.height() / 2, rect.width(), rect.height()));
 
-        /*GeometryMeshObject *selectedObject = pickObject(_lastMousePos);
+//        // QBox3D aabbFrustum = game.camera()->viewFrustum();
 
-        // Draw the campaign if the campaign is running
-        Campaign *campaign = game.campaign();
-        if (campaign && campaign->currentZone())
-        {
-            const QSharedPointer<ZoneTemplate> &zoneTemplate = campaign->currentZone()->zoneTemplate();
+//        d_ptr->objectsDrawn = 0; // Reset number of objects drawn.
 
-            // Draw the zone background map
-            ZoneBackgroundMap *map = zoneTemplate->dayBackground();
+//        /*GeometryMeshObject *selectedObject = pickObject(_lastMousePos);
 
-            if (map)
-            {
-                map->draw(game, context);
-            }
+//        // Draw the campaign if the campaign is running
+//        Campaign *campaign = game.campaign();
+//        if (campaign && campaign->currentZone())
+//        {
+//            const QSharedPointer<ZoneTemplate> &zoneTemplate = campaign->currentZone()->zoneTemplate();
 
-            // Draw other static geometry objects
-            game.camera()->activate();
+//            // Draw the zone background map
+//            ZoneBackgroundMap *map = zoneTemplate->dayBackground();
 
-            glDisable(GL_LIGHTING);
-            glDisable(GL_CULL_FACE);
-            glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color buffer writing
-            glDisable(GL_TEXTURE_2D);
+//            if (map)
+//            {
+//                map->draw(game, context);
+//            }
 
-            foreach (GeometryMeshObject *object, zoneTemplate->clippingGeometry())
-            {
-                if (aabbFrustum.contains(object->boundingBox())
-                    || aabbFrustum.intersects(object->boundingBox()))
-                    {
-                    object->draw(game, context);
-                    _objectsDrawn++;
-                }
-            }
+//            // Draw other static geometry objects
+//            game.camera()->activate();
 
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-            glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-            glEnable(GL_TEXTURE_2D);
-            glEnable(GL_LIGHTING);
-            glEnable(GL_CULL_FACE);
+//            glDisable(GL_LIGHTING);
+//            glDisable(GL_CULL_FACE);
+//            glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color buffer writing
+//            glDisable(GL_TEXTURE_2D);
 
-            // Set lighting state
-            glEnable(GL_LIGHT0);
-            glEnable(GL_LIGHT1);
+//            foreach (GeometryMeshObject *object, zoneTemplate->clippingGeometry())
+//            {
+//                if (aabbFrustum.contains(object->boundingBox())
+//                    || aabbFrustum.intersects(object->boundingBox()))
+//                    {
+//                    object->draw(game, context);
+//                    _objectsDrawn++;
+//                }
+//            }
 
-            const GLfloat ambientLight[] = { 0.8f, 0.8f, 0.8f, 1.0f };
-            glLightfv(GL_LIGHT0, GL_AMBIENT, ambientLight);
+//            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+//            glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+//            glEnable(GL_TEXTURE_2D);
+//            glEnable(GL_LIGHTING);
+//            glEnable(GL_CULL_FACE);
 
-            const GLfloat diffuseLight[] = { 0.8f, 0.8f, 0.8f, 1.0f };
-            const GLfloat diffuseDir[] = { 0, -1, 0, 0 };
-            glLightfv(GL_LIGHT1, GL_DIFFUSE, diffuseLight);
-            glLightfv(GL_LIGHT1, GL_POSITION, diffuseDir);           
+//            // Set lighting state
+//            glEnable(GL_LIGHT0);
+//            glEnable(GL_LIGHT1);
 
-            foreach (GeometryMeshObject *object, zoneTemplate->staticGeometry())
-            {
-                if (aabbFrustum.contains(object->boundingBox())
-                    || aabbFrustum.intersects(object->boundingBox()))
-                    {
-                    if (object == selectedObject)
-                        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-                    object->draw(game, context);
-                    if (object == selectedObject)
-                        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-                    _objectsDrawn++;
-                }
-            }
-        }
+//            const GLfloat ambientLight[] = { 0.8f, 0.8f, 0.8f, 1.0f };
+//            glLightfv(GL_LIGHT0, GL_AMBIENT, ambientLight);
 
-        game.camera()->activate();
+//            const GLfloat diffuseLight[] = { 0.8f, 0.8f, 0.8f, 1.0f };
+//            const GLfloat diffuseDir[] = { 0, -1, 0, 0 };
+//            glLightfv(GL_LIGHT1, GL_DIFFUSE, diffuseLight);
+//            glLightfv(GL_LIGHT1, GL_POSITION, diffuseDir);
 
-        model->setRotation(QQuaternion::fromAxisAndAngle(0, 1, 0, roty));
-        model->draw(game, context); */
+//            foreach (GeometryMeshObject *object, zoneTemplate->staticGeometry())
+//            {
+//                if (aabbFrustum.contains(object->boundingBox())
+//                    || aabbFrustum.intersects(object->boundingBox()))
+//                    {
+//                    if (object == selectedObject)
+//                        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+//                    object->draw(game, context);
+//                    if (object == selectedObject)
+//                        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+//                    _objectsDrawn++;
+//                }
+//            }
+//        }
 
-        /*
-          Draw the map limits
-         */
+//        game.camera()->activate();
 
-        game.camera()->activate(true);
+//        model->setRotation(QQuaternion::fromAxisAndAngle(0, 1, 0, roty));
+//        model->draw(game, context); */
 
-        glDisable(GL_TEXTURE_2D);
-        glDisable(GL_DEPTH_TEST);
-        glDisable(GL_LIGHTING);
+//        /*
+//          Draw the map limits
+//         */
 
-        glLineWidth(5);
+//        // game.camera()->activate(true);
 
-        glBegin(GL_LINE_LOOP);
-        glVertex2i(-8180, -8708);
-        glVertex2i(8180, -8708);
-        glVertex2i(8180, -18172);
-        glVertex2i(-8180, -18172);
-        glEnd();
+//        glDisable(GL_TEXTURE_2D);
+//        glDisable(GL_DEPTH_TEST);
+//        glDisable(GL_LIGHTING);
 
-        glEnable(GL_TEXTURE_2D);
-        glEnable(GL_DEPTH_TEST);
-        glEnable(GL_LIGHTING);        
+//        glBegin(GL_LINE_LOOP);
+//        glVertex2i(-8180, -8708);
+//        glVertex2i(8180, -8708);
+//        glVertex2i(8180, -18172);
+//        glVertex2i(-8180, -18172);
+//        glEnd();
 
-        // Reset state
+//        glEnable(GL_TEXTURE_2D);
+//        glEnable(GL_DEPTH_TEST);
+//        glEnable(GL_LIGHTING);
 
-        glPopAttrib();
-        glPopClientAttrib();
+//        // Reset state
 
-        glMatrixMode(GL_PROJECTION);
-        glPopMatrix();
+//        glPopAttrib();
+//        glPopClientAttrib();
 
-        glMatrixMode(GL_MODELVIEW);
-        glPopMatrix();
+//        glMatrixMode(GL_PROJECTION);
+//        glPopMatrix();
 
-        totalTime += timer.elapsed();
-        totalFrames++;
-    }
+//        glMatrixMode(GL_MODELVIEW);
+//        glPopMatrix();
 
-    void GameGraphicsScene::mousePressEvent(QGraphicsSceneMouseEvent *mouseEvent)
-    {
-        QGraphicsScene::mousePressEvent(mouseEvent);
+//        d_ptr->totalTime += d_ptr->timer.elapsed();
+//        d_ptr->totalFrames++;
+//    }
 
-        if (!mouseEvent->isAccepted())
-        {
-            /*GeometryMeshObject *selected = pickObject(_lastMousePos);
+//    void GameGraphicsScene::mousePressEvent(QGraphicsSceneMouseEvent *mouseEvent)
+//    {
+//        QGraphicsScene::mousePressEvent(mouseEvent);
 
-            if (selected) {
-               // MeshDialog *meshDialog = new MeshDialog(selected, NULL);
-              //  meshDialog->show();
-            } else {
-                dragging = true;
-            }*/
+//        if (!mouseEvent->isAccepted())
+//        {
+//            /*GeometryMeshObject *selected = pickObject(_lastMousePos);
 
-            mouseEvent->accept();            
-        }
-    }
+//            if (selected) {
+//               // MeshDialog *meshDialog = new MeshDialog(selected, NULL);
+//              //  meshDialog->show();
+//            } else {
+//                dragging = true;
+//            }*/
 
-    void GameGraphicsScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *mouseEvent)
-    {
-        QGraphicsScene::mouseReleaseEvent(mouseEvent);
-        dragging = false;
-    }
+//            mouseEvent->accept();
+//        }
+//    }
 
-    void GameGraphicsScene::mouseMoveEvent(QGraphicsSceneMouseEvent *mouseEvent)
-    {
-        QPointF pos = mouseEvent->scenePos(); // Relative to center of scene, y+ is down, x+ is right.
+//    void GameGraphicsScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *mouseEvent)
+//    {
+//        QGraphicsScene::mouseReleaseEvent(mouseEvent);
+//        d_ptr->dragging = false;
+//    }
 
-        _lastMousePos = QVector2D(pos.x(), sceneRect().height() - pos.y());
+//    void GameGraphicsScene::mouseMoveEvent(QGraphicsSceneMouseEvent *mouseEvent)
+//    {
+//        QPointF pos = mouseEvent->scenePos(); // Relative to center of scene, y+ is down, x+ is right.
 
-        if (dragging)
-        {
-            QVector2D diff = QVector2D(mouseEvent->scenePos() - mouseEvent->lastScenePos());
-            game.camera()->moveView(diff);
-            mouseEvent->accept();
-        }
-        else
-        {
-            QGraphicsScene::mouseMoveEvent(mouseEvent);
-        }
-    }
+//        d_ptr->lastMousePos = QVector2D(pos.x(), sceneRect().height() - pos.y());
+
+//        if (d_ptr->dragging)
+//        {
+//            QVector2D diff = QVector2D(mouseEvent->scenePos() - mouseEvent->lastScenePos());
+//            // game.camera()->moveView(diff);
+//            mouseEvent->accept();
+//        }
+//        else
+//        {
+//            QGraphicsScene::mouseMoveEvent(mouseEvent);
+//        }
+//    }
 
     double GameGraphicsScene::fps() const {
-        if (totalFrames > 0) {
-            return totalTime / totalFrames;
+        if (d_ptr->totalFrames > 0) {
+            return d_ptr->totalTime / d_ptr->totalFrames;
         } else {
             return 0;
         }
@@ -337,5 +449,10 @@ namespace EvilTemple {
 
         return result;
     }*/
+
+    int GameGraphicsScene::objectsDrawn() const
+    {
+        return d_ptr->objectsDrawn;
+    }
 
 }

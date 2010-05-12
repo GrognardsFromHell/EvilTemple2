@@ -15,6 +15,8 @@ namespace EvilTemple {
     class GeometryMeshObject;
     class ConsoleWidget;
 
+    class GameGraphicsSceneData;
+
     class GAME_EXPORT GameGraphicsScene : public QGraphicsScene
     {
         Q_OBJECT
@@ -24,44 +26,20 @@ namespace EvilTemple {
 
         double fps() const;
 
-    protected:
-        void drawBackground(QPainter *painter, const QRectF &rect);
-
-        void mousePressEvent(QGraphicsSceneMouseEvent *mouseEvent);
-        void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
-        void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
-
     public slots:
-        void rotate();
-        void toggleConsole();
-
         /**
-      Gets the number of objects that were drawn during the last update.
-      */
+         Gets the number of objects that were drawn during the last update.
+         */
         int objectsDrawn() const;
 
-    protected slots:
-        void resizeConsole(const QRectF &viewport);
+    protected:
+        void initializeGL();
+        void resizeGL(int w, int h);
+        void paintGL();
 
     private:
-        bool dragging;
-        QTime timer;
-        int totalTime;
-        int totalFrames;
-
-        const Game &game;
-        float rotx, roty;
-        int _objectsDrawn;
-        QVector2D _lastMousePos;
-        ConsoleWidget *console;
-
-        // GeometryMeshObject *pickObject(QVector2D screenPos);
+        QScopedPointer<GameGraphicsSceneData> d_ptr;
     };
-
-    inline int GameGraphicsScene::objectsDrawn() const
-    {
-        return _objectsDrawn;
-    }
 
 }
 

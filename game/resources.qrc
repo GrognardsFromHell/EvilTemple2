@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/schema">
+        <file>material.xsd</file>
+    </qresource>
+    <qresource prefix="/material">
+        <file>map_material.xml</file>
+    </qresource>
+</RCC>

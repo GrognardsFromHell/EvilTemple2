@@ -12,9 +12,8 @@ class QDeclarativeItem;
 
 namespace EvilTemple {
 
-class GameGraphicsScene;
-class GameGraphicsView;
 class Game;
+class MainWindowData;
 
 class GAME_EXPORT MainWindow : public QMainWindow
 {
@@ -42,10 +41,7 @@ protected:
     void keyPressEvent(QKeyEvent *);
 
 private:        
-    const Game &game;
-    GameGraphicsScene *scene;
-    QDeclarativeView *view;
-    QDeclarativeItem *consoleWidget;
+    QScopedPointer<MainWindowData> d_ptr;
 };
 
 }

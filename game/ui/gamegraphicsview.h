@@ -22,7 +22,7 @@ namespace EvilTemple
 
     public slots:
 
-    protected:
+    protected:        
         void resizeEvent(QResizeEvent *event);
 
         const Game &game;

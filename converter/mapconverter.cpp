@@ -3,7 +3,6 @@
 
 #include "mapconverter.h"
 #include "zonebackgroundmap.h"
-#include "squish.h"
 #include "jpeglib.h"
 
 template <int T> bool checkBlack(unsigned char *pixels, int width, int height) {
@@ -125,8 +124,24 @@ public:
                 }
             }
 
+            tilesPresent.append(QPoint(x, y));
+
             mZip->addFile(QString("%1%2-%3.jpg").arg(newFolder).arg(y).arg(x), tileContent, 0);
         }
+
+        QByteArray tileIndex;
+        tileIndex.reserve(sizeof(int) + sizeof(short) * 2 * tilesPresent.size());
+        QDataStream stream(&tileIndex, QIODevice::WriteOnly);
+        stream.setByteOrder(QDataStream::LittleEndian);
+
+        stream << (uint)tilesPresent.size();
+
+        for (int i = 0; i < tilesPresent.size(); ++i) {
+            const QPoint &point = tilesPresent[i];
+            stream << (short)point.x() << (short)point.y();
+        }
+
+        mZip->addFile(QString("%1index.dat").arg(newFolder), tileIndex, 9);
 
         convertedGroundMaps[directory] = newFolder;
 

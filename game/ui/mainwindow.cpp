@@ -1,3 +1,6 @@
+
+#include <GL/glew.h>
+
 #include <QGraphicsView>
 #include <QGLWidget>
 #include <QSettings>
@@ -11,8 +14,8 @@
 #include "ui/gamegraphicsview.h"
 #include "camera.h"
 #include "game.h"
-#include "glext.h"
 #include "savegames.h"
+#include "gameview.h"
 
 // Used to display the memory usage in the title bar
 #if defined(Q_OS_WIN32)
@@ -21,10 +24,14 @@
 
 namespace EvilTemple {
 
-    inline void dumpgl(const QGLFormat &format)
-    {
-        qWarning("Depth buffer size: %d", format.depthBufferSize());
-    }
+    class MainWindowData {
+    public:
+        MainWindowData(const Game &_game) : game(_game), gameView(0), consoleWidget(0) {}
+
+        const Game &game;
+        GameView *gameView;
+        QDeclarativeItem *consoleWidget;
+    };
 
     MainWindow *currentMainWindow;
 
@@ -39,28 +46,28 @@ namespace EvilTemple {
 
     MainWindow::MainWindow(const Game &game, QWidget *parent)
         : QMainWindow(parent),
-        game(game),
-        scene(new GameGraphicsScene(game, this)),
-        // view(new GameGraphicsView(game, this))
-        view(new QDeclarativeView(this))
+        d_ptr(new MainWindowData(game))
     {
-        setCentralWidget(view);
-
+        // Set up the OpenGL format for our view
         QGLFormat format(QGL::DoubleBuffer|QGL::DepthBuffer|QGL::DirectRendering);
         format.setDepthBufferSize(24);
+        format.setSampleBuffers(true);
+        format.setSamples(4);
 
-        QGLWidget *viewport = new QGLWidget(format);
-        viewport->setMouseTracking(true); // This is important for hover events
+        QGLWidget *glViewport = new QGLWidget(format, this);
+        glViewport->makeCurrent();
 
-        view->setViewport(viewport);
-        view->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-        view->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-        view->setResizeMode(QDeclarativeView::SizeRootObjectToView);
-        connect(view, SIGNAL(statusChanged(QDeclarativeView::Status)),
-                SLOT(viewStatusChanged(QDeclarativeView::Status)));
-        //view->setScene(scene);
-        QUrl baseUrl = QUrl::fromLocalFile(QDir::currentPath() + QDir::separator() + "data" + QDir::separator());
-        view->engine()->setBaseUrl(baseUrl);
+        if (glewInit() != GLEW_OK) {
+            qWarning("GLEWinit failed.");
+        }
+
+        while (glGetError() != GL_NO_ERROR) {}
+
+        // Create the actual OpenGL widget
+        d_ptr->gameView = new GameView();
+        d_ptr->gameView->setViewport(glViewport);
+        d_ptr->gameView->setMouseTracking(true);
+        setCentralWidget(d_ptr->gameView);
 
         connect(game.camera(), SIGNAL(positionChanged()), SLOT(updateTitle()));
 
@@ -71,22 +78,20 @@ namespace EvilTemple {
         timer->start();
 
         // Create the console
-        QDeclarativeComponent *component = new QDeclarativeComponent(view->engine(), this);
+        QDeclarativeComponent *component = new QDeclarativeComponent(d_ptr->gameView->uiEngine(), this);
         component->loadUrl(QUrl("interface/Console.qml"));
-        consoleWidget = qobject_cast<QDeclarativeItem*>(component->create());
-        if (!consoleWidget) {
+        d_ptr->consoleWidget = qobject_cast<QDeclarativeItem*>(component->create());
+        if (!d_ptr->consoleWidget) {
             qWarning("Console widget doesn't inherit from QDeclarativeItem.");
         } else {
-            connect(this, SIGNAL(consoleToggled()), consoleWidget, SLOT(toggle()));
+            connect(this, SIGNAL(consoleToggled()), d_ptr->consoleWidget, SLOT(toggle()));
         }
 
-        connect(this, SIGNAL(logMessage(QVariant,QVariant)), consoleWidget, SLOT(addMessage(QVariant,QVariant)));
+        connect(this, SIGNAL(logMessage(QVariant,QVariant)), d_ptr->consoleWidget, SLOT(addMessage(QVariant,QVariant)));
         currentMainWindow = this;
         qInstallMsgHandler(consoleMessageHandler);
 
-        dumpgl(viewport->format());
-
-        view->rootContext()->setContextProperty("savegames", new SaveGames("C:/", this));
+        // d_ptr->guiView->rootContext()->setContextProperty("savegames", new SaveGames("C:/", this));
     }
 
     MainWindow::~MainWindow()
@@ -95,14 +100,13 @@ namespace EvilTemple {
         qInstallMsgHandler(NULL);
     }
 
-
     void MainWindow::viewStatusChanged(QDeclarativeView::Status status)
     {
-        if (status == QDeclarativeView::Error) {
-            foreach (QDeclarativeError error, view->errors()) {
+        /*if (status == QDeclarativeView::Error) {
+            foreach (QDeclarativeError error, d_ptr->guiView->errors()) {
                 qWarning("QML Error: %s", qPrintable(error.description()));
             }
-        }
+        }*/
     }
 
     void MainWindow::consoleMessage(QtMsgType type, const char *message)
@@ -130,11 +134,10 @@ namespace EvilTemple {
 
     void MainWindow::updateTitle()
     {
-        QVector2D centeredOn = game.camera()->centeredOn();
-        QString windowTitle = QString("EvilTemple (Pos: %1,%2 | Objects: %3) %4 fps").arg((int)centeredOn.x())
-                               .arg((int)centeredOn.y())
-                               .arg(scene->objectsDrawn())
-                               .arg((int)scene->fps());
+        QPoint centeredOn = d_ptr->gameView->screenCenter();
+
+        QString windowTitle = QString("EvilTemple (Pos: %1,%2)").arg((int)centeredOn.x())
+                               .arg((int)centeredOn.y());
 
 #if defined(Q_OS_WIN32)
         // Open a handle to the current process
@@ -194,15 +197,16 @@ namespace EvilTemple {
             show();
         }
 
-        view->setSource(QUrl("interface/Startup.qml"));
+        d_ptr->gameView->showView("interface/Startup.qml");
+        //d_ptr->guiView->setSource(QUrl("interface/Startup.qml"));
 
         // TODO: Wait for the loading state here
 
         // Is it safe to assume that root object is a declarative item?
-        QDeclarativeItem *root = qobject_cast<QDeclarativeItem*>(view->rootObject());
-        if (root) {
-            consoleWidget->setParentItem(root);
-        }
+        //QDeclarativeItem *root = qobject_cast<QDeclarativeItem*>(d_ptr->guiView->rootObject());
+        //if (root) {
+        //    d_ptr->consoleWidget->setParentItem(root);
+        //}
     }
 
     void MainWindow::keyPressEvent(QKeyEvent *e) {
@@ -219,5 +223,6 @@ namespace EvilTemple {
             emit consoleToggled();
         }
     }
+
 
 }

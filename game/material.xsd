@@ -1,0 +1,134 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xs:schema id="material"
+    targetNamespace="http://hartte.de/eviltemple/material.xsd"
+    elementFormDefault="qualified"
+    xmlns="http://hartte.de/eviltemple/material.xsd"
+    xmlns:mstns="http://hartte.de/eviltemple/material.xsd"
+    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+>
+
+  <xs:element name="material">    
+    <xs:complexType>      
+      <xs:sequence>
+        <xs:element name="pass" minOccurs="1" maxOccurs="unbounded" type="passType" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="passType">
+    <xs:sequence>
+      <xs:element name="shader" type="shaderType" minOccurs="1" maxOccurs="1" />
+      <xs:element name="textureSampler" type="textureSamplerType" minOccurs="0" maxOccurs="8" />
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="blend" type="xs:boolean" default="true" />
+        <xs:element name="blendFunc">
+          <xs:complexType>
+            <xs:attribute name="src" type="srcBlendFactorType" use="required" />
+            <xs:attribute name="dest" type="destBlendFactorType" use="required" />
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="cullFace" type="xs:string" />
+        <xs:element name="depthWrite" type="xs:boolean" default="true" />
+      </xs:choice>
+    </xs:sequence>    
+  </xs:complexType>
+
+  <xs:simpleType name="srcBlendFactorType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="zero" />
+      <xs:enumeration value="one" />
+      <xs:enumeration value="srcColor" />
+      <xs:enumeration value="oneMinusSrcColor" />
+      <xs:enumeration value="dstColor" />
+      <xs:enumeration value="oneMinusDstColor" />
+      <xs:enumeration value="srcAlpha" />
+      <xs:enumeration value="oneMinusSrcAlpha" />
+      <xs:enumeration value="dstAlpha" />
+      <xs:enumeration value="oneMinusDstAlpha" />
+      <xs:enumeration value="constantColor" />
+      <xs:enumeration value="oneMinusConstantColor" />
+      <xs:enumeration value="constantAlpha" />
+      <xs:enumeration value="oneMinusConstantAlpha" />
+      <xs:enumeration value="srcAlphaSaturate" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="destBlendFactorType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="zero" />
+      <xs:enumeration value="one" />
+      <xs:enumeration value="srcColor" />
+      <xs:enumeration value="oneMinusSrcColor" />
+      <xs:enumeration value="dstColor" />
+      <xs:enumeration value="oneMinusDstColor" />
+      <xs:enumeration value="srcAlpha" />
+      <xs:enumeration value="oneMinusSrcAlpha" />
+      <xs:enumeration value="dstAlpha" />
+      <xs:enumeration value="oneMinusDstAlpha" />
+      <xs:enumeration value="constantColor" />
+      <xs:enumeration value="oneMinusConstantColor" />
+      <xs:enumeration value="constantAlpha" />
+      <xs:enumeration value="oneMinusConstantAlpha" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="shaderType">
+    <xs:sequence>
+      <xs:element name="vertexShader" type="subShaderType" minOccurs="1" maxOccurs="1" />
+      <xs:element name="fragmentShader" type="subShaderType" minOccurs="1" maxOccurs="1" />
+      <xs:element name="attribute" type="attributeType" minOccurs="0" maxOccurs="unbounded" />
+      <xs:element name="uniform" type="uniformType" minOccurs="0" maxOccurs="unbounded" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="textureSamplerType">
+    <xs:attribute name="texture" type="xs:string" use="required" />
+  </xs:complexType>
+
+  <xs:complexType name="subShaderType">
+    <xs:sequence>
+      <xs:element name="include" type="includeType" minOccurs="0" maxOccurs="unbounded" />
+      <xs:element name="code" type="xs:string" minOccurs="1" maxOccurs="1" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="attributeType">
+    <xs:attribute name="name" use="required" type="xs:string" />
+    <xs:attribute name="buffer" use="required" type="xs:string" />
+    <xs:attribute name="components" use="optional" default="4">
+      <xs:simpleType>
+        <xs:restriction base="xs:int">
+          <xs:minInclusive value="1" />
+          <xs:maxInclusive value="4" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="type" default="float" use="optional">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="byte" />
+          <xs:enumeration value="unsigned_byte" />
+          <xs:enumeration value="short" />
+          <xs:enumeration value="unsigned_short" />
+          <xs:enumeration value="integer" />
+          <xs:enumeration value="unsigned_integer" />
+          <xs:enumeration value="float" />
+          <xs:enumeration value="double" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="normalized" type="xs:boolean" default="false" use="optional" />
+    <xs:attribute name="stride" type="xs:int" default="0" use="optional" />
+    <xs:attribute name="offset" type="xs:int" default="0" use="optional" />
+  </xs:complexType>
+
+  <xs:complexType name="uniformType">
+    <xs:attribute name="name" type="xs:string" use="required" />
+    <xs:attribute name="semantic" type="xs:string" use="required" />
+  </xs:complexType>
+
+  <xs:complexType name="includeType">
+    <xs:attribute name="file" use="required" />
+  </xs:complexType>
+
+</xs:schema>

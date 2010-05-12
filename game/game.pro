@@ -11,7 +11,7 @@ TEMPLATE = lib
 
 TARGET = game
 
-TEMPLE_LIBS += qt3d minizip model game-math
+TEMPLE_LIBS += qt3d minizip model glew
 include(../3rdparty/game-math/game-math.pri)
 
 DEFINES += GAME_LIBRARY
@@ -22,11 +22,16 @@ SOURCES += \
     game.cpp \
     ui/gamegraphicsview.cpp \
     camera.cpp \
-    ui/consolewidget.cpp \
     scriptengine.cpp \
     datafileengine.cpp \
     material.cpp \
-    renderstates.cpp
+    renderstates.cpp \
+    modelfile.cpp \
+    texture.cpp \
+    materialstate.cpp \
+    glslprogram.cpp \
+    gameview.cpp \
+    backgroundmap.cpp
 HEADERS += \
     ui/mainwindow.h \
     ui/gamegraphicsscene.h \
@@ -36,13 +41,20 @@ HEADERS += \
     ui/gamegraphicsview.h \
     camera.h \
     util.h \
-    ui/consolewidget.h \
     scriptengine.h \
     datafileengine.h \
     gameglobal.h \
     material.h \
-    renderstates.h
-OTHER_FILES +=
+    renderstates.h \
+    modelfile.h \
+    texturesource.h \
+    texture.h \
+    materialstate.h \
+    glslprogram.h \
+    gameview.h \
+    backgroundmap.h
+OTHER_FILES += material.xsd \
+    map_material.xml
 
 INCLUDEPATH += .
 
@@ -54,3 +66,6 @@ else:SOURCES += io/basepathfinder.cpp
 win32:LIBS += -ladvapi32 -lpsapi
 
 include(../base.pri)
+
+RESOURCES += \
+    resources.qrc
