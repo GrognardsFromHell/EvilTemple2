@@ -3,6 +3,8 @@
   This is the precompiled header.
  */
 
+#include <GL/glew.h>
+
 // Target windows xp sp1
 #define WINVER 0x0502
 

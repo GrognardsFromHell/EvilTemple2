@@ -1,10 +1,11 @@
 
+#include <GL/glew.h>
+
 #include <QTime>
 #include <QMatrix4x4>
 #include <QColor>
 
 #include <QtOpenGL>
-#include "glext.h"
 
 #include "materials.h"
 #include "material.h"

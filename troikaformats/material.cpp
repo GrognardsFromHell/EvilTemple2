@@ -1,6 +1,8 @@
+
+#include <GL/glew.h>
+
 #include "material.h"
 #include "virtualfilesystem.h"
-#include "glext.h"
 #include "constants.h"
 #include "util.h"
 

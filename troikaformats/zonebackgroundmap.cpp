@@ -1,5 +1,7 @@
+
+#include <GL/glew.h>
+
 #include <QtOpenGL>
-#include "glext.h"
 #include <QPainter>
 
 #include "virtualfilesystem.h"

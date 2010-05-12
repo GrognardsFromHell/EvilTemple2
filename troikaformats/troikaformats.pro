@@ -19,7 +19,6 @@ HEADERS += dagreader.h \
     material.h \
     modelsource.h \
     skeleton.h \
-    glext.h \
     prototypes.h \
     util.h \
     constants.h \
@@ -46,7 +45,7 @@ SOURCES += dagreader.cpp \
     zonetemplate.cpp \
     zonetemplates.cpp
 
-TEMPLE_LIBS += qt3d
+TEMPLE_LIBS += qt3d glew
 
 PRECOMPILED_HEADER = stable.h
 
