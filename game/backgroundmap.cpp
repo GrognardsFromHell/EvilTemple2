@@ -17,13 +17,19 @@ inline uint qHash(const QPoint &key)
 
 namespace EvilTemple {
 
+/*
+    LEGACY CENTER OF MAP: 19.9999352f, -13454.0
+    LEGACY ORIGIN OF MAP: -8428,-4366
+    LEGACY MAP WIDTH: 66 tiles
+    LEGACY MAP HEIGHT: 71 tiles
+*/
+
 class BackgroundMapData
 {
 public:
     BackgroundMapData(const RenderStates &states) : renderStates(states), positionBuffer(QGLBuffer::VertexBuffer),
-        texCoordBuffer(QGLBuffer::VertexBuffer), indexBuffer(QGLBuffer::IndexBuffer)
+        texCoordBuffer(QGLBuffer::VertexBuffer), indexBuffer(QGLBuffer::IndexBuffer), mapOrigin(-8428,-4366)
     {
-
         QFile materialFile(":/material/map_material.xml");
 
         if (!materialFile.open(QIODevice::ReadOnly)) {
@@ -53,10 +59,10 @@ public:
         }
 
         Vector4 positions[4];
-        positions[0] = Vector4(0, -256, -1, 1);
-        positions[1] = Vector4(256, -256, -1, 1);
-        positions[2] = Vector4(0, 0, -1, 1);
-        positions[3] = Vector4(256, 0, -1, 1);
+        positions[0] = Vector4(mapOrigin.x(), mapOrigin.y() -256, -1, 1);
+        positions[1] = Vector4(mapOrigin.x() + 256, mapOrigin.y() -256, -1, 1);
+        positions[2] = Vector4(mapOrigin.x(), mapOrigin.y(), -1, 1);
+        positions[3] = Vector4(mapOrigin.x() + 256, mapOrigin.y(), -1, 1);
         positionBuffer.allocate(positions, sizeof(positions));
         positionBuffer.release();
 
@@ -177,6 +183,8 @@ public:
     QGLBuffer positionBuffer;
     QGLBuffer texCoordBuffer;
     QGLBuffer indexBuffer;
+
+    QPointF mapOrigin;
 };
 
 BackgroundMap::BackgroundMap(const RenderStates &states) : d(new BackgroundMapData(states))
@@ -261,11 +269,16 @@ void BackgroundMap::render()
          */
         const Box2d &screenViewport = d->renderStates.screenViewport();
 
+        int left = screenViewport.left() - d->mapOrigin.x();
+        int top = screenViewport.top() + d->mapOrigin.y();
+        int right = screenViewport.right() - d->mapOrigin.x();
+        int bottom = screenViewport.bottom() + d->mapOrigin.y();
+
         // Negative map tile coordinates are not considered
-        int firstVisibleX = qMax<int>(0, (int)screenViewport.left() / 256);
-        int firstVisibleY = qMax<int>(0, (int)screenViewport.top() / 256);
-        int lastVisibleX = qMax<int>(0, (int)screenViewport.right() / 256);
-        int lastVisibleY = qMax<int>(0, (int)screenViewport.bottom() / 256);
+        int firstVisibleX = qMax<int>(0, left / 256);
+        int firstVisibleY = qMax<int>(0, top / 256);
+        int lastVisibleX = qMax<int>(0, right / 256);
+        int lastVisibleY = qMax<int>(0, bottom / 256);
 
         for (int x = firstVisibleX; x <= lastVisibleX; ++x) {
             for (int y = firstVisibleY; y <= lastVisibleY; ++y) {
