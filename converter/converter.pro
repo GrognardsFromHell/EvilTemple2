@@ -7,7 +7,7 @@ TARGET = converter
 
 QT += xml opengl xmlpatterns
 
-TEMPLE_LIBS += troikaformats qt3d minizip
+TEMPLE_LIBS += troikaformats qt3d minizip jpeg
 
 SOURCES += converter.cpp \
     collada.cpp \
@@ -28,7 +28,6 @@ HEADERS += \
     mapconverter.h
 
 include(../base.pri)
-include(../3rdparty/jpeg-8a/jpeg-8a.pri)
 
 RESOURCES += \
     resources.qrc

@@ -2,6 +2,9 @@
 #include <QtOpenGL/QGLContext>
 
 #include "texture.h"
+#include "turbojpeg.h"
+
+static tjhandle turboJpeg; // Clean up this handle
 
 namespace EvilTemple {
 
@@ -151,6 +154,48 @@ bool Texture::loadTga(const QByteArray &tgaImage)
     glTexImage2D(GL_TEXTURE_2D, 0, type, w, h, 0, type, GL_UNSIGNED_BYTE, data);
     glBindTexture(GL_TEXTURE_2D, 0);*/
     return false;
+}
+
+bool Texture::loadJpeg(const QByteArray &jpegImage)
+{
+    if (!turboJpeg) {
+        turboJpeg = tjInitDecompress();
+    }
+
+    int width, height;
+
+    if (tjDecompressHeader(turboJpeg, (uchar*)jpegImage.data(), jpegImage.size(), &width, &height)) {
+        return false;
+    }
+
+    Q_ASSERT(isPowerOfTwo(width));
+    Q_ASSERT(isPowerOfTwo(height));
+
+    QByteArray decompressedImage(width * height * 3, Qt::Uninitialized);
+
+    if (tjDecompress(turboJpeg, (uchar*)jpegImage.data(), jpegImage.size(), (uchar*)decompressedImage.data(), width, width * 3, height, 3, TJ_BOTTOMUP))
+    {
+        return false;
+    }
+
+    if (isValid()) {
+            glDeleteTextures(1, &mHandle);
+            mValid = false;
+    }
+
+    glGenTextures(1, &mHandle);
+    mValid = true;
+
+    glBindTexture(GL_TEXTURE_2D, mHandle);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, mMinFilter);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, mMagFilter);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, mWrapModeS);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, mWrapModeT);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, decompressedImage.data());
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    return true;
+
 }
 
 void Texture::release()

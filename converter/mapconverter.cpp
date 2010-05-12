@@ -3,7 +3,9 @@
 
 #include "mapconverter.h"
 #include "zonebackgroundmap.h"
-#include "jpeglib.h"
+#include "turbojpeg.h"
+
+static tjhandle jpegHandle = 0;
 
 template <int T> bool checkBlack(unsigned char *pixels, int width, int height) {
     int totalPixels = width * height;
@@ -27,49 +29,34 @@ class MapConverterData
 {
 public:
     MapConverterData(VirtualFileSystem *vfs, ZipWriter *zip) : mVfs(vfs), mZip(zip)
-    {
-        cinfo.err = jpeg_std_error(&jerr);
-        jpeg_create_decompress(&cinfo);
+    {        
     }
 
     ~MapConverterData()
     {
-        jpeg_destroy_decompress(&cinfo);
     }
 
-    struct jpeg_decompress_struct cinfo;
-    struct jpeg_error_mgr jerr;
-
     void decompressJpeg(const QByteArray &input, QByteArray &output, int &width, int &height, int &components) {
-        jpeg_mem_src(&cinfo, (unsigned char*)input.data(), input.size());
-
-        jpeg_read_header(&cinfo, TRUE);
-
-        jpeg_start_decompress(&cinfo);
-
-        int scanlineSize = cinfo.output_components * cinfo.output_width;
-        output.resize(scanlineSize * cinfo.output_height);
-
-        uchar** scanlines = new uchar*[cinfo.output_height];
-        uchar *buffer = (uchar*)output.data();
-        for (int i = 0; i < cinfo.output_height; ++i) {
-            scanlines[i] = buffer;
-            buffer += scanlineSize;
+        if (!jpegHandle) {
+            jpegHandle = tjInitDecompress();
         }
 
-        uchar** currentScanline = scanlines;
-        while (cinfo.output_scanline < cinfo.output_height) {
-            int read = jpeg_read_scanlines(&cinfo, currentScanline, cinfo.output_height - cinfo.output_scanline);
-            currentScanline += read;
+        uchar *srcBuffer = (uchar*)input.data();
+
+        if (tjDecompressHeader(jpegHandle, srcBuffer, input.size(), &width, &height)) {
+            qWarning("Unable to read JPEG header.");
+            return;
         }
 
-        delete [] scanlines;
+        components = 3;
+        int pitch = width * 3;
+        output.resize(height * pitch);
+        int flags = 0;
 
-        width = cinfo.output_width;
-        height = cinfo.output_height;
-        components = cinfo.output_components;
-
-        jpeg_finish_decompress(&cinfo);
+        if (tjDecompress(jpegHandle, srcBuffer, input.size(), (uchar*)output.data(), width, pitch, height, 3, flags)) {
+            qWarning("Unable to decompress JPEG image.");
+            return;
+        }
     }
 
     /**

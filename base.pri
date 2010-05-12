@@ -31,6 +31,12 @@ contains(TEMPLE_LIBS,game) {
     }
 }
 
+# It's possible we should instead use the system libjpeg here on unix
+contains(TEMPLE_LIBS,jpeg) {
+    INCLUDEPATH += $${PWD}/3rdparty/libjpeg-turbo/include
+    LIBS += $${PWD}/3rdparty/libjpeg-turbo/lib/turbojpeg.lib
+}
+
 contains(TEMPLE_LIBS,glew) {
     # GLEW is not a system library on windows,
     # so use the packaged one

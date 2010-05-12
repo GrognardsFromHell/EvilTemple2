@@ -33,6 +33,11 @@ public:
         bool loadTga(const QByteArray &tgaImage);
 
         /**
+          An optimized loading method for JPEG images.
+          */
+        bool loadJpeg(const QByteArray &jpegImage);
+
+        /**
           Releases resources held by this texture.
           */
         void release();

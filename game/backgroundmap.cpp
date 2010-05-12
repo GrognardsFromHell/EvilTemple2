@@ -125,7 +125,7 @@ public:
             }
 
             if (qMax<int>(xDist, yDist) > 3) {
-                qDebug("Removing %d,%d from texture cache.", it.key().x(), it.key().y());
+                //qDebug("Removing %d,%d from texture cache.", it.key().x(), it.key().y());
                 it = textures.erase(it);
             } else {
                 ++it;
@@ -156,10 +156,7 @@ public:
         textures.insert(point, result);
 
         if (backgroundTexture.open(QIODevice::ReadOnly)) {
-            QImage image;
-            image.loadFromData(backgroundTexture.readAll(), "JPG");
-
-            if (!result->load(image)) {
+            if (!result->loadJpeg(backgroundTexture.readAll())) {
                 qWarning("Unable to load background image %s.", qPrintable(filename));
             }
         } else {
