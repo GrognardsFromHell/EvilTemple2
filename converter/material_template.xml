@@ -88,6 +88,7 @@ void main(void)
     <depthWrite>{{DEPTH_WRITE}}</depthWrite>
   </pass>
 
+{{SHADOW_ON}}
 <!--
     Shadow pass
 -->
@@ -138,5 +139,6 @@ void main(void)
 
     <depthWrite>false</depthWrite>
   </pass>
+{{/SHADOW_ON}}
 
 </material>

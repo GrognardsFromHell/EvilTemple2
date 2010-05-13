@@ -13,6 +13,7 @@ class MaterialConverterData
 private:
     VirtualFileSystem *mVfs;
     QString mMaterialTemplate;
+    QStringList shadowCasterList;
 
 public:
     MaterialConverterData(VirtualFileSystem *vfs) : mVfs(vfs) {
@@ -23,9 +24,36 @@ public:
 
         mMaterialTemplate = QString::fromUtf8(materialTemplateFile.readAll().data());
         materialTemplateFile.close();
+
+        QFile shadowCaster(":/shadow_caster.txt");
+
+        if (!shadowCaster.open(QIODevice::ReadOnly|QIODevice::Text)) {
+            qFatal("Unable to load shadow caster material list.");
+        }
+
+        QTextStream shadowCasterStream(&shadowCaster);
+
+        while (!shadowCasterStream.atEnd()) {
+            QString line = shadowCasterStream.readLine().trimmed();
+            if (line.isEmpty())
+                continue;
+            shadowCasterList.append(QDir::toNativeSeparators(line.toLower()));
+        }
     }
 
-    bool convert(const Material *material) {
+    bool isShadowCaster(const QString &filename)
+    {
+        QString comparison = QDir::toNativeSeparators(filename.toLower());
+        foreach (const QString &shadowCaster, shadowCasterList) {
+            if (comparison.startsWith(shadowCaster)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool convert(const Material *material)
+    {
         Q_ASSERT(!mMaterialTemplate.isNull());
 
         QString materialFile = mMaterialTemplate;
@@ -34,6 +62,15 @@ public:
         QString samplers = "";
         QString pixelTerm = "vec4 texel;\n";
         QString samplerUniforms = "";
+
+        if (isShadowCaster(material->name())) {
+            materialFile.replace("{{SHADOW_ON}}", "");
+            materialFile.replace("{{/SHADOW_ON}}", "");
+        } else {
+            QRegExp lightingBlocks("\\{\\{SHADOW_ON\\}\\}.+\\{\\{\\/SHADOW_ON\\}\\}");
+            lightingBlocks.setMinimal(true);
+            materialFile.replace(lightingBlocks, "");
+        }
 
         // TODO: Only perform if lighting is enabled
         if (material->isLightingDisabled()) {

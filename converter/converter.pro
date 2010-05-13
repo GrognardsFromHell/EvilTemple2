@@ -33,4 +33,5 @@ RESOURCES += \
     resources.qrc
 
 OTHER_FILES += exclusions.txt \
-    material_template.xml
+    material_template.xml \
+    shadow_caster.txt
