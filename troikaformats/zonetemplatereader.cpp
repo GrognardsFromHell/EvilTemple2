@@ -26,6 +26,13 @@ namespace Troika
         zoneTemplate(_zoneTemplate),
         mapDirectory(_mapDirectory)
     {
+
+        meshMapping = MessageFile::parse(vfs->openFile("art/meshes/meshes.mes"));
+
+        foreach (uint key, meshMapping.keys()) {
+            meshMapping[key] = "art/meshes/" + meshMapping[key];
+        }
+
     }
 
     bool ZoneTemplateReader::read()
@@ -166,7 +173,7 @@ namespace Troika
             rotation = rad2deg(rotation + LegacyBaseRotation);
 
             // Create the geometry mesh object and add it to the zone template.
-            GeometryObject *meshObject = new GeometryObject(QVector3D(x, y, z) * PixelPerWorldTile,
+            GeometryObject *meshObject = new GeometryObject(QVector3D(x, y, z),
                                                             QQuaternion::fromAxisAndAngle(0, 1, 0, rotation),
                                                             geometryMeshFiles[fileIndex].modelFilename);
 
@@ -286,6 +293,7 @@ namespace Troika
 
             // TODO: Zone templates need to store not only the runtime version, but rather a prototype reference
             // zoneTemplate->addStaticGeometry(reader.createMeshObject(models));
+            zoneTemplate->addStaticGeometry(reader.createObject(meshMapping));
 
             stream >> header;
         }

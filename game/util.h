@@ -39,6 +39,14 @@ namespace EvilTemple
         return rad * 180.f / Pi;
     }
 
+    /**
+      Converts radians to degree.
+      */
+    inline float deg2rad(float deg)
+    {
+        return deg / 180.f * Pi;
+    }
+
     inline static void DrawVertex(const QVector3D &v) {
         glVertex3f(v.x(), v.y(), v.z());
     }

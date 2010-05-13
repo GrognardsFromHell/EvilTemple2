@@ -4,6 +4,8 @@
 #include "troikaformatsglobal.h"
 
 #include <QDataStream>
+#include <QHash>
+#include <QString>
 
 namespace Troika
 {
@@ -14,6 +16,7 @@ namespace Troika
     class VirtualFileSystem;
     class Materials;
     class Models;
+    class GeometryObject;
 
     const int ObjectFileVersion = 0x77;
 
@@ -25,6 +28,8 @@ namespace Troika
 
         bool read(bool skipHeader = false);
         const QString &errorMessage() const;
+
+        GeometryObject *createObject(QHash<uint,QString> meshMapping);
     private:
         QScopedPointer<ObjectFileReaderData> d_ptr;
 

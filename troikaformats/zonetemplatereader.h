@@ -8,6 +8,7 @@
 #include <QDataStream>
 #include <QStringList>
 #include <QVector>
+#include <QHash>
 
 namespace Troika
 {
@@ -94,6 +95,7 @@ namespace Troika
         QStringList clippingMeshFiles;
         QList<Light> lights;
         QList<ParticleSystem> particleSystems;
+        QHash<uint,QString> meshMapping;
     };
 
 }

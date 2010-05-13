@@ -31,6 +31,12 @@
 #include "interfaceconverter.h"
 #include "modelwriter.h"
 
+/**
+  The original game applies an additional base rotation to everything in order to align it
+  with the isometric grid. This is the radians value of that rotation.
+  */
+const float LegacyBaseRotation = 0.77539754f;
+
 struct MeshReference {
     MeshReference() : meshId(0), source(0) {}
 
@@ -105,7 +111,6 @@ public:
         foreach (quint32 mapId, zoneTemplates->mapIds()) {
             QScopedPointer<Troika::ZoneTemplate> zoneTemplate(zoneTemplates->load(mapId));
 
-
             converter.convert(zoneTemplate.data());
 
             if (zoneTemplate) {
@@ -118,11 +123,23 @@ public:
                     qWarning("Zone has no daylight background: %d.", mapId);
                 }
 
+                QByteArray objectPosData;
+                QDataStream objectPosStream(&objectPosData, QIODevice::WriteOnly);
+                objectPosStream.setByteOrder(QDataStream::LittleEndian);
+                objectPosStream.setFloatingPointPrecision(QDataStream::SinglePrecision);
+
                 // Add all static geometry files to the list of referenced models
                 foreach (Troika::GeometryObject *object, zoneTemplate->staticGeometry()) {
+                    QVector3D objectPos = object->position();
+                    objectPosStream << objectPos.x() << objectPos.y() << objectPos.z() << getNewModelFilename(object->mesh())
+                            << object->rotation().x() << object->rotation().y() << object->rotation().z()
+                            << object->rotation().scalar();
+
                     MeshReference &reference = meshReferences[QDir::toNativeSeparators(object->mesh()).toLower()];
                     reference.source |= MeshReference::StaticGeometry;
                 }
+
+                writer.addFile(zoneTemplate->directory() + "staticGeometry.dat", objectPosData, 9);
             } else {
                 qWarning("Unable to load zone template for map id %d.", mapId);
             }
@@ -134,7 +151,7 @@ public:
     }
 
     QString getNewModelFilename(const QString &modelFilename) {
-        QString newFilename = modelFilename;
+        QString newFilename = QDir::toNativeSeparators(modelFilename);
         if (newFilename.startsWith(QString("art") + QDir::separator(), Qt::CaseInsensitive)) {
             newFilename = newFilename.right(newFilename.length() - 4);
         }

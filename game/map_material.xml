@@ -58,6 +58,7 @@ void main() {
       <uniform name="texSampler" semantic="Texture0" />
     </shader>
 
+    <depthWrite>false</depthWrite>
   </pass>
 
 </material>

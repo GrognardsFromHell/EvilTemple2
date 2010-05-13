@@ -10,6 +10,7 @@
 #include "messagefile.h"
 #include "prototypes.h"
 #include "util.h"
+#include "zonetemplate.h"
 
 namespace Troika
 {
@@ -681,7 +682,7 @@ namespace Troika
             return true;
         }
 
-        GeometryMeshObject *createMeshObject(Models *models)
+        GeometryObject *createMeshObject(QHash<uint,QString> meshMapping)
         {
             /*GeometryMeshObject *result = new GeometryMeshObject();
 
@@ -690,7 +691,12 @@ namespace Troika
             result->setScale(QVector3D(scale, scale, scale));
             result->setModelSource(new LegacyModelSource(models, prototype->modelId()));*/
 
-            return NULL;
+            GeometryObject *obj = new GeometryObject(position,
+                                                     QQuaternion::fromAxisAndAngle(0, 1, 0, rotation),
+                                                     QVector3D(scale, scale, scale),
+                                                     meshMapping[prototype->modelId()]);
+
+            return obj;
         }
     };
 
@@ -715,6 +721,11 @@ namespace Troika
             return false;
 
         return d_ptr->read();
+    }
+
+    GeometryObject *ObjectFileReader::createObject(QHash<uint,QString> meshMapping)
+    {
+        return d_ptr->createMeshObject(meshMapping);
     }
 
 }

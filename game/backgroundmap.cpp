@@ -225,6 +225,8 @@ void BackgroundMap::render()
 {
     MaterialState *material = &d->materialState;
 
+    glDepthMask(GL_FALSE);
+
     for (int i = 0; i < material->passCount; ++i) {
         MaterialPassState &pass = material->passes[i];
 
@@ -314,6 +316,8 @@ void BackgroundMap::render()
         // Clean the cache
         d->cleanCache(firstVisibleX, firstVisibleY, lastVisibleX, lastVisibleY);
     }
+
+    glDepthMask(GL_TRUE);
 
 }
 
