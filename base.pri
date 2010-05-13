@@ -43,6 +43,7 @@ contains(TEMPLE_LIBS,glew) {
     win32 {
         INCLUDEPATH += $${PWD}/3rdparty/glew-1.5.4/include
         LIBS += $${PWD}/3rdparty/glew-1.5.4/lib/glew32s.lib
+        LIBS += -lopengl32
         DEFINES += GLEW_STATIC
     } else {
         LIBS += -lGLEW
