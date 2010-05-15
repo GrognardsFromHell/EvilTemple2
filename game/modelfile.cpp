@@ -213,6 +213,7 @@ namespace EvilTemple {
                     }
 
                     Vector4 result(0, 0, 0, 0);
+                    Vector4 resultNormal(0, 0, 0, 0);
 
                     for (int k = 0; k < attachments[j].count(); ++k) {
                         float weight = attachments[j].weights()[k];
@@ -222,17 +223,23 @@ namespace EvilTemple {
                         transformedPos *= 1 / transformedPos.w();
 
                         result += weight * transformedPos;
+                        resultNormal += weight * (bone.defaultPoseTransform() * normals[j]);
                     }
 
                     result.data()[2] *= -1;
+                    resultNormal.data()[2] *= -1;
 
                     result.data()[3] = 1;
 
                     positions[j] = result;
+                    normals[j] = resultNormal;
                 }
 
                 glBindBufferARB(GL_ARRAY_BUFFER_ARB, positionBuffer);
                 glBufferDataARB(GL_ARRAY_BUFFER_ARB, sizeof(Vector4) * vertices, positions, GL_STATIC_DRAW_ARB);
+
+                glBindBufferARB(GL_ARRAY_BUFFER_ARB, normalBuffer);
+                glBufferDataARB(GL_ARRAY_BUFFER_ARB, sizeof(Vector4) * vertices, normals, GL_STATIC_DRAW_ARB);
 
             } else {
                 // This should never happen
@@ -365,20 +372,30 @@ namespace EvilTemple {
 
     void Model::drawNormals() const
     {
-	glLineWidth(2);
+        glLineWidth(1.5);
 	glEnable(GL_LINE_SMOOTH);
 	glColor3f(0, 0, 1);
 	glDisable(GL_LIGHTING);
 	glBegin(GL_LINES);
 
-	for (int i = 0; i < vertices; ++i) {
+        for (int i = 0; i < vertices; i += 2) {
             Vector4 &vertex = positions[i];
             Vector4 &normal = normals[i];
             glVertex3fv(vertex.data());
-            glVertex3fv((vertex + 5 * normal).data());
+            glVertex3fv((vertex + 15 * normal).data());
 	}
 
 	glEnd();
+
+        glPointSize(2);
+        glBegin(GL_POINTS);
+        glColor3f(1, 0, 0);
+        for (int i = 0; i < vertices; i += 2) {
+            Vector4 &vertex = positions[i];
+            glVertex3fv(vertex.data());
+        }
+        glEnd();
+
 	glEnable(GL_LIGHTING);
     }
 

@@ -9,7 +9,7 @@
 #version 120
 
 uniform mat4 worldViewProjectionMatrix;
-const vec4 invertedLightDirection = vec4(0, 0.89, 0.447, 0);
+const vec4 invertedLightDirection = vec4(0.447, 0.89, 0, 0);
 
 attribute vec4 vertexPosition;
 attribute vec2 vertexTexCoord;
@@ -26,7 +26,7 @@ varying vec2 texCoord;
 void main() {
 {{LIGHTING_ON}}
         light = worldViewMatrix * invertedLightDirection;
-        normal = worldViewMatrix * vertexNormal;
+        normal = normalize(worldViewMatrix * vertexNormal);
 {{/LIGHTING_ON}}
 
         gl_Position = worldViewProjectionMatrix * vertexPosition;
@@ -57,9 +57,9 @@ varying vec2 texCoord;
 void main(void)
 {
 {{LIGHTING_ON}}
-   float cosTheta = max(dot(normal,light), 0.0);
+   float cosTheta = abs(dot(normal,light));
    vec4 Idiff = materialDiffuse * diffuseLightColor * cosTheta + globalAmbient;
-   Idiff = clamp(Idiff, 0.99, 1.0);
+   Idiff = clamp(Idiff, 0.0, 1.0);
 {{/LIGHTING_ON}}
 
    {{PIXEL_TERM}}
@@ -101,7 +101,7 @@ void main(void)
 
 uniform mat4 viewProjectionMatrix;
 uniform mat4 worldMatrix;
-const vec4 invertedLightDirection = vec4(0, 0.89, 0.447, 0);
+const vec4 invertedLightDirection = vec4(0.447, 0.89, 0, 0);
 
 attribute vec4 vertexPosition;
 

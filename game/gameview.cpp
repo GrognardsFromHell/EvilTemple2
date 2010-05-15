@@ -362,7 +362,7 @@ namespace EvilTemple {
             glMatrixMode(GL_MODELVIEW);
             glLoadMatrixf(d->renderStates.viewMatrix().data());
             glMultMatrixf(positionMatrix.data());
-            DrawDebugCoordinateSystem();
+            //geometryMesh.model->drawNormals();
 
             positionMatrix.setToIdentity();
             d->renderStates.setWorldMatrix(positionMatrix);
