@@ -224,6 +224,8 @@ namespace EvilTemple {
                         result += weight * transformedPos;
                     }
 
+                    result.data()[2] *= -1;
+
                     result.data()[3] = 1;
 
                     positions[j] = result;
@@ -293,14 +295,14 @@ namespace EvilTemple {
 	glGenBuffersARB(1, &texcoordBuffer);
 
         for (int i = 0; i < vertices; ++i) {
-            positions[i].data()[2] *= -1;
+            //positions[i].data()[2] *= -1;
         }
 
 	glBindBufferARB(GL_ARRAY_BUFFER_ARB, positionBuffer);
 	glBufferDataARB(GL_ARRAY_BUFFER_ARB, sizeof(Vector4) * vertices, positions, GL_STATIC_DRAW_ARB);
 
 	for (int i = 0; i < vertices; ++i) {
-            normals[i].data()[2] *= -1;
+            //normals[i].data()[2] *= -1;
 	}
 
 	glBindBufferARB(GL_ARRAY_BUFFER_ARB, normalBuffer);
