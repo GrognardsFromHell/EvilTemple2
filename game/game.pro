@@ -31,7 +31,8 @@ SOURCES += \
     materialstate.cpp \
     glslprogram.cpp \
     gameview.cpp \
-    backgroundmap.cpp
+    backgroundmap.cpp \
+    tga.cpp
 HEADERS += \
     ui/mainwindow.h \
     ui/gamegraphicsscene.h \
@@ -52,7 +53,8 @@ HEADERS += \
     materialstate.h \
     glslprogram.h \
     gameview.h \
-    backgroundmap.h
+    backgroundmap.h \
+    tga.h
 OTHER_FILES += material.xsd \
     map_material.xml
 

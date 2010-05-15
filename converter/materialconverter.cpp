@@ -73,19 +73,7 @@ public:
             materialFile.replace(lightingBlocks, "");
         }
 
-        // TODO: Only perform if lighting is enabled
-        if (material->isLightingDisabled()) {
-            QRegExp lightingBlocks("\\{\\{LIGHTING_ON\\}\\}.+\\{\\{\\/LIGHTING_ON\\}\\}");
-            lightingBlocks.setMinimal(true);
-            materialFile.replace(lightingBlocks, "");
-
-            pixelTerm.append("vec4 diffuseColor = materialDiffuse;\n");
-        } else {
-            materialFile.replace("{{LIGHTING_ON}}", "");
-            materialFile.replace("{{/LIGHTING_ON}}", "");
-            pixelTerm.append("vec4 diffuseColor = Idiff;\n");
-        }
-        pixelTerm.append("gl_FragColor = diffuseColor;\n");
+        pixelTerm.append("gl_FragColor = materialDiffuse;\n");
 
         for (int i = 0; i < LegacyTextureStages; ++i) {
             const TextureStageInfo *textureStage = material->getTextureStage(i);
@@ -109,18 +97,29 @@ public:
                 pixelTerm.append("gl_FragColor = gl_FragColor * texel;\n");
                 break;
             case TextureStageInfo::Add:
-                pixelTerm.append("gl_FragColor = vec4(vec3(gl_FragColor + texel), gl_FragColor.a);\n");
+                pixelTerm.append("gl_FragColor = vec4(gl_FragColor.rgb + texel.rgb, gl_FragColor.a);\n");
                 break;
             case TextureStageInfo::TextureAlpha:
-                pixelTerm.append("gl_FragColor = vec4(mix(vec3(gl_FragColor), vec3(texel), texel.a), gl_FragColor.a);\n");
+                pixelTerm.append("gl_FragColor = vec4(mix(gl_FragColor.rgb, texel.rgb, texel.a), gl_FragColor.a);\n");
                 break;
             case TextureStageInfo::CurrentAlpha:
-                pixelTerm.append("gl_FragColor = vec4(mix(vec3(gl_FragColor), vec3(texel), gl_FragColor.a), diffuseColor.a);\n");
+                pixelTerm.append("gl_FragColor = vec4(mix(gl_FragColor.rgb, texel.rgb, gl_FragColor.a), materialDiffuse.a);\n");
                 break;
             case TextureStageInfo::CurrentAlphaAdd:
-                pixelTerm.append("gl_FragColor = vec4(vec3(gl_FragColor.r, gl_FragColor.g, gl_FragColor.b) + vec3(texel) * vec3(gl_FragColor.a, gl_FragColor.a, gl_FragColor.a), diffuseColor.a);\n");
+                pixelTerm.append("gl_FragColor.rgb += texel.rgb * gl_FragColor.a;\n");
+                pixelTerm.append("gl_FragColor.a = materialDiffuse.a;\n");
                 break;
             }
+        }
+
+        if (material->isLightingDisabled()) {
+            QRegExp lightingBlocks("\\{\\{LIGHTING_ON\\}\\}.+\\{\\{\\/LIGHTING_ON\\}\\}");
+            lightingBlocks.setMinimal(true);
+            materialFile.replace(lightingBlocks, "");
+        } else {
+            materialFile.replace("{{LIGHTING_ON}}", "");
+            materialFile.replace("{{/LIGHTING_ON}}", "");
+            pixelTerm.append("gl_FragColor = gl_FragColor * Idiff;\n");
         }
 
         QColor color = material->getColor();

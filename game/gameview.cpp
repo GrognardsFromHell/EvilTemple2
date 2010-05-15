@@ -87,7 +87,7 @@ namespace EvilTemple {
                     glVertexAttribPointer(attribute.location, attribute.binding.components(), attribute.binding.type(),
                                           attribute.binding.normalized(), attribute.binding.stride(), (GLvoid*)attribute.binding.offset());
                     HANDLE_GL_ERROR
-                        }
+                }
                 glBindBuffer(GL_ARRAY_BUFFER, 0); // Unbind any previously bound buffers
 
                 // Set render states
@@ -97,11 +97,11 @@ namespace EvilTemple {
 
                 // Draw the actual model
                 glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, faceGroup.buffer); HANDLE_GL_ERROR
-                        glDrawElements(GL_TRIANGLES, faceGroup.elementCount, GL_UNSIGNED_SHORT, 0); HANDLE_GL_ERROR
-                        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0); HANDLE_GL_ERROR
+                glDrawElements(GL_TRIANGLES, faceGroup.elementCount, GL_UNSIGNED_SHORT, 0); HANDLE_GL_ERROR
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0); HANDLE_GL_ERROR
 
-                        // Reset render states to default
-                        foreach (const SharedMaterialRenderState &state, pass.renderStates) {
+                // Reset render states to default
+                foreach (const SharedMaterialRenderState &state, pass.renderStates) {
                     state->disable();
                 }
 
@@ -114,7 +114,7 @@ namespace EvilTemple {
                 for (int j = 0; j < pass.attributes.size(); ++j) {
                     MaterialPassAttributeState &attribute = pass.attributes[j];
                     glDisableVertexAttribArray(attribute.location); HANDLE_GL_ERROR
-                        }
+                }
 
                 pass.program.unbind();
             }
@@ -336,25 +336,9 @@ namespace EvilTemple {
         d->rotationLabel->setText(QString("%1").arg(rotationVal));
 
         foreach (const GMF &geometryMesh, d->geometryMeshes) {
-            Quaternion q;
-            Matrix4 positionMatrix;
-
-            if (geometryMesh.staticObject && geometryMesh.customRotation) {
-                q = Quaternion::fromAxisAndAngle(0, 1, 0, deg2rad(rotationVal) + LegacyBaseRotation + geometryMesh.rotation.angle());
-
-                positionMatrix = Matrix4::transformation(geometryMesh.scale,
-                                                         q,
-                                                         geometryMesh.position);
-            } else {
-                //q = Quaternion::fromAxisAndAngle(0, 1, 0, geometryMesh.rotation.angle() );
-                q = Quaternion::fromAxisAndAngle(0, 1, 0, (LegacyBaseRotation + geometryMesh.rotation.angle()));
-
-
-                positionMatrix = Matrix4::transformation(geometryMesh.scale,
-                                                         q,
-                                                         geometryMesh.position);
-            }
-
+            Matrix4 positionMatrix = Matrix4::transformation(geometryMesh.scale,
+                                                             geometryMesh.rotation,
+                                                             geometryMesh.position);
             d->renderStates.setWorldMatrix(positionMatrix);
 
             Draw(geometryMesh.model.data());

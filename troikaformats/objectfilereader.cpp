@@ -696,7 +696,7 @@ namespace Troika
             result->setModelSource(new LegacyModelSource(models, prototype->modelId()));*/
 
             GeometryObject *obj = new GeometryObject(position,
-                                                     QQuaternion::fromAxisAndAngle(0, 1, 0, rad2deg(rotation)),
+                                                     QQuaternion::fromAxisAndAngle(0, 1, 0, rad2deg(rotation + LegacyBaseRotation)),
                                                      QVector3D(scale, scale, scale),
                                                      meshMapping[prototype->modelId()]);
 

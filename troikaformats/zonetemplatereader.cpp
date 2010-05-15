@@ -170,7 +170,7 @@ namespace Troika
             }
 
             // Convert radians to degrees
-            rotation = rad2deg(rotation);
+            rotation = rad2deg(rotation + LegacyBaseRotation);
 
             // Create the geometry mesh object and add it to the zone template.
             GeometryObject *meshObject = new GeometryObject(QVector3D(x, y, z),

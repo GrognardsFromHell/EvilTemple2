@@ -55,12 +55,8 @@ namespace EvilTemple {
                         QByteArray textureData = QByteArray::fromRawData((char*)mTextures[textureId],
                                                                          mTextureSizes[textureId]);
 
-                        // Try loading the TGA image
-                        QImage img;
-                        img.loadFromData(textureData, "TGA");
-
                         texture = SharedTexture(new Texture);
-                        texture->load(img);
+                        texture->loadTga(textureData);
 
                         GlobalTextureCache::instance().insert(mMd5Hashes[textureId], texture);
                     }
