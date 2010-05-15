@@ -4,12 +4,9 @@ TARGET = audioengine
 
 DEFINES += AUDIOENGINE_LIBRARY
 
-TEMPLE_LIBS += openal
+TEMPLE_LIBS += openal libavcodec
 
 QT += script
-
-win32:INCLUDEPATH += ../3rdparty/libavcodec/include
-LIBS += -L../3rdparty/libavcodec/lib -lavcodec -lavformat -lavutil
 
 PRECOMPILED_HEADER = stable.h
 

@@ -59,6 +59,15 @@ contains(TEMPLE_LIBS,troikaformats) {
     }
 }
 
+contains(TEMPLE_LIBS,libavcodec) {
+    win32:INCLUDEPATH += $${PWD}/3rdparty/libavcodec/include
+    win32:LIBS += -L$${PWD}/3rdparty/libavcodec/lib
+
+    win32-msvc2008:INCLUDEPATH += $${PWD}/3rdparty/libavcodec/msvc
+
+    LIBS += -lavcodec -lavformat -lavutil -lswscale
+}
+
 contains(TEMPLE_LIBS,minizip) {
     INCLUDEPATH += ../3rdparty/minizip
     CONFIG(debug, debug|release) {
