@@ -9,7 +9,10 @@ namespace Troika
     AnimationStream *Animation::openStream(const Skeleton *skeleton) const
     {
         int boneCount = skeleton->bones().size();
-        return new AnimationStream(_keyFramesData, _keyFramesDataStart, boneCount);
+        if (_frames == 0)
+            return 0;
+        else
+            return new AnimationStream(_keyFramesData, _keyFramesDataStart, boneCount);
     }
 
     class SkeletonData
@@ -307,10 +310,53 @@ namespace Troika
         while ((boneHeader & 1) == 1) {
             int boneId = boneHeader >> 4;
 
+            // Would be nice. But doesnt work. Q_ASSERT(boneId < _boneCount);
+
+            if (boneId < 0 || boneId >= _boneCount) {
+                qWarning("Animation stream tries to reference an invalid bone. Trying to recover.");
+
+                if ((boneHeader & 8) == 8) {
+                    qint16 nextFrame, x, y, z;
+                    stream >> nextFrame >> x >> y >> z;
+                }
+                if ((boneHeader & 4) == 4) {
+                    qint16 nextFrame, x, y, z, w;
+                    stream >> nextFrame >> x >> y >> z >> w;
+                }
+                if ((boneHeader & 2) == 2) {
+                    qint16 nextFrame, x, y, z;
+                    stream >> nextFrame >> x >> y >> z;
+                }
+
+                stream >> boneHeader;
+                continue;
+            }
+
             // Get a pointer to the bone state affected by this key frame chunk
             AnimationBoneState *state = _boneMap[boneId];
 
-            Q_ASSERT(state);
+            // Would've been too nice Q_ASSERT(state);
+
+            if (!state) {
+                qWarning("Found key-frame data in frame %d for bone %d, which isn't part of the initial key frame."
+                         " Trying to recover.", nextFrameId, boneId);
+
+                if ((boneHeader & 8) == 8) {
+                    qint16 nextFrame, x, y, z;
+                    stream >> nextFrame >> x >> y >> z;
+                }
+                if ((boneHeader & 4) == 4) {
+                    qint16 nextFrame, x, y, z, w;
+                    stream >> nextFrame >> x >> y >> z >> w;
+                }
+                if ((boneHeader & 2) == 2) {
+                    qint16 nextFrame, x, y, z;
+                    stream >> nextFrame >> x >> y >> z;
+                }
+
+                stream >> boneHeader;
+                continue;
+            }
 
             // Scale Delta Frame
             if ((boneHeader & 8) == 8) {

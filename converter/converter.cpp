@@ -124,22 +124,27 @@ public:
                 }
 
                 QByteArray objectPosData;
-                QDataStream objectPosStream(&objectPosData, QIODevice::WriteOnly);
-                objectPosStream.setByteOrder(QDataStream::LittleEndian);
-                objectPosStream.setFloatingPointPrecision(QDataStream::SinglePrecision);
+                QTextStream objectPosStream(&objectPosData, QIODevice::WriteOnly);
 
                 // Add all static geometry files to the list of referenced models
                 foreach (Troika::GeometryObject *object, zoneTemplate->staticGeometry()) {
                     QVector3D objectPos = object->position();
-                    objectPosStream << objectPos.x() << objectPos.y() << objectPos.z() << getNewModelFilename(object->mesh())
-                            << object->rotation().x() << object->rotation().y() << object->rotation().z()
-                            << object->rotation().scalar();
+                    const char SPACE = ' ';
+                    objectPosStream << objectPos.x() << SPACE << objectPos.y() << SPACE << objectPos.z() << SPACE
+                            << getNewModelFilename(object->mesh()) << SPACE
+                            << object->rotation().x() << SPACE << object->rotation().y() << SPACE << object->rotation().z() << SPACE
+                            << object->rotation().scalar() << SPACE
+                            << object->scale().x() << SPACE << object->scale().y() << SPACE << object->scale().z() << SPACE
+                            << object->staticObject << SPACE << object->rotationFromPrototype << SPACE << object->customRotation
+                            << endl;
 
                     MeshReference &reference = meshReferences[QDir::toNativeSeparators(object->mesh()).toLower()];
                     reference.source |= MeshReference::StaticGeometry;
                 }
 
-                writer.addFile(zoneTemplate->directory() + "staticGeometry.dat", objectPosData, 9);
+                objectPosStream.flush();
+
+                writer.addFile(zoneTemplate->directory() + "staticGeometry.txt", objectPosData, 9);
             } else {
                 qWarning("Unable to load zone template for map id %d.", mapId);
             }
@@ -304,6 +309,9 @@ public:
 
         writer.writeVertices(model->vertices());
         writer.writeFaces(model->faceGroups(), materialMapping);
+
+        writer.writeBones(model->skeleton());
+        writer.writeBoneAttachments(model->vertices());
 
         writer.finish();
 

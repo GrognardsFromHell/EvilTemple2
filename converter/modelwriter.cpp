@@ -8,7 +8,10 @@ static const uint VERSION = 1;
 static const uint RESERVED = 0;
 
 // There will be at most 15 bytes of padding.
-static const char PADDING_DATA[15] = { 0xFF, };
+static const char PADDING_DATA[15] = { (char)0xFF, };
+
+// Padding for the name of bones
+static const char BONE_NAME_PADDING[64] = { 0, };
 
 inline uint getRequiredPadding(uint size) {
     uint result = 16 - (size % 16);
@@ -52,29 +55,119 @@ void ModelWriter::writeChunk(uint chunk, bool required, const QByteArray &data)
     chunks++;
 }
 
-void ModelWriter::writeTextures(const QList<QByteArray> &textures)
+QMatrix4x4 relativeWorld(const AnimationStream *stream, const Troika::Bone &bone) {
+    // Quite annoying: Build the relative matrix, rebuild the entire matrix for the bone + parent
+    const AnimationBoneState *state = stream->getBoneState(bone.id);
+
+    if (!state) {
+        return bone.relativeWorld;
+    } else {
+        QMatrix4x4 matrix;
+        matrix.setToIdentity();
+        matrix.translate(state->translation);
+        matrix.rotate(state->rotation);
+        matrix.scale(state->scale);
+
+        return matrix;
+    }
+}
+
+void ModelWriter::writeBones(const Troika::Skeleton *skeleton)
 {
-    startChunk(Textures, true);
+    startChunk(Bones, true);
 
-    stream << (uint)textures.size() << RESERVED << RESERVED << RESERVED;
+    stream << (uint)skeleton->bones().size() << RESERVED << RESERVED << RESERVED;
 
-    foreach (const QByteArray &texture, textures) {
-        stream << (uint)texture.size();
-        stream.writeRawData(texture.data(), texture.size());
+    const Animation *animation = skeleton->findAnimation("item_idle");
+    AnimationStream *animStream = NULL;
+    if (animation)
+        animStream = animation->openStream(skeleton);
+
+    foreach (const Troika::Bone &bone, skeleton->bones()) {
+        QByteArray name = bone.name.toLatin1();
+        Q_ASSERT(name.size() < 60);
+        stream.writeRawData(name.data(), name.size());
+        stream.writeRawData(BONE_NAME_PADDING, 60 - name.size());
+
+        // Id of parent (or -1)
+        stream << (int)bone.parentId;
+
+        // Use the bones of the item_idle animation
+        if (animation && animStream) {
+            QMatrix4x4 transform = relativeWorld(animStream, bone) * bone.fullWorldInverse;
+
+            int parentId = bone.parentId;
+            while (parentId != -1) {
+                transform = relativeWorld(animStream, skeleton->bones()[parentId]) * transform;
+                parentId = skeleton->bones()[parentId].parentId;
+            }
+
+            for (int col = 0; col < 4; ++col) {
+                for (int row = 0; row < 4; ++row) {
+                    stream << (float)transform(row, col);
+                }
+            }
+        } else {
+            for (int col = 0; col < 4; ++col) {
+                for (int row = 0; row < 4; ++row) {
+                    stream << (float)bone.defaultPoseWorld(row, col);
+                }
+            }
+        }
+
     }
 
     finishChunk();
 }
 
-void ModelWriter::writeMaterials(const QList<QByteArray> &materialScripts)
+void ModelWriter::writeBoneAttachments(const QVector<Troika::Vertex> &vertices)
+{
+    startChunk(BoneAttachments, true);
+
+    stream << (uint)vertices.size() << RESERVED << RESERVED << RESERVED;
+
+    foreach (const Troika::Vertex &vertex, vertices) {
+        stream << (uint)vertex.attachmentCount;
+        for (int i = 0; i < 6; ++i) {
+            if (i < vertex.attachmentCount) {
+                stream << (int)vertex.attachmentBone[i];
+            } else {
+                stream << (int)-1;
+            }
+        }
+        for (int i = 0; i < 6; ++i) {
+            if (i < vertex.attachmentCount) {
+                stream << (float)vertex.attachmentWeight[i];
+            } else {
+                stream << (float)0;
+            }
+        }
+    }
+
+    finishChunk();
+}
+
+void ModelWriter::writeTextures(const QList<HashedData> &textures)
+{
+    startChunk(Textures, true);
+
+    stream << (uint)textures.size() << RESERVED << RESERVED << RESERVED;
+
+    foreach (const HashedData &hashedData, textures) {
+       stream << hashedData;
+    }
+
+    finishChunk();
+}
+
+void ModelWriter::writeMaterials(const QList<HashedData> &materialScripts)
 {
     startChunk(Materials, true);
 
     stream << (uint)materialScripts.size() << RESERVED << RESERVED << RESERVED;
 
-    foreach (const QByteArray &materialScript, materialScripts) {
-        stream << (uint)materialScript.size();
-        stream.writeRawData(materialScript.data(), materialScript.size());
+    foreach (const HashedData &hashedData, materialScripts) {
+        stream << hashedData;
     }
 
     finishChunk();

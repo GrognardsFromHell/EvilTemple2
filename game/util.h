@@ -47,6 +47,38 @@ namespace EvilTemple
         return deg / 180.f * Pi;
     }
 
+    /**
+      This class represents an md5 hash that is used to identify a file.
+      It is NOT used to actually create md5 hashes, use QCryptographicHash for that purpose
+      instead.
+      */
+    class Md5Hash {
+    friend inline uint qHash(const Md5Hash &key);
+    public:
+        bool operator ==(const Md5Hash &other) const;
+        bool operator !=(const Md5Hash &other) const;
+    private:
+        int mHash[4];
+    };
+
+    inline bool Md5Hash::operator ==(const Md5Hash &other) const
+    {
+        return mHash[0] == other.mHash[0] &&
+               mHash[1] == other.mHash[1] &&
+               mHash[2] == other.mHash[2] &&
+               mHash[3] == other.mHash[3];
+    }
+
+    inline uint qHash(const Md5Hash &key)
+    {
+        return key.mHash[0] ^ key.mHash[1] ^ key.mHash[2] ^ key.mHash[3];
+    }
+
+    inline bool Md5Hash::operator !=(const Md5Hash &other) const
+    {
+        return !this->operator==(other);
+    }
+
     inline static void DrawVertex(const QVector3D &v) {
         glVertex3f(v.x(), v.y(), v.z());
     }

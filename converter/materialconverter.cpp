@@ -1,5 +1,6 @@
 
 #include <QString>
+#include <QCryptographicHash>
 
 #include "virtualfilesystem.h"
 #include "material.h"
@@ -94,10 +95,10 @@ public:
 
             QString samplerName = QString("texSampler%1").arg(i);
 
-            samplers.append(QString("uniform sampler2D %1;\n").arg(samplerName));
-            textureDefs.append(QString("<textureSampler texture=\"#%1\"/>\n").arg(textures.size()));
+            int textureId = getTexture(textureStage->filename);
 
-            textures.append(mVfs->openFile(textureStage->filename));
+            samplers.append(QString("uniform sampler2D %1;\n").arg(samplerName));
+            textureDefs.append(QString("<textureSampler texture=\"#%1\"/>\n").arg(textureId));
 
             samplerUniforms.append(QString("<uniform name=\"%1\" semantic=\"Texture%2\" />").arg(samplerName).arg(i));
 
@@ -162,14 +163,34 @@ public:
         }
         materialFile.replace("{{BLEND_DEST}}", blendFactor);
 
-        materialScripts.append(materialFile.toUtf8());
+        materialScripts.append(HashedData(materialFile.toUtf8()));
 
         return true;
     }
 
-    QList<QByteArray> textures;
-    QList<QByteArray> materialScripts;
+    int getTexture(const QString &filename) {
+        if (loadedTextures.contains(filename.toLower())) {
+            return loadedTextures[filename.toLower()];
+        } else {
+            QByteArray texture = mVfs->openFile(filename);
+            int textureId = textures.size();
+            textures.append(texture);
+
+            loadedTextures[filename.toLower()] = textureId;
+            return textureId;
+        }
+    }
+
+    QHash<QString, uint> loadedTextures;
+
+    QList<HashedData> textures;
+    QList<HashedData> materialScripts;
 };
+
+HashedData::HashedData(const QByteArray &_data) : data(_data), md5Hash(QCryptographicHash::hash(_data, QCryptographicHash::Md5))
+{
+
+}
 
 MaterialConverter::MaterialConverter(VirtualFileSystem *vfs)
     : d_ptr(new MaterialConverterData(vfs))
@@ -185,12 +206,23 @@ bool MaterialConverter::convert(const Material *material)
     return d_ptr->convert(material);
 }
 
-const QList<QByteArray> &MaterialConverter::textures()
+const QList<HashedData> &MaterialConverter::textures()
 {
     return d_ptr->textures;
 }
 
-const QList<QByteArray> &MaterialConverter::materialScripts()
+const QList<HashedData> &MaterialConverter::materialScripts()
 {
     return d_ptr->materialScripts;
+}
+
+QDataStream &operator <<(QDataStream &stream, const HashedData &hashedData)
+{
+    Q_ASSERT(hashedData.md5Hash.size() == 16);
+
+    stream.writeRawData(hashedData.md5Hash.constData(), 16);
+    stream << hashedData.data.size();
+    stream.writeRawData(hashedData.data.constData(), hashedData.data.size());
+
+    return stream;
 }

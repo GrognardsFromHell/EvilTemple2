@@ -14,6 +14,7 @@ namespace Troika
         ZoneBackgroundMap *dayBackground;
         ZoneBackgroundMap *nightBackground;
         QList<GeometryObject*> staticGeometry;
+        QList<GeometryObject*> staticObjects;
         QList<GeometryObject*> clippingGeometry;
 
         QVector3D startPosition;

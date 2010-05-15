@@ -4,17 +4,20 @@
 #include <QDataStream>
 #include <QHash>
 #include "model.h"
+#include "materialconverter.h"
 
 class ModelWriter
 {
 public:
     ModelWriter(QDataStream &stream);
 
-    void writeTextures(const QList<QByteArray> &textures);
-    void writeMaterials(const QList<QByteArray> &materialScripts);
+    void writeBones(const Troika::Skeleton *skeleton);
+    void writeTextures(const QList<HashedData> &textures);
+    void writeMaterials(const QList<HashedData> &materialScripts);
     void writeChunk(uint chunk, bool required, const QByteArray &data);
     void writeVertices(const QVector<Troika::Vertex> &vertices);
     void writeFaces(const QList<QSharedPointer<Troika::FaceGroup> > &faceGroups, const QHash<QString,int> &materialMapping);
+    void writeBoneAttachments(const QVector<Troika::Vertex> &vertices);
 
     void finish(); // Writes CRC values and finishes the overall file structure
 

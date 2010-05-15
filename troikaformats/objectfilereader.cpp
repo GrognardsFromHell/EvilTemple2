@@ -159,13 +159,16 @@ namespace Troika
         Prototype *prototype;
         QVector3D position;
 
+        bool customRotation;
+
         float scale;
         float rotation; // Degrees
 
         ObjectFileReaderData(QDataStream &_stream) : stream(_stream)
         {
             scale = 1.f;
-            rotation = rad2deg(LegacyBaseRotation);
+            customRotation = false;
+            rotation = 0;
         }
 
         /**
@@ -198,7 +201,8 @@ namespace Troika
             prototype = prototypes->get(prototypeId);
             if (prototype)
             {
-                rotation = prototype->rotation();
+                if (prototype->hasRotation)
+                    rotation = prototype->rotation(); // This is already in degrees
                 scale = prototype->scale();
             }
 
@@ -359,7 +363,7 @@ namespace Troika
                 break;
             case Rotation:
                 stream >> rotation;
-                rotation = rad2deg(rotation + LegacyBaseRotation);
+                customRotation = true;
                 break;
             case Unknown1:
                 stream.skipRawData(4);
@@ -692,9 +696,15 @@ namespace Troika
             result->setModelSource(new LegacyModelSource(models, prototype->modelId()));*/
 
             GeometryObject *obj = new GeometryObject(position,
-                                                     QQuaternion::fromAxisAndAngle(0, 1, 0, rotation),
+                                                     QQuaternion::fromAxisAndAngle(0, 1, 0, rad2deg(rotation)),
                                                      QVector3D(scale, scale, scale),
                                                      meshMapping[prototype->modelId()]);
+
+            obj->staticObject = true;
+            if (prototype) {
+                obj->rotationFromPrototype = prototype->hasRotation;
+            }
+            obj->customRotation = customRotation;
 
             return obj;
         }

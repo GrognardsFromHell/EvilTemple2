@@ -17,7 +17,8 @@ namespace Troika
     class TROIKAFORMATS_EXPORT GeometryObject {
     public:
         GeometryObject(const QVector3D &position, const QQuaternion &rotation, const QString &mesh) :
-                mPosition(position), mRotation(rotation), mScale(1, 1, 1), mMesh(mesh) {
+                mPosition(position), mRotation(rotation), mScale(1, 1, 1), mMesh(mesh)
+        , staticObject(false), customRotation(false), rotationFromPrototype(false) {
         }
 
         GeometryObject(const QVector3D &position,
@@ -26,11 +27,16 @@ namespace Troika
                        const QString &mesh) :
                 mPosition(position), mRotation(rotation), mScale(scale), mMesh(mesh) {}
 
+        bool staticObject;
+        bool rotationFromPrototype;
+        bool customRotation;
+
         const QVector3D &position() const { return mPosition; }
         const QQuaternion &rotation() const { return mRotation; }
         const QVector3D &scale() const { return mScale; }
         const QString &mesh() const { return mMesh; }
     private:
+
         QVector3D mPosition;
         QQuaternion mRotation;
         QVector3D mScale;

@@ -33,6 +33,8 @@ namespace Troika
           */
         void parse(const QStringList &parts);
 
+        bool hasRotation;
+
     private:
         int _id;
         quint16 _modelId;

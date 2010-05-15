@@ -62,11 +62,11 @@ namespace Troika
         return d_ptr->prototypes[id];
     }
 
-    Prototype::Prototype(int id, QObject *parent) : QObject(parent), _id(id)
+    Prototype::Prototype(int id, QObject *parent) : QObject(parent), _id(id), hasRotation(false)
     {
         _modelId = 0;
-        _rotation = 0; //rad2deg(LegacyBaseRotation);
         _scale = 1.f;
+        _rotation = 0;
     }
 
     inline bool isPartDefined(const QString &part)
@@ -82,8 +82,10 @@ namespace Troika
         if (isPartDefined(parts[34]))
             _modelId = parts[34].toInt();
 
-        if (isPartDefined(parts[31]))
-            _rotation = rad2deg(parts[31].toFloat() + LegacyBaseRotation);
+        if (isPartDefined(parts[31])) {
+            hasRotation = true;
+            _rotation = parts[31].toFloat();
+        }
     }
 
 }

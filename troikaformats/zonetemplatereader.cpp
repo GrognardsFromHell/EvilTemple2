@@ -170,13 +170,13 @@ namespace Troika
             }
 
             // Convert radians to degrees
-            rotation = rad2deg(rotation + LegacyBaseRotation);
+            rotation = rad2deg(rotation);
 
             // Create the geometry mesh object and add it to the zone template.
             GeometryObject *meshObject = new GeometryObject(QVector3D(x, y, z),
                                                             QQuaternion::fromAxisAndAngle(0, 1, 0, rotation),
                                                             geometryMeshFiles[fileIndex].modelFilename);
-
+            meshObject->staticObject = false;
             zoneTemplate->addStaticGeometry(meshObject);
         }
 
@@ -276,7 +276,6 @@ namespace Troika
     bool ZoneTemplateReader::readSectorObjects(QDataStream &stream)
     {
         int header;
-        ObjectFileReader reader(prototypes, stream);
 
         stream.skipRawData(48); // Skip unknown data
 
@@ -285,6 +284,8 @@ namespace Troika
 
         while (header == ObjectFileVersion)
         {
+            ObjectFileReader reader(prototypes, stream);
+
             if (!reader.read(true))
             {
                 qWarning("Object file error: %s", qPrintable(reader.errorMessage()));
@@ -293,7 +294,9 @@ namespace Troika
 
             // TODO: Zone templates need to store not only the runtime version, but rather a prototype reference
             // zoneTemplate->addStaticGeometry(reader.createMeshObject(models));
-            zoneTemplate->addStaticGeometry(reader.createObject(meshMapping));
+            GeometryObject *object = reader.createObject(meshMapping);
+            object->staticObject = true;
+            zoneTemplate->addStaticGeometry(object);
 
             stream >> header;
         }

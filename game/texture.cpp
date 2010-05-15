@@ -1,5 +1,6 @@
 
 #include <QtOpenGL/QGLContext>
+#include <QtCore/QWaitCondition>
 
 #include "texture.h"
 #include "turbojpeg.h"
@@ -205,5 +206,86 @@ void Texture::release()
             mValid = false;
     }
 }
+
+class GlobalTextureCacheCleanupThread : public QThread
+{
+public:
+    const static uint TexturePruneInterval = 2500; // Milliseconds
+
+    GlobalTextureCacheCleanupThread(GlobalTextureCache &cache)
+        : mCache(cache)
+    {
+    }
+
+    void cancel()
+    {
+        QMutexLocker locker(&mWaitMutex);
+        mWaitCondition.wakeAll();
+    }
+
+protected:
+    void run()
+    {
+        QMutexLocker locker(&mWaitMutex);
+        while (!mWaitCondition.wait(&mWaitMutex, TexturePruneInterval)) {
+            pruneTextures();
+        }
+    }
+
+private:
+
+    void pruneTextures()
+    {
+        QMutexLocker locker(&mCache.mCleanupMutex);
+
+        GlobalTextureCache::iterator it = mCache.mTextures.begin();
+
+        while (it != mCache.mTextures.end()) {
+            if (it.value().isNull()) {
+                it = mCache.mTextures.erase(it);
+            } else {
+                it++;
+            }
+        }
+    }
+
+    GlobalTextureCache &mCache;
+    QMutex mWaitMutex;
+    QWaitCondition mWaitCondition;
+};
+
+GlobalTextureCache::GlobalTextureCache() : mThread(new GlobalTextureCacheCleanupThread(*this))
+{
+    mThread->start();
+}
+
+GlobalTextureCache::~GlobalTextureCache()
+{
+    mThread->cancel();
+    mThread->wait();
+    delete mThread;
+}
+
+SharedTexture GlobalTextureCache::get(const Md5Hash &hash)
+{
+    QMutexLocker locker(&mCleanupMutex);
+
+    iterator it = mTextures.find(hash);
+
+    if (it != mTextures.end()) {
+        return SharedTexture(it.value());
+    } else {
+        return SharedTexture(0);
+    }
+}
+
+void GlobalTextureCache::insert(const Md5Hash &hash, const SharedTexture &texture)
+{
+    QMutexLocker locker(&mCleanupMutex);
+
+    mTextures[hash] = QWeakPointer<Texture>(texture);
+}
+
+GlobalTextureCache GlobalTextureCache::mInstance;
 
 }

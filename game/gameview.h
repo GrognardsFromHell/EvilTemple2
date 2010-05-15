@@ -23,6 +23,8 @@ signals:
 
 public slots:
 
+    void centerOnWorld(float worldX, float worldY);
+
     QPoint screenCenter() const;
 
 protected:

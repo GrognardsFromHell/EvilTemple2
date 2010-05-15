@@ -17,7 +17,11 @@ namespace EvilTemple {
     public:
         GMF() : model(new Model) {}
 
+        bool staticObject;
+        bool rotationFromPrototype;
+        bool customRotation;
         Vector4 position;
+        Vector4 scale;
         Quaternion rotation;
         QSharedPointer<Model> model;
     };
@@ -83,7 +87,7 @@ namespace EvilTemple {
                     glVertexAttribPointer(attribute.location, attribute.binding.components(), attribute.binding.type(),
                                           attribute.binding.normalized(), attribute.binding.stride(), (GLvoid*)attribute.binding.offset());
                     HANDLE_GL_ERROR
-                }
+                        }
                 glBindBuffer(GL_ARRAY_BUFFER, 0); // Unbind any previously bound buffers
 
                 // Set render states
@@ -93,12 +97,12 @@ namespace EvilTemple {
 
                 // Draw the actual model
                 glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, faceGroup.buffer); HANDLE_GL_ERROR
-                glDrawElements(GL_TRIANGLES, faceGroup.elementCount, GL_UNSIGNED_SHORT, 0); HANDLE_GL_ERROR
-                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0); HANDLE_GL_ERROR
+                        glDrawElements(GL_TRIANGLES, faceGroup.elementCount, GL_UNSIGNED_SHORT, 0); HANDLE_GL_ERROR
+                        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0); HANDLE_GL_ERROR
 
-                // Reset render states to default
-                foreach (const SharedMaterialRenderState &state, pass.renderStates) {
-                      state->disable();
+                        // Reset render states to default
+                        foreach (const SharedMaterialRenderState &state, pass.renderStates) {
+                    state->disable();
                 }
 
                 // Unbind textures
@@ -110,7 +114,7 @@ namespace EvilTemple {
                 for (int j = 0; j < pass.attributes.size(); ++j) {
                     MaterialPassAttributeState &attribute = pass.attributes[j];
                     glDisableVertexAttribArray(attribute.location); HANDLE_GL_ERROR
-                }
+                        }
 
                 pass.program.unbind();
             }
@@ -122,61 +126,57 @@ namespace EvilTemple {
     public:
         GameViewData(GameView *view)
             : q(view), rootItem(0), modelLoaded(0), backgroundMap(renderStates),
-        dragging(false) {
+            dragging(false) {
             if (glewInit() != GLEW_OK) {
                 qWarning("Unable to initialize GLEW.");
             }
 
-            Quaternion rot1 = Quaternion::fromAxisAndAngle(1, 0, 0, deg2rad(44.42700648682643));
+            rotationSlider = new QSlider(Qt::Horizontal);
+            rotationSlider->setMinimum(0);
+            rotationSlider->setMaximum(360);
+            uiScene.addWidget(rotationSlider);
+
+            rotationLabel = new QLabel();
+            rotationLabel->setGeometry(0, 50, 150, 25);
+            //uiScene.addWidget(rotationLabel);
+
+            // Old: -44
+            Quaternion rot1 = Quaternion::fromAxisAndAngle(1, 0, 0, deg2rad(-44.42700648682643));
             Matrix4 rotate1matrix = Matrix4::transformation(Vector4(1,1,1,0), rot1, Vector4(0,0,0,0));
 
-            Quaternion rot2 = Quaternion::fromAxisAndAngle(0, 1, 0, deg2rad(90-135.0000005619373));
+            // Old: 90-135
+            Quaternion rot2 = Quaternion::fromAxisAndAngle(0, 1, 0, deg2rad(135.0000005619373));
             Matrix4 rotate2matrix = Matrix4::transformation(Vector4(1,1,1,0), rot2, Vector4(0,0,0,0));
 
-            renderStates.setViewMatrix(rotate1matrix * rotate2matrix);
-
-            Matrix4 transform = rotate1matrix;
-
-            Vector4 upVector(0, 1, 0, 0);
-            Vector4 eyeVector(0, 0, 1, 1);
-
-           // upVector = transform * upVector;
-            eyeVector = transform * eyeVector;
-
-            /*
-            Vector4 eyeVector(250.0, 500, 500, 0);
-            Vector4 centerVector(0, 10, 0, 0);
-            Vector4 upVector(0, 1, 0, 0);
-            Matrix4 viewMatrix = Matrix4::lookAt(eyeVector, centerVector, upVector);
-            renderStates.setViewMatrix(viewMatrix);
-            */
-            upVector.normalize();
-
-            Matrix4 lookAt = Matrix4::lookAt(eyeVector, Vector4(0, 0, 0, 0), upVector);
-            renderStates.setViewMatrix(lookAt);
+            Matrix4 flipZMatrix;
+            flipZMatrix.setToIdentity();
+            flipZMatrix(2, 2) = -1;
 
             Matrix4 id;
             id.setToIdentity();
             id(2,3) = -3000;
 
-            renderStates.setViewMatrix(id * rotate1matrix * rotate2matrix);
+            baseViewMatrix = id * flipZMatrix * rotate1matrix * rotate2matrix;
+
+            renderStates.setViewMatrix(baseViewMatrix);
+            centerOnWorld(480 * 28.2842703f, 480 * 28.2842703f);
 
             backgroundMap.setMapDirectory("backgroundMaps/hommlet-exterior/");
+            //backgroundMap.setMapDirectory("backgroundMaps/moathouse_interior/");
 
-            QFile gmf("maps/Map-2-Hommlet-Exterior/staticGeometry.dat");
+            QFile gmf("maps/Map-2-Hommlet-Exterior/staticGeometry.txt");
+            //QFile gmf("maps/Map-7-Moathouse_Interior/staticGeometry.txt");
 
             if (!gmf.open(QIODevice::ReadOnly)) {
                 qFatal("Couldn't open GMF.");
             }
 
-            QDataStream stream(&gmf);
-            stream.setByteOrder(QDataStream::LittleEndian);
-            stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
+            QTextStream stream(&gmf);
 
             while (!stream.atEnd()) {
                 float x, y, z, w;
                 QString modelFilename;
-                stream >> z >> y >> x >> modelFilename;
+                stream >> x >> y >> z >> modelFilename;
 
                 GMF obj;
                 obj.position = Vector4(x, y, z, 0);
@@ -184,6 +184,20 @@ namespace EvilTemple {
                 stream >> x >> y >> z >> w;
 
                 obj.rotation = Quaternion(x, y, z, w);
+
+                stream >> x >> y >> z;
+                obj.scale = Vector4(x, y, z, 1);
+
+                int flag;
+                stream >> flag;
+
+                obj.staticObject = flag;
+
+                stream >> flag;
+                obj.rotationFromPrototype = flag;
+
+                stream >> flag;
+                obj.customRotation = flag;
 
                 if (modelCache.contains(modelFilename)) {
                     obj.model = modelCache[modelFilename];
@@ -197,6 +211,14 @@ namespace EvilTemple {
             }
         }
 
+        void centerOnWorld(float worldX, float worldY)
+        {
+            Matrix4 matrix = Matrix4::translation(-worldY, 0, -worldX);
+            renderStates.setViewMatrix(baseViewMatrix * matrix);
+        }
+
+        QSlider *rotationSlider;
+        QLabel *rotationLabel;
         QDeclarativeEngine uiEngine;
         QGraphicsScene uiScene;
         QDeclarativeItem* rootItem;
@@ -207,6 +229,7 @@ namespace EvilTemple {
 
         bool dragging;
         QPoint lastPoint;
+        Matrix4 baseViewMatrix; // Without translations
 
         typedef QPair<Vector4, QSharedPointer<Model> > GeometryMesh;
 
@@ -269,19 +292,23 @@ namespace EvilTemple {
 
         HANDLE_GL_ERROR
 
-        if (!d->modelLoaded) {
+                if (!d->modelLoaded) {
             if (!d->model.open("meshes/monsters/demon/demon.model", d->renderStates)) {
-            //if (!d->model.open("meshes/scenery/portals/stairs-down.model", d->renderStates)) {
+                //if (!d->model.open("meshes/scenery/portals/stairs-down.model", d->renderStates)) {
                 qWarning("Unable to open model file: %s", qPrintable(d->model.error()));
             }
             d->modelLoaded = true;
         }
 
+        glUseProgram(0);
+
         glEnable(GL_DEPTH_TEST); HANDLE_GL_ERROR
-        glEnable(GL_CULL_FACE); HANDLE_GL_ERROR
-        glEnable(GL_ALPHA_TEST); HANDLE_GL_ERROR
-        glAlphaFunc(GL_NOTEQUAL, 0); HANDLE_GL_ERROR
-        glEnable(GL_BLEND); HANDLE_GL_ERROR
+                glEnable(GL_CULL_FACE); HANDLE_GL_ERROR
+                glEnable(GL_ALPHA_TEST); HANDLE_GL_ERROR
+                glAlphaFunc(GL_NOTEQUAL, 0); HANDLE_GL_ERROR
+                glEnable(GL_BLEND); HANDLE_GL_ERROR
+
+                glDisable(GL_STENCIL_TEST);
 
         glClearColor(0.2f, 0.2f, 0.2f, 0.0f);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
@@ -292,6 +319,9 @@ namespace EvilTemple {
         t.setToIdentity();;
         t(0, 3) = 480 * 28.2842703f;
         t(2, 3) = 480 * 28.2842703f;
+        //float angl = deg2rad(45);
+        //Quaternion rot = Quaternion::fromAxisAndAngle(0, 1, 0, angl);
+        //d->renderStates.setWorldMatrix(t * Matrix4::transformation(Vector4(1,1,1,1), rot, Vector4(0,0,0,0)));
         d->renderStates.setWorldMatrix(t);
 
         Draw(&d->model);
@@ -299,51 +329,54 @@ namespace EvilTemple {
         t.setToIdentity();
         d->renderStates.setWorldMatrix(t);
 
+        glMatrixMode(GL_PROJECTION);
+        glLoadMatrixf(d->renderStates.projectionMatrix().data());
+
+        int rotationVal = d->rotationSlider->value();
+        d->rotationLabel->setText(QString("%1").arg(rotationVal));
+
         foreach (const GMF &geometryMesh, d->geometryMeshes) {
-            Matrix4 positionMatrix = Matrix4::transformation(Vector4(1, 1, 1, 0),
-                                                             geometryMesh.rotation,
-                                                             geometryMesh.position)
-            * Matrix4::transformation(Vector4(1,1,1,0), Quaternion::fromAxisAndAngle(0, 1, 0, Pi), Vector4(0,0,0,0));
+            Quaternion q;
+            Matrix4 positionMatrix;
+
+            if (geometryMesh.staticObject && geometryMesh.customRotation) {
+                q = Quaternion::fromAxisAndAngle(0, 1, 0, deg2rad(rotationVal) + LegacyBaseRotation + geometryMesh.rotation.angle());
+
+                positionMatrix = Matrix4::transformation(geometryMesh.scale,
+                                                         q,
+                                                         geometryMesh.position);
+            } else {
+                //q = Quaternion::fromAxisAndAngle(0, 1, 0, geometryMesh.rotation.angle() );
+                q = Quaternion::fromAxisAndAngle(0, 1, 0, (LegacyBaseRotation + geometryMesh.rotation.angle()));
+
+
+                positionMatrix = Matrix4::transformation(geometryMesh.scale,
+                                                         q,
+                                                         geometryMesh.position);
+            }
+
             d->renderStates.setWorldMatrix(positionMatrix);
 
             Draw(geometryMesh.model.data());
+
+            glMatrixMode(GL_MODELVIEW);
+            glLoadMatrixf(d->renderStates.viewMatrix().data());
+            glMultMatrixf(positionMatrix.data());
+            DrawDebugCoordinateSystem();
 
             positionMatrix.setToIdentity();
             d->renderStates.setWorldMatrix(positionMatrix);
         }
 
         glDisable(GL_DEPTH_TEST); HANDLE_GL_ERROR
-        glDisable(GL_CULL_FACE); HANDLE_GL_ERROR
-        glDisable(GL_ALPHA_TEST); HANDLE_GL_ERROR
-        glAlphaFunc(GL_ALWAYS, 0); HANDLE_GL_ERROR
-        glDisable(GL_BLEND); HANDLE_GL_ERROR
+                glDisable(GL_CULL_FACE); HANDLE_GL_ERROR
+                glDisable(GL_ALPHA_TEST); HANDLE_GL_ERROR
+                glAlphaFunc(GL_ALWAYS, 0); HANDLE_GL_ERROR
+                glDisable(GL_BLEND); HANDLE_GL_ERROR
 
-        glDisable(GL_TEXTURE_2D);
+                glDisable(GL_TEXTURE_2D);
         glDisable(GL_DEPTH_TEST);
         glDisable(GL_LIGHTING);
-
-        glMatrixMode(GL_PROJECTION);
-        glLoadMatrixf(d->renderStates.projectionMatrix().data());
-
-        glMatrixMode(GL_MODELVIEW);
-        glLoadIdentity();
-        glLoadMatrixf(d->renderStates.viewMatrix().data());
-
-        glBegin(GL_LINES);
-        glColor3f(1, 0, 0);
-        glVertex3f(0, 0, 0);
-        glVertex3f(100, 0, 0);
-        glColor3f(0, 1, 0);
-        glVertex3f(0, 0, 0);
-        glVertex3f(0, 100, 0);
-        glColor3f(0, 0, 1);
-        glVertex3f(0, 0, 0);
-        glVertex3f(0, 0, 100);
-
-        glColor3f(1, 1, 0);
-        glVertex3f(0, 0, 0);
-        glVertex3f(480 * 28.2842703f, 0, 480 * 28.2842703f);
-        glEnd();
 
         glPointSize(50);
         glColor3f(1, 0, 0);
@@ -366,12 +399,12 @@ namespace EvilTemple {
         glEnd();
 
         glLoadIdentity();HANDLE_GL_ERROR
-        glMatrixMode(GL_PROJECTION);HANDLE_GL_ERROR
-        glLoadIdentity();HANDLE_GL_ERROR
-        glMatrixMode(GL_MODELVIEW);HANDLE_GL_ERROR
+                glMatrixMode(GL_PROJECTION);HANDLE_GL_ERROR
+                glLoadIdentity();HANDLE_GL_ERROR
+                glMatrixMode(GL_MODELVIEW);HANDLE_GL_ERROR
 
-        glClear(GL_DEPTH_BUFFER_BIT);HANDLE_GL_ERROR
-    }
+                glClear(GL_DEPTH_BUFFER_BIT);HANDLE_GL_ERROR
+            }
 
     void GameView::showView(const QString &url)
     {
@@ -465,6 +498,11 @@ namespace EvilTemple {
         viewCenter *= 1/ viewCenter.w();
 
         return QPoint(viewCenter.x(), viewCenter.y());
+    }
+
+    void GameView::centerOnWorld(float worldX, float worldY)
+    {
+        d->centerOnWorld(worldX, worldY);
     }
 
 }
