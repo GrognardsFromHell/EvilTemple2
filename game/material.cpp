@@ -148,6 +148,31 @@ bool MaterialPass::load(const QDomElement &passElement)
         }
     }
 
+    QDomElement depthTestElement = passElement.firstChildElement("depthTest");
+    if (!depthTestElement.isNull()) {
+        QString depthTest = depthTestElement.text();
+
+        // TODO: Sanity check
+        if (depthTest == "false") {
+            SharedMaterialRenderState renderState(new MaterialDisableState(GL_DEPTH_TEST));
+            mRenderStates.append(renderState);
+        }
+    }
+
+    QDomElement colorMaskElement = passElement.firstChildElement("colorMask");
+    if (!colorMaskElement.isNull()) {
+        bool red = colorMaskElement.attribute("red", "true") == "true";
+        bool green = colorMaskElement.attribute("green", "true") == "true";
+        bool blue = colorMaskElement.attribute("blue", "true") == "true";
+        bool alpha = colorMaskElement.attribute("alpha", "true") == "true";
+
+        // TODO: Need some way to determine default state without encoding it here
+        if (!red || !green || !blue || !alpha) {
+            SharedMaterialRenderState renderState(new MaterialColorMaskState(red, green, blue, alpha));
+            mRenderStates.append(renderState);
+        }
+    }
+
     return true;
 }
 

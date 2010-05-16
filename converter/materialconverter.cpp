@@ -131,6 +131,7 @@ public:
         materialFile.replace("{{CULL_FACE}}", material->isFaceCullingDisabled() ? "false" : "true");
         materialFile.replace("{{BLEND}}", material->isAlphaBlendingDisabled() ? "false" : "true");
         materialFile.replace("{{DEPTH_WRITE}}", material->isDepthWriteDisabled() ? "false" : "true");
+        materialFile.replace("{{DEPTH_TEST}}", material->isDepthTestDisabled() ? "false" : "true");
 
         QString blendFactor;
         switch (material->getSourceBlendFactor()) {

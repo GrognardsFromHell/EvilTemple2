@@ -9,6 +9,8 @@
 #include <QtCore/QByteArray>
 #include <QtCore/QSharedPointer>
 
+#include "util.h"
+
 class QDomElement;
 
 namespace EvilTemple {
@@ -85,6 +87,27 @@ public:
 private:
     GLenum mState;
     bool defaultEnabled;
+};
+
+class MaterialColorMaskState : public MaterialRenderState
+{
+public:
+    MaterialColorMaskState(bool red = true, bool green = true, bool blue = true, bool alpha = true)
+        : mRed(red), mGreen(green), mBlue(blue), mAlpha(alpha)
+    {
+    }
+
+    void enable() {
+        SAFE_GL(glColorMask(mRed, mGreen, mBlue, mAlpha));
+    }
+
+    void disable() {
+        // TODO: This encodes how the default state of glColorWrite should look
+        SAFE_GL(glColorMask(true, true, true, true));
+    }
+
+private:
+    bool mRed, mGreen, mBlue, mAlpha;
 };
 
 typedef QSharedPointer<MaterialRenderState> SharedMaterialRenderState;

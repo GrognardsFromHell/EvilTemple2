@@ -175,7 +175,7 @@ namespace EvilTemple {
             //QFile gmf("maps/Map-7-Moathouse_Interior/staticGeometry.txt");
 
             if (!gmf.open(QIODevice::ReadOnly)) {
-                qFatal("Couldn't open GMF.");
+                qFatal("Couldn't open GMF: %s", qPrintable(gmf.fileName()));
             }
 
             QTextStream stream(&gmf);
@@ -209,7 +209,7 @@ namespace EvilTemple {
                 if (modelCache.contains(modelFilename)) {
                     obj.model = modelCache[modelFilename];
                 } else if (!obj.model->open(modelFilename, renderStates)) {
-                    qWarning("UNABLE TO LOAD GMF: %s", qPrintable(modelFilename));
+                    qWarning("UNABLE TO LOAD GMF: %s (%s)", qPrintable(modelFilename), qPrintable(obj.model->error()));
                     continue;
                 }
 
