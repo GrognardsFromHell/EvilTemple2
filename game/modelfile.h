@@ -15,18 +15,18 @@ using namespace GameMath;
 namespace EvilTemple {
 
 struct FaceGroup {
-	MaterialState *material;
-	uint elementCount;
-	GLuint buffer;
-	
-	FaceGroup();
-	~FaceGroup();
+    MaterialState *material;
+    uint elementCount;
+    GLuint buffer;
+
+    FaceGroup();
+    ~FaceGroup();
 };
 
 /**
-  Models the attachment of a single vertex to several bones.
-  This is used for skeletal animation
-  */
+Models the attachment of a single vertex to several bones.
+This is used for skeletal animation
+*/
 class BoneAttachment {
 public:
 
@@ -48,19 +48,19 @@ private:
     static const uint MaxCount = 6; // Maximum number of attachments
 
     /*
-     TODO: Can't we convert this to a pointer instead?
-         The lifetime of the bones is exactly as long as the lifetime of the model, which in turn
-         dictates the lifetime of the attachments. Thus, it should be no problem.
-         In addition, we could just point to the full transform matrix instead, further simplifying things.
-     */
+    TODO: Can't we convert this to a pointer instead?
+    The lifetime of the bones is exactly as long as the lifetime of the model, which in turn
+    dictates the lifetime of the attachments. Thus, it should be no problem.
+    In addition, we could just point to the full transform matrix instead, further simplifying things.
+    */
     int mBones[MaxCount]; // Index to every bone this vertex is attached to
 
     float mWeights[MaxCount]; // Weights for every one of these bones. Assumption is: Sum(mWeights) = 1.0f
 };
 
 /**
-  A bone for skeletal animation
-  */
+A bone for skeletal animation
+*/
 class Bone {
 public:
 
@@ -86,30 +86,30 @@ inline const Matrix4 &Bone::defaultPoseTransform() const
 
 class Model {
 public:
-	Model();
-	~Model();
+    Model();
+    ~Model();
 
-        bool open(const QString &filename, const RenderStates &renderState);
-	void close();
+    bool open(const QString &filename, const RenderStates &renderState);
+    void close();
 
-	Vector4 *positions;
-	Vector4 *normals;
-        const BoneAttachment *attachments; // This CAN be null!
-        const Bone *bones; // Bones in the model
-	float *texCoords;
-        int vertices;
-        int bonesCount;
+    Vector4 *positions;
+    Vector4 *normals;
+    const BoneAttachment *attachments; // This CAN be null!
+    const Bone *bones; // Bones in the model
+    float *texCoords;
+    int vertices;
+    int bonesCount;
 
-	GLuint positionBuffer;
-	GLuint normalBuffer;
-	GLuint texcoordBuffer;
+    GLuint positionBuffer;
+    GLuint normalBuffer;
+    GLuint texcoordBuffer;
 
-	int faces;	
-        QScopedArrayPointer<FaceGroup> faceGroups;
+    int faces;
+    QScopedArrayPointer<FaceGroup> faceGroups;
 
-	void drawNormals() const;
+    void drawNormals() const;
 
-	const QString &error() const;
+    const QString &error() const;
 
 private:
     QScopedArrayPointer<MaterialState> materialState;
@@ -130,7 +130,7 @@ private:
 
 inline const QString &Model::error() const
 {
-	return mError;
+    return mError;
 }
 
 }

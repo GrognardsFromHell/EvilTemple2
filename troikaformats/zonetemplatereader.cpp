@@ -12,6 +12,9 @@
 #include "model.h"
 #include "util.h"
 
+#define GAMEMATH_NO_MEMORY_OPERATORS
+#include <gamemath.h>
+
 namespace Troika
 {
 
@@ -337,6 +340,8 @@ namespace Troika
 
     bool ZoneTemplateReader::readClippingMeshInstances()
     {
+        using namespace GameMath;
+
         QByteArray data = vfs->openFile(mapDirectory + "clipping.cif");
 
         if (data.isNull())
@@ -361,6 +366,10 @@ namespace Troika
             QVector3D position, scale;
             stream >> position >> scale;
 
+            float tmp = scale.z();
+            scale.setZ(scale.y());
+            scale.setY(tmp);
+
             float rotation;
             stream >> rotation;
 
@@ -368,7 +377,7 @@ namespace Troika
 
             QQuaternion rotationQuaternion = QQuaternion::fromAxisAndAngle(0, 1, 0, rad2deg(rotation));
 
-            GeometryObject *geometryMesh = new GeometryObject(position * PixelPerWorldTile,
+            GeometryObject *geometryMesh = new GeometryObject(position,
                                                               rotationQuaternion,
                                                               scale,
                                                               clippingMeshFiles[meshIndex]);

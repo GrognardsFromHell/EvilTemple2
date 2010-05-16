@@ -4,5 +4,6 @@
     </qresource>
     <qresource prefix="/material">
         <file>map_material.xml</file>
+        <file>clipping_material.xml</file>
     </qresource>
 </RCC>

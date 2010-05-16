@@ -10,6 +10,8 @@
 #include "modelfile.h"
 #include "backgroundmap.h"
 
+#include "clippinggeometry.h"
+
 namespace EvilTemple {
 
     // TODO: THIS IS TEMP
@@ -126,7 +128,7 @@ namespace EvilTemple {
     public:
         GameViewData(GameView *view)
             : q(view), rootItem(0), modelLoaded(0), backgroundMap(renderStates),
-            dragging(false) {
+            clippingGeometry(renderStates), dragging(false) {
             if (glewInit() != GLEW_OK) {
                 qWarning("Unable to initialize GLEW.");
             }
@@ -163,6 +165,11 @@ namespace EvilTemple {
 
             backgroundMap.setMapDirectory("backgroundMaps/hommlet-exterior/");
             //backgroundMap.setMapDirectory("backgroundMaps/moathouse_interior/");
+
+            if (!clippingGeometry.load("maps/Map-2-Hommlet-Exterior/clippingGeometry.dat")) {
+            //if (!clippingGeometry.load("maps/Map-7-Moathouse_Interior/clippingGeometry.dat")) {
+                qWarning("Loading clipping geometry failed.");
+            }
 
             QFile gmf("maps/Map-2-Hommlet-Exterior/staticGeometry.txt");
             //QFile gmf("maps/Map-7-Moathouse_Interior/staticGeometry.txt");
@@ -239,6 +246,8 @@ namespace EvilTemple {
 
         BackgroundMap backgroundMap;
 
+        ClippingGeometry clippingGeometry;
+
         void resize(int width, int height) {
             float halfWidth = width * 0.5f;
             float halfHeight = height * 0.5f;
@@ -314,6 +323,8 @@ namespace EvilTemple {
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
         d->backgroundMap.render();
+
+        d->clippingGeometry.draw();
 
         Matrix4 t;
         t.setToIdentity();;

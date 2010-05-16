@@ -9,6 +9,7 @@
 
 #include <iostream>
 
+#include "dagreader.h"
 #include "zipwriter.h"
 #include "virtualfilesystem.h"
 #include "messagefile.h"
@@ -145,6 +146,8 @@ public:
                 objectPosStream.flush();
 
                 writer.addFile(zoneTemplate->directory() + "staticGeometry.txt", objectPosData, 9);
+
+                convertClippingMeshes(zoneTemplate.data(), &writer);
             } else {
                 qWarning("Unable to load zone template for map id %d.", mapId);
             }
@@ -153,6 +156,58 @@ public:
         writer.close();
 
         return true;
+    }
+
+    void convertClippingMeshes(ZoneTemplate *zoneTemplate, ZipWriter *writer)
+    {
+        QByteArray clippingData;
+        QDataStream clippingStream(&clippingData, QIODevice::WriteOnly);
+        clippingStream.setFloatingPointPrecision(QDataStream::SinglePrecision);
+        clippingStream.setByteOrder(QDataStream::LittleEndian);
+
+        QStringList clippingGeometryFiles;
+
+        foreach (GeometryObject *object, zoneTemplate->clippingGeometry()) {
+            QString normalizedFilename = QDir::toNativeSeparators(object->mesh()).toLower();
+
+            if (!clippingGeometryFiles.contains(normalizedFilename)) {
+                clippingGeometryFiles.append(normalizedFilename);
+            }
+        }
+
+        // File header
+        clippingStream << (uint)clippingGeometryFiles.size() << (uint)zoneTemplate->clippingGeometry().size();
+
+        foreach (QString clippingGeometryFile, clippingGeometryFiles) {
+            Troika::DagReader reader(vfs.data(), clippingGeometryFile);
+            MeshModel *model = reader.get();
+
+            Q_ASSERT(model->faceGroups().size() == 1);
+
+            clippingStream << (uint)model->vertices().size() << (uint)model->faceGroups()[0]->faces().size() * 3;
+
+            foreach (const Vertex &vertex, model->vertices()) {
+                clippingStream << vertex.positionX << vertex.positionY << vertex.positionZ << (float) 1;
+            }
+
+            foreach (const Face &face, model->faceGroups()[0]->faces()) {
+                clippingStream << face.vertices[0] << face.vertices[1] << face.vertices[2];
+            }
+        }
+
+        // Instances
+        foreach (GeometryObject *object, zoneTemplate->clippingGeometry()) {
+            QString normalizedFilename = QDir::toNativeSeparators(object->mesh()).toLower();
+
+            clippingStream << object->position().x() << object->position().y() << object->position().z() << (float)1
+                    << object->rotation().x() << object->rotation().y() << object->rotation().z()
+                    << object->rotation().scalar()
+                    << object->scale().x() << object->scale().y() << object->scale().z() << (float)1
+                    << (uint)clippingGeometryFiles.indexOf(normalizedFilename);
+
+        }
+
+        writer->addFile(zoneTemplate->directory() + "clippingGeometry.dat", clippingData, 9);
     }
 
     QString getNewModelFilename(const QString &modelFilename) {

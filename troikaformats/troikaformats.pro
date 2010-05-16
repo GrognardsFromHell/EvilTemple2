@@ -47,6 +47,8 @@ SOURCES += dagreader.cpp \
 
 TEMPLE_LIBS += qt3d glew
 
+include(../3rdparty/game-math/game-math.pri)
+
 PRECOMPILED_HEADER = stable.h
 
 include(../base.pri)

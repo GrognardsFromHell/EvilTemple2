@@ -22,7 +22,7 @@ GLSLProgram::~GLSLProgram()
 
 bool GLSLProgram::bind()
 {
-	glUseProgram(program);
+        glUseProgram(program);
 	HANDLE_GL_ERROR
 	return true;
 }

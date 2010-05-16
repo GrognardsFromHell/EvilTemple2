@@ -119,8 +119,3 @@ contains(TEMPLE_LIBS,openal) {
         LIBS += -lopenal -lalut
     }
 }
-
-
-contains(TEMPLE_LIBS,eigen) {
-    INCLUDEPATH += ../3rdparty/eigen/
-}

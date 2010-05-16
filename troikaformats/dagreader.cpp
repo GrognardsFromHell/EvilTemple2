@@ -73,7 +73,7 @@ namespace Troika
             Vertex &vertex = vertices[i];
             stream >> vertex.positionX >> vertex.positionZ >> vertex.positionY;
             vertex.positionX = - vertex.positionX;
-            vertex.positionZ = vertex.positionZ;
+            vertex.positionZ = - vertex.positionZ;
             vertex.attachmentCount = 0;
         }
 

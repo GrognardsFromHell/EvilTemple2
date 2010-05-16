@@ -332,6 +332,30 @@ namespace EvilTemple
         return true;
     }
 
+    /*
+        OpenGL error handling code:
+        Every GL function call should be wrapped in this macro. This allows the application to insert
+        pre and post debugging code.
+
+        In no-debug mode, this macro simply calls the supplied function without any checks.
+    */
+#if defined(QT_NO_DEBUG)
+    #define SAFE_GL(x) x
+#else
+    #define SAFE_GL(x) x; { int _errorCode; while ((_errorCode = glGetError()) != GL_NO_ERROR) { \
+        qWarning("GL call '%s' failed @ %s:%d with %s.", #x, __FILE__, __LINE__, gluErrorString(_errorCode));} }
+#endif
+
+inline QDataStream &operator >>(QDataStream &stream, GameMath::Vector4 &vector) {
+    stream >> vector.data()[0] >> vector.data()[1] >> vector.data()[2] >> vector.data()[3];
+    return stream;
+}
+
+inline QDataStream &operator >>(QDataStream &stream, GameMath::Quaternion &quaternion) {
+    stream >> quaternion.data()[0] >> quaternion.data()[1] >> quaternion.data()[2] >> quaternion.data()[3];
+    return stream;
+}
+
 }
 
 #endif // UTIL_H

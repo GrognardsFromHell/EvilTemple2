@@ -32,7 +32,8 @@ SOURCES += \
     glslprogram.cpp \
     gameview.cpp \
     backgroundmap.cpp \
-    tga.cpp
+    tga.cpp \
+    clippinggeometry.cpp
 HEADERS += \
     ui/mainwindow.h \
     ui/gamegraphicsscene.h \
@@ -54,9 +55,11 @@ HEADERS += \
     glslprogram.h \
     gameview.h \
     backgroundmap.h \
-    tga.h
+    tga.h \
+    clippinggeometry.h
 OTHER_FILES += material.xsd \
-    map_material.xml
+    map_material.xml \
+    clipping_material.xml
 
 INCLUDEPATH += .
 
