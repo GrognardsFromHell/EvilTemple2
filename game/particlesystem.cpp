@@ -588,10 +588,17 @@ void Emitter::updateParticle(Particle &particle, float elapsedTimeUnits)
 	}
 
 	if (mParticleVelocityType == Polar) {
-		Vector4 velocity = polarToCartesian(particle.velocityX, particle.velocityY, particle.velocityZ);
-		
-		// Update position according to velocity
-		particle.position += velocity * elapsedTimeUnits * TimeUnit;
+		float r = particle.position.length();
+		if (r != 0) {
+			Vector4 rotNormal(0, 1, 0, 0);
+			Vector4 rotAxis = rotNormal.cross(particle.position).normalized();
+			Quaternion rot1 = Quaternion::fromAxisAndAngle(rotAxis.x(), rotAxis.y(), rotAxis.z(), deg2rad(particle.velocityY));
+			Quaternion rot2 = Quaternion::fromAxisAndAngle(0, 1, 0, deg2rad(particle.velocityX));
+			particle.position = Matrix4::rotation(rot1) * Matrix4::rotation(rot2) * particle.position;
+
+
+			particle.position += (particle.velocityZ / particle.position.length()) * particle.position;
+		}		
 	} else {
 		particle.position += Vector4(particle.velocityX, particle.velocityY, particle.velocityZ, 0) 
 			* elapsedTimeUnits * TimeUnit;
@@ -1153,7 +1160,7 @@ bool EmitterTemplate::readParticles(const QDomElement &element)
 				return false;
 		}
 	}
-
+	
 	return true;
 }
 
