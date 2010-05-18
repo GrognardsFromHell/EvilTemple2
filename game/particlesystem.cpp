@@ -5,6 +5,7 @@
 #include <QtCore/QStringList>
 
 #include <QtCore/QList>
+#include <QtCore/QWeakPointer>
 #include <QtCore/QTime>
 #include <QtCore/QScopedArrayPointer>
 #include <QtCore/QSharedPointer>
@@ -20,6 +21,17 @@
 #include "materialstate.h"
 
 namespace EvilTemple {
+
+enum ParticleType {
+	Sprite,
+	Disc,
+	Model
+};
+
+enum CoordinateType {
+	Cartesian,
+	Polar
+};
 
 enum ParticleBlendMode {
 	Blend_Add,
@@ -78,7 +90,7 @@ template<typename T> class RadiusProperty : public ParticleProperty<T> {
 public:
 	T operator()(float ratio) const
 	{
-		return 40;
+		return 20;
 	}
 
 	bool isAnimated() const
@@ -233,13 +245,15 @@ inline ParticleProperty<float> *propertyFromString(const QString &string)
 	return result;
 }
 
+class Emitter;
+
 /**
   Models a particle system in world space and it's emitters.
   */
 class ParticleSystem
 {
 public:
-    ParticleSystem();
+    ParticleSystem(const QString &id, const QList<Emitter*> &emitters);
     ~ParticleSystem();
 
     void setPosition(const Vector4 &position);
@@ -248,176 +262,57 @@ public:
     void elapseTime(float seconds);
 
     void render(RenderStates &renderStates, MaterialState *material) const;
-	
+
 private:
     QScopedPointer<ParticleSystemData> d;
+	Q_DISABLE_COPY(ParticleSystem)
 };
 
-const float TimeUnit = 0.1; // All time-based values are in relation to this base value
+const float TimeUnit = 1 / 30.0f; // All time-based values are in relation to this base value
 
 class Particle {
 public:
+	Particle() : rotationYaw(0), rotationPitch(0), rotationRoll(0),
+		colorRed(255), colorGreen(255), colorBlue(255), colorAlpha(255),
+		scale(100),
+		accelerationX(0), accelerationY(0), accelerationZ(0),
+		velocityX(0), velocityY(0), velocityZ(0)
+	{
+	}
+
     Vector4 position;
-    float rotation;
+    float rotationYaw, rotationPitch, rotationRoll;
+	float colorRed, colorGreen, colorBlue, colorAlpha;
+	float accelerationX, accelerationY, accelerationZ;
+	float velocityX, velocityY, velocityZ;
+	float scale;
     float expireTime;
     float startTime;
-};
-
-/**
-  Interpolates between evenly spaced key-frames.
-  */
-template<typename T> class KeyframedValueProvider {
-public:
-    KeyframedValueProvider(const QVector<T> &values)
-        : mStep(1.0f / (values.size() - 1)), mValues(values)
-    {
-    }
-
-	T operator()(float ratio) const {
-		if (mValues.size() == 1) {
-			return mValues[0];
-		}
-
-        // Clamp to [0,1]
-        ratio = qMin<float>(1, qMax<float>(0, ratio));
-
-        int index = floor(ratio * (mValues.size() - 1));
-        int nextIndex = ceil(ratio * (mValues.size() - 1));
-
-        Q_ASSERT(index < mValues.size());
-
-        if (nextIndex >= mValues.size()) {
-            return mValues[index];
-        }
-
-        T first = mValues[index];
-        T second = mValues[nextIndex];
-
-        float i = (ratio - index * mStep) / mStep;
-
-        return first + (second - first) * i;
-    }
-private:
-    float mStep;
-    QVector<T> mValues;
 };
 
 class Emitter {
 public:
 
-	Emitter(float spawnRate, float particleLifetime, const QVector<float> &scale, const QVector<float> &alpha, SharedTexture texture) 
+	typedef const ParticleProperty<float> *Property;
+
+	Emitter(float spawnRate, float particleLifetime) 
 		: mPartialSpawnedParticles(0), mElapsedTime(0), mExpired(false), 
-		mSpawnRate(spawnRate), mParticleLifetime(particleLifetime), mTexture(texture), mScale(scale), mAlpha(alpha),
-		mMinRotation(0), mMaxRotation(0)
-    {
-    }
+		mSpawnRate(1/(spawnRate *TimeUnit)), mParticleLifetime(particleLifetime), mLifetime(std::numeric_limits<float>::infinity())
+	{
+	}
 
-    void elapseTime(float timeUnits)
-    {
-        Q_ASSERT(mSpawnRate > 0);
-
-        mElapsedTime += timeUnits;
-
-        // Check for expired particles
-        QList<Particle>::iterator it = mParticles.begin();
-        while (it != mParticles.end()) {
-            if (it->expireTime < mElapsedTime)
-                it = mParticles.erase(it);
-            else
-                ++it;
-        }
-
-        // Spawn new particles
-        if (!mExpired) {
-            timeUnits += mPartialSpawnedParticles;
-
-            while (timeUnits > mSpawnRate) {
-                spawnParticle();
-                timeUnits -= mSpawnRate;
-            }
-
-            mPartialSpawnedParticles = timeUnits;
-
-            if (mElapsedTime > mLifetime) {
-                mExpired = true;
-            }
-        }
-
-        // TODO: Transform particles
-    }
+    void elapseTime(float timeUnits);
 
     /**
       Spawns a single particle
       */
-    void spawnParticle()
-    {
-        Particle particle;
-        particle.position = mPosition;
-        particle.rotation = mMinRotation + (rand() / (float)RAND_MAX) * (mMaxRotation - mMinRotation);
-        particle.startTime = mElapsedTime;
-        particle.expireTime = mElapsedTime + mParticleLifetime;
-        mParticles.append(particle);
-    }
+    void spawnParticle();
 
-    void render(RenderStates &renderStates, MaterialState *material) const
-    {
-		MaterialPassState &pass = material->passes[0];
+	void updateParticles(float elapsedTimeUnits);
 
-		pass.program.bind();			
+	void updateParticle(Particle &particle, float elapsedTimeUnits);
 
-		mTexture->bind();
-
-		glDepthMask(GL_FALSE);
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-						
-        foreach (const Particle &particle, mParticles) {			
-			renderStates.setWorldMatrix(Matrix4::translation(particle.position.x(),
-				particle.position.y(),
-				particle.position.z()));
-
-			// Bind uniforms
-			for (int j = 0; j < pass.uniforms.size(); ++j) {
-				pass.uniforms[j].bind();
-			}
-
-			float particleElapsed = mElapsedTime - particle.startTime;
-			float particleLifetime = particle.expireTime - particle.startTime;
-
-            float lifecycle = particleElapsed / particleLifetime;
-
-            float alpha = mAlpha(lifecycle);
-
-			int loc = pass.program.uniformLocation("materialColor");
-			glUniform4f(loc, 1, 0.5, 0.25, alpha);
-
-			loc = pass.program.uniformLocation("rotation");
-			glUniform1f(loc, particle.rotation);
-			
-			int posAttrib = pass.program.attributeLocation("vertexPosition");
-			int texAttrib = pass.program.attributeLocation("vertexTexCoord");
-
-            float d = mScale(lifecycle);
-            glBegin(GL_QUADS);
-            glVertexAttrib2f(texAttrib, 0, 0);
-            glVertexAttrib4fv(posAttrib, Vector4(d/2, d, -d/2, 1).data());
-            glVertexAttrib2f(texAttrib, 0, 1);
-            glVertexAttrib4fv(posAttrib, Vector4(d/2, -d, -d/2, 1).data());
-            glVertexAttrib2f(texAttrib, 1, 1);
-            glVertexAttrib4fv(posAttrib, Vector4(-d/2, -d, d/2, 1).data());
-            glVertexAttrib2f(texAttrib, 1, 0);
-			glVertexAttrib4fv(posAttrib, Vector4(-d/2, d, d/2, 1).data());
-            glEnd();			
-        }
-
-		renderStates.setWorldMatrix(Matrix4::identity());
-
-		glDepthMask(GL_TRUE);
-		glDisable(GL_BLEND);
-		glBlendFunc(GL_ONE, GL_ZERO);
-
-		pass.program.unbind();
-    }
+    void render(RenderStates &renderStates, MaterialState *material) const;
 
     void setLifetime(float lifetime)
     {
@@ -427,54 +322,423 @@ public:
         }
     }
 
+	void setScale(Property scale)
+	{
+		mScale = scale;
+	}
+
+	void setColor(Property colorRed, Property colorGreen, Property colorBlue, Property colorAlpha)
+	{
+		mColorRed = colorRed;
+		mColorGreen = colorGreen;
+		mColorBlue = colorBlue;
+		mColorAlpha = colorAlpha;
+	}
+
+	void setRotation(Property rotationYaw, Property rotationPitch, Property rotationRoll)
+	{
+		mRotationYaw = rotationYaw;
+		mRotationPitch = rotationPitch;
+		mRotationRoll = rotationRoll;
+	}
+
+	void setParticleVelocity(Property velocityX, Property velocityY, Property velocityZ, CoordinateType type)
+	{
+		mVelocityX = velocityX;
+		mVelocityY = velocityY;
+		mVelocityZ = velocityZ;
+		mVelocityType = type;
+	}
+
+	void setParticlePosition(Property positionX, Property positionY, Property positionZ, CoordinateType type)
+	{
+		mPositionX = positionX;
+		mPositionY = positionY;
+		mPositionZ = positionZ;
+		mPositionType = type;
+	}
+
+	void setAcceleration(Property accelerationX, Property accelerationY, Property accelerationZ)
+	{
+		mAccelerationX = accelerationX;
+		mAccelerationY = accelerationY;
+		mAccelerationZ = accelerationZ;
+	}
+
+	void setBlendMode(ParticleBlendMode blendMode)
+	{
+		mBlendMode = blendMode;
+	}
+
+	void setTexture(const SharedTexture &texture)
+	{
+		mTexture = texture;
+	}
+
     void setPosition(const Vector4 &position)
     {
         mPosition = position;
     }
 
-	void setRotation(float minDegrees, float maxDegrees) {
-		mMinRotation = minDegrees;
-		mMaxRotation = maxDegrees;
+	void setParticleType(ParticleType type) 
+	{
+		mParticleType = type;
 	}
 
 private:
+
+	Vector4 polarToCartesian(float x, float y, float z);
+
+	Property mScale;
+
+	Property mColorAlpha, mColorRed, mColorGreen, mColorBlue;
+
+	Property mRotationYaw, mRotationPitch, mRotationRoll;
+
+	Property mAccelerationX, mAccelerationY, mAccelerationZ;
+
+	Property mVelocityX, mVelocityY, mVelocityZ;
+	CoordinateType mVelocityType;
+
+	Property mPositionX, mPositionY, mPositionZ;
+	CoordinateType mPositionType;
+
+	ParticleType mParticleType;
 
     QList<Particle> mParticles;
 
     Vector4 mPosition; // Current position of this emitter (should this be dynamic?)
 
-	KeyframedValueProvider<float> mScale;
-	KeyframedValueProvider<float> mAlpha;
-
     // All particles of an emitter use the same material
 	SharedTexture mTexture;
 
+	ParticleBlendMode mBlendMode;
     bool mExpired; // More time elapsed than this emitter's lifetime
     float mElapsedTime;
     float mParticleLifetime; // Lifetime of newly created particles in time units
     float mLifetime; // Number of time units until this emitter stops working. Can be Infinity.
     float mSpawnRate; // One particle per this many time units is spawned
     float mPartialSpawnedParticles; // If the elapsed time is not enough to spawn another particle, it is accumulated.
-
-	float mMinRotation;
-	float mMaxRotation;
+	
+	Q_DISABLE_COPY(Emitter);
 };
+
+inline Vector4 Emitter::polarToCartesian(float phi, float theta, float r)
+{
+	/*
+		The formula is taken from http://en.wikipedia.org/wiki/Spherical_coordinate_system
+		With coordinates swapped according to the ToEE system.
+		In addition, we're using inclination from the reference plane, so cos(theta) needs to be subtracted from 1.
+	*/
+	float newZ = r * (1 - std::sin(deg2rad(theta))) * std::cos(deg2rad(phi));
+	float newX = r * (1 - std::sin(deg2rad(theta))) * std::sin(deg2rad(phi));
+	float newY = r * (1 - std::cos(deg2rad(theta)));
+
+	return Vector4(newX, newY, newZ, 0);
+}
+
+void Emitter::updateParticles(float elapsedTimeunits)
+{
+	for (int i = 0; i < mParticles.size(); ++i) {
+		updateParticle(mParticles[i], elapsedTimeunits);
+	}
+}
+
+void Emitter::spawnParticle()
+{
+	Particle particle;
+
+	if (mRotationYaw) {
+		particle.rotationYaw = (*mRotationYaw)(0);
+	}
+	if (mRotationPitch) {
+		particle.rotationPitch = (*mRotationPitch)(0);
+	}
+	if (mRotationRoll) {
+		particle.rotationRoll = (*mRotationRoll)(0);
+	}
+
+	if (mAccelerationX) {
+		particle.accelerationX = (*mAccelerationX)(0);
+	}
+	if (mAccelerationY) {
+		particle.accelerationY = (*mAccelerationY)(0);
+	}
+	if (mAccelerationZ) {
+		particle.accelerationZ = (*mAccelerationZ)(0);
+	}
+
+	if (mVelocityX) {
+		particle.velocityX = (*mVelocityX)(0);
+	}
+	if (mVelocityY) {
+		particle.velocityY = (*mVelocityY)(0);
+	}
+	if (mVelocityZ) {
+		particle.velocityZ = (*mVelocityZ)(0);
+	}
+
+	if (mScale) {
+		particle.scale = (*mScale)(0);
+	}
+
+	if (mColorRed) {
+		particle.colorRed = (*mColorRed)(0);
+	}
+	if (mColorGreen) {
+		particle.colorGreen = (*mColorGreen)(0);
+	}
+	if (mColorBlue) {
+		particle.colorBlue = (*mColorBlue)(0);
+	}
+	if (mColorAlpha) {
+		particle.colorAlpha = (*mColorAlpha)(0);
+	}
+
+	Vector4 positionOffset(0, 0, 0, 0);
+	if (mPositionX) {
+		positionOffset.setX((*mPositionX)(0));
+	}
+	if (mPositionY) {
+		positionOffset.setY((*mPositionY)(0));
+	}
+	if (mPositionZ) {
+		positionOffset.setZ((*mPositionZ)(0));
+	}
+	// Convert to cartesian if necessary
+	if (mPositionType == Polar) {
+		positionOffset = polarToCartesian(positionOffset.x(), positionOffset.y(), positionOffset.z());
+	}
+	particle.position = mPosition + positionOffset;
+
+	particle.startTime = mElapsedTime;
+	particle.expireTime = mElapsedTime + mParticleLifetime;
+	mParticles.append(particle);
+}
+
+void Emitter::updateParticle(Particle &particle, float elapsedTimeUnits)
+{
+	float particleElapsed = mElapsedTime - particle.startTime;
+	float particleLifetime = particle.expireTime - particle.startTime;
+
+	float lifecycle = particleElapsed / particleLifetime;
+
+	if (mRotationYaw && mRotationYaw->isAnimated()) {
+		particle.rotationYaw = (*mRotationYaw)(lifecycle);
+	}
+	if (mRotationPitch && mRotationPitch->isAnimated()) {
+		particle.rotationPitch = (*mRotationPitch)(lifecycle);
+	}
+	if (mRotationRoll && mRotationRoll->isAnimated()) {
+		particle.rotationRoll = (*mRotationRoll)(lifecycle);
+	}
+
+	if (mScale && mScale->isAnimated()) {
+		particle.scale = (*mScale)(lifecycle);
+	}
+
+	if (mColorRed && mColorRed->isAnimated()) {
+		particle.colorRed = (*mColorRed)(lifecycle);
+	}
+	if (mColorGreen && mColorGreen->isAnimated()) {
+		particle.colorGreen = (*mColorGreen)(lifecycle);
+	}
+	if (mColorBlue && mColorBlue->isAnimated()) {
+		particle.colorBlue = (*mColorBlue)(lifecycle);
+	}
+	if (mColorAlpha && mColorAlpha->isAnimated()) {
+		particle.colorAlpha = (*mColorAlpha)(lifecycle);
+	}
+
+	if (mAccelerationX && mAccelerationX->isAnimated()) {
+		particle.accelerationX = (*mAccelerationX)(lifecycle);
+	}
+	if (mAccelerationY && mAccelerationY->isAnimated()) {
+		particle.accelerationY = (*mAccelerationY)(lifecycle);
+	}
+	if (mAccelerationZ && mAccelerationZ->isAnimated()) {
+		particle.accelerationZ = (*mAccelerationZ)(lifecycle);
+	}
+
+	// Increase velocity according to acceleration or animate it using keyframes	
+	if (mVelocityX && mVelocityX->isAnimated()) {
+		particle.velocityX = (*mVelocityX)(lifecycle);
+	} else {
+		particle.velocityX += elapsedTimeUnits * particle.accelerationX * TimeUnit;
+	}
+	if (mVelocityY && mVelocityY->isAnimated()) {
+		particle.velocityY = (*mVelocityY)(lifecycle);
+	} else {
+		particle.velocityY += elapsedTimeUnits * particle.accelerationY * TimeUnit;
+	}
+	if (mVelocityZ && mVelocityZ->isAnimated()) {
+		particle.velocityZ = (*mVelocityZ)(lifecycle);
+	} else {
+		particle.velocityZ += elapsedTimeUnits * particle.accelerationZ * TimeUnit;
+	}
+
+	// Update position according to velocity
+	particle.position.data()[0] = particle.position.x() + particle.velocityX * elapsedTimeUnits * TimeUnit;
+	particle.position.data()[1] = particle.position.y() + particle.velocityY * elapsedTimeUnits * TimeUnit;
+	particle.position.data()[2] = particle.position.z() + particle.velocityZ * elapsedTimeUnits * TimeUnit;
+
+	// An animated position overrides any velocity calculations
+	if (mPositionX && mPositionX->isAnimated()) {
+		particle.position.setX(particle.position.x() + (*mPositionX)(lifecycle));
+	}
+	if (mPositionY && mPositionY->isAnimated()) {
+		particle.position.setY(particle.position.y() + (*mPositionY)(lifecycle));
+	}
+	if (mPositionZ && mPositionZ->isAnimated()) {
+		particle.position.setZ(particle.position.z() + (*mPositionZ)(lifecycle));
+	}
+
+}
+
+void Emitter::elapseTime(float timeUnits) {
+	Q_ASSERT(mSpawnRate > 0);
+
+	mElapsedTime += timeUnits;
+
+	// Check for expired particles
+	QList<Particle>::iterator it = mParticles.begin();
+	while (it != mParticles.end()) {
+		if (it->expireTime < mElapsedTime)
+			it = mParticles.erase(it);
+		else
+			++it;
+	}
+	
+	// Spawn new particles
+	if (!mExpired) {
+		float remainingSpawnTime = timeUnits;
+		remainingSpawnTime += mPartialSpawnedParticles;
+
+		while (remainingSpawnTime > mSpawnRate) {
+			spawnParticle();
+			remainingSpawnTime -= mSpawnRate;
+		}
+
+		mPartialSpawnedParticles = remainingSpawnTime;
+
+		if (mElapsedTime > mLifetime) {
+			mExpired = true;
+		}
+	}
+
+	// TODO: Transform particles
+	updateParticles(timeUnits);
+}
+
+
+void Emitter::render(RenderStates &renderStates, MaterialState *material) const
+{
+	MaterialPassState &pass = material->passes[0];
+
+	int posAttrib = pass.program.attributeLocation("vertexPosition");
+	int texAttrib = pass.program.attributeLocation("vertexTexCoord");
+	int rotationLoc = pass.program.uniformLocation("rotation");
+	int materialColorLoc = pass.program.uniformLocation("materialColor");
+
+	pass.program.bind();			
+
+	mTexture->bind();
+	glDepthMask(GL_FALSE);
+	glEnable(GL_BLEND);
+	switch (mBlendMode)
+	{
+	case Blend_Add:
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		break;
+	case Blend_Blend:
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		break;
+	case Blend_Subtract:
+		glBlendColor(-1, -1, -1, -1);
+		glBlendFunc(GL_CONSTANT_COLOR, GL_ONE);
+		break;
+	}
+	
+	foreach (const Particle &particle, mParticles) {			
+		renderStates.setWorldMatrix(Matrix4::translation(particle.position.x(),
+			particle.position.y(),
+			particle.position.z()));
+
+		// Bind uniforms
+		for (int j = 0; j < pass.uniforms.size(); ++j) {
+			pass.uniforms[j].bind();
+		}
+				
+		glUniform4f(materialColorLoc, particle.colorRed / 255.0f, 
+			particle.colorGreen / 255.0f, 
+			particle.colorBlue / 255.0f, 
+			particle.colorAlpha / 255.0f);
+		glUniform1f(rotationLoc, particle.rotationYaw);
+
+		float d = particle.scale;
+		glBegin(GL_QUADS);
+		switch (mParticleType) {
+		case Sprite:
+			glVertexAttrib2f(texAttrib, 0, 0);
+			glVertexAttrib4fv(posAttrib, Vector4(d/2, d, -d/2, 1).data());
+			glVertexAttrib2f(texAttrib, 0, 1);
+			glVertexAttrib4fv(posAttrib, Vector4(d/2, -d, -d/2, 1).data());
+			glVertexAttrib2f(texAttrib, 1, 1);
+			glVertexAttrib4fv(posAttrib, Vector4(-d/2, -d, d/2, 1).data());
+			glVertexAttrib2f(texAttrib, 1, 0);
+			glVertexAttrib4fv(posAttrib, Vector4(-d/2, d, d/2, 1).data());
+			break;
+		case Disc:
+			glVertexAttrib2f(texAttrib, 0, 0);
+			glVertexAttrib4fv(posAttrib, Vector4(d/2, 0, 0, 1).data());
+			glVertexAttrib2f(texAttrib, 0, 1);
+			glVertexAttrib4fv(posAttrib, Vector4(0, 0, d/2, 1).data());
+			glVertexAttrib2f(texAttrib, 1, 1);
+			glVertexAttrib4fv(posAttrib, Vector4(-d/2, 0, 0, 1).data());
+			glVertexAttrib2f(texAttrib, 1, 0);
+			glVertexAttrib4fv(posAttrib, Vector4(0, 0, -d/2, 1).data());
+			break;
+		}
+		glEnd();			
+	}
+
+	renderStates.setWorldMatrix(Matrix4::identity());
+
+	glDepthMask(GL_TRUE);
+	glDisable(GL_BLEND);
+	glBlendFunc(GL_ONE, GL_ZERO);
+
+	pass.program.unbind();
+}
 
 class ParticleSystemData
 {
 public:
-    ParticleSystemData() {
+    ParticleSystemData(const QString &_id, const QList<Emitter*> &_emitters) 
+		: id(_id), emitters(_emitters)
+	{
     }
 
 	~ParticleSystemData() {
 		qDeleteAll(emitters);
 	}
-
+	
+	QString id;
     QList<Emitter*> emitters;
     Vector4 position;
 };
 
+static QHash<QString, QWeakPointer<Texture> > spriteCache;
+
 SharedTexture loadTexture(const QString &filename) {
+
+	if (spriteCache.contains(filename.toLower())) {
+		SharedTexture cachedResult = SharedTexture(spriteCache[filename.toLower()]);
+		if (cachedResult) {
+			return cachedResult;
+		}
+	}	
+
 	QFile f(filename);
 	if (!f.open(QIODevice::ReadOnly)) {
 		qWarning("Unable to open test texture.");
@@ -492,46 +756,14 @@ SharedTexture loadTexture(const QString &filename) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
+	spriteCache[filename.toLower()] = QWeakPointer<Texture>(t);
+
 	return t;
 }
 
-ParticleSystem::ParticleSystem() : d(new ParticleSystemData)
+ParticleSystem::ParticleSystem(const QString &id, const QList<Emitter*> &emitters) 
+	: d(new ParticleSystemData(id, emitters))
 {
-	QVector<float> scale;
-	QVector<float> alpha;
-	
-	scale.append(20);
-	alpha.append(64/255.0f);
-	Emitter *emitter = new Emitter(30/1, 30, scale, alpha, loadTexture("particles/flare-big.tga"));
-	emitter->setLifetime(std::numeric_limits<float>::infinity());
-    emitter->setPosition(d->position);
-	d->emitters.append(emitter);
-
-	scale.clear();
-	alpha.clear();
-	foreach (QString p, QString("25,27,26,30,28,26,25,27,26,30,28,26,25,27,26,30,28,26,25,27,26,30,28,26,25,27,26,30,28,26,25,27,26,30,28,26,25,27,26,30,28,26").split(","))
-	{
-		scale.append(p.toFloat());
-	}
-	alpha.append(16/255.0f);
-	alpha.append(0/255.0f);
-	emitter = new Emitter(30/3, 60, scale, alpha, loadTexture("particles/flare-3.tga"));
-	emitter->setLifetime(std::numeric_limits<float>::infinity());
-    emitter->setPosition(d->position);
-	emitter->setRotation(0, 360);
-	d->emitters.append(emitter);
-	
-	scale.clear();
-	alpha.clear();
-	scale.append(40);
-	alpha.append(0/255.0f);
-	alpha.append(32/255.0f);
-	alpha.append(0/255.0f);
-	emitter = new Emitter(30/5, 30, scale, alpha, loadTexture("particles/flare-1.tga"));
-	emitter->setLifetime(std::numeric_limits<float>::infinity());
-	emitter->setPosition(d->position);
-	emitter->setRotation(0, 360);
-	d->emitters.append(emitter);
 }
 
 ParticleSystem::~ParticleSystem()
@@ -541,8 +773,8 @@ ParticleSystem::~ParticleSystem()
 void ParticleSystem::elapseTime(float timeUnits)
 {
 	foreach (Emitter *emitter, d->emitters) {
-        emitter->elapseTime(timeUnits);
-    }
+		emitter->elapseTime(timeUnits);
+	}
 }
 
 void ParticleSystem::setPosition(const Vector4 &position)
@@ -575,6 +807,11 @@ public:
 	typedef QSharedPointer<ParticleProperty<float> > Property;
 
 	bool loadFromXml(const QDomElement &emitterNode);
+
+	/**
+	 * Instantiates this template and creates an emitter.
+	 */
+	Emitter *instantiate() const;
 	
 private:
 	bool readPosition(const QDomElement &element);
@@ -600,6 +837,7 @@ private:
 	Property mParticleVelocityX;
 	Property mParticleVelocityY;
 	Property mParticleVelocityZ;
+	CoordinateType mParticleVelocityType;
 
 	// Particle acceleration affects velocity
 	Property mParticleAccelerationX;
@@ -610,11 +848,14 @@ private:
 	Property mParticlePositionX;
 	Property mParticlePositionY;
 	Property mParticlePositionZ;
+	CoordinateType mParticlePositionType;
 
 	// Particle rotation. For sprites, only Yaw matters
 	Property mRotationYaw;
 	Property mRotationPitch;
 	Property mRotationRoll;
+
+	ParticleType mParticleType;
 
 	// Particle color
 	Property mColorRed;
@@ -651,6 +892,11 @@ public:
 	 */
 	bool loadFromXml(const QDomElement &element);
 
+	/**
+	 * Creates a particle system from this template.
+	 */
+	ParticleSystem *instantiate() const;
+
 private:
 	QList<EmitterTemplate> mEmitterTemplates;
 	QString mId;
@@ -665,7 +911,7 @@ bool EmitterTemplate::loadFromXml(const QDomElement &element)
 		qWarning("Node name of emitter element must be emitter.");
 		return false;
 	}
-
+	
 	bool ok;
 
 	mName = element.attribute("name");
@@ -716,8 +962,9 @@ bool EmitterTemplate::loadFromXml(const QDomElement &element)
 	mPositionZ = ZeroProperty;
 
 	QDomElement position = element.firstChildElement("position");
-	if (!position.isNull() && !readPosition(position)) {
-		return false;
+	if (!position.isNull()) {
+		if (!readPosition(position))
+			return false;
 	}
 
 	// Particle properties
@@ -787,35 +1034,77 @@ bool EmitterTemplate::readParticles(const QDomElement &element)
 {
 	bool ok;
 
-	mParticleSpawnRate = element.attribute("rate").toFloat(&ok);
+	QString type = element.attribute("type", "sprite").toLower();
 
-	if (!ok) {
-		qWarning("Emitter has invalid particle spawn rate.");
+	if (type == "sprite") {
+		mParticleType = Sprite;
+	} else if (type == "disc") {
+		mParticleType = Disc;
+	} else if (type == "model") {
+		mParticleType = Model;
+	} else {
+		qWarning("Invalid particle type: %s.", qPrintable(type));
 		return false;
 	}
 
-	mParticleLifespan = element.attribute("lifespan").toFloat(&ok);
+	mParticleSpawnRate = element.attribute("rate").toFloat(&ok);
 
 	if (!ok) {
-		qWarning("Emitter has invalid particle lifespan.");
+		qWarning("Emitter has invalid particle spawn rate: %s.", qPrintable(element.attribute("rate")));
 		return false;
+	}
+
+	if (element.hasAttribute("lifespan")) {
+		mParticleLifespan = element.attribute("lifespan").toFloat(&ok);
+		
+		if (!ok) {
+			qWarning("Emitter has invalid particle lifetime: %s.", qPrintable(element.attribute("lifespan")));
+			return false;
+		}
+	} else {
+		mParticleLifespan = std::numeric_limits<float>::infinity();
 	}
 
 	if (element.hasAttribute("material")) {
 		mParticleTexture = element.attribute("material");
 	}
+	
+	mParticleVelocityType = Cartesian;
+	mParticlePositionType = Cartesian;
 
 	for (QDomElement child = element.firstChildElement(); !child.isNull(); child = child.nextSiblingElement()) {
 	
 		if (child.nodeName() == "velocity") {
 			if (!readVector(child, mParticleVelocityX, mParticleVelocityY, mParticleVelocityZ))
 				return false;
+
+			QString type = child.attribute("coordinates", "cartesian");
+			if (type == "cartesian")
+				mParticleVelocityType = Cartesian;
+			else if (type == "polar")
+				mParticleVelocityType = Polar;
+			else {
+				qWarning("Invalid coordinate type: %s.", qPrintable(type));
+				return false;
+			}
+
 		} else if (child.nodeName() == "acceleration") {
 			if (!readVector(child, mParticleAccelerationX, mParticleAccelerationY, mParticleAccelerationZ))
 				return false;
 		} else if (child.nodeName() == "position") {
 			if (!readVector(child, mParticlePositionX, mParticlePositionY,mParticlePositionZ))
 				return false;
+
+			QString type = child.attribute("coordinates", "cartesian");
+			if (type == "cartesian")
+				mParticlePositionType = Cartesian;
+			else if (type == "polar")
+				mParticlePositionType = Polar;
+			else {
+				qWarning("Invalid coordinate type: %s.", qPrintable(type));
+				return false;
+			}
+
 		} else if (child.nodeName() == "rotation") {
 			if (child.hasAttribute("yaw")) {
 				mRotationYaw = Property(propertyFromString(child.attribute("yaw")));
@@ -876,6 +1165,35 @@ bool ParticleSystemTemplate::loadFromXml(const QDomElement &element)
 	}
 
 	return true;
+}
+
+ParticleSystem *ParticleSystemTemplate::instantiate() const
+{
+	QList<Emitter*> emitters;
+	emitters.reserve(mEmitterTemplates.size());
+
+	foreach (const EmitterTemplate &emitterTemplate, mEmitterTemplates) {
+		emitters.append(emitterTemplate.instantiate());
+	}
+
+	return new ParticleSystem(mId, emitters);
+}
+
+Emitter *EmitterTemplate::instantiate() const
+{
+	Emitter *emitter = new Emitter(mParticleSpawnRate, mParticleLifespan);
+	emitter->setColor(mColorRed.data(), mColorGreen.data(), mColorBlue.data(), mColorAlpha.data());
+	emitter->setScale(mScale.data());
+	emitter->setLifetime(mLifespan);
+	emitter->setTexture(loadTexture(mParticleTexture));
+	emitter->setRotation(mRotationYaw.data(), mRotationPitch.data(), mRotationRoll.data());
+	emitter->setAcceleration(mParticleAccelerationX.data(), mParticleAccelerationY.data(), mParticleAccelerationZ.data());
+	emitter->setParticleVelocity(mParticleVelocityX.data(), mParticleVelocityY.data(), mParticleVelocityZ.data(), mParticleVelocityType);
+	emitter->setParticlePosition(mParticlePositionX.data(), mParticlePositionY.data(), mParticlePositionZ.data(), mParticlePositionType);
+	emitter->setParticleType(mParticleType);
+	emitter->setBlendMode(mBlendMode);
+
+	return emitter;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -971,33 +1289,14 @@ void ParticleSystemsThread::run() {
 
         mData.mutex.unlock();
 
-        msleep(10); // Aim for 30 updates per second
+        msleep(33); // Aim for 30 updates per second
     }
 }
 
 ParticleSystems::ParticleSystems(RenderStates &renderState) : d(new ParticleSystemsData(renderState))
 {
-
-}
-
-ParticleSystems::~ParticleSystems()
-{
-
-}
-
-void ParticleSystems::render()
-{
-    QMutexLocker locker(&d->mutex);
-
-    foreach (const ParticleSystem *particleSystem, d->particleSystems) {
-        particleSystem->render(d->renderStates, &d->spriteMaterial);
-    }
-}
-
-void ParticleSystems::create()
-{
 	d->loadTemplates();
-	
+
 	QFile spriteMaterialFile(":/material/sprite_material.xml");
 
 	if (!spriteMaterialFile.open(QIODevice::ReadOnly)) {
@@ -1015,9 +1314,26 @@ void ParticleSystems::create()
 		qWarning("Unable to create material state: %s", qPrintable(d->spriteMaterial.error()));
 		return;
 	}
-	
-    ParticleSystem *system = new ParticleSystem;
-    system->setPosition(Vector4(13978.1, 75.988, 13036.2, 1));
+}
+
+ParticleSystems::~ParticleSystems()
+{
+
+}
+
+void ParticleSystems::render()
+{
+    QMutexLocker locker(&d->mutex);
+
+    foreach (const ParticleSystem *particleSystem, d->particleSystems) {
+        particleSystem->render(d->renderStates, &d->spriteMaterial);
+    }
+}
+
+void ParticleSystems::create(const QString &name, const Vector4 &position)
+{
+    ParticleSystem *system = d->templates[name].instantiate();
+    system->setPosition(position);
 
     QMutexLocker locker(&d->mutex);
     d->particleSystems.append(system);

@@ -227,8 +227,8 @@ public:
                 continue;
             }
 
-            const Vector4 &pos = particleSystem.light.position;
-            stream << pos.x() << pos.y() << pos.z() << particleSystemHashes[particleSystem.hash];
+            const Vector4 &pos = particleSystem.light.position;            
+            stream << pos.x() << pos.y() << pos.z() << particleSystem.light.range << particleSystemHashes[particleSystem.hash];
         }
 
         writer->addFile(zoneTemplate->directory() + "particleSystems.txt", particleSystems, 9);
@@ -389,7 +389,7 @@ public:
     }
 
     bool isZeroOrEmpty(const QByteArray &value) {
-        return value.isEmpty() || value.trimmed() == "0";
+        return value.trimmed().isEmpty() || value.trimmed() == "0";
     }
 
     void convertParticleSystemEmitter(QDomDocument &document, QDomElement &particleSystem,
@@ -408,9 +408,9 @@ public:
         if (!type.isEmpty() && type.toLower() != "point")
             emitter.setAttribute("type", type);
 
-        QString lifespan(sections[4]);
+        QString lifespan(sections[4].trimmed().toLower());
         if (lifespan != "perm")
-            emitter.setAttribute("lifeSpan", lifespan);
+            emitter.setAttribute("lifespan", lifespan);
 
         QDomElement particles = document.createElement("particles");
 
@@ -420,14 +420,16 @@ public:
             particles.setAttribute("type", QString(sections[11]));
         if (!sections[12].isEmpty())
             particles.setAttribute("coordinateSystem", QString(sections[12]));
-        if (!sections[13].isEmpty())
-            particles.setAttribute("positionCoordinates", QString(sections[13]));
-        if (!sections[14].isEmpty())
-            particles.setAttribute("velocityCoordinates", QString(sections[14]));
+        //if (!sections[13].isEmpty())
+        //    particles.setAttribute("positionCoordinates", QString(sections[13]));
+        //if (!sections[14].isEmpty())
+        //    particles.setAttribute("velocityCoordinates", QString(sections[14]));
+
         if (!sections[15].isEmpty())
             particles.setAttribute("material", "particles/" + QString(sections[15]) + ".tga");
-        if (!sections[16].isEmpty())
-            particles.setAttribute("lifespan", QString(sections[16]));
+        lifespan = QString(sections[16]).trimmed().toLower();
+        if (!lifespan.isEmpty() && lifespan != "perm")
+            particles.setAttribute("lifespan", lifespan);
         if (!sections[20].isEmpty())
             particles.setAttribute("model", "particles/" + QString(sections[20]) + ".model");
 
@@ -468,12 +470,14 @@ public:
             emitter.appendChild(element);
         }
 
-
         if (!isZeroOrEmpty(sections[31]) || !isZeroOrEmpty(sections[32]) || !isZeroOrEmpty(sections[33])) {
             element = document.createElement("rotation");
-            element.setAttribute("yaw", QString(sections[31]));
-            element.setAttribute("pitch", QString(sections[32]));
-            element.setAttribute("roll", QString(sections[33]));
+            if (!isZeroOrEmpty(sections[31]))
+                element.setAttribute("yaw", QString(sections[31]));
+            if (!isZeroOrEmpty(sections[32]))
+                element.setAttribute("pitch", QString(sections[32]));
+            if (!isZeroOrEmpty(sections[33]))
+                element.setAttribute("roll", QString(sections[33]));
             emitter.appendChild(element);
         }
 
@@ -489,7 +493,7 @@ public:
         }
 
         if (!isZeroOrEmpty(sections[40]) || !isZeroOrEmpty(sections[41]) || !isZeroOrEmpty(sections[42])) {
-            element = makeVector(document, "initialVelocity", sections[40], sections[41], sections[42]);
+            element = makeVector(document, "initialVelocity", sections[40], sections[41], sections[42], true, true);
             emitter.appendChild(element);
         }
 
@@ -514,11 +518,23 @@ public:
 
         if (!isZeroOrEmpty(sections[50]) || !isZeroOrEmpty(sections[51]) || !isZeroOrEmpty(sections[52])) {
             element = makeVector(document, "velocity", sections[50], sections[51], sections[52]);
+
+            // Add coordinate-system type
+            if (!sections[14].isEmpty() && sections[14].toLower() != "cartesian") {
+                element.setAttribute("coordinates", QString(sections[14].toLower()));
+            }
+
             particles.appendChild(element);
         }
 
         if (!isZeroOrEmpty(sections[53]) || !isZeroOrEmpty(sections[54]) || !isZeroOrEmpty(sections[55])) {
             element = makeVector(document, "position", sections[53], sections[54], sections[55]);
+
+            // Add coordinate-system type
+            if (!sections[13].isEmpty() && sections[13].toLower() != "cartesian") {
+                element.setAttribute("coordinates", QString(sections[13].toLower()));
+            }
+
             particles.appendChild(element);
         }
 
@@ -535,9 +551,12 @@ public:
 
         if (!isZeroOrEmpty(sections[59]) || !isZeroOrEmpty(sections[60]) || !isZeroOrEmpty(sections[61])) {
             element = document.createElement("rotation");
-            element.setAttribute("yaw", QString(sections[59]));
-            element.setAttribute("pitch", QString(sections[60]));
-            element.setAttribute("roll", QString(sections[61]));
+            if (!isZeroOrEmpty(sections[59]))
+                element.setAttribute("yaw", QString(sections[59]));
+            if (!isZeroOrEmpty(sections[60]))
+                element.setAttribute("pitch", QString(sections[60]));
+            if (!isZeroOrEmpty(sections[61]))
+                element.setAttribute("roll", QString(sections[61]));
             particles.appendChild(element);
         }
 
@@ -574,11 +593,14 @@ public:
             colorAlpha = sections[62];
         }
 
+        QRegExp bracketRemover("\\(.+\\)");
+        bracketRemover.setMinimal(true);
+
         element = document.createElement("color");
-        element.setAttribute("red", QString(colorRed));
-        element.setAttribute("green", QString(colorGreen));
-        element.setAttribute("blue", QString(colorBlue));
-        element.setAttribute("alpha", QString(colorAlpha));
+        element.setAttribute("red", QString(colorRed).replace(bracketRemover, ""));
+        element.setAttribute("green", QString(colorGreen).replace(bracketRemover, ""));
+        element.setAttribute("blue", QString(colorBlue).replace(bracketRemover, ""));
+        element.setAttribute("alpha", QString(colorAlpha).replace(bracketRemover, ""));
         particles.appendChild(element);
 
         if (!sections[66].isEmpty()) {

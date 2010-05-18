@@ -1,6 +1,7 @@
 #ifndef PARTICLESYSTEM_H
 #define PARTICLESYSTEM_H
 
+#include <QtCore/QString>
 #include <QtCore/QScopedPointer>
 
 #include <gamemath.h>
@@ -21,7 +22,7 @@ public:
     ~ParticleSystems();
 
     void render();
-    void create();
+    void create(const QString &name, const Vector4 &position);
 
 private:
     QScopedPointer<ParticleSystemsData> d;

@@ -222,15 +222,14 @@ namespace EvilTemple {
             partSysStream.setFloatingPointPrecision(QDataStream::SinglePrecision);
 
             while (!partSysStream.atEnd()) {
-                float x, y, z;
+                float x, y, z, radius;
                 QString name;
 
-                partSysStream >> x >> y >> z >> name;
-
+                partSysStream >> x >> y >> z >> radius >> name;
+				
                // particleSysPos.append(Vector4(x, y, z, 1));
+				particleSystems.create(name, Vector4(x, y, z, 1));
             }
-
-            particleSystems.create();
 
         }
 
@@ -268,7 +267,7 @@ namespace EvilTemple {
         void resize(int width, int height) {
             float halfWidth = width * 0.5f;
             float halfHeight = height * 0.5f;
-
+			glViewport(0, 0, width, height);
             Matrix4 projectionMatrix = Matrix4::ortho(-halfWidth, halfWidth, -halfHeight, halfHeight, 1, 3628);
             renderStates.setProjectionMatrix(projectionMatrix);
         }

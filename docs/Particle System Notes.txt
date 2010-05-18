@@ -1,0 +1,9 @@
+SpawnRate is number of particles spawned per second (tested via fraps and modified particle systems)
+
+Lifetime 30 & Rate = 1 -> Particle lived 1 second, 1 particle spawned per second
+Lifetime 30 & Rate = 2 -> Particle lived 1 seconds, 2 particle spawned per second
+
+Lifetime 60 & Rate = 1 -> Particle lived 1 seconds, 2 particle spawned per second
+Lifetime 60 & Rate = 2 -> Particle lived 1 seconds, 4 particle spawned per second
+
+30 seems to be the base unit (=1 second)
