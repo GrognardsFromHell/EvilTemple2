@@ -344,18 +344,18 @@ public:
 
 	void setParticleVelocity(Property velocityX, Property velocityY, Property velocityZ, CoordinateType type)
 	{
-		mVelocityX = velocityX;
-		mVelocityY = velocityY;
-		mVelocityZ = velocityZ;
-		mVelocityType = type;
+		mParticleVelocityX = velocityX;
+		mParticleVelocityY = velocityY;
+		mParticleVelocityZ = velocityZ;
+		mParticleVelocityType = type;
 	}
 
 	void setParticlePosition(Property positionX, Property positionY, Property positionZ, CoordinateType type)
 	{
-		mPositionX = positionX;
-		mPositionY = positionY;
-		mPositionZ = positionZ;
-		mPositionType = type;
+		mParticlePositionX = positionX;
+		mParticlePositionY = positionY;
+		mParticlePositionZ = positionZ;
+		mParticlePositionType = type;
 	}
 
 	void setAcceleration(Property accelerationX, Property accelerationY, Property accelerationZ)
@@ -375,14 +375,21 @@ public:
 		mTexture = texture;
 	}
 
-    void setPosition(const Vector4 &position)
+    void setPosition(Property positionX, Property positionY, Property positionZ)
     {
-        mPosition = position;
+        mPositionX = positionX;
+		mPositionY = positionY;
+		mPositionZ = positionZ;
     }
 
 	void setParticleType(ParticleType type) 
 	{
 		mParticleType = type;
+	}
+
+	void setName(const QString &name)
+	{
+		mName = name;
 	}
 
 private:
@@ -397,17 +404,20 @@ private:
 
 	Property mAccelerationX, mAccelerationY, mAccelerationZ;
 
-	Property mVelocityX, mVelocityY, mVelocityZ;
-	CoordinateType mVelocityType;
+	Property mParticleVelocityX, mParticleVelocityY, mParticleVelocityZ;
+	CoordinateType mParticleVelocityType;
 
-	Property mPositionX, mPositionY, mPositionZ;
-	CoordinateType mPositionType;
+	Property mParticlePositionX, mParticlePositionY, mParticlePositionZ;
+	CoordinateType mParticlePositionType;
 
 	ParticleType mParticleType;
 
     QList<Particle> mParticles;
 
-    Vector4 mPosition; // Current position of this emitter (should this be dynamic?)
+	QString mName;
+
+	// Current position of this emitter
+    Property mPositionX, mPositionY, mPositionZ;
 
     // All particles of an emitter use the same material
 	SharedTexture mTexture;
@@ -468,14 +478,14 @@ void Emitter::spawnParticle()
 		particle.accelerationZ = (*mAccelerationZ)(0);
 	}
 
-	if (mVelocityX) {
-		particle.velocityX = (*mVelocityX)(0);
+	if (mParticleVelocityX) {
+		particle.velocityX = (*mParticleVelocityX)(0);
 	}
-	if (mVelocityY) {
-		particle.velocityY = (*mVelocityY)(0);
+	if (mParticleVelocityY) {
+		particle.velocityY = (*mParticleVelocityY)(0);
 	}
-	if (mVelocityZ) {
-		particle.velocityZ = (*mVelocityZ)(0);
+	if (mParticleVelocityZ) {
+		particle.velocityZ = (*mParticleVelocityZ)(0);
 	}
 
 	if (mScale) {
@@ -496,20 +506,20 @@ void Emitter::spawnParticle()
 	}
 
 	Vector4 positionOffset(0, 0, 0, 0);
-	if (mPositionX) {
-		positionOffset.setX((*mPositionX)(0));
+	if (mParticlePositionX) {
+		positionOffset.setX((*mParticlePositionX)(0));
 	}
-	if (mPositionY) {
-		positionOffset.setY((*mPositionY)(0));
+	if (mParticlePositionY) {
+		positionOffset.setY((*mParticlePositionY)(0));
 	}
-	if (mPositionZ) {
-		positionOffset.setZ((*mPositionZ)(0));
+	if (mParticlePositionZ) {
+		positionOffset.setZ((*mParticlePositionZ)(0));
 	}
 	// Convert to cartesian if necessary
-	if (mPositionType == Polar) {
+	if (mParticlePositionType == Polar) {
 		positionOffset = polarToCartesian(positionOffset.x(), positionOffset.y(), positionOffset.z());
 	}
-	particle.position = mPosition + positionOffset;
+	particle.position = Vector4((*mPositionX)(0), (*mPositionY)(0), (*mPositionZ)(0), 1) + positionOffset;
 
 	particle.startTime = mElapsedTime;
 	particle.expireTime = mElapsedTime + mParticleLifetime;
@@ -561,36 +571,41 @@ void Emitter::updateParticle(Particle &particle, float elapsedTimeUnits)
 	}
 
 	// Increase velocity according to acceleration or animate it using keyframes	
-	if (mVelocityX && mVelocityX->isAnimated()) {
-		particle.velocityX = (*mVelocityX)(lifecycle);
+	if (mParticleVelocityX && mParticleVelocityX->isAnimated()) {
+		particle.velocityX = (*mParticleVelocityX)(lifecycle);
 	} else {
 		particle.velocityX += elapsedTimeUnits * particle.accelerationX * TimeUnit;
 	}
-	if (mVelocityY && mVelocityY->isAnimated()) {
-		particle.velocityY = (*mVelocityY)(lifecycle);
+	if (mParticleVelocityY && mParticleVelocityY->isAnimated()) {
+		particle.velocityY = (*mParticleVelocityY)(lifecycle);
 	} else {
 		particle.velocityY += elapsedTimeUnits * particle.accelerationY * TimeUnit;
 	}
-	if (mVelocityZ && mVelocityZ->isAnimated()) {
-		particle.velocityZ = (*mVelocityZ)(lifecycle);
+	if (mParticleVelocityZ && mParticleVelocityZ->isAnimated()) {
+		particle.velocityZ = (*mParticleVelocityZ)(lifecycle);
 	} else {
 		particle.velocityZ += elapsedTimeUnits * particle.accelerationZ * TimeUnit;
 	}
 
-	// Update position according to velocity
-	particle.position.data()[0] = particle.position.x() + particle.velocityX * elapsedTimeUnits * TimeUnit;
-	particle.position.data()[1] = particle.position.y() + particle.velocityY * elapsedTimeUnits * TimeUnit;
-	particle.position.data()[2] = particle.position.z() + particle.velocityZ * elapsedTimeUnits * TimeUnit;
+	if (mParticleVelocityType == Polar) {
+		Vector4 velocity = polarToCartesian(particle.velocityX, particle.velocityY, particle.velocityZ);
+		
+		// Update position according to velocity
+		particle.position += velocity * elapsedTimeUnits * TimeUnit;
+	} else {
+		particle.position += Vector4(particle.velocityX, particle.velocityY, particle.velocityZ, 0) 
+			* elapsedTimeUnits * TimeUnit;
+	}
 
 	// An animated position overrides any velocity calculations
-	if (mPositionX && mPositionX->isAnimated()) {
-		particle.position.setX(particle.position.x() + (*mPositionX)(lifecycle));
+	if (mParticlePositionX && mParticlePositionX->isAnimated()) {
+		particle.position.setX(particle.position.x() + (*mParticlePositionX)(lifecycle));
 	}
-	if (mPositionY && mPositionY->isAnimated()) {
-		particle.position.setY(particle.position.y() + (*mPositionY)(lifecycle));
+	if (mParticlePositionY && mParticlePositionY->isAnimated()) {
+		particle.position.setY(particle.position.y() + (*mParticlePositionY)(lifecycle));
 	}
-	if (mPositionZ && mPositionZ->isAnimated()) {
-		particle.position.setZ(particle.position.z() + (*mPositionZ)(lifecycle));
+	if (mParticlePositionZ && mParticlePositionZ->isAnimated()) {
+		particle.position.setZ(particle.position.z() + (*mParticlePositionZ)(lifecycle));
 	}
 
 }
@@ -658,9 +673,11 @@ void Emitter::render(RenderStates &renderStates, MaterialState *material) const
 		glBlendFunc(GL_CONSTANT_COLOR, GL_ONE);
 		break;
 	}
+
+	Matrix4 oldWorld = renderStates.worldMatrix();
 	
 	foreach (const Particle &particle, mParticles) {			
-		renderStates.setWorldMatrix(Matrix4::translation(particle.position.x(),
+		renderStates.setWorldMatrix(oldWorld * Matrix4::translation(particle.position.x(),
 			particle.position.y(),
 			particle.position.z()));
 
@@ -690,19 +707,19 @@ void Emitter::render(RenderStates &renderStates, MaterialState *material) const
 			break;
 		case Disc:
 			glVertexAttrib2f(texAttrib, 0, 0);
-			glVertexAttrib4fv(posAttrib, Vector4(d/2, 0, 0, 1).data());
+			glVertexAttrib4fv(posAttrib, Vector4(d, 0, 0, 1).data());
 			glVertexAttrib2f(texAttrib, 0, 1);
-			glVertexAttrib4fv(posAttrib, Vector4(0, 0, d/2, 1).data());
+			glVertexAttrib4fv(posAttrib, Vector4(0, 0, d, 1).data());
 			glVertexAttrib2f(texAttrib, 1, 1);
-			glVertexAttrib4fv(posAttrib, Vector4(-d/2, 0, 0, 1).data());
+			glVertexAttrib4fv(posAttrib, Vector4(-d, 0, 0, 1).data());
 			glVertexAttrib2f(texAttrib, 1, 0);
-			glVertexAttrib4fv(posAttrib, Vector4(0, 0, -d/2, 1).data());
+			glVertexAttrib4fv(posAttrib, Vector4(0, 0, -d, 1).data());
 			break;
 		}
 		glEnd();			
 	}
 
-	renderStates.setWorldMatrix(Matrix4::identity());
+	renderStates.setWorldMatrix(oldWorld);
 
 	glDepthMask(GL_TRUE);
 	glDisable(GL_BLEND);
@@ -780,10 +797,6 @@ void ParticleSystem::elapseTime(float timeUnits)
 void ParticleSystem::setPosition(const Vector4 &position)
 {
     d->position = position;
-
-	foreach (Emitter *emitter, d->emitters) {
-		emitter->setPosition(d->position);
-	}
 }
 
 const Vector4 &ParticleSystem::position() const
@@ -792,9 +805,14 @@ const Vector4 &ParticleSystem::position() const
 }
 
 void ParticleSystem::render(RenderStates &renderStates, MaterialState *material) const {
+
+	renderStates.setWorldMatrix(Matrix4::translation(d->position.x(), d->position.y(), d->position.z(), 0));
+
     foreach (Emitter *emitter, d->emitters) {
         emitter->render(renderStates, material);
     }
+
+	renderStates.setWorldMatrix(Matrix4::identity());
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1182,10 +1200,12 @@ ParticleSystem *ParticleSystemTemplate::instantiate() const
 Emitter *EmitterTemplate::instantiate() const
 {
 	Emitter *emitter = new Emitter(mParticleSpawnRate, mParticleLifespan);
+	emitter->setName(mName);
 	emitter->setColor(mColorRed.data(), mColorGreen.data(), mColorBlue.data(), mColorAlpha.data());
 	emitter->setScale(mScale.data());
 	emitter->setLifetime(mLifespan);
 	emitter->setTexture(loadTexture(mParticleTexture));
+	emitter->setPosition(mPositionX.data(), mPositionY.data(), mPositionZ.data());
 	emitter->setRotation(mRotationYaw.data(), mRotationPitch.data(), mRotationRoll.data());
 	emitter->setAcceleration(mParticleAccelerationX.data(), mParticleAccelerationY.data(), mParticleAccelerationZ.data());
 	emitter->setParticleVelocity(mParticleVelocityX.data(), mParticleVelocityY.data(), mParticleVelocityZ.data(), mParticleVelocityType);
