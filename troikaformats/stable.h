@@ -3,6 +3,9 @@
   This is the precompiled header.
  */
 
+#define GAMEMATH_NO_MEMORY_OPERATORS
+#include <gamemath.h>
+
 #include <GL/glew.h>
 
 // Target windows xp sp1

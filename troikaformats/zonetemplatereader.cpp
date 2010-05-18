@@ -220,11 +220,21 @@ namespace Troika
             Light light;
             ParticleSystem particleSystem;
 
+            quint32 xPos, yPos;
+            float xOffset, yOffset, zOffset;
+
             stream >> light.handle >> flags >> light.type >> light.r >> light.b >> light.g >>
                     light.unknown >> light.ur >> light.ub >> light.ug >> light.ua >>
-                    light.xPos >> light.yPos >> light.xOffset >> light.yOffset >> light.zOffset >>
+                    xPos >> yPos >> xOffset >> yOffset >> zOffset >>
                     light.dirX >> light.dirY >> light.dirZ >>
                     light.range >> light.phi;
+
+            light.position = Vector4((xPos + .5f) * PixelPerWorldTile + xOffset,
+                                     zOffset,
+                                     (yPos + .5f) * PixelPerWorldTile + yOffset,
+                                     1);
+
+            // TODO: What to do about the direction?
 
             // Also check flags?
             if (light.type)
@@ -247,12 +257,12 @@ namespace Troika
 
                 // Also check flags?
                 if (light.type)
-                    lights.append(light);
+                    zoneTemplate->addLight(light);
 
                 particleSystem.light = light;
                 stream >> particleSystem.hash >> particleSystem.id;
                 if (particleSystem.hash)
-                    particleSystems.append(particleSystem);
+                    zoneTemplate->addParticleSystem(particleSystem);
             }
         }
 

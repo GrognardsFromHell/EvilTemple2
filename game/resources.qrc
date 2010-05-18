@@ -1,9 +1,10 @@
 <RCC>
     <qresource prefix="/schema">
-        <file>material.xsd</file>
+        <file>materialfile.xsd</file>
     </qresource>
     <qresource prefix="/material">
         <file>map_material.xml</file>
         <file>clipping_material.xml</file>
+        <file>sprite_material.xml</file>
     </qresource>
 </RCC>

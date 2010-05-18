@@ -7,6 +7,10 @@
 #include <QQuaternion>
 #include <QVector3D>
 
+#define GAMEMATH_NO_MEMORY_OPERATORS
+#include <gamemath.h>
+using namespace GameMath;
+
 class QBox3D;
 
 namespace Troika
@@ -43,6 +47,26 @@ namespace Troika
         QString mMesh;
     };
 
+    struct Light
+    {
+        quint64 handle;
+        quint32 type;
+        quint8 r, g, b; // Diffuse/Specular
+        quint8 unknown;
+        quint8 ur, ug, ub, ua; // Unknown color
+        Vector4 position;
+        float dirX, dirY, dirZ;
+        float range;
+        float phi;
+    };
+
+    struct ParticleSystem
+    {
+        Light light;
+        quint32 hash;
+        quint32 id;
+    };
+
     class TROIKAFORMATS_EXPORT ZoneTemplate : public QObject
     {        
         Q_OBJECT
@@ -66,6 +90,10 @@ namespace Troika
         bool isOutdoor() const;
         bool hasDayNightTransfer() const;
         bool allowsBedrest() const;
+
+        const QList<Light> &lights() const;
+
+        const QList<ParticleSystem> &particleSystems() const;
 
         const QString &name() const; // Zone name (translated)
 
@@ -101,6 +129,9 @@ namespace Troika
                         of this pointer.
           */
         void addClippingGeometry(GeometryObject *object);
+
+        void addLight(const Light &light);
+        void addParticleSystem(const ParticleSystem &particleSystem);
 
         void setName(const QString &name);
         void setDirectory(const QString &directory);

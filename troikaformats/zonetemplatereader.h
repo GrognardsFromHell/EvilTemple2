@@ -10,11 +10,12 @@
 #include <QVector>
 #include <QHash>
 
+#include "zonetemplate.h"
+
 namespace Troika
 {
 
     class VirtualFileSystem;
-    class ZoneTemplate;
     class Game;
     class Models;
     class Prototypes;
@@ -28,27 +29,6 @@ namespace Troika
     {
         QString modelFilename;
         QString animationFilename;
-    };
-
-    struct Light
-    {
-        quint64 handle;
-        quint32 type;
-        quint8 r, g, b; // Diffuse/Specular
-        quint8 unknown;
-        quint8 ur, ug, ub, ua; // Unknown color
-        quint32 xPos, yPos;
-        float xOffset, yOffset, zOffset;
-        float dirX, dirY, dirZ;
-        float range;
-        float phi;
-    };
-
-    struct ParticleSystem
-    {
-        Light light;
-        quint32 hash;
-        quint32 id;
     };
 
     struct SectorTile

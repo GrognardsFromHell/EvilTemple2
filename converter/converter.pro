@@ -28,10 +28,12 @@ HEADERS += \
     mapconverter.h
 
 include(../base.pri)
+include(../3rdparty/game-math/game-math.pri)
 
 RESOURCES += \
     resources.qrc
 
 OTHER_FILES += exclusions.txt \
     material_template.xml \
-    shadow_caster.txt
+    shadow_caster.txt \
+    particlefiles.txt

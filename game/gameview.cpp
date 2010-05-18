@@ -11,6 +11,7 @@
 #include "backgroundmap.h"
 
 #include "clippinggeometry.h"
+#include "particlesystem.h"
 
 namespace EvilTemple {
 
@@ -128,19 +129,10 @@ namespace EvilTemple {
     public:
         GameViewData(GameView *view)
             : q(view), rootItem(0), modelLoaded(0), backgroundMap(renderStates),
-            clippingGeometry(renderStates), dragging(false) {
+            clippingGeometry(renderStates), particleSystems(renderStates), dragging(false) {
             if (glewInit() != GLEW_OK) {
                 qWarning("Unable to initialize GLEW.");
             }
-
-            rotationSlider = new QSlider(Qt::Horizontal);
-            rotationSlider->setMinimum(0);
-            rotationSlider->setMaximum(360);
-            uiScene.addWidget(rotationSlider);
-
-            rotationLabel = new QLabel();
-            rotationLabel->setGeometry(0, 50, 150, 25);
-            //uiScene.addWidget(rotationLabel);
 
             // Old: -44
             Quaternion rot1 = Quaternion::fromAxisAndAngle(1, 0, 0, deg2rad(-44.42700648682643));
@@ -163,15 +155,17 @@ namespace EvilTemple {
             renderStates.setViewMatrix(baseViewMatrix);
             centerOnWorld(480 * 28.2842703f, 480 * 28.2842703f);
 
-            backgroundMap.setMapDirectory("backgroundMaps/hommlet-exterior/");
+            backgroundMap.setMapDirectory("backgroundMaps/hommlet-exterior-night/");
             //backgroundMap.setMapDirectory("backgroundMaps/moathouse_interior/");
 
-            if (!clippingGeometry.load("maps/Map-2-Hommlet-Exterior/clippingGeometry.dat")) {
+            QString mapDir = "maps/Map-2-Hommlet-Exterior/";
+
+            if (!clippingGeometry.load(mapDir + "clippingGeometry.dat")) {
             //if (!clippingGeometry.load("maps/Map-7-Moathouse_Interior/clippingGeometry.dat")) {
                 qWarning("Loading clipping geometry failed.");
             }
 
-            QFile gmf("maps/Map-2-Hommlet-Exterior/staticGeometry.txt");
+            QFile gmf(mapDir + "staticGeometry.txt");
             //QFile gmf("maps/Map-7-Moathouse_Interior/staticGeometry.txt");
 
             if (!gmf.open(QIODevice::ReadOnly)) {
@@ -216,6 +210,28 @@ namespace EvilTemple {
                 modelCache[modelFilename] = obj.model;
                 geometryMeshes.append(obj);
             }
+
+            QFile partSys(mapDir + "particleSystems.txt");
+
+            if (!partSys.open(QIODevice::ReadOnly)) {
+                qWarning("Unable to find particle system file.");
+            }
+
+            QDataStream partSysStream(&partSys);
+            partSysStream.setByteOrder(QDataStream::LittleEndian);
+            partSysStream.setFloatingPointPrecision(QDataStream::SinglePrecision);
+
+            while (!partSysStream.atEnd()) {
+                float x, y, z;
+                QString name;
+
+                partSysStream >> x >> y >> z >> name;
+
+               // particleSysPos.append(Vector4(x, y, z, 1));
+            }
+
+            particleSystems.create();
+
         }
 
         void centerOnWorld(float worldX, float worldY)
@@ -224,8 +240,6 @@ namespace EvilTemple {
             renderStates.setViewMatrix(baseViewMatrix * matrix);
         }
 
-        QSlider *rotationSlider;
-        QLabel *rotationLabel;
         QDeclarativeEngine uiEngine;
         QGraphicsScene uiScene;
         QDeclarativeItem* rootItem;
@@ -240,6 +254,7 @@ namespace EvilTemple {
 
         typedef QPair<Vector4, QSharedPointer<Model> > GeometryMesh;
 
+        QList< Vector4 > particleSysPos;
         QList< GMF > geometryMeshes;
 
         QHash<QString, QWeakPointer<Model> > modelCache;
@@ -247,6 +262,8 @@ namespace EvilTemple {
         BackgroundMap backgroundMap;
 
         ClippingGeometry clippingGeometry;
+
+        ParticleSystems particleSystems;
 
         void resize(int width, int height) {
             float halfWidth = width * 0.5f;
@@ -280,12 +297,6 @@ namespace EvilTemple {
 
         d->uiScene.setStickyFocus(true);
 
-        // Ensure constant updates
-        QTimer *animTimer = new QTimer(this);
-        animTimer->setInterval(5);
-        animTimer->setSingleShot(false);
-        connect(animTimer, SIGNAL(timeout()), this, SLOT(update()));
-        animTimer->start();
 
         setMouseTracking(true);
     }
@@ -311,13 +322,12 @@ namespace EvilTemple {
 
         glUseProgram(0);
 
-        glEnable(GL_DEPTH_TEST); HANDLE_GL_ERROR
-                glEnable(GL_CULL_FACE); HANDLE_GL_ERROR
-                glEnable(GL_ALPHA_TEST); HANDLE_GL_ERROR
-                glAlphaFunc(GL_NOTEQUAL, 0); HANDLE_GL_ERROR
-                glEnable(GL_BLEND); HANDLE_GL_ERROR
-
-                glDisable(GL_STENCIL_TEST);
+        SAFE_GL(glEnable(GL_DEPTH_TEST));
+		SAFE_GL(glEnable(GL_CULL_FACE));
+		SAFE_GL(glEnable(GL_ALPHA_TEST));
+		SAFE_GL(glAlphaFunc(GL_NOTEQUAL, 0));
+		SAFE_GL(glEnable(GL_BLEND));
+		SAFE_GL(glDisable(GL_STENCIL_TEST));
 
         glClearColor(0.2f, 0.2f, 0.2f, 0.0f);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
@@ -327,24 +337,14 @@ namespace EvilTemple {
         d->clippingGeometry.draw();
 
         Matrix4 t;
-        t.setToIdentity();;
+        t.setToIdentity();
         t(0, 3) = 480 * 28.2842703f;
         t(2, 3) = 480 * 28.2842703f;
-        //float angl = deg2rad(45);
-        //Quaternion rot = Quaternion::fromAxisAndAngle(0, 1, 0, angl);
-        //d->renderStates.setWorldMatrix(t * Matrix4::transformation(Vector4(1,1,1,1), rot, Vector4(0,0,0,0)));
         d->renderStates.setWorldMatrix(t);
 
         Draw(&d->model);
 
-        t.setToIdentity();
-        d->renderStates.setWorldMatrix(t);
-
-        glMatrixMode(GL_PROJECTION);
-        glLoadMatrixf(d->renderStates.projectionMatrix().data());
-
-        int rotationVal = d->rotationSlider->value();
-        d->rotationLabel->setText(QString("%1").arg(rotationVal));
+        d->renderStates.setWorldMatrix(Matrix4::identity());
 
         foreach (const GMF &geometryMesh, d->geometryMeshes) {
             Matrix4 positionMatrix = Matrix4::transformation(geometryMesh.scale,
@@ -354,32 +354,36 @@ namespace EvilTemple {
 
             Draw(geometryMesh.model.data());
 
-            glMatrixMode(GL_MODELVIEW);
-            glLoadMatrixf(d->renderStates.viewMatrix().data());
-            glMultMatrixf(positionMatrix.data());
-            //geometryMesh.model->drawNormals();
-
-            positionMatrix.setToIdentity();
-            d->renderStates.setWorldMatrix(positionMatrix);
+            d->renderStates.setWorldMatrix(Matrix4::identity());
         }
+		
+        d->particleSystems.render();
 
-        glDisable(GL_DEPTH_TEST); HANDLE_GL_ERROR
-                glDisable(GL_CULL_FACE); HANDLE_GL_ERROR
-                glDisable(GL_ALPHA_TEST); HANDLE_GL_ERROR
-                glAlphaFunc(GL_ALWAYS, 0); HANDLE_GL_ERROR
-                glDisable(GL_BLEND); HANDLE_GL_ERROR
+		SAFE_GL(glDisable(GL_CULL_FACE));
+		SAFE_GL(glDisable(GL_DEPTH_TEST));
+		SAFE_GL(glDisable(GL_TEXTURE_2D));
+		SAFE_GL(glDisable(GL_LIGHTING));
+				
+		glDisable(GL_ALPHA_TEST); HANDLE_GL_ERROR
+		glDisable(GL_DEPTH_TEST); HANDLE_GL_ERROR
+		glAlphaFunc(GL_ALWAYS, 0); HANDLE_GL_ERROR
+		glDisable(GL_BLEND); HANDLE_GL_ERROR
 
-                glDisable(GL_TEXTURE_2D);
-        glDisable(GL_DEPTH_TEST);
-        glDisable(GL_LIGHTING);
+		glMatrixMode(GL_PROJECTION);
+		glLoadMatrixf(d->renderStates.projectionMatrix().data());
 
-        glPointSize(50);
-        glColor3f(1, 0, 0);
-        glBegin(GL_POINTS);
-        glVertex3f(19.9999352f, -13454.0, -1);
-        glVertex3f(480 * 28.2842703f, 0, 480 * 28.2842703f);
+		glMatrixMode(GL_MODELVIEW);
+		glLoadMatrixf(d->renderStates.viewMatrix().data());
 
-        glEnd();
+		glPointSize(10);
+		glColor3f(1, 0, 0);
+		glBegin(GL_POINTS);
+
+		foreach (const Vector4 &partSysPos, d->particleSysPos) {
+			glVertex4fv(partSysPos.data());
+		}
+
+		glEnd();
 
         glLoadIdentity();
         glTranslatef(d->renderStates.viewMatrix()(0, 3), d->renderStates.viewMatrix()(1, 3), 0);

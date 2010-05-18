@@ -71,6 +71,14 @@ namespace EvilTemple {
 
         connect(game.camera(), SIGNAL(positionChanged()), SLOT(updateTitle()));
 
+
+        // Ensure constant updates
+        QTimer *animTimer = new QTimer(this);
+        animTimer->setInterval(5);
+        animTimer->setSingleShot(false);
+        connect(animTimer, SIGNAL(timeout()), glViewport, SLOT(repaint()));
+        animTimer->start();
+
         QTimer *timer = new QTimer(this);
         timer->setInterval(1000);
         timer->setSingleShot(false);

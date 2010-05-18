@@ -194,11 +194,6 @@ public:
         for (int i = 0; i < mInstanceCount; ++i) {
             stream >> position >> rotation >> scale >> meshIndex;
 
-            qWarning("Clipping geometry mesh @ %f,%f,%f (Scale: %f,%f,%f) (Rotation: %f,%f,%f,%f)",
-                     position.x(), position.y(), position.z(),
-                     scale.x(), scale.y(), scale.z(),
-                     rotation.x(), rotation.y(), rotation.z(), rotation.w());
-
             Q_ASSERT(meshIndex >= 0 && meshIndex < mMeshCount);
 
             mInstances[i].setMesh(mMeshes.data() + meshIndex);

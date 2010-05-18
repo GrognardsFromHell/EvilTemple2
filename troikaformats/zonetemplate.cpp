@@ -17,6 +17,9 @@ namespace Troika
         QList<GeometryObject*> staticObjects;
         QList<GeometryObject*> clippingGeometry;
 
+        QList<ParticleSystem> particleSystems;
+        QList<Light> lights;
+
         QVector3D startPosition;
         quint32 movie; // Movie to play when entering
 
@@ -197,6 +200,26 @@ namespace Troika
     void ZoneTemplate::setName(const QString &name)
     {
         d_ptr->name = name;
+    }
+
+    void ZoneTemplate::addLight(const Light &light)
+    {
+        d_ptr->lights.append(light);
+    }
+
+    void ZoneTemplate::addParticleSystem(const ParticleSystem &particleSystem)
+    {
+        d_ptr->particleSystems.append(particleSystem);
+    }
+
+    const QList<Light> &ZoneTemplate::lights() const
+    {
+        return d_ptr->lights;
+    }
+
+    const QList<ParticleSystem> &ZoneTemplate::particleSystems() const
+    {
+        return d_ptr->particleSystems;
     }
 
 }

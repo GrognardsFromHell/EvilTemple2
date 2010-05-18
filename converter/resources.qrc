@@ -3,5 +3,6 @@
         <file>exclusions.txt</file>
         <file>material_template.xml</file>
         <file>shadow_caster.txt</file>
+        <file>particlefiles.txt</file>
     </qresource>
 </RCC>

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<material xmlns="http://hartte.de/eviltemple/material.xsd">
+
+  <pass>
+    <shader>
+      <vertexShader>
+        <code>
+          <![CDATA[
+#version 120
+
+uniform mat4 worldViewProjection;
+
+attribute vec4 vertexPosition;
+attribute vec2 vertexTexCoord;
+varying vec2 texCoord;
+
+void main() {
+  gl_Position = worldViewProjection * vertexPosition;
+  texCoord = vertexTexCoord;
+}
+]]>
+        </code>
+      </vertexShader>
+
+      <fragmentShader>
+        <code>
+          <![CDATA[
+#version 120
+
+uniform sampler2D texSampler;
+uniform vec4 materialColor;
+uniform float rotation;
+
+varying vec2 texCoord;
+
+const vec2 pivot = vec2(0.5, 0.5); // Pivot on the texture
+
+void main() {
+  float rotationRadians = radians(rotation);
+
+  mat2 mTexRotate = mat2(cos(rotationRadians), sin(rotationRadians),
+    -sin(rotationRadians), cos(rotationRadians)  
+  );
+  
+  vec2 newTexCoord = mTexRotate * (texCoord - pivot) + pivot;
+
+    vec4 texel = texture2D(texSampler, newTexCoord);
+    gl_FragColor = materialColor * texel;
+}
+]]>
+        </code>
+      </fragmentShader>
+
+      <attribute name="vertexPosition" buffer="positions" />
+      <attribute name="vertexTexCoord" buffer="texCoords" components="2" />
+      <uniform name="worldViewProjection" semantic="WorldViewProjection" />
+      <uniform name="texSampler" semantic="Texture0" />
+    </shader>
+  </pass>
+
+</material>
