@@ -1,6 +1,7 @@
 
 #include <GL/glew.h>
 
+#include <QtCore/QTime>
 #include <QtDeclarative/QtDeclarative>
 #include <QtGui/QResizeEvent>
 
@@ -8,6 +9,7 @@
 
 #include "renderstates.h"
 #include "modelfile.h"
+#include "modelinstance.h"
 #include "backgroundmap.h"
 
 #include "clippinggeometry.h"
@@ -18,7 +20,9 @@ namespace EvilTemple {
     // TODO: THIS IS TEMP
     class GMF {
     public:
-        GMF() : model(new Model) {}
+        GMF() : modelInstance(new ModelInstance)
+        {
+        }
 
         bool staticObject;
         bool rotationFromPrototype;
@@ -26,7 +30,7 @@ namespace EvilTemple {
         Vector4 position;
         Vector4 scale;
         Quaternion rotation;
-        QSharedPointer<Model> model;
+        QSharedPointer<ModelInstance> modelInstance;
     };
 
 #define HANDLE_GL_ERROR handleGlError(__FILE__, __LINE__);
@@ -42,85 +46,6 @@ namespace EvilTemple {
 
         if (error.length() > 0) {
             qWarning("OpenGL error @ %s:%d: %s", file, line, qPrintable(error));
-        }
-    }
-
-    static void Draw(Model *model) {
-        for (int faceGroupId = 0; faceGroupId < model->faces; ++faceGroupId) {
-            const FaceGroup &faceGroup = model->faceGroups[faceGroupId];
-            MaterialState *material = faceGroup.material;
-
-            if (!material)
-                continue;
-
-            for (int i = 0; i < material->passCount; ++i) {
-                MaterialPassState &pass = material->passes[i];
-
-                pass.program.bind(); HANDLE_GL_ERROR
-
-                        // Bind texture samplers
-                        for (int j = 0; j < pass.textureSamplers.size(); ++j) {
-                    pass.textureSamplers[j].bind(); HANDLE_GL_ERROR
-                        }
-
-                // Bind uniforms
-                for (int j = 0; j < pass.uniforms.size(); ++j) {
-                    pass.uniforms[j].bind(); HANDLE_GL_ERROR
-                        }
-
-                // Bind attributes
-                for (int j = 0; j < pass.attributes.size(); ++j) {
-                    MaterialPassAttributeState &attribute = pass.attributes[j];
-
-                    // Bind the correct buffer
-                    switch (attribute.bufferType) {
-                    case 0:
-                        glBindBuffer(GL_ARRAY_BUFFER, model->positionBuffer);
-                        break;
-                    case 1:
-                        glBindBuffer(GL_ARRAY_BUFFER, model->normalBuffer);
-                        break;
-                    case 2:
-                        glBindBuffer(GL_ARRAY_BUFFER, model->texcoordBuffer);
-                        break;
-                    }
-
-                    // Assign the attribute
-                    glEnableVertexAttribArray(attribute.location);
-                    glVertexAttribPointer(attribute.location, attribute.binding.components(), attribute.binding.type(),
-                                          attribute.binding.normalized(), attribute.binding.stride(), (GLvoid*)attribute.binding.offset());
-                    HANDLE_GL_ERROR
-                }
-                glBindBuffer(GL_ARRAY_BUFFER, 0); // Unbind any previously bound buffers
-
-                // Set render states
-                foreach (const SharedMaterialRenderState &state, pass.renderStates) {
-                    state->enable();
-                }
-
-                // Draw the actual model
-                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, faceGroup.buffer); HANDLE_GL_ERROR
-                glDrawElements(GL_TRIANGLES, faceGroup.elementCount, GL_UNSIGNED_SHORT, 0); HANDLE_GL_ERROR
-                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0); HANDLE_GL_ERROR
-
-                // Reset render states to default
-                foreach (const SharedMaterialRenderState &state, pass.renderStates) {
-                    state->disable();
-                }
-
-                // Unbind textures
-                for (int j = 0; j < pass.textureSamplers.size(); ++j) {
-                    pass.textureSamplers[j].unbind();
-                }
-
-                // Unbind attributes
-                for (int j = 0; j < pass.attributes.size(); ++j) {
-                    MaterialPassAttributeState &attribute = pass.attributes[j];
-                    glDisableVertexAttribArray(attribute.location); HANDLE_GL_ERROR
-                }
-
-                pass.program.unbind();
-            }
         }
     }
 
@@ -200,14 +125,18 @@ namespace EvilTemple {
                 stream >> flag;
                 obj.customRotation = flag;
 
+                SharedModel model(new Model);
+
                 if (modelCache.contains(modelFilename)) {
-                    obj.model = modelCache[modelFilename];
-                } else if (!obj.model->open(modelFilename, renderStates)) {
-                    qWarning("UNABLE TO LOAD GMF: %s (%s)", qPrintable(modelFilename), qPrintable(obj.model->error()));
+                    model = modelCache[modelFilename];
+                } else if (!model->open(modelFilename, renderStates)) {
+                    qWarning("UNABLE TO LOAD GMF: %s (%s)", qPrintable(modelFilename), qPrintable(model->error()));
                     continue;
                 }
 
-                modelCache[modelFilename] = obj.model;
+                obj.modelInstance->setModel(model);
+
+                modelCache[modelFilename] = model;
                 geometryMeshes.append(obj);
             }
 
@@ -244,7 +173,7 @@ namespace EvilTemple {
         QDeclarativeItem* rootItem;
 
         RenderStates renderStates;
-        Model model;
+        ModelInstance model;
         bool modelLoaded;
 
         bool dragging;
@@ -263,6 +192,8 @@ namespace EvilTemple {
         ClippingGeometry clippingGeometry;
 
         ParticleSystems particleSystems;
+
+        QTime animationTimer;
 
         void resize(int width, int height) {
             float halfWidth = width * 0.5f;
@@ -296,7 +227,6 @@ namespace EvilTemple {
 
         d->uiScene.setStickyFocus(true);
 
-
         setMouseTracking(true);
     }
 
@@ -311,22 +241,23 @@ namespace EvilTemple {
 
         HANDLE_GL_ERROR
 
-                if (!d->modelLoaded) {
-            if (!d->model.open("meshes/monsters/demon/demon.model", d->renderStates)) {
-                //if (!d->model.open("meshes/scenery/portals/stairs-down.model", d->renderStates)) {
-                qWarning("Unable to open model file: %s", qPrintable(d->model.error()));
+        if (!d->modelLoaded) {
+            SharedModel model(new Model);
+            if (!model->open("meshes/monsters/demon/demon.model", d->renderStates)) {
+                qWarning("Unable to open model file: %s", qPrintable(model->error()));
             }
+            d->model.setModel(model);
             d->modelLoaded = true;
         }
 
         glUseProgram(0);
 
         SAFE_GL(glEnable(GL_DEPTH_TEST));
-		SAFE_GL(glEnable(GL_CULL_FACE));
-		SAFE_GL(glEnable(GL_ALPHA_TEST));
-		SAFE_GL(glAlphaFunc(GL_NOTEQUAL, 0));
-		SAFE_GL(glEnable(GL_BLEND));
-		SAFE_GL(glDisable(GL_STENCIL_TEST));
+        SAFE_GL(glEnable(GL_CULL_FACE));
+        SAFE_GL(glEnable(GL_ALPHA_TEST));
+        SAFE_GL(glAlphaFunc(GL_NOTEQUAL, 0));
+        SAFE_GL(glEnable(GL_BLEND));
+        SAFE_GL(glDisable(GL_STENCIL_TEST));
 
         glClearColor(0.2f, 0.2f, 0.2f, 0.0f);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
@@ -341,17 +272,30 @@ namespace EvilTemple {
         t(2, 3) = 480 * 28.2842703f;
         d->renderStates.setWorldMatrix(t);
 
-        Draw(&d->model);
+        d->model.draw();
 
         d->renderStates.setWorldMatrix(Matrix4::identity());
 
-        foreach (const GMF &geometryMesh, d->geometryMeshes) {
+        float elapsed = 0;
+
+        if (!d->animationTimer.isNull()) {
+            elapsed = d->animationTimer.restart() / 1000.0f;
+        } else {
+            d->animationTimer.start();
+        }
+
+        for (int i = 0; i < d->geometryMeshes.size(); ++i) {
+            GMF &geometryMesh = d->geometryMeshes[i];
+            if (elapsed > 0) {
+                geometryMesh.modelInstance->elapseTime(elapsed);
+            }
+
             Matrix4 positionMatrix = Matrix4::transformation(geometryMesh.scale,
                                                              geometryMesh.rotation,
                                                              geometryMesh.position);
             d->renderStates.setWorldMatrix(positionMatrix);
 
-            Draw(geometryMesh.model.data());
+            geometryMesh.modelInstance->draw();
 
             d->renderStates.setWorldMatrix(Matrix4::identity());
         }

@@ -12,7 +12,7 @@ namespace Troika
         if (_frames == 0)
             return 0;
         else
-            return new AnimationStream(_keyFramesData, _keyFramesDataStart, boneCount);
+            return new AnimationStream(_keyFramesData, _keyFramesDataStart, boneCount, _frames);
     }
 
     class SkeletonData
@@ -20,6 +20,7 @@ namespace Troika
     private:
         QByteArray data; // SKA data
         QDataStream stream;
+        QString filename;
 
         void loadBones(quint32 count, quint32 dataStart)
         {
@@ -180,7 +181,8 @@ namespace Troika
         QVector<Animation> animations;
         QHash<QString, Animation*> animationMap;
 
-        SkeletonData(const QVector<Bone> &bones, const QByteArray &_data) : data(_data), stream(data), bones(bones)
+        SkeletonData(const QVector<Bone> &bones, const QByteArray &_data,
+                     const QString &_filename) : data(_data), stream(data), bones(bones), filename(_filename)
         {
             stream.setByteOrder(QDataStream::LittleEndian);
             stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
@@ -191,6 +193,10 @@ namespace Troika
           */
         void load()
         {
+			if (data.isNull()) {
+				return; // No animation data present.
+			}
+
             quint32 boneCount; // Number of bones in skeleton
             quint32 bonesDataStart; // Start of bones data in bytes
             quint32 variationCount; // Unknown + Unused
@@ -211,7 +217,8 @@ namespace Troika
         }
     };
 
-    Skeleton::Skeleton(const QVector<Bone> &bones, const QByteArray &data) : d_ptr(new SkeletonData(bones, data))
+    Skeleton::Skeleton(const QVector<Bone> &bones, const QByteArray &data, const QString &filename)
+        : d_ptr(new SkeletonData(bones, data, filename))
     {
         d_ptr->load();
     }
@@ -249,8 +256,8 @@ namespace Troika
 
     const float AnimationStream::rotationFactor = 1 / 32766.0f;
 
-    AnimationStream::AnimationStream(const QByteArray &data, int dataStart, int boneCount)
-        : _dataStart(dataStart), _boneCount(boneCount), _boneMap(new AnimationBoneState*[boneCount]), stream(data)
+    AnimationStream::AnimationStream(const QByteArray &data, int dataStart, int boneCount, int _frameCount)
+        : _dataStart(dataStart), _boneCount(boneCount), _boneMap(new AnimationBoneState*[boneCount]), stream(data), frameCount(_frameCount)
     {
         stream.setByteOrder(QDataStream::LittleEndian);
         stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
@@ -453,9 +460,17 @@ namespace Troika
             stream >> boneId;
         }
 
-        stream >> nextFrameId;
+		if (!stream.atEnd()) {
+			stream >> nextFrameId;
 
-        readNextFrame();
+			if (nextFrameId == -2) {
+				nextFrameId = -1; // No idea why this happens
+			} else {
+				readNextFrame();
+			}
+		} else {
+			qWarning("Stream ended after initial bone list.");
+		}
     }
 
     void AnimationStream::seek(int frame)

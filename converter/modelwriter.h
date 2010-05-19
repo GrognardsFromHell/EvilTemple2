@@ -18,6 +18,8 @@ public:
     void writeVertices(const QVector<Troika::Vertex> &vertices);
     void writeFaces(const QList<QSharedPointer<Troika::FaceGroup> > &faceGroups, const QHash<QString,int> &materialMapping);
     void writeBoneAttachments(const QVector<Troika::Vertex> &vertices);
+    void writeBoundingVolumes(const Troika::MeshModel *model);
+    void writeAnimations(const Troika::MeshModel *model);
 
     void finish(); // Writes CRC values and finishes the overall file structure
 
@@ -28,6 +30,8 @@ public:
         Faces = 4,
         Bones = 5, // Skeletal data
         BoneAttachments = 6, // Assigns vertices to bones
+        BoundingVolumes = 7, // Bounding volumes,
+        Animations = 8, // Animations
         Metadata = 0xFFFF,  // Last chunk is always metadata
         UserChunk = 0x10000, // This gives plenty of room. 16-bit are reserved for application chunks
     };

@@ -1,8 +1,7 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-#include <QScopedPointer>
-#include <QtOpenGL>
+#include <GL/glew.h>
 
 #include <limits>
 
@@ -339,23 +338,47 @@ namespace EvilTemple
 
         In no-debug mode, this macro simply calls the supplied function without any checks.
     */
+    inline void __gl_errorHandler(const char *file, int line, const char *statement) {
+        for(int _errorCode = glGetError(); _errorCode != GL_NO_ERROR; _errorCode = glGetError()) {
+            qWarning("GL call '%s' failed @ %s:%d with %s.", statement, file, line, gluErrorString(_errorCode));
+        }
+    }
+
 #if defined(QT_NO_DEBUG)
     #define SAFE_GL(x) x
 #else
-    #define SAFE_GL(x) x; { int _errorCode; while ((_errorCode = glGetError()) != GL_NO_ERROR) { \
-        qWarning("GL call '%s' failed @ %s:%d with %s.", #x, __FILE__, __LINE__, gluErrorString(_errorCode));} }
+    #define SAFE_GL(x) x, __gl_errorHandler(__FILE__, __LINE__, #x)
 #endif
 
+}
+
+inline QDataStream &operator >>(QDataStream &stream, GameMath::Matrix4 &matrix) {
+#if Q_BYTE_ORDER == Q_LITTLE_ENDIAN
+        stream.readRawData(reinterpret_cast<char*>(matrix.data()), sizeof(float) * 16);
+#else
+        for (int i = 0; i < 16; ++i) {
+            stream >> matrix.data()[i];
+        }
+#endif
+        return stream;
+}
+
 inline QDataStream &operator >>(QDataStream &stream, GameMath::Vector4 &vector) {
+#if Q_BYTE_ORDER == Q_LITTLE_ENDIAN
+    stream.readRawData(reinterpret_cast<char*>(vector.data()), sizeof(float) * 4);
+#else
     stream >> vector.data()[0] >> vector.data()[1] >> vector.data()[2] >> vector.data()[3];
+#endif
     return stream;
 }
 
 inline QDataStream &operator >>(QDataStream &stream, GameMath::Quaternion &quaternion) {
+#if Q_BYTE_ORDER == Q_LITTLE_ENDIAN
+    stream.readRawData(reinterpret_cast<char*>(quaternion.data()), sizeof(float) * 4);
+#else
     stream >> quaternion.data()[0] >> quaternion.data()[1] >> quaternion.data()[2] >> quaternion.data()[3];
+#endif
     return stream;
-}
-
 }
 
 #endif // UTIL_H

@@ -42,10 +42,8 @@ namespace Troika
             timer.start();
 
             QByteArray skmData = vfs->openFile(filename);
-            // TODO: Make this more resilient.
-            QByteArray skaData = vfs->openFile(filename.replace(".skm", ".ska"));
-
-            if (skmData.isNull() || skaData.isNull()) {
+			
+            if (skmData.isNull()) {
                 qWarning("Unknown model file: %s", qPrintable(filename));
                 return NULL;
             }
@@ -60,7 +58,9 @@ namespace Troika
             readMaterials(stream);
             readFaces(stream);
 
-            skeleton.reset(new Skeleton(bones, skaData));
+			// Some models (add meshes for instance) have no skeleton and are unanimated
+			QByteArray skaData = vfs->openFile(filename.replace(".skm", ".ska", Qt::CaseInsensitive));
+			skeleton.reset(new Skeleton(bones, skaData, filename));
 
             QList< QSharedPointer<FaceGroup> > faceGroups;
             for (quint32 i = 0; i < header.materialCount; ++i) {

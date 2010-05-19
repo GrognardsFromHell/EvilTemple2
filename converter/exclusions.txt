@@ -4,7 +4,7 @@
 art/meshes/player/*
 
 # This seems to be a broken tree (500kb for the model -> insane)
-art/meshes/foliage/tree1.*
+art/meshes/scenery/foliage/tree1.*
 
 # The name says it all, uses variations (unsupported)
 art\meshes\particle\test.skm

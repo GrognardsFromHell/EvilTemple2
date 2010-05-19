@@ -32,6 +32,8 @@
 #include "interfaceconverter.h"
 #include "modelwriter.h"
 
+void printEventTypes();
+
 /**
   The original game applies an additional base rotation to everything in order to align it
   with the isometric grid. This is the radians value of that rotation.
@@ -44,6 +46,7 @@ struct MeshReference {
     enum Sources {
         MeshesMes = 0x1,
         StaticGeometry = 0x2, // from a map
+		AddMesh = 0x4, // Added from addmesh.mes
         FORCE_DWORD = 0x7FFFFFFF, // force 32-bit size (whatever)
     };
 
@@ -227,7 +230,7 @@ public:
                 continue;
             }
 
-            const Vector4 &pos = particleSystem.light.position;            
+            const Vector4 &pos = particleSystem.light.position;
             stream << pos.x() << pos.y() << pos.z() << particleSystem.light.range << particleSystemHashes[particleSystem.hash];
         }
 
@@ -616,10 +619,25 @@ public:
 
         foreach (quint32 meshId, meshesIndex.keys()) {
             QString meshFilename = QDir::toNativeSeparators("art/meshes/" + meshesIndex[meshId] + ".skm");
-            MeshReference &reference = meshReferences[meshFilename.toLower()];
 
+            MeshReference &reference = meshReferences[meshFilename.toLower()];
             reference.meshId = meshId;
             reference.source |= MeshReference::MeshesMes;
+        }
+    }
+
+	void addAddMeshesMesReferences()
+    {
+        QHash<quint32, QString> meshesIndex = Troika::MessageFile::parse(vfs->openFile("rules/addmesh.mes"));
+
+        foreach (quint32 meshId, meshesIndex.keys()) {
+			QString filename = meshesIndex[meshId].trimmed();
+
+			if (filename.isEmpty())
+				continue;
+
+            MeshReference &reference = meshReferences[filename];
+			reference.source |= MeshReference::AddMesh;
         }
     }
 
@@ -632,6 +650,7 @@ public:
 
         // Convert all valid meshes in meshes.mes
         addMeshesMesReferences();
+		addAddMeshesMesReferences();
 
         foreach (const QString &meshFilename, meshReferences.keys()) {
             if (exclusions.isExcluded(meshFilename)) {
@@ -709,8 +728,12 @@ public:
         writer.writeVertices(model->vertices());
         writer.writeFaces(model->faceGroups(), materialMapping);
 
-        writer.writeBones(model->skeleton());
-        writer.writeBoneAttachments(model->vertices());
+		writer.writeBones(model->skeleton());
+		writer.writeBoneAttachments(model->vertices());
+
+		if (model->skeleton()->animations().size() > 0) {
+			writer.writeAnimations(model);
+		}
 
         writer.finish();
 
@@ -727,13 +750,15 @@ public:
             qFatal("Unable to create output directory %s.", qPrintable(mOutputPath));
         }
 
-        convertParticleSystems();
+        /*convertParticleSystems();
 
-        convertMaps();
-
-        convertModels();
+        convertMaps();*/
+		
+        convertModels();               
 
         convertInterface();               
+
+        printEventTypes();
 
         return true;
     }

@@ -7,10 +7,22 @@
 
 namespace EvilTemple {
 
+	enum ModelChunks {
+		Chunk_Textures = 1,
+		Chunk_Materials = 2,
+		Chunk_Geometry = 3,
+		Chunk_Faces = 4,
+		Chunk_Bones = 5, // Skeletal data
+		Chunk_BoneAttachments = 6, // Assigns vertices to bones
+		Chunk_BoundingVolumes = 7, // Bounding volumes,
+		Chunk_Animations = 8, // Animations
+		Chunk_Metadata = 0xFFFF,  // Last chunk is always metadata
+	};
+
     Model::Model()
 	: faceGroups(0), positions(0), normals(0), texCoords(0), vertices(0), vertexData(0), faceData(0)
         , positionBuffer(0), normalBuffer(0), texcoordBuffer(0), materialState(0), textureData(0), faces(0),
-        attachments(0), bonesCount(0), bones(0)
+        attachments(0)
     {
     }
 
@@ -33,7 +45,7 @@ namespace EvilTemple {
 	uint reserved;
 	uint size;
     };
-
+	
     class ModelTextureSource : public TextureSource {
     public:
         ModelTextureSource(const QVector<Md5Hash> &md5Hashes, const QVector<unsigned char*> &textures,
@@ -111,7 +123,7 @@ namespace EvilTemple {
                 return false;
             }
 
-            if (chunkHeader.type < 1 || chunkHeader.type > 6) {
+            if (chunkHeader.type < Chunk_Textures || chunkHeader.type > Chunk_Animations) {
                 // Skip, unknown chunk
                 mError.append(QString("WARN: Unknown chunk type %1 in model file %2.").arg(chunkHeader.type).arg(filename));
                 file.seek(file.pos() + chunkHeader.size);
@@ -125,7 +137,7 @@ namespace EvilTemple {
                 return false;
             }
 
-            if (chunkHeader.type == 1) {
+            if (chunkHeader.type == Chunk_Textures) {
                 textureData.reset(chunkData.take());
 
                 unsigned int textureCount = *(unsigned int*)textureData.data();
@@ -146,7 +158,7 @@ namespace EvilTemple {
                     texturesSize[j] = size;
                     ptr += size;
                 }
-            } else if (chunkHeader.type == 2) {
+            } else if (chunkHeader.type == Chunk_Materials) {
                 unsigned int count = *reinterpret_cast<unsigned int*>(chunkData.data());
                 materialState.reset(new MaterialState[count]);
 
@@ -176,20 +188,43 @@ namespace EvilTemple {
                     }
                 }
 
-            } else if (chunkHeader.type == 3) {
+            } else if (chunkHeader.type == Chunk_Geometry) {
                 vertexData.reset(chunkData.take());
                 loadVertexData();
-            } else if (chunkHeader.type == 4) {
+            } else if (chunkHeader.type == Chunk_Faces) {
                 faceData.reset(chunkData.take());
                 loadFaceData();
-            } else if (chunkHeader.type == 5) {
-                boneData.reset(chunkData.take());
+            } else if (chunkHeader.type == Chunk_Bones) {
+                QDataStream stream(QByteArray::fromRawData(chunkData.data(), chunkHeader.size));
+				stream.setByteOrder(QDataStream::LittleEndian);
+				stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
+				
+				uint bonesCount;
+				stream >> bonesCount;
+				
+				mBones.resize(bonesCount);
+				
+				for (int j = 0; j < bonesCount; ++j) {
+					Bone &bone = mBones[j];
+					QByteArray boneName;
+					int parentId;
 
-                bonesCount = *reinterpret_cast<unsigned int*>(boneData.data());
+					stream >> boneName >> parentId >> bone.mFullWorldInverse 
+						>> bone.mRelativeWorld >> bone.mDefaultTransform;
 
-                bones = reinterpret_cast<Bone*>(boneData.data() + 16);
+					Q_ASSERT(parentId >= -1 && parentId < mBones.size());
 
-            } else if (chunkHeader.type == 6) {
+					bone.setBoneId(j);
+
+					bone.mName = QString::fromUtf8(boneName, boneName.size());
+
+					if (parentId == -1)
+						continue;
+
+					bone.mParent = mBones.constData() + parentId;
+				}
+
+            } else if (chunkHeader.type == Chunk_BoneAttachments) {
                 boneAttachmentData.reset(chunkData.take());
 
                 int count = *reinterpret_cast<unsigned int*>(boneAttachmentData.data());
@@ -213,22 +248,22 @@ namespace EvilTemple {
 
                     for (int k = 0; k < attachments[j].count(); ++k) {
                         float weight = attachments[j].weights()[k];
-                        const Bone &bone = bones[attachments[j].bones()[k]];
+                        const Bone &bone = mBones[attachments[j].bones()[k]];
 
-                        Vector4 transformedPos = bone.defaultPoseTransform() * positions[j];
+                        Vector4 transformedPos = bone.defaultTransform() * positions[j];
                         transformedPos *= 1 / transformedPos.w();
 
                         result += weight * transformedPos;
-                        resultNormal += weight * (bone.defaultPoseTransform() * normals[j]);
+                        resultNormal += weight * (bone.defaultTransform() * normals[j]);
                     }
 
                     result.data()[2] *= -1;
                     resultNormal.data()[2] *= -1;
 
-                    result.data()[3] = 1;
+                    result.data()[3] =  1;
 
-                    positions[j] = result;
-                    normals[j] = resultNormal;
+                    //const_cast<Vector4&>(positions[j]) = result;
+                    //const_cast<Vector4&>(normals[j]) = resultNormal;
                 }
 
                 glBindBufferARB(GL_ARRAY_BUFFER_ARB, positionBuffer);
@@ -236,6 +271,23 @@ namespace EvilTemple {
 
                 glBindBufferARB(GL_ARRAY_BUFFER_ARB, normalBuffer);
                 glBufferDataARB(GL_ARRAY_BUFFER_ARB, sizeof(Vector4) * vertices, normals, GL_STATIC_DRAW_ARB);
+
+            } else if (chunkHeader.type == Chunk_Animations) {
+                QDataStream stream(QByteArray::fromRawData(chunkData.data(), chunkHeader.size));
+                stream.setByteOrder(QDataStream::LittleEndian);
+                stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
+
+                uint count;
+                stream >> count;
+                stream.skipRawData(3 * sizeof(uint)); // Padding
+
+                mAnimations.reset(new Animation[count]);
+
+                for (int j = 0; j < count; ++j) {
+                    Animation &animation = mAnimations[j];
+                    stream >> animation;
+                    mAnimationMap[animation.name()] = &animation;
+                }
 
             } else {
                 // This should never happen
@@ -375,8 +427,8 @@ namespace EvilTemple {
 	glBegin(GL_LINES);
 
         for (int i = 0; i < vertices; i += 2) {
-            Vector4 &vertex = positions[i];
-            Vector4 &normal = normals[i];
+            const Vector4 &vertex = positions[i];
+            const Vector4 &normal = normals[i];
             glVertex3fv(vertex.data());
             glVertex3fv((vertex + 15 * normal).data());
 	}
@@ -387,7 +439,7 @@ namespace EvilTemple {
         glBegin(GL_POINTS);
         glColor3f(1, 0, 0);
         for (int i = 0; i < vertices; i += 2) {
-            Vector4 &vertex = positions[i];
+            const Vector4 &vertex = positions[i];
             glVertex3fv(vertex.data());
         }
         glEnd();
@@ -404,6 +456,42 @@ namespace EvilTemple {
 	if (buffer) {
             //glDeleteBuffersARB(1, &buffer);
 	}
+    }
+
+    QDataStream &operator >>(QDataStream &stream, Animation &animation)
+    {
+        QByteArray name;
+        uint driveType;
+        stream >> name >> animation.mFrames >> animation.mFrameRate >> animation.mDps
+                >> driveType >> animation.mLoopable >> animation.mEvents >> animation.mAnimationBones;
+
+        Q_ASSERT(animation.mFrameRate >= 0);
+        Q_ASSERT(driveType == Animation::Time || driveType == Animation::Rotation || driveType == Animation::Distance);
+
+        animation.mDriveType = static_cast<Animation::DriveType>(driveType);
+        animation.mName = QString::fromUtf8(name.constData(), name.length());
+
+        return stream;
+    }
+
+    QDataStream &operator >>(QDataStream &stream, AnimationEvent &event)
+    {
+        QByteArray action;
+        uint type;
+        stream >> event.mFrame >> type >> action;
+
+        Q_ASSERT(type == AnimationEvent::Action || type == AnimationEvent::Script);
+
+        event.mType = static_cast<AnimationEvent::Type>(type);
+        event.mContent = QString::fromUtf8(action.constData(), action.size());
+
+        return stream;
+    }
+
+    QDataStream &operator >>(QDataStream &stream, AnimationBone &bone)
+    {
+        stream >> bone.mRotationStream >> bone.mScaleStream >> bone.mTranslationStream;
+        return stream;
     }
 
 }

@@ -157,7 +157,7 @@ namespace Troika {
         GLuint indexBuffer;
 
         Q_DISABLE_COPY(MeshModel)
-    };
+    };       
 
 }
 

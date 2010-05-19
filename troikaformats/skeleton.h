@@ -66,12 +66,18 @@ namespace Troika
     class TROIKAFORMATS_EXPORT AnimationStream
     {
     public:
-        AnimationStream(const QByteArray &data, int dataStart, int boneCount);
+        AnimationStream(const QByteArray &data, int dataStart, int boneCount, int frameCount);
 
         const AnimationBoneState *getBoneState(quint16 boneId) const;
 
+        bool atEnd() const;
+        void readNextFrame();
         void seek(int frame);
         void rewind();
+
+		int getNextFrameId() const {
+			return nextFrameId;
+		}
 
     private:
         int _dataStart; // Offset into the stream where the first key frame starts
@@ -91,10 +97,15 @@ namespace Troika
         float translationFactor; // ToEE stores translation components as shorts and multiplies with this factor
         static const float rotationFactor; // ToEE uses a static factor for rotations
         qint16 nextFrameId; // Id of next key frame
+		int frameCount;
 
-        void readNextFrame();
         int countBones();
     };
+
+    inline bool AnimationStream::atEnd() const
+    {
+		return nextFrameId == -1 || stream.atEnd();
+    }
 
     inline const AnimationBoneState *AnimationStream::getBoneState(quint16 boneId) const
     {
@@ -191,6 +202,10 @@ namespace Troika
             _keyFramesDataStart = dataStart;
         }
 
+		uint keyFramesDataStart() const {
+			return _keyFramesDataStart;
+		}
+
         /**
           Opens a stream for the key frames of this animation.
           The caller takes ownership of the returned object.
@@ -218,7 +233,7 @@ namespace Troika
           @param bones The bones from the SKM model file.
           @param data The data of the SKA animation/skeleton file.
           */
-        explicit Skeleton(const QVector<Bone> &bones, const QByteArray &data);
+        explicit Skeleton(const QVector<Bone> &bones, const QByteArray &data, const QString &filename);
         ~Skeleton();
 
         const QVector<Bone> &bones() const;
@@ -230,7 +245,7 @@ namespace Troika
           @returns Null if no animation with the given name could be found.
           */
         const Animation *findAnimation(const QString &name) const;
-
+		
     private:
         QScopedPointer<SkeletonData> d_ptr;
         Q_DISABLE_COPY(Skeleton);

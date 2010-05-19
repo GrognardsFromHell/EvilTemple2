@@ -590,14 +590,23 @@ void Emitter::updateParticle(Particle &particle, float elapsedTimeUnits)
 	if (mParticleVelocityType == Polar) {
 		float r = particle.position.length();
 		if (r != 0) {
-			Vector4 rotNormal(0, 1, 0, 0);
-			Vector4 rotAxis = rotNormal.cross(particle.position).normalized();
+			Vector4 rotAxis;
+			if (particle.position.x() != 0 || particle.position.z() == 0) {
+				Vector4 rotNormal(0, 1, 0, 0);
+				rotAxis = rotNormal.cross(particle.position).normalized();
+			} else {
+				// In case the point is above the origin (x=0,y=0), use the x axis as a rotation axis, doesn't matter.
+				rotAxis = Vector4(1, 0, 0, 0);
+			}
+
 			Quaternion rot1 = Quaternion::fromAxisAndAngle(rotAxis.x(), rotAxis.y(), rotAxis.z(), deg2rad(particle.velocityY));
 			Quaternion rot2 = Quaternion::fromAxisAndAngle(0, 1, 0, deg2rad(particle.velocityX));
-			particle.position = Matrix4::rotation(rot1) * Matrix4::rotation(rot2) * particle.position;
+			particle.position = Matrix4::rotation(rot2) * Matrix4::rotation(rot1) * particle.position;
 
-
-			particle.position += (particle.velocityZ / particle.position.length()) * particle.position;
+			// Extrude the position outwards
+			Vector4 direction = particle.position;
+			direction.setW(0);
+			particle.position += (particle.velocityZ / direction.length()) * direction;
 		}		
 	} else {
 		particle.position += Vector4(particle.velocityX, particle.velocityY, particle.velocityZ, 0) 

@@ -34,7 +34,8 @@ SOURCES += \
     backgroundmap.cpp \
     tga.cpp \
     clippinggeometry.cpp \
-    particlesystem.cpp
+    particlesystem.cpp \
+    modelinstance.cpp
 HEADERS += \
     ui/mainwindow.h \
     ui/gamegraphicsscene.h \
@@ -58,7 +59,8 @@ HEADERS += \
     backgroundmap.h \
     tga.h \
     clippinggeometry.h \
-    particlesystem.h
+    particlesystem.h \
+    modelinstance.h
 OTHER_FILES += materialfile.xsd \
     map_material.xml \
     clipping_material.xml
