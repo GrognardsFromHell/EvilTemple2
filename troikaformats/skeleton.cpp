@@ -107,11 +107,6 @@ namespace Troika
             rawName[64] = 0;
             stream.readRawData(rawName, 64);
 
-            // TODO: remove this special handling for tree1.skm
-            if (!rawName[0]) {
-                return;
-            }
-
             animation.setName(QString::fromLatin1(rawName));
 
             quint8 driveType;

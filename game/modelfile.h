@@ -7,6 +7,7 @@
 #include <QtCore/QString>
 #include <QtCore/QSharedPointer>
 #include <QtCore/QMap>
+#include <QtCore/QDataStream>
 
 #include "materialstate.h"
 #include "renderstates.h"
@@ -90,7 +91,6 @@ private:
     uint mFrame;
     Type mType;
     QString mContent;
-
 };
 
 inline const QString &AnimationEvent::content() const
@@ -103,37 +103,115 @@ inline AnimationEvent::Type AnimationEvent::type() const
     return mType;
 }
 
+template<typename T> inline T lerp(const T &a, const T &b, float t)
+{
+	return (1 - t) * a + t * b;
+}
+
+template<> inline Quaternion lerp<Quaternion>(const Quaternion &a, const Quaternion &b, float t)
+{
+	Quaternion result = (1 - t) * a + t * b;
+	result.normalize();
+	return result;
+}
+
+template<typename T, typename FT = ushort> class KeyframeStream
+{
+template<typename _T, typename _FT>
+friend inline QDataStream &operator >>(QDataStream &stream, KeyframeStream<_T,_FT> &keyframeStream);
+public:
+	KeyframeStream() : mFrameStream(0), mValueStream(0), mSize(0)
+	{
+	}
+
+	~KeyframeStream()
+	{
+		delete [] mFrameStream;
+		delete [] mValueStream;
+	}
+		
+	T interpolate(FT frame, FT totalFrames) const
+	{
+		Q_ASSERT(mSize > 0);
+
+		if (mSize == 1)
+			return mValueStream[0];
+
+		for (int i = 0; i < mSize; ++i) {
+			FT keyFrame = mFrameStream[i];
+
+			if (keyFrame == frame) {
+				return mValueStream[i];
+			} else if (keyFrame > frame) {
+				// We've reached the "latter" frame. We asumme here, that 
+				// this CANNOT be the first keyframe, since that MUST be frame 0
+				Q_ASSERT(i > 0);
+				FT prevKeyFrame = mFrameStream[i - 1];
+				Q_ASSERT(keyFrame > prevKeyFrame); // Otherwise we have duplicate frames.
+				float delta = (frame - prevKeyFrame) / (float)(keyFrame - prevKeyFrame);
+				
+				return lerp<T>(mValueStream[i - 1], mValueStream[i], delta);
+			}
+		}
+
+		// Interpolate between the last and first frame (TODO: is this really a good idea?)
+		FT lastKeyFrame = mFrameStream[mSize - 1];
+		float delta = (frame - lastKeyFrame) / (float)(totalFrames - lastKeyFrame);
+		return lerp<T>(mValueStream[0], mValueStream[mSize - 1], delta);
+	}	
+
+private:
+	FT mSize;
+	FT* mFrameStream;
+	T* mValueStream;
+
+	Q_DISABLE_COPY(KeyframeStream);
+};
+
+template<typename T, typename FT>
+inline QDataStream &operator >>(QDataStream &stream, KeyframeStream<T,FT> &keyframeStream)
+{
+	uint size;
+	stream >> size;
+	keyframeStream.mSize = size;
+	keyframeStream.mFrameStream = new FT[size];
+	keyframeStream.mValueStream = new T[size];
+
+	for (int i = 0; i < size; ++i) {
+		stream >> keyframeStream.mFrameStream[i] >> keyframeStream.mValueStream[i];
+	}
+
+	return stream;
+}
+
 /**
   Contains the keyframe data for an animated bone.
   */
 class AnimationBone {
 friend QDataStream &operator >>(QDataStream &stream, AnimationBone &bone);
-public:
-	const QMap<ushort, Quaternion> &rotationStream() const;
+public:	
+	AnimationBone()
+	{
+	}
 
-	const QMap<ushort, Vector4> &scaleStream() const;
-
-	const QMap<ushort, Vector4> &translationStream() const;
-
+	Matrix4 getTransform(ushort frame, ushort totalFrames) const;
+	
 private:
-    QMap<ushort, Quaternion> mRotationStream;
-    QMap<ushort, Vector4> mScaleStream;
-    QMap<ushort, Vector4> mTranslationStream;
+	KeyframeStream<Quaternion> rotationStream;
+	KeyframeStream<Vector4> scaleStream;
+	KeyframeStream<Vector4> translationStream;
+
+	Q_DISABLE_COPY(AnimationBone);
 };
 
-inline const QMap<ushort, Quaternion> &AnimationBone::rotationStream() const
+inline Matrix4 AnimationBone::getTransform(ushort frame, ushort totalFrames) const
 {
-	return mRotationStream;
-}
+	
+	Quaternion rotation = rotationStream.interpolate(frame, totalFrames);
+	Vector4 scale = scaleStream.interpolate(frame, totalFrames);
+	Vector4 translation = translationStream.interpolate(frame, totalFrames);
 
-inline const QMap<ushort, Vector4> &AnimationBone::scaleStream() const
-{
-	return mScaleStream;
-}
-
-inline const QMap<ushort, Vector4> &AnimationBone::translationStream() const
-{
-	return mTranslationStream;
+	return Matrix4::transformation(scale, rotation, translation);
 }
 
 /**
@@ -143,9 +221,13 @@ class Animation {
     friend QDataStream &operator >>(QDataStream &stream, Animation &event);
 public:
 
-    Animation()
+    Animation() : mAnimationBones(0)
     {
     }
+
+	~Animation()
+	{
+	}
 
     enum DriveType {
         Time = 0,
@@ -153,6 +235,11 @@ public:
         Rotation,
         DriveType_ForceDWord = 0x7fffffff
     };
+	
+	/**
+	 Type of the container that maps bone ids to their respective animated state.
+	 */
+	typedef QHash<uint, const AnimationBone*> BoneMap;
 
     const QString &name() const;
 
@@ -168,7 +255,7 @@ public:
 
     const QVector<AnimationEvent> &events() const;
 
-    const QMap<uint, AnimationBone> &animationBones() const;
+    const BoneMap &animationBones() const;
 
 private:
     QString mName;
@@ -178,7 +265,8 @@ private:
     bool mLoopable;
     DriveType mDriveType;
     QVector<AnimationEvent> mEvents;
-    QMap<uint, AnimationBone> mAnimationBones;
+    BoneMap mAnimationBonesMap;
+	AnimationBone *mAnimationBones;
     Q_DISABLE_COPY(Animation);
 };
 
@@ -217,9 +305,9 @@ inline const QVector<AnimationEvent> &Animation::events() const
     return mEvents;
 }
 
-inline const QMap<uint, AnimationBone> &Animation::animationBones() const
+inline const Animation::BoneMap &Animation::animationBones() const
 {
-    return mAnimationBones;
+	return mAnimationBonesMap;
 }
 
 /**

@@ -55,23 +55,6 @@ void ModelWriter::writeChunk(uint chunk, bool required, const QByteArray &data)
     chunks++;
 }
 
-QMatrix4x4 relativeWorld(const AnimationStream *stream, const Troika::Bone &bone) {
-    // Quite annoying: Build the relative matrix, rebuild the entire matrix for the bone + parent
-    const AnimationBoneState *state = stream->getBoneState(bone.id);
-
-    if (!state) {
-        return bone.relativeWorld;
-    } else {
-        QMatrix4x4 matrix;
-        matrix.setToIdentity();
-        matrix.translate(state->translation);
-        matrix.rotate(state->rotation);
-        matrix.scale(state->scale);
-
-        return matrix;
-    }
-}
-
 void ModelWriter::writeBones(const Troika::Skeleton *skeleton)
 {
     startChunk(Bones, true);

@@ -270,19 +270,23 @@ namespace EvilTemple {
         t.setToIdentity();
         t(0, 3) = 480 * 28.2842703f;
         t(2, 3) = 480 * 28.2842703f;
-        d->renderStates.setWorldMatrix(t);
+		d->renderStates.setWorldMatrix(t * Matrix4::rotation(Quaternion::fromAxisAndAngle(0, 1, 0, deg2rad(-90))));
 
-        d->model.draw();
-
-        d->renderStates.setWorldMatrix(Matrix4::identity());
-
-        float elapsed = 0;
+		float elapsed = 0;
 
         if (!d->animationTimer.isNull()) {
             elapsed = d->animationTimer.restart() / 1000.0f;
         } else {
             d->animationTimer.start();
         }
+
+		if (elapsed > 0) {
+			d->model.elapseTime(elapsed);
+		}
+
+        d->model.draw();
+
+        d->renderStates.setWorldMatrix(Matrix4::identity());
 
         for (int i = 0; i < d->geometryMeshes.size(); ++i) {
             GMF &geometryMesh = d->geometryMeshes[i];

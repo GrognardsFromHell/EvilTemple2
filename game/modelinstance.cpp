@@ -17,7 +17,11 @@ namespace EvilTemple {
 
 		mCurrentAnimation = model->animation("item_idle");
 
-		if (mCurrentAnimation && mModel) {
+		if (!mCurrentAnimation) {
+			mCurrentAnimation = model->animation("unarmed_unarmed_idle");
+		}
+
+		if (mCurrentAnimation) {
 			mPositionBuffer.create();
 			mPositionBuffer.bind();
 			mPositionBuffer.allocate(model->positions, sizeof(Vector4) * model->vertices);
@@ -231,22 +235,25 @@ namespace EvilTemple {
 			return;
 
 		mPartialFrameTime += elapsedSeconds;
+		
+		float timePerFrame = 1 / mCurrentAnimation->frameRate();
 
-		if (mPartialFrameTime > 1 / mCurrentAnimation->frameRate()) {
+		if (mPartialFrameTime < timePerFrame)
+			return;
+
+		while (mPartialFrameTime >= timePerFrame) {
 			mCurrentFrame++;
 
-			if (mCurrentFrame > mCurrentAnimation->frames()) {
+			if (mCurrentFrame >= mCurrentAnimation->frames()) {
 				mCurrentFrame = 0;
 			}
-			mPartialFrameTime = 0;
-		} else {
-			return;
+			mPartialFrameTime -= timePerFrame;
 		}
 
 		const QVector<Bone> &bones = mModel->bones();
 
 		// Create a bone state map for all bones
-		const QMap<uint, AnimationBone> &animationBones = mCurrentAnimation->animationBones();
+		const Animation::BoneMap &animationBones = mCurrentAnimation->animationBones();
 
 		for (int i = 0; i < mBoneStates.size(); ++i) {
 			BoneState &boneState = mBoneStates[i];
@@ -255,27 +262,9 @@ namespace EvilTemple {
 			Matrix4 relativeWorld;
 
 			if (animationBones.contains(i)) {
-				const AnimationBone &animationBone = animationBones[i];
-
-				int frame = mCurrentFrame;
-				while (!animationBone.rotationStream().contains(frame)) {
-					frame--;
-				}
-				Quaternion rotation = animationBone.rotationStream()[frame];
-
-				frame = mCurrentFrame;
-				while (!animationBone.scaleStream().contains(frame)) {
-					frame--;
-				}
-				Vector4 scale = animationBone.scaleStream()[frame];
-
-				frame = mCurrentFrame;
-				while (!animationBone.translationStream().contains(frame)) {
-					frame--;
-				}
-				Vector4 translation = animationBone.translationStream()[frame];
-
-				relativeWorld = Matrix4::transformation(scale, rotation, translation);
+				const AnimationBone *animationBone = animationBones[i];
+				
+				relativeWorld = animationBone->getTransform(mCurrentFrame, mCurrentAnimation->frames());
 			} else {
 				relativeWorld = bone.relativeWorld();
 			}
@@ -316,18 +305,19 @@ namespace EvilTemple {
             for (int k = 0; k < mModel->attachments[i].count(); ++k) {
                 float weight = mModel->attachments[i].weights()[k];
 				uint boneId = mModel->attachments[i].bones()[k];
-				Q_ASSERT(boneId >= 0 && boneId <= boneStates.size());
+				Q_ASSERT(boneId >= 0 && boneId <= mBoneStates.size());
 				const BoneState &bone = mBoneStates[boneId];
 
 				Vector4 transformedPos = bone.fullTransform * mModel->positions[i];
                 transformedPos *= 1 / transformedPos.w();
 
                 result += weight * transformedPos;
-                resultNormal += weight * (bone.fullTransform * mModel->normals[i]);
+                resultNormal += weight * (bone.fullTransform.transposed() * mModel->normals[i]);
             }
 
             result.data()[2] *= -1;
             resultNormal.data()[2] *= -1;
+			resultNormal.normalize(); // TODO: Use estimate here?
 
             result.data()[3] =  1;
 

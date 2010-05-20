@@ -462,8 +462,20 @@ namespace EvilTemple {
     {
         QByteArray name;
         uint driveType;
+		uint animationBonesCount;
         stream >> name >> animation.mFrames >> animation.mFrameRate >> animation.mDps
-                >> driveType >> animation.mLoopable >> animation.mEvents >> animation.mAnimationBones;
+			>> driveType >> animation.mLoopable >> animation.mEvents >> animationBonesCount;
+
+		delete [] animation.mAnimationBones;
+		animation.mAnimationBonesMap.clear();
+		animation.mAnimationBonesMap.reserve(animationBonesCount);
+		animation.mAnimationBones = new AnimationBone[animationBonesCount];
+
+		for (int i = 0; i < animationBonesCount; ++i) {
+			uint boneId;
+			stream >> boneId >> animation.mAnimationBones[i];
+			animation.mAnimationBonesMap.insert(boneId, animation.mAnimationBones + i);
+		}
 
         Q_ASSERT(animation.mFrameRate >= 0);
         Q_ASSERT(driveType == Animation::Time || driveType == Animation::Rotation || driveType == Animation::Distance);
@@ -490,7 +502,7 @@ namespace EvilTemple {
 
     QDataStream &operator >>(QDataStream &stream, AnimationBone &bone)
     {
-        stream >> bone.mRotationStream >> bone.mScaleStream >> bone.mTranslationStream;
+        stream >> bone.rotationStream >> bone.scaleStream >> bone.translationStream;
         return stream;
     }
 
