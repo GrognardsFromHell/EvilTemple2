@@ -110,24 +110,18 @@ template<typename T> inline T lerp(const T &a, const T &b, float t)
 
 template<> inline Quaternion lerp<Quaternion>(const Quaternion &a, const Quaternion &b, float t)
 {
-	// This is actually slerp
-	float w1, w2;
+	// TODO: Try to use SLERP here, but also account for direction like this NLERP implementation
+	float dot = a.dot(b);
+	Quaternion result;
 
-	float cosTheta = a.dot(b);
-	float theta    = (float)acos(cosTheta);
-	float sinTheta = (float)sin(theta);
-
-	if( sinTheta > 0.001f )
-	{
-		w1 = float( sin( (1.0f-t)*theta ) / sinTheta);
-		w2 = float( sin( t*theta) / sinTheta);
+	if (dot >= 0) {
+		result = (1 - t) * a + t * b;
 	} else {
-		// CQuat a ~= CQuat b
-		w1 = 1.0f - t;
-		w2 = t;
+		result = (1 - t) * a - t * b;
 	}
 
-	return a*w1 + b*w2;
+	result.normalize();
+	return result;
 }
 
 template<typename T, typename FT = ushort> class KeyframeStream
@@ -168,6 +162,13 @@ public:
 				return lerp<T>(mValueStream[i - 1], mValueStream[i], delta);
 			}
 		}
+
+		/*
+			return mValueStream[mSize - 1];
+			No visual difference was perceived between clamping (the line above) and interpolating
+			back to the starting frame. So we interpolate back to the starting frame if we're behind
+			the last keyframe.
+		*/
 
 		// Interpolate between the last and first frame (TODO: is this really a good idea?)
 		FT lastKeyFrame = mFrameStream[mSize - 1];
