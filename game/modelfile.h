@@ -110,9 +110,24 @@ template<typename T> inline T lerp(const T &a, const T &b, float t)
 
 template<> inline Quaternion lerp<Quaternion>(const Quaternion &a, const Quaternion &b, float t)
 {
-	Quaternion result = (1 - t) * a + t * b;
-	result.normalize();
-	return result;
+	// This is actually slerp
+	float w1, w2;
+
+	float cosTheta = a.dot(b);
+	float theta    = (float)acos(cosTheta);
+	float sinTheta = (float)sin(theta);
+
+	if( sinTheta > 0.001f )
+	{
+		w1 = float( sin( (1.0f-t)*theta ) / sinTheta);
+		w2 = float( sin( t*theta) / sinTheta);
+	} else {
+		// CQuat a ~= CQuat b
+		w1 = 1.0f - t;
+		w2 = t;
+	}
+
+	return a*w1 + b*w2;
 }
 
 template<typename T, typename FT = ushort> class KeyframeStream
