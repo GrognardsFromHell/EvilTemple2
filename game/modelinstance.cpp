@@ -6,7 +6,8 @@ namespace EvilTemple {
     ModelInstance::ModelInstance()
         : mPositionBuffer(QGLBuffer::VertexBuffer), mNormalBuffer(QGLBuffer::VertexBuffer),
 		mCurrentAnimation(NULL), mPartialFrameTime(0), mCurrentFrame(0),
-		mTransformedPositions(NULL), mTransformedNormals(NULL)
+		mTransformedPositions(NULL), mTransformedNormals(NULL), mFullTransform(NULL),
+		mFullWorld(NULL)
     {
 		mPositionBuffer.setUsagePattern(QGLBuffer::StreamDraw);
 		mNormalBuffer.setUsagePattern(QGLBuffer::StreamDraw);
@@ -16,6 +17,8 @@ namespace EvilTemple {
 	{
 		delete [] mTransformedPositions;
 		delete [] mTransformedNormals;
+		delete [] mFullWorld;
+		delete [] mFullTransform;
 	}
 
     void ModelInstance::setModel(const SharedModel &model)
@@ -24,6 +27,10 @@ namespace EvilTemple {
 		mTransformedPositions = 0;
 		delete [] mTransformedNormals;
 		mTransformedNormals = 0;
+		delete [] mFullWorld;
+		mFullWorld = 0;
+		delete [] mFullTransform;
+		mFullTransform = 0;
 
         mModel = model;
 
@@ -45,7 +52,8 @@ namespace EvilTemple {
 			mNormalBuffer.bind();
 			mNormalBuffer.allocate(model->normals, sizeof(Vector4) * model->vertices);
 
-			mBoneStates.resize(mModel->bones().size());
+			mFullWorld = new Matrix4[mModel->bones().size()];
+			mFullTransform = new Matrix4[mModel->bones().size()];
 		}
     }
 
@@ -275,8 +283,7 @@ namespace EvilTemple {
 		// Create a bone state map for all bones
 		const Animation::BoneMap &animationBones = mCurrentAnimation->animationBones();
 
-		for (int i = 0; i < mBoneStates.size(); ++i) {
-			BoneState &boneState = mBoneStates[i];
+		for (int i = 0; i < bones.size(); ++i) {
 			const Bone &bone = bones[i];
 						
 			Matrix4 relativeWorld;
@@ -294,12 +301,12 @@ namespace EvilTemple {
 
 			if (parent) {
 				Q_ASSERT(parent->boneId() >= 0 && parent->boneId() < bone.boneId());
-				boneState.fullWorld = mBoneStates[parent->boneId()].fullWorld * relativeWorld;
+				mFullWorld[i] = mFullWorld[parent->boneId()] * relativeWorld;
 			} else {
-				boneState.fullWorld = relativeWorld;
+				mFullWorld[i] = relativeWorld;
 			}
 
-			boneState.fullTransform = boneState.fullWorld * bone.fullWorldInverse();
+			mFullTransform[i] = mFullWorld[i] * bone.fullWorldInverse();
 		}
 
 		QueryPerformanceCounter(&end);
@@ -315,22 +322,21 @@ namespace EvilTemple {
             Vector4 result(0, 0, 0, 0);
             Vector4 resultNormal(0, 0, 0, 0);
 
-            for (int k = 0; k < mModel->attachments[i].count(); ++k) {
-                float weight = mModel->attachments[i].weights()[k];
-				uint boneId = mModel->attachments[i].bones()[k];
+			const BoneAttachment &attachment = mModel->attachments[i];
+
+			for (int k = 0; k < attachment.count(); ++k) {
+                float weight = attachment.weights()[k];
+				uint boneId = attachment.bones()[k];
 				Q_ASSERT(boneId >= 0 && boneId <= mBoneStates.size());
-				const BoneState &bone = mBoneStates[boneId];
 
-				Vector4 transformedPos = bone.fullTransform * mModel->positions[i];
-                transformedPos *= 1 / transformedPos.w();
+				const Matrix4 &fullTransform = mFullTransform[boneId];
 
-                result += weight * transformedPos;
-                resultNormal += weight * (bone.fullTransform.transposed() * mModel->normals[i]);
+                result += weight * fullTransform.mapPosition(mModel->positions[i]);
+                resultNormal += weight * fullTransform.mapNormal(mModel->normals[i]);
             }
 
             result.data()[2] *= -1;
             resultNormal.data()[2] *= -1;
-			resultNormal.normalize(); // TODO: Use estimate here?
 
             result.data()[3] =  1;
 

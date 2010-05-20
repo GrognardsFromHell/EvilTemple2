@@ -28,12 +28,8 @@ public:
     void draw(MaterialState *overrideMaterial) const;
 
 private:
-	struct BoneState {
-		Matrix4 fullWorld;
-		Matrix4 fullTransform;
-	};
-
-	QVector<BoneState> mBoneStates;
+	Matrix4 *mFullWorld;
+	Matrix4 *mFullTransform;
 
     SharedModel mModel;
 
