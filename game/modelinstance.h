@@ -18,6 +18,7 @@ class ModelInstance
 {
 public:
     ModelInstance();
+	~ModelInstance();
 
     void setModel(const SharedModel &model);
 
@@ -40,6 +41,9 @@ private:
 
 	float mPartialFrameTime;
 	uint mCurrentFrame;
+
+	Vector4 *mTransformedPositions;
+	Vector4 *mTransformedNormals;
 
     QGLBuffer mPositionBuffer;
     QGLBuffer mNormalBuffer;

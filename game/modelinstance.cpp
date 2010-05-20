@@ -5,14 +5,26 @@ namespace EvilTemple {
 
     ModelInstance::ModelInstance()
         : mPositionBuffer(QGLBuffer::VertexBuffer), mNormalBuffer(QGLBuffer::VertexBuffer),
-		mCurrentAnimation(NULL), mPartialFrameTime(0), mCurrentFrame(0)
+		mCurrentAnimation(NULL), mPartialFrameTime(0), mCurrentFrame(0),
+		mTransformedPositions(NULL), mTransformedNormals(NULL)
     {
 		mPositionBuffer.setUsagePattern(QGLBuffer::StreamDraw);
 		mNormalBuffer.setUsagePattern(QGLBuffer::StreamDraw);
     }
 
+	ModelInstance::~ModelInstance()
+	{
+		delete [] mTransformedPositions;
+		delete [] mTransformedNormals;
+	}
+
     void ModelInstance::setModel(const SharedModel &model)
     {
+		delete [] mTransformedPositions;
+		mTransformedPositions = 0;
+		delete [] mTransformedNormals;
+		mTransformedNormals = 0;
+
         mModel = model;
 
 		mCurrentAnimation = model->animation("item_idle");
@@ -22,6 +34,9 @@ namespace EvilTemple {
 		}
 
 		if (mCurrentAnimation) {
+			mTransformedPositions = new Vector4[mModel->vertices];
+			mTransformedNormals = new Vector4[mModel->vertices];
+
 			mPositionBuffer.create();
 			mPositionBuffer.bind();
 			mPositionBuffer.allocate(model->positions, sizeof(Vector4) * model->vertices);
@@ -227,7 +242,8 @@ namespace EvilTemple {
         }
     }
 
-
+	double updateBones = 0;
+	double updateVertices = 0;
 
     void ModelInstance::elapseTime(float elapsedSeconds)
     {
@@ -249,6 +265,10 @@ namespace EvilTemple {
 			}
 			mPartialFrameTime -= timePerFrame;
 		}
+
+		LARGE_INTEGER freq, start, end;
+		QueryPerformanceFrequency(&freq);
+		QueryPerformanceCounter(&start);
 
 		const QVector<Bone> &bones = mModel->bones();
 
@@ -282,18 +302,11 @@ namespace EvilTemple {
 			boneState.fullTransform = boneState.fullWorld * bone.fullWorldInverse();
 		}
 
-		// Now transform positions + normals
-		if (!mPositionBuffer.bind())
-			qWarning("Unable to bind position buffer before update.");
-		Vector4 *transformedPositions = reinterpret_cast<Vector4*>(mPositionBuffer.map(QGLBuffer::WriteOnly));
-		if (!transformedPositions)
-			qWarning("Unable to map the position buffer for updating.");
+		QueryPerformanceCounter(&end);
 
-		if (!mNormalBuffer.bind())
-			qWarning("Unable to bind normal buffer before update.");
-		Vector4 *transformedNormals = reinterpret_cast<Vector4*>(mNormalBuffer.map(QGLBuffer::WriteOnly));
-		if (!transformedNormals)
-			qWarning("Unable to map the normal buffer for updating");
+		updateBones += (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
+
+		QueryPerformanceCounter(&start);
 
 		for (int i = 0; i < mModel->vertices; ++i) {
 			if (mModel->attachments[i].count() == 0)
@@ -321,16 +334,19 @@ namespace EvilTemple {
 
             result.data()[3] =  1;
 
-			transformedPositions[i] = result;
-			transformedNormals[i] = result;
+			mTransformedPositions[i] = result;
+			mTransformedNormals[i] = result;
 		}
-				
-		if (!mNormalBuffer.unmap())
-			qWarning("Unmapping normal buffer after update failed.");
-		if (!mPositionBuffer.bind())
-			qWarning("Binding position buffer after update failed.");
-		if (!mPositionBuffer.unmap())
-			qWarning("Unmapping position buffer after update failed.");
+		
+		glBindBuffer(GL_ARRAY_BUFFER, mPositionBuffer.bufferId());
+		glBufferData(GL_ARRAY_BUFFER, sizeof(Vector4) * mModel->vertices, mTransformedPositions, GL_STREAM_DRAW);
+
+		glBindBuffer(GL_ARRAY_BUFFER, mNormalBuffer.bufferId());
+		glBufferData(GL_ARRAY_BUFFER, sizeof(Vector4) * mModel->vertices, mTransformedNormals, GL_STREAM_DRAW);
+		
+		QueryPerformanceCounter(&end);
+
+		updateVertices += (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
     }
 
 }

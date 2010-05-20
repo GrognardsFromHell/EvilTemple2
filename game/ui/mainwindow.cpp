@@ -140,12 +140,14 @@ namespace EvilTemple {
         emit logMessage(varMessage, varType);
     }
 
+	extern double updateBones;
+	extern double updateVertices;
+
     void MainWindow::updateTitle()
     {
         QPoint centeredOn = d_ptr->gameView->screenCenter();
 
-        QString windowTitle = QString("EvilTemple (Pos: %1,%2)").arg((int)centeredOn.x())
-                               .arg((int)centeredOn.y());
+        QString windowTitle = QString("EvilTemple Bones: %1, Vertices: %2").arg(updateBones).arg(updateVertices);
 
 #if defined(Q_OS_WIN32)
         // Open a handle to the current process
