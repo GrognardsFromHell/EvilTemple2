@@ -29,6 +29,15 @@
         </xs:element>
         <xs:element name="cullFace" type="xs:string" />
         <xs:element name="depthWrite" type="xs:boolean" default="true" />
+        <xs:element name="depthTest" type="xs:boolean" default="true" />
+        <xs:element name="colorWrite">
+          <xs:complexType>
+            <xs:attribute name="red" use="optional" default="true" type="xs:boolean" />
+            <xs:attribute name="green" use="optional" default="true" type="xs:boolean" />
+            <xs:attribute name="blue" use="optional" default="true" type="xs:boolean" />
+            <xs:attribute name="alpha" use="optional" default="true" type="xs:boolean" />            
+          </xs:complexType>
+        </xs:element>
       </xs:choice>
     </xs:sequence>    
   </xs:complexType>
@@ -85,11 +94,12 @@
     <xs:attribute name="texture" type="xs:string" use="required" />
   </xs:complexType>
 
-  <xs:complexType name="subShaderType">
+  <xs:complexType name="subShaderType">    
     <xs:sequence>
       <xs:element name="include" type="includeType" minOccurs="0" maxOccurs="unbounded" />
-      <xs:element name="code" type="xs:string" minOccurs="1" maxOccurs="1" />
+      <xs:element name="code" type="xs:string" minOccurs="1" maxOccurs="1" />      
     </xs:sequence>
+    <xs:attribute name="version" use="optional" type="xs:string" />
   </xs:complexType>
 
   <xs:complexType name="attributeType">
@@ -125,6 +135,7 @@
   <xs:complexType name="uniformType">
     <xs:attribute name="name" type="xs:string" use="required" />
     <xs:attribute name="semantic" type="xs:string" use="required" />
+    <xs:attribute name="optional" type="xs:boolean" use="optional" default="true" />
   </xs:complexType>
 
   <xs:complexType name="includeType">

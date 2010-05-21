@@ -120,18 +120,25 @@ public:
     enum Type {
         FragmentShader = GL_VERTEX_SHADER,
         VertexShader = GL_FRAGMENT_SHADER
-                   };
+    };
 
     bool load(const QDomElement &shaderElement);
 
     Type type() const;
     const QString &code() const;
+    const QString &version() const;
     const QStringList &includes() const;
 private:
+    QString mVersion;
     Type mType;
     QString mCode;
     QStringList mIncludes;
 };
+
+inline const QString &MaterialShader::version() const
+{
+    return mVersion;
+}
 
 inline MaterialShader::Type MaterialShader::type() const
 {
@@ -275,17 +282,29 @@ public:
     const QString &semantic() const;
 
     /**
+      * Indicates that this uniform is optional. This prevents an error from being raised when the uniform isn't found.
+      * In debug mode, a warning is still raised.
+      */
+    bool isOptional() const;
+
+    /**
      * Loads this uniform binding from an XML element.
      */
     bool load( const QDomElement &element );
 private:
     QString mName;
     QString mSemantic;
+    bool mOptional;
 };
 
 inline const QString &MaterialUniformBinding::name() const
 {
     return mName;
+}
+
+inline bool MaterialUniformBinding::isOptional() const
+{
+    return mOptional;
 }
 
 inline const QString &MaterialUniformBinding::semantic() const
@@ -377,6 +396,8 @@ public:
     ~Material();
 
     bool loadFromData(const QByteArray &data);
+
+    bool loadFromFile(const QString &filename);
 
     const QString &error() const;
 

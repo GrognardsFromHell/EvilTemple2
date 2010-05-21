@@ -72,13 +72,19 @@ public:
 
     QHash<uint,QString> particleSystemHashes;
 
+	QHash<QString,bool> mWrittenTextures;
+
+	QHash<QString,bool> mWrittenMaterials;
+
+	bool external;
+
     // Maps lower-case mesh filenames (normalized separators) to an information structure
     QHash<QString, MeshReference> meshReferences;
 
     Exclusions exclusions;
 
     ConverterData(const QString &inputPath, const QString &outputPath) :
-            mInputPath(inputPath), mOutputPath(outputPath)
+            mInputPath(inputPath), mOutputPath(outputPath), external(false)
     {
         // Force both paths to be in the system specific format and end with a separator.
         mInputPath = QDir::toNativeSeparators(mInputPath);
@@ -152,6 +158,8 @@ public:
 
                 writer.addFile(zoneTemplate->directory() + "staticGeometry.txt", objectPosData, 9);
 
+				convertLighting(zoneTemplate.data(), &writer);
+
                 convertClippingMeshes(zoneTemplate.data(), &writer);
 
                 convertParticleSystemInstances(zoneTemplate.data(), &writer);
@@ -164,6 +172,98 @@ public:
 
         return true;
     }
+
+	void convertLighting(ZoneTemplate *zoneTemplate, ZipWriter *writer)
+	{
+		QDomDocument document;
+		QDomElement root = document.createElement("lighting");
+		document.appendChild(root);
+
+		// Insert global lighting first
+		QDomElement globalLight = document.createElement("global");
+		root.appendChild(globalLight);
+		QDomElement color = document.createElement("color");
+		color.setAttribute("red", zoneTemplate->globalLight().r);
+		color.setAttribute("green", zoneTemplate->globalLight().g);
+		color.setAttribute("blue", zoneTemplate->globalLight().b);
+		globalLight.appendChild(color);
+
+		QDomElement direction = document.createElement("direction");
+		direction.setAttribute("x", zoneTemplate->globalLight().dirX);
+		direction.setAttribute("y", zoneTemplate->globalLight().dirY);
+		direction.setAttribute("z", zoneTemplate->globalLight().dirZ);
+		globalLight.appendChild(direction);
+
+		QDomElement lightSources = document.createElement("lightSources");
+		root.appendChild(lightSources);
+
+		foreach (const Light &light, zoneTemplate->lights())
+		{
+			QDomElement element;
+			switch (light.type) {
+			case 1:
+				element = document.createElement("pointLight");
+				break;
+			case 2:
+				element = document.createElement("spotLight");
+				break;
+			case 3:
+				element = document.createElement("directionalLight");				
+				break;
+			default:
+				qWarning("Invalid light type: %d.", light.type);
+				continue;
+			}
+
+			element.setAttribute("range", light.range);
+			if (light.type != 3) {
+				// ToEE does not allow custom attenuation per light. We might add this later, so convert it here and add it as a modifiable attribute
+				element.setAttribute("attenuation", 4 / (light.range * light.range));
+			}
+			if (light.type == 2) {
+				element.setAttribute("phi", light.phi);
+				element.setAttribute("theta", light.phi * 0.6f);
+			}
+			
+			QDomElement pos = document.createElement("position");
+			element.appendChild(pos);
+			pos.setAttribute("x", light.position.x());
+			pos.setAttribute("y", light.position.y());
+			pos.setAttribute("z", light.position.z());
+
+			// Makes only sense for spot/directional, right?
+			if (light.type != 1) {
+				QDomElement dir = document.createElement("direction");
+				element.appendChild(dir);
+				dir.setAttribute("x", light.dirX);
+				dir.setAttribute("y", light.dirY);
+				dir.setAttribute("z", light.dirZ);
+			}
+
+			if (light.r > 0 || light.g > 0 || light.b > 0) {
+				QDomElement color = document.createElement("color");
+				element.appendChild(color);
+				color.setAttribute("red", light.r);
+				color.setAttribute("green", light.g);
+				color.setAttribute("blue", light.b);
+			}
+
+			/**
+				This seems to be truly unused.
+				if (light.ur > 0 || light.ug > 0 || light.ub > 0) {
+					color = document.createElement("specularColor");
+					element.appendChild(color);
+					color.setAttribute("red", light.ur);
+					color.setAttribute("green", light.ug);
+					color.setAttribute("blue", light.ub);
+				}
+			*/
+			
+			lightSources.appendChild(element);
+		}
+
+		writer->addFile(zoneTemplate->directory() + "lighting.xml", document.toByteArray(), 9);
+	}
 
     void convertClippingMeshes(ZoneTemplate *zoneTemplate, ZipWriter *writer)
     {
@@ -236,7 +336,7 @@ public:
 
         writer->addFile(zoneTemplate->directory() + "particleSystems.txt", particleSystems, 9);
     }
-
+	
     QString getNewModelFilename(const QString &modelFilename) {
         QString newFilename = QDir::toNativeSeparators(modelFilename);
         if (newFilename.startsWith(QString("art") + QDir::separator(), Qt::CaseInsensitive)) {
@@ -641,9 +741,6 @@ public:
         }
     }
 
-    /**
-      At the moment, this method only dumps a CSV with information about models.
-      */
     void convertModels()
     {        
         ZipWriter zip(mOutputPath + "meshes.zip");
@@ -691,20 +788,21 @@ public:
         stream.setByteOrder(QDataStream::LittleEndian);
         stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
 
-        writeModel(model, stream);
+        writeModel(model, stream, zip);
 
         modelBuffer.close();
 
         return zip->addFile(newFilename, modelData, 9);
     }
 
-    bool writeModel(Troika::MeshModel *model, QDataStream &stream)
+	bool writeModel(Troika::MeshModel *model, QDataStream &stream, ZipWriter *zip)
     {
         ModelWriter writer(stream);
 
         QHash< QString, QSharedPointer<Troika::Material> > groupedMaterials;
 
         MaterialConverter converter(vfs.data());
+		converter.setExternal(external);
 
         // Convert materials used by the model
         foreach (const QSharedPointer<Troika::FaceGroup> &faceGroup, model->faceGroups()) {
@@ -714,16 +812,40 @@ public:
         }
 
         QHash<QString,int> materialMapping;
+		QHash<uint,QString> materialFileMapping;
         int i = 0;
 
         foreach (const QString &materialName, groupedMaterials.keys()) {
             qDebug("Converting %s.", qPrintable(materialName));
             converter.convert(groupedMaterials[materialName].data());
-            materialMapping[materialName] = i++;
+			
+			materialFileMapping[i] = getNewMaterialFilename(materialName);
+			materialMapping[materialName] = i++;
         }
 
-        writer.writeTextures(converter.textures());
-        writer.writeMaterials(converter.materialScripts());
+		if (!external) {
+			writer.writeTextures(converter.textures().values());
+			writer.writeMaterials(converter.materialScripts().values());
+		} else {
+			QStringList materials;
+			for (int j = 0; j < i; ++j) {
+				materials.append(materialFileMapping[j]);
+			}
+			writer.writeMaterialReferences(materials);
+
+			foreach (const QString &filename, converter.materialScripts().keys()) {
+				if (!mWrittenMaterials[filename]) {
+					mWrittenMaterials[filename] = true;
+					zip->addFile(filename, converter.materialScripts()[filename].data, 9);
+				}
+			}
+			foreach (const QString &filename, converter.textures().keys()) {
+				if (!mWrittenTextures[filename]) {
+					mWrittenTextures[filename] = true;
+					zip->addFile(filename, converter.textures()[filename].data, 9);
+				}
+			}
+		}
 
         writer.writeVertices(model->vertices());
         writer.writeFaces(model->faceGroups(), materialMapping);
@@ -750,9 +872,9 @@ public:
             qFatal("Unable to create output directory %s.", qPrintable(mOutputPath));
         }
 
-        /*convertParticleSystems();
+        convertParticleSystems();
 
-        convertMaps();*/
+        convertMaps();
 		
         convertModels();               
 
@@ -779,18 +901,29 @@ bool Converter::convert()
     return d_ptr->convert();
 }
 
+void Converter::setExternal(bool ext)
+{
+	d_ptr->external = ext;
+}
+
 int main(int argc, char **argv) {
 
     QCoreApplication app(argc, argv);
 
     std::cout << "Conversion utility for Temple of Elemental Evil." << std::endl;
 
-    if (argc != 2) {
+    if (argc < 2) {
         std::cout << "Usage: " << argv[0] << " " << "<install-dir>" << std::endl;
         return -1;
     }
 
     Converter converter(QString::fromLocal8Bit(argv[1]), QString("data/"));
+
+	for (int i = 2; i < argc; ++i) {
+		if (!strcmp(argv[i], "-external")) {
+			converter.setExternal(true);
+		}
+	}
 
     if (!converter.convert()) {
         std::cout << "ERROR: Conversion failed." << std::endl;

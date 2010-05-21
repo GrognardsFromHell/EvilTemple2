@@ -14,6 +14,8 @@
 
 #include "clippinggeometry.h"
 #include "particlesystem.h"
+#include "lighting.h"
+#include "lighting_debug.h"
 
 namespace EvilTemple {
 
@@ -54,7 +56,7 @@ namespace EvilTemple {
     public:
         GameViewData(GameView *view)
             : q(view), rootItem(0), modelLoaded(0), backgroundMap(renderStates),
-            clippingGeometry(renderStates), particleSystems(renderStates), dragging(false) {
+            clippingGeometry(renderStates), particleSystems(renderStates), dragging(false), lightDebugger(renderStates) {
             if (glewInit() != GLEW_OK) {
                 qWarning("Unable to initialize GLEW.");
             }
@@ -160,6 +162,41 @@ namespace EvilTemple {
 				particleSystems.create(name, Vector4(x, y, z, 1));
             }
 
+            QFile lightingFile(mapDir + "lighting.xml");
+            if (!lightingFile.open(QIODevice::ReadOnly)) {
+                qWarning("Missing lighting model.");
+            }
+
+            loadLighting(&lightingFile);
+
+            lightDebugger.loadMaterial();
+        }
+
+        void loadLighting(QIODevice *lightingSrc)
+        {
+            QDomDocument document;
+
+            QString errorMsg;
+            int errorLine, errorColumn;
+            if (!document.setContent(lightingSrc, false, &errorMsg, &errorLine, &errorColumn)) {
+                qWarning("Couldn't parse lighting XML file: %s (%d:%d)", qPrintable(errorMsg), errorLine, errorColumn);
+                return;
+            }
+
+            QDomElement root = document.documentElement();
+
+            QDomElement global = root.firstChildElement("global");
+            // Not used yet
+
+            QDomElement lightSources = root.firstChildElement("lightSources");
+            for (QDomElement element = lightSources.firstChildElement(); 
+                !element.isNull(); 
+                element = element.nextSiblingElement()) {
+                    Light light;
+                    if (light.load(element))
+                        lights.append(light);
+                        
+            }
         }
 
         void centerOnWorld(float worldX, float worldY)
@@ -182,10 +219,13 @@ namespace EvilTemple {
 
         typedef QPair<Vector4, QSharedPointer<Model> > GeometryMesh;
 
+        QList< Light > lights;
         QList< Vector4 > particleSysPos;
         QList< GMF > geometryMeshes;
 
         QHash<QString, QWeakPointer<Model> > modelCache;
+
+        LightDebugRenderer lightDebugger;
 
         BackgroundMap backgroundMap;
 
@@ -284,7 +324,7 @@ namespace EvilTemple {
 			d->model.elapseTime(elapsed);
 		}
 
-        d->model.draw();
+        d->model.draw(d->renderStates);
 
         d->renderStates.setWorldMatrix(Matrix4::identity());
 
@@ -299,11 +339,28 @@ namespace EvilTemple {
                                                              geometryMesh.position);
             d->renderStates.setWorldMatrix(positionMatrix);
 
-            geometryMesh.modelInstance->draw();
+            // Find all lights that affect this model.
+            QVector<Light> activeLights;
+            activeLights.reserve(d->lights.size());
+            foreach (const Light &light, d->lights) {
+                float distance = (light.position() - geometryMesh.position).lengthSquared();
+                // TODO: This ignores the bounding sphere of the mesh
+                if (distance > (light.range() * light.range()))
+                    continue;
+                activeLights.append(light);
+            }
+            d->renderStates.setActiveLights(activeLights);
+
+            geometryMesh.modelInstance->draw(d->renderStates);
 
             d->renderStates.setWorldMatrix(Matrix4::identity());
         }
-		
+
+        // Render debugging information for lights
+        foreach (const Light &light, d->lights) {
+            d->lightDebugger.render(light);
+        }
+
         d->particleSystems.render();
 
 		SAFE_GL(glDisable(GL_CULL_FACE));
@@ -320,17 +377,18 @@ namespace EvilTemple {
 		glLoadMatrixf(d->renderStates.projectionMatrix().data());
 
 		glMatrixMode(GL_MODELVIEW);
-		glLoadMatrixf(d->renderStates.viewMatrix().data());
+		
+       for (int i = 0; i < d->geometryMeshes.size(); ++i) {
+            GMF &geometryMesh = d->geometryMeshes[i];
 
-		glPointSize(10);
-		glColor3f(1, 0, 0);
-		glBegin(GL_POINTS);
+            Matrix4 positionMatrix = Matrix4::transformation(geometryMesh.scale,
+                                                             geometryMesh.rotation,
+                                                             geometryMesh.position);
+            glLoadMatrixf(d->renderStates.viewMatrix().data());
+            glMultMatrixf(positionMatrix.data());
 
-		foreach (const Vector4 &partSysPos, d->particleSysPos) {
-			glVertex4fv(partSysPos.data());
-		}
-
-		glEnd();
+            // geometryMesh.modelInstance->drawNormals();
+        }
 
         glLoadIdentity();
         glTranslatef(d->renderStates.viewMatrix()(0, 3), d->renderStates.viewMatrix()(1, 3), 0);
@@ -345,12 +403,12 @@ namespace EvilTemple {
         glEnd();
 
         glLoadIdentity();HANDLE_GL_ERROR
-                glMatrixMode(GL_PROJECTION);HANDLE_GL_ERROR
-                glLoadIdentity();HANDLE_GL_ERROR
-                glMatrixMode(GL_MODELVIEW);HANDLE_GL_ERROR
+        glMatrixMode(GL_PROJECTION);HANDLE_GL_ERROR
+        glLoadIdentity();HANDLE_GL_ERROR
+        glMatrixMode(GL_MODELVIEW);HANDLE_GL_ERROR
 
-                glClear(GL_DEPTH_BUFFER_BIT);HANDLE_GL_ERROR
-            }
+        glClear(GL_DEPTH_BUFFER_BIT);HANDLE_GL_ERROR
+    }
 
     void GameView::showView(const QString &url)
     {
@@ -373,18 +431,20 @@ namespace EvilTemple {
 
     void GameView::resizeEvent(QResizeEvent *event)
     {
-        // Update projection matrix
-        d->resize(event->size().width(), event->size().height());
-
         QGraphicsView::resizeEvent(event);
+
+        // Update projection matrix
+        d->resize(event->size().width(), event->size().height());        
     }
 
-    void GameView::mouseMoveEvent(QMouseEvent *event)
+    void GameView::mouseMoveEvent(QMouseEvent *evt)
     {
+        QGraphicsView::mouseMoveEvent(evt);
+      
         if (d->dragging) {
-            int diffX = event->pos().x() - d->lastPoint.x();
-            int diffY = event->pos().y() - d->lastPoint.y();
-            d->lastPoint = event->pos();
+            int diffX = evt->pos().x() - d->lastPoint.x();
+            int diffY = evt->pos().y() - d->lastPoint.y();
+            d->lastPoint = evt->pos();
 
             Vector4 diff(diffX, -diffY, 0, 0);
 
@@ -405,33 +465,25 @@ namespace EvilTemple {
 
             Matrix4 viewMatrix = d->renderStates.viewMatrix();
             d->renderStates.setViewMatrix(viewMatrix * transform);
-            event->accept();
-
-            viewport()->repaint();
+            evt->accept();
         }
-
-        QGraphicsView::mouseMoveEvent(event);
     }
 
-    void GameView::mousePressEvent(QMouseEvent *event)
+    void GameView::mousePressEvent(QMouseEvent *evt)
     {
-        QGraphicsView::mousePressEvent(event);
-
-        if (!event->isAccepted()) {
+        QGraphicsView::mousePressEvent(evt);
+        
+        if (!evt->isAccepted()) {
             d->dragging = true;
-            d->lastPoint = event->pos();
-            //grabMouse(QCursor(Qt::ClosedHandCursor));
-            event->accept();
+            d->lastPoint = evt->pos();
+            evt->accept();
         }
     }
 
-    void GameView::mouseReleaseEvent(QMouseEvent *event)
+    void GameView::mouseReleaseEvent(QMouseEvent *evt)
     {
-        QGraphicsView::mouseReleaseEvent(event);
-
         d->dragging = false;
-        //releaseMouse();
-        event->accept();
+        QGraphicsView::mouseReleaseEvent(evt);        
     }
 
     QPoint GameView::screenCenter() const

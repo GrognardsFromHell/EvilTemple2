@@ -6,6 +6,7 @@
 #include <QtCore/QScopedPointer>
 
 #include "gamemath.h"
+#include "lighting.h"
 
 using namespace GameMath;
 
@@ -35,6 +36,12 @@ public:
     const Matrix4 &viewProjectionMatrix() const;
 
     /**
+    Returns the active lights in the scene.
+    */
+    const QVector<Light> &activeLights() const;
+    void setActiveLights(const QVector<Light> &activeLights);
+
+    /**
       Returns a 2D box that encapsulates the viewport in absolute screen coordinates.
       This is useful for culling 2D background images.
 
@@ -56,8 +63,14 @@ private:
     Matrix4 mWorldMatrix;
     QScopedPointer<UniformBinder> mWorldMatrixBinder;
 
+    Matrix4 mWorldInverseMatrix;
+    QScopedPointer<UniformBinder> mWorldInverseMatrixBinder;
+
     Matrix4 mViewMatrix;
     QScopedPointer<UniformBinder> mViewMatrixBinder;
+
+    Matrix4 mViewInverseMatrix;
+    QScopedPointer<UniformBinder> mViewInverseMatrixBinder;
 
     Matrix4 mProjectionMatrix;
     QScopedPointer<UniformBinder> mProjectionMatrixBinder;
@@ -65,11 +78,16 @@ private:
     Matrix4 mWorldViewMatrix;
     QScopedPointer<UniformBinder> mWorldViewMatrixBinder;
 
+    Matrix4 mWorldViewInverseMatrix;
+    QScopedPointer<UniformBinder> mWorldViewInverseMatrixBinder;
+
     Matrix4 mViewProjectionMatrix;
     QScopedPointer<UniformBinder> mViewProjectionMatrixBinder;
 
     Matrix4 mWorldViewProjectionMatrix;
     QScopedPointer<UniformBinder> mWorldViewProjectionMatrixBinder;
+
+    QVector<Light> mActiveLights;
 };
 
 inline const Box2d &RenderStates::screenViewport() const
@@ -100,6 +118,8 @@ inline const Matrix4 &RenderStates::projectionMatrix() const
 inline void RenderStates::setWorldMatrix(const Matrix4 &worldMatrix)
 {
     mWorldMatrix = worldMatrix;
+    mWorldInverseMatrix = worldMatrix.inverted(); // Should probably be deferred
+    mWorldViewInverseMatrix = mWorldInverseMatrix * mViewInverseMatrix;  // Should probably be deferred
     mWorldViewMatrix = mViewMatrix * worldMatrix;
     mWorldViewProjectionMatrix = mProjectionMatrix * mWorldViewMatrix;
 }
@@ -107,6 +127,8 @@ inline void RenderStates::setWorldMatrix(const Matrix4 &worldMatrix)
 inline void RenderStates::setViewMatrix(const Matrix4 &viewMatrix)
 {
     mViewMatrix = viewMatrix;
+    mViewInverseMatrix = viewMatrix.inverted();  // Should probably be deferred
+    mWorldViewInverseMatrix = mWorldInverseMatrix * mViewInverseMatrix;  // Should probably be deferred
     mWorldViewMatrix = viewMatrix * mWorldMatrix;
     mViewProjectionMatrix = mProjectionMatrix * mViewMatrix;
     mWorldViewProjectionMatrix = mProjectionMatrix * mWorldViewMatrix;
@@ -129,6 +151,16 @@ inline const Matrix4 &RenderStates::worldViewMatrix() const
 inline const Matrix4 &RenderStates::worldViewProjectionMatrix() const
 {
     return mWorldViewProjectionMatrix;
+}
+
+inline const QVector<Light> &RenderStates::activeLights() const
+{
+    return mActiveLights;
+}
+
+inline void RenderStates::setActiveLights(const QVector<Light> &activeLights)
+{
+    mActiveLights = activeLights;
 }
 
 }

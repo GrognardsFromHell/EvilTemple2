@@ -101,6 +101,24 @@ void printEventTypes() {
     }
 }
 
+// We convert the streams to non-interleaved data, which makes it easier to read them into vectors
+struct Streams {
+    QMap<uint, QQuaternion> rotationFrames;
+    QMap<uint, QVector3D> scaleFrames;
+    QMap<uint, QVector3D> translationFrames;
+
+    void appendCurrentState(const AnimationBoneState *state) {
+        rotationFrames[state->rotationFrame] = state->rotation;
+        scaleFrames[state->scaleFrame] = state->scale;
+        translationFrames[state->translationFrame] = state->translation;
+    }
+
+    void appendNextState(const AnimationBoneState *state) {
+        rotationFrames[state->nextRotationFrame] = state->nextRotation;
+        scaleFrames[state->nextScaleFrame] = state->nextScale;
+        translationFrames[state->nextTranslationFrame] = state->nextTranslation;
+    }
+};
 
 void ModelWriter::writeAnimations(const Troika::MeshModel *model)
 {
@@ -141,25 +159,6 @@ void ModelWriter::writeAnimations(const Troika::MeshModel *model)
         }
 
         AnimationStream *animStream = animation.openStream(skeleton);
-
-        // We convert the streams to non-interleaved data, which makes it easier to read them into vectors
-        struct Streams {
-            QMap<uint, QQuaternion> rotationFrames;
-            QMap<uint, QVector3D> scaleFrames;
-            QMap<uint, QVector3D> translationFrames;
-
-            void appendCurrentState(const AnimationBoneState *state) {
-                rotationFrames[state->rotationFrame] = state->rotation;
-                scaleFrames[state->scaleFrame] = state->scale;
-                translationFrames[state->translationFrame] = state->translation;
-            }
-
-            void appendNextState(const AnimationBoneState *state) {
-                rotationFrames[state->nextRotationFrame] = state->nextRotation;
-                scaleFrames[state->nextScaleFrame] = state->nextScale;
-                translationFrames[state->nextTranslationFrame] = state->nextTranslation;
-            }
-        };
 
         QMap<uint,Streams> streams;
 
@@ -226,6 +225,15 @@ void ModelWriter::writeAnimations(const Troika::MeshModel *model)
     }
 
     finishChunk();
+}
+
+void ModelWriter::writeMaterialReferences(const QStringList &materials)
+{
+	startChunk(MaterialReferences, true);
+
+	stream << materials;
+
+	finishChunk();
 }
 
 void ModelWriter::writeBoneAttachments(const QVector<Troika::Vertex> &vertices)

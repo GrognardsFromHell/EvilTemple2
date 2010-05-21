@@ -6,8 +6,57 @@
 
 namespace EvilTemple {
 
+class NullBinder : public UniformBinder 
+{
+    void bind(GLint) const;
+};
+
+void NullBinder::bind(GLint) const
+{
+}
+
+static NullBinder nullBinderInstance;
+
 UniformBinder::~UniformBinder()
 {
+}
+
+bool MaterialState::createFromFile(const QString &filename, const RenderStates &renderState, TextureSource *textureSource)
+{
+    Material material;
+
+    if (!material.loadFromFile(filename)) {
+        mError = material.error();
+        return false;
+    }
+
+    return createFrom(material, renderState, textureSource);
+}
+
+QString getFullCode(const MaterialShader &shader) {
+    QString result;
+
+    // Prepend version if specified
+    if (!shader.version().isEmpty()) {
+        result = "#version " + shader.version() + "\n";
+    }
+
+    foreach (const QString &includedFile, shader.includes()) {
+        QFile file(includedFile);
+
+        if (!file.open(QIODevice::ReadOnly|QIODevice::Text)) {
+            qWarning("Couldn't open shader include file %s.", qPrintable(includedFile));
+            continue;
+        }
+
+        result.append('\n');
+        result.append(file.readAll());
+        result.append('\n');
+    }
+
+    result.append(shader.code());
+
+    return result;
 }
 
 bool MaterialState::createFrom(const Material &material, const RenderStates &states, TextureSource *textureSource)
@@ -21,8 +70,8 @@ bool MaterialState::createFrom(const Material &material, const RenderStates &sta
 
         passState.renderStates = pass->renderStates();
 
-        if (!passState.program.load(qPrintable(pass->vertexShader().code()), qPrintable(pass->fragmentShader().code())))
-        {
+
+        if (!passState.program.load(qPrintable(getFullCode(pass->vertexShader())), qPrintable(getFullCode(pass->fragmentShader())))) {
             mError = QString("Unable to compile shader:\n%1").arg(passState.program.error());
             return false;
         }
@@ -71,9 +120,17 @@ bool MaterialState::createFrom(const Material &material, const RenderStates &sta
 
             GLint location = passState.program.uniformLocation(qPrintable(binding.name()));
             if (location == -1) {
-                mError = QString("Unable to find uniform location for '%1' in shader.").arg(binding.name());
-                return false;
+                if (binding.isOptional()) {
+                    qWarning("Unable to find uniform location for '%s' in shader.", qPrintable(binding.name()));
+                    state.setBinder(&nullBinderInstance);
+                    state.setLocation(-1);
+                    continue;
+                } else {
+                    mError = QString("Unable to find uniform location for '%1' in shader.").arg(binding.name());
+                    return false;
+                }
             }
+
             state.setLocation(location);
 
             const UniformBinder *binder = 0;

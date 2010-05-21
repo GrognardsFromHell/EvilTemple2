@@ -3,6 +3,7 @@
 #include <QtCore/QFile>
 
 #include "GLSLProgram.h"
+#include "util.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -209,7 +210,9 @@ void GLSLProgram::release()
 
 GLint GLSLProgram::uniformLocation( const char *name )
 {
-	return glGetUniformLocation(program, name);
+    GLint location;
+	SAFE_GL(location = glGetUniformLocation(program, name));
+    return location;
 }
 
 }

@@ -11,9 +11,14 @@ RenderStates::RenderStates()
     mProjectionMatrixBinder(new ReferenceBinder<Matrix4>(mProjectionMatrix)),
     mViewMatrixBinder(new ReferenceBinder<Matrix4>(mViewMatrix)),
     mViewProjectionMatrixBinder(new ReferenceBinder<Matrix4>(mViewProjectionMatrix)),
+    // TODO: This binder should defer updating the inverse until it's really needed.
+    mWorldInverseMatrixBinder(new ReferenceBinder<Matrix4>(mWorldInverseMatrix)),
+    mViewInverseMatrixBinder(new ReferenceBinder<Matrix4>(mViewInverseMatrix)),
+    mWorldViewInverseMatrixBinder(new ReferenceBinder<Matrix4>(mWorldViewInverseMatrix)),
     mScreenViewport(0, 0, 0, 0)
 {
     mWorldMatrix.setToIdentity();
+    mWorldInverseMatrix.setToIdentity();
     mViewMatrix.setToIdentity();
     mProjectionMatrix.setToIdentity();
     mViewProjectionMatrix.setToIdentity();
@@ -42,12 +47,18 @@ const UniformBinder *RenderStates::getStateBinder(const QString &semantic) const
         return mWorldViewProjectionMatrixBinder.data();
    } else if (semantic == "WorldView") {
        return mWorldViewMatrixBinder.data();
+   } else if (semantic == "WorldViewInverse") {
+       return mWorldViewInverseMatrixBinder.data();
    } else if (semantic == "World") {
        return mWorldMatrixBinder.data();
+   } else if (semantic == "WorldInverse") {
+       return mWorldInverseMatrixBinder.data();
    } else if (semantic == "Projection") {
        return mProjectionMatrixBinder.data();
    } else if (semantic == "View") {
        return mViewMatrixBinder.data();
+   } else if (semantic == "ViewInverse") {
+       return mViewInverseMatrixBinder.data();
    } else if (semantic == "ViewProjection") {
        return mViewProjectionMatrixBinder.data();
    } else {

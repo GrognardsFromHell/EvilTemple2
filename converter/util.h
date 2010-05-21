@@ -36,4 +36,28 @@ inline uint ELFHash(const QByteArray &string)
     return result;
 }
 
+inline QString getNewMaterialFilename(const QString &mdfFilename) {
+    QString newFilename = QDir::toNativeSeparators(mdfFilename);
+    if (newFilename.startsWith(QString("art") + QDir::separator(), Qt::CaseInsensitive)) {
+        newFilename = newFilename.right(newFilename.length() - 4);
+    }
+
+    if (newFilename.endsWith(".mdf", Qt::CaseInsensitive))
+    {
+        newFilename = newFilename.left(newFilename.length() - 4);
+    }
+
+    newFilename.append(".xml");
+
+    return newFilename;
+}
+
+inline QString getNewTextureFilename(const QString &mdfFilename) {
+    QString newFilename = QDir::toNativeSeparators(mdfFilename);
+    if (newFilename.startsWith(QString("art") + QDir::separator(), Qt::CaseInsensitive)) {
+        newFilename = newFilename.right(newFilename.length() - 4);
+    }
+    return newFilename;
+}
+
 #endif // UTIL_H

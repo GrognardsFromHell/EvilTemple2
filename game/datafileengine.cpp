@@ -107,6 +107,13 @@ public:
             path = QDir::toNativeSeparators(filename);
         }
 
+		// Look for the file in the data directory.
+		engine.setFileName(absoluteDataPath + path);
+		if (engine.fileFlags(QAbstractFileEngine::ExistsFlag) & QAbstractFileEngine::ExistsFlag) {
+			qDebug("Using override for %s.", qPrintable(path));
+			return new QFSFileEngine(absoluteDataPath + path);
+		}
+
         ArchiveEntries::const_iterator it = archiveEntries.find(path.toLower());
 
         if (it != archiveEntries.end()) {

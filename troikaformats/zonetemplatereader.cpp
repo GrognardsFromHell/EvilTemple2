@@ -46,7 +46,8 @@ namespace Troika
                 && readGeometryMeshInstances()
                 && readSectors()
                 && readClippingMeshFiles()
-                && readClippingMeshInstances();
+                && readClippingMeshInstances()
+				&& readGlobalLight();
     }
 
     bool ZoneTemplateReader::readMapProperties()
@@ -397,5 +398,42 @@ namespace Troika
 
         return true;
     }
+
+	bool ZoneTemplateReader::readGlobalLight()
+	{
+        QByteArray data = vfs->openFile(mapDirectory + "global.lit");
+
+        if (data.isNull()) {
+			qWarning("Missing global lighting information for %s.", qPrintable(mapDirectory));
+            return false;
+		}
+
+		QDataStream stream(data);
+		stream.setByteOrder(QDataStream::LittleEndian);
+		stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
+
+		Light globalLight;
+		uint flags;
+		float cr, cg, cb;
+		stream >> flags >> globalLight.type >> cr >> cg >> cb;
+		globalLight.r = cr * 255.0f;
+		globalLight.g = cg * 255.0f;
+		globalLight.b = cb * 255.0f;
+		stream.skipRawData(3 * sizeof(float)); // Unknown data.
+		stream >> globalLight.dirX >> globalLight.dirY >> globalLight.dirZ >> globalLight.range;
+
+		// ToEE normalizes the global.lit direction after loading the file. We do it ahead of time here.
+		Vector4 lightDir(globalLight.dirX, globalLight.dirY, globalLight.dirZ, 0);
+		lightDir.normalize();
+		globalLight.dirX = lightDir.x();
+		globalLight.dirY = lightDir.y();
+		globalLight.dirZ = lightDir.z();
+		
+		if (globalLight.type != 3) {
+			qWarning("Found a non-directional global light.");
+		}
+
+		zoneTemplate->setGlobalLight(globalLight);
+	}
 
 }

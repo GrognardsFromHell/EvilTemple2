@@ -6,5 +6,8 @@
         <file>map_material.xml</file>
         <file>clipping_material.xml</file>
         <file>sprite_material.xml</file>
+        <file>light_material.xml</file>
+        <file>lighting.vs</file>
+        <file>lighting.fs</file>
     </qresource>
 </RCC>

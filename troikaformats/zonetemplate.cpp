@@ -33,6 +33,7 @@ namespace Troika
         QBox3D scrollBox;
         QString directory;
         QString name;
+		Light globalLight;
     };
 
     ZoneTemplate::ZoneTemplate(quint32 id, QObject *parent) :
@@ -222,4 +223,13 @@ namespace Troika
         return d_ptr->particleSystems;
     }
 
+	const Light &ZoneTemplate::globalLight() const
+	{
+		return d_ptr->globalLight;
+	}
+
+	void ZoneTemplate::setGlobalLight(const Light &light)
+	{
+		d_ptr->globalLight = light;
+	}
 }

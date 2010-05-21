@@ -1,6 +1,9 @@
 
+#include <QtCore/QDir>
 #include <QtCore/QFile>
+#include <QtCore/QCryptographicHash>
 #include <QtGui/QImage>
+
 
 #include "modelfile.h"
 #include "util.h"
@@ -10,12 +13,13 @@ namespace EvilTemple {
 	enum ModelChunks {
 		Chunk_Textures = 1,
 		Chunk_Materials = 2,
-		Chunk_Geometry = 3,
-		Chunk_Faces = 4,
-		Chunk_Bones = 5, // Skeletal data
-		Chunk_BoneAttachments = 6, // Assigns vertices to bones
-		Chunk_BoundingVolumes = 7, // Bounding volumes,
-		Chunk_Animations = 8, // Animations
+		Chunk_MaterialReferences = 3,
+		Chunk_Geometry = 4,
+		Chunk_Faces = 5,
+		Chunk_Bones = 6, // Skeletal data
+		Chunk_BoneAttachments = 7, // Assigns vertices to bones
+		Chunk_BoundingVolumes = 8, // Bounding volumes,
+		Chunk_Animations = 9, // Animations
 		Chunk_Metadata = 0xFFFF,  // Last chunk is always metadata
 	};
 
@@ -86,6 +90,36 @@ namespace EvilTemple {
 	QVector<unsigned char*> mTextures;
 	QVector<int> mTextureSizes;
     };
+
+	class FileTextureSource : public TextureSource {
+    public:
+		SharedTexture loadTexture(const QString &name)
+		{
+			bool ok;
+			
+			QByteArray hash = QCryptographicHash::hash(QDir::toNativeSeparators(name).toLower().toUtf8(), QCryptographicHash::Md5);
+			Md5Hash filenameHash = *reinterpret_cast<const Md5Hash*>(hash.constData());
+
+            // Check if there already is a texture in the cache
+            SharedTexture texture = GlobalTextureCache::instance().get(filenameHash);
+
+            if (!texture) {
+				QFile file(name);
+				if (!file.open(QIODevice::ReadOnly)) {
+					qWarning("Unable to open texture %s.", qPrintable(name));
+				} else {
+					QByteArray textureData = file.readAll();
+					texture = SharedTexture(new Texture);
+					texture->loadTga(textureData);
+					file.close();
+				}
+
+                GlobalTextureCache::instance().insert(filenameHash, texture);
+            }
+
+			return texture;
+		}
+	};
 
     bool Model::open(const QString &filename, const RenderStates &renderState)
     {
@@ -176,6 +210,44 @@ namespace EvilTemple {
                     Material material;
 
                     if (!material.loadFromData(rawMaterialData)) {
+                        mError.append(QString("Unable to read material from model %1:\n%2").arg(filename)
+                                      .arg(material.error()));
+                        return false;
+                    }
+
+                    if (!materialState[j].createFrom(material, renderState, &textureSource)) {
+                        mError.append(QString("Unable to create material state for model %1:\n%2").arg(filename)
+                                      .arg(materialState[j].error()));
+                        return false;
+                    }
+                }
+
+			} else if (chunkHeader.type == Chunk_MaterialReferences) {
+				Q_ASSERT(materialState.isNull()); // Materials and MaterialReferences are exclusive
+				
+				QDataStream stream(QByteArray::fromRawData(chunkData.data(), chunkHeader.size));
+				stream.setByteOrder(QDataStream::LittleEndian);
+				stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
+
+				QStringList materialNames;
+				stream >> materialNames;
+				
+                materialState.reset(new MaterialState[materialNames.size()]);
+
+				FileTextureSource textureSource;
+				
+                for (int j = 0; j < materialNames.size(); ++j) {
+
+					QFile file(materialNames[j]);
+
+					if (!file.open(QIODevice::ReadOnly)) {
+						qWarning("Unable to open material file %s.", qPrintable(materialNames[j]));
+						return false;
+					}
+
+                    Material material;
+
+					if (!material.loadFromData(file.readAll())) {
                         mError.append(QString("Unable to read material from model %1:\n%2").arg(filename)
                                       .arg(material.error()));
                         return false;

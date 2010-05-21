@@ -12,6 +12,8 @@ public:
     Converter(const QString &inputPath, const QString &outputPath);
     ~Converter();
 
+	void setExternal(bool ext);
+
 public slots:
     bool convert();
 

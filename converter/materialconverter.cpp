@@ -5,6 +5,8 @@
 #include "virtualfilesystem.h"
 #include "material.h"
 
+
+#include "util.h"
 #include "materialconverter.h"
 
 using namespace Troika;
@@ -17,6 +19,8 @@ private:
     QStringList shadowCasterList;
 
 public:
+	bool external;
+
     MaterialConverterData(VirtualFileSystem *vfs) : mVfs(vfs) {
         QFile materialTemplateFile(":/material_template.xml");
         if (!materialTemplateFile.open(QIODevice::ReadOnly)) {
@@ -73,7 +77,7 @@ public:
             materialFile.replace(lightingBlocks, "");
         }
 
-        pixelTerm.append("gl_FragColor = materialDiffuse;\n");
+        pixelTerm.append("gl_FragColor = materialColor;\n");
 
         for (int i = 0; i < LegacyTextureStages; ++i) {
             const TextureStageInfo *textureStage = material->getTextureStage(i);
@@ -83,10 +87,14 @@ public:
 
             QString samplerName = QString("texSampler%1").arg(i);
 
-            int textureId = getTexture(textureStage->filename);
-
+			int textureId = getTexture(textureStage->filename); // This forces the texture to be loaded -> ok
+			
             samplers.append(QString("uniform sampler2D %1;\n").arg(samplerName));
-            textureDefs.append(QString("<textureSampler texture=\"#%1\"/>\n").arg(textureId));
+			if (external) {
+				textureDefs.append(QString("<textureSampler texture=\"%1\"/>\n").arg(getNewTextureFilename(textureStage->filename)));
+			} else {				
+				textureDefs.append(QString("<textureSampler texture=\"#%1\"/>\n").arg(textureId));
+			}
 
             samplerUniforms.append(QString("<uniform name=\"%1\" semantic=\"Texture%2\" />").arg(samplerName).arg(i));
 
@@ -103,11 +111,11 @@ public:
                 pixelTerm.append("gl_FragColor = vec4(mix(gl_FragColor.rgb, texel.rgb, texel.a), gl_FragColor.a);\n");
                 break;
             case TextureStageInfo::CurrentAlpha:
-                pixelTerm.append("gl_FragColor = vec4(mix(gl_FragColor.rgb, texel.rgb, gl_FragColor.a), materialDiffuse.a);\n");
+                pixelTerm.append("gl_FragColor = vec4(mix(gl_FragColor.rgb, texel.rgb, gl_FragColor.a), materialColor.a);\n");
                 break;
             case TextureStageInfo::CurrentAlphaAdd:
                 pixelTerm.append("gl_FragColor.rgb += texel.rgb * gl_FragColor.a;\n");
-                pixelTerm.append("gl_FragColor.a = materialDiffuse.a;\n");
+                pixelTerm.append("gl_FragColor.a = materialColor.a;\n");
                 break;
             }
         }
@@ -163,7 +171,7 @@ public:
         }
         materialFile.replace("{{BLEND_DEST}}", blendFactor);
 
-        materialScripts.append(HashedData(materialFile.toUtf8()));
+        materialScripts.insert(getNewMaterialFilename(material->name()), HashedData(materialFile.toUtf8()));
 
         return true;
     }
@@ -174,7 +182,7 @@ public:
         } else {
             QByteArray texture = mVfs->openFile(filename);
             int textureId = textures.size();
-            textures.append(texture);
+			textures.insert(getNewTextureFilename(filename), texture);
 
             loadedTextures[filename.toLower()] = textureId;
             return textureId;
@@ -183,8 +191,8 @@ public:
 
     QHash<QString, uint> loadedTextures;
 
-    QList<HashedData> textures;
-    QList<HashedData> materialScripts;
+    QMap<QString,HashedData> textures;
+    QMap<QString,HashedData> materialScripts;
 };
 
 HashedData::HashedData(const QByteArray &_data) : data(_data), md5Hash(QCryptographicHash::hash(_data, QCryptographicHash::Md5))
@@ -206,14 +214,19 @@ bool MaterialConverter::convert(const Material *material)
     return d_ptr->convert(material);
 }
 
-const QList<HashedData> &MaterialConverter::textures()
+const QMap<QString,HashedData> &MaterialConverter::textures()
 {
     return d_ptr->textures;
 }
 
-const QList<HashedData> &MaterialConverter::materialScripts()
+const QMap<QString,HashedData> &MaterialConverter::materialScripts()
 {
     return d_ptr->materialScripts;
+}
+
+void MaterialConverter::setExternal(bool external)
+{
+	d_ptr->external = external;
 }
 
 QDataStream &operator <<(QDataStream &stream, const HashedData &hashedData)

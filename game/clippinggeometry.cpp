@@ -199,6 +199,8 @@ public:
             mInstances[i].setMesh(mMeshes.data() + meshIndex);
             mInstances[i].setWorldMatrix(position, rotation, scale);
         }
+
+        return true;
     }
 
     void unload() {

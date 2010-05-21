@@ -66,6 +66,7 @@ namespace Troika
         bool readSectorObjects(QDataStream &stream);
         bool readClippingMeshFiles(); // Loads clipping.cgf
         bool readClippingMeshInstances(); // Loads dag files + clipping.cif
+		bool readGlobalLight(); // Loads global.lit
 
         VirtualFileSystem *vfs;
         Prototypes *prototypes;

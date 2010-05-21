@@ -74,9 +74,9 @@ namespace EvilTemple {
 
         // Ensure constant updates
         QTimer *animTimer = new QTimer(this);
-        animTimer->setInterval(5);
+        animTimer->setInterval(20);
         animTimer->setSingleShot(false);
-        connect(animTimer, SIGNAL(timeout()), glViewport, SLOT(repaint()));
+        connect(animTimer, SIGNAL(timeout()), glViewport, SLOT(repaint()), Qt::DirectConnection);
         animTimer->start();
 
         QTimer *timer = new QTimer(this);
@@ -188,7 +188,7 @@ namespace EvilTemple {
 
     void MainWindow::closeEvent(QCloseEvent *e) {
         writeSettings();
-        e->accept();
+        QMainWindow::closeEvent(e);
     }
 
     void MainWindow::showFromSettings() {

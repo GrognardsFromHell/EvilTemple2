@@ -17,7 +17,7 @@ namespace Troika
 {
     class ZoneTemplateData;
     class ZoneBackgroundMap;
-
+	
     class TROIKAFORMATS_EXPORT GeometryObject {
     public:
         GeometryObject(const QVector3D &position, const QQuaternion &rotation, const QString &mesh) :
@@ -91,6 +91,8 @@ namespace Troika
         bool hasDayNightTransfer() const;
         bool allowsBedrest() const;
 
+		const Light &globalLight() const;
+
         const QList<Light> &lights() const;
 
         const QList<ParticleSystem> &particleSystems() const;
@@ -144,6 +146,7 @@ namespace Troika
         void setDayNightTransfer(bool enabled);
         void setBedrest(bool enabled);
         void setScrollBox(const QBox3D &scrollBox);
+		void setGlobalLight(const Light &light);
 
     private:
         QScopedPointer<ZoneTemplateData> d_ptr;

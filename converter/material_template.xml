@@ -3,31 +3,29 @@
 
   <pass>
     <shader>
-      <vertexShader>
+      <vertexShader version="120">
+        {{LIGHTING_ON}}
+        <include file=":/material/lighting.vs" />
+        {{/LIGHTING_ON}}
         <code>
           <![CDATA[
-#version 120
-
 uniform mat4 worldViewProjectionMatrix;
-const vec4 invertedLightDirection = vec4(0.447, 0.89, 0, 0);
 
 attribute vec4 vertexPosition;
 attribute vec2 vertexTexCoord;
 
-{{LIGHTING_ON}}
-uniform mat4 worldViewMatrix;
-attribute vec4 vertexNormal;
-varying vec4 normal;
-varying vec4 light;
-{{/LIGHTING_ON}}
-
 varying vec2 texCoord;
 
-void main() {
 {{LIGHTING_ON}}
-        light = worldViewMatrix * invertedLightDirection;
-        normal = normalize(worldViewMatrix * vertexNormal);
+attribute vec4 vertexNormal;
+varying vec3 normal;
 {{/LIGHTING_ON}}
+
+void main() {
+{{LIGHTING_ON}}        
+        lighting(vertexPosition);
+        normal = vec3(normalize(vertexNormal));
+{{/LIGHTING_ON}}     
 
         gl_Position = worldViewProjectionMatrix * vertexPosition;
         texCoord = vertexTexCoord; // Pass through texture coordinates
@@ -36,30 +34,28 @@ void main() {
         </code>
       </vertexShader>
 
-      <fragmentShader>
+      <fragmentShader version="120">
+        {{LIGHTING_ON}}
+        <include file=":/material/lighting.fs" />
+        {{/LIGHTING_ON}}
         <code>
         <![CDATA[
-#version 120
 
-{{LIGHTING_ON}}
-varying vec4 normal;
-varying vec4 light;
-{{/LIGHTING_ON}}
-
-const vec4 globalAmbient = vec4(0.1, 0.1, 0.1, 1);
-const vec4 diffuseLightColor = vec4(0.9, 0.9, 0.9, 1);
-const vec4 materialDiffuse = vec4({{MATERIAL_DIFFUSE}});
+// Material properties
+const vec4 materialColor = vec4({{MATERIAL_DIFFUSE}});
+const int shininess = 50;
 
 varying vec2 texCoord;
+{{LIGHTING_ON}}
+varying vec3 normal;
+{{/LIGHTING_ON}}
 
 {{SAMPLERS}}
 
 void main(void)
 {
 {{LIGHTING_ON}}
-   float cosTheta = abs(dot(normal,light));
-   vec4 Idiff = materialDiffuse * diffuseLightColor * cosTheta + globalAmbient;
-   Idiff = clamp(Idiff, 0.0, 1.0);
+  vec4 Idiff = lighting(normalize(normal), shininess);
 {{/LIGHTING_ON}}
 
    {{PIXEL_TERM}}
@@ -75,7 +71,9 @@ void main(void)
       <attribute name="vertexTexCoord" buffer="texCoords" components="2" />
       <uniform name="worldViewProjectionMatrix" semantic="WorldViewProjection" />
       {{LIGHTING_ON}}
-      <uniform name="worldViewMatrix" semantic="WorldView" />
+      <uniform name="worldMatrix" semantic="World" />
+      <uniform name="worldInverseMatrix" semantic="WorldInverse" />
+      <uniform name="worldViewInverseMatrix" semantic="WorldViewInverse" />
       {{/LIGHTING_ON}}
       {{SAMPLER_UNIFORMS}}
     </shader>

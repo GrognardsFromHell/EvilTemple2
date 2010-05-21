@@ -10,6 +10,8 @@
 
 namespace EvilTemple {
 
+class RenderStates;
+
 /**
     A model instance manages the per-instance state of models. This includes animation state
     and transformed position and normal data.
@@ -24,8 +26,9 @@ public:
 
     void elapseTime(float elapsedSeconds);
 
-    void draw() const;
-    void draw(MaterialState *overrideMaterial) const;
+    void drawNormals() const;
+    void draw(const RenderStates &renderStates) const;
+    void draw(const RenderStates &renderStates, MaterialState *overrideMaterial) const;
 
 private:
 	Matrix4 *mFullWorld;

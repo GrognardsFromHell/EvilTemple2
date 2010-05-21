@@ -1,5 +1,6 @@
 #include "modelinstance.h"
 #include "util.h"
+#include "drawhelper.h"
 
 namespace EvilTemple {
 
@@ -57,16 +58,147 @@ namespace EvilTemple {
 		}
     }
 
-    void ModelInstance::draw() const
+    struct ModelDrawStrategy : public DrawStrategy {
+        ModelDrawStrategy(GLint bufferId, int elementCount)
+            : mBufferId(bufferId), mElementCount(elementCount)
+        {
+        }
+
+        inline void draw(const RenderStates &renderStates, MaterialPassState &state) const
+        {
+            Q_UNUSED(state);
+            Q_UNUSED(renderStates);
+
+            // Render once without diffuse/specular, then render again without ambient
+            int typePos = state.program.uniformLocation("lightSource.type");
+            if (typePos != -1) {
+                SAFE_GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mBufferId));
+
+                typePos = state.program.uniformLocation("lightSource.type");
+                int colorPos = state.program.uniformLocation("lightSource.color");
+                int positionPos = state.program.uniformLocation("lightSource.position");
+                int attenuationPos = state.program.uniformLocation("lightSource.attenuation");
+
+                SAFE_GL(glUniform1i(typePos, 1));
+                SAFE_GL(glUniform4f(colorPos, 0.662745f, 0.564706f, 0.905882f, 0));
+                SAFE_GL(glUniform4f(positionPos, -0.632409f, -0.774634f, 0, 0));              
+                
+                SAFE_GL(glDrawElements(GL_TRIANGLES, mElementCount, GL_UNSIGNED_SHORT, 0));
+
+                SAFE_GL(glDepthFunc(GL_EQUAL));
+                SAFE_GL(glEnable(GL_CULL_FACE));
+
+                if (renderStates.activeLights().size() > 0) {
+                    SAFE_GL(glEnable(GL_BLEND));
+                    SAFE_GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE));
+
+                    // Draw again for every light affecting this mesh
+                    foreach (const Light &light, renderStates.activeLights()) {
+                        SAFE_GL(glUniform1i(typePos, light.type()));
+                        SAFE_GL(glUniform4f(colorPos, light.color().x(), light.color().y(), light.color().z(), light.color().w()));
+                        SAFE_GL(glUniform4f(positionPos, light.position().x(), light.position().y(), light.position().z(), 1));
+                        SAFE_GL(glUniform1f(attenuationPos, light.attenuation()));
+
+                        SAFE_GL(glDrawElements(GL_TRIANGLES, mElementCount, GL_UNSIGNED_SHORT, 0));
+                    }
+
+                    SAFE_GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+                }
+                
+                SAFE_GL(glDepthFunc(GL_LESS));
+
+                SAFE_GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
+            } else {
+                SAFE_GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mBufferId));
+                SAFE_GL(glDrawElements(GL_TRIANGLES, mElementCount, GL_UNSIGNED_SHORT, 0));
+                SAFE_GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
+            }
+        }
+
+        GLint mBufferId;
+        int mElementCount;
+    };
+
+    void ModelInstance::drawNormals() const
+    {
+        if (!mModel)
+            return;
+
+        if (!mCurrentAnimation) {
+            mModel->drawNormals();
+            return;
+        }
+
+
+        SAFE_GL(glLineWidth(1.5));
+        SAFE_GL(glEnable(GL_LINE_SMOOTH));
+        SAFE_GL(glColor3f(0, 0, 1));
+        SAFE_GL(glDisable(GL_LIGHTING));
+        glBegin(GL_LINES);
+
+        for (int i = 0; i < mModel->vertices; i += 2) {
+            const Vector4 &vertex = mTransformedPositions[i];
+            const Vector4 &normal = mTransformedNormals[i];
+            glVertex3fv(vertex.data());
+            glVertex3fv((vertex + 15 * normal).data());
+        }
+        glEnd();
+
+        glPointSize(2);
+        glBegin(GL_POINTS);
+        glColor3f(1, 0, 0);
+        for (int i = 0; i < mModel->vertices; i += 2) {
+            const Vector4 &vertex = mTransformedPositions[i];
+            glVertex3fv(vertex.data());
+        }
+        SAFE_GL(glEnd());
+    }
+
+    struct ModelBufferSource : public BufferSource {
+        inline ModelBufferSource(GLint positionBuffer, GLint normalBuffer, GLint texCoordBuffer)
+            : mPositionBuffer(positionBuffer), mNormalBuffer(normalBuffer), mTexCoordBuffer(texCoordBuffer)
+        {
+        }
+
+        inline GLint buffer(const MaterialPassAttributeState &attribute) const
+        {
+            switch (attribute.bufferType)
+            {
+            case 0:
+                return mPositionBuffer;
+            case 1:
+                return mNormalBuffer;
+            case 2:
+                return mTexCoordBuffer;
+            default:
+                qWarning("Unknown buffer id requested: %d.", attribute.bufferType);
+            }
+        }
+
+        GLint mPositionBuffer;
+        GLint mNormalBuffer;
+        GLint mTexCoordBuffer;
+    };
+
+    void ModelInstance::draw(const RenderStates &renderStates) const
     {
         const Model *model = mModel.data();
 
         if (!model)
             return;
 
+        DrawHelper<ModelDrawStrategy, ModelBufferSource> drawHelper;
+        ModelBufferSource bufferSource(mCurrentAnimation ? mPositionBuffer.bufferId() : model->positionBuffer,
+            mCurrentAnimation ? mNormalBuffer.bufferId() : model->normalBuffer,
+            model->texcoordBuffer);
+
         for (int faceGroupId = 0; faceGroupId < model->faces; ++faceGroupId) {
             const FaceGroup &faceGroup = model->faceGroups[faceGroupId];
             MaterialState *material = faceGroup.material;
+
+            ModelDrawStrategy drawStrategy(faceGroup.buffer, faceGroup.elementCount);
+            
+            drawHelper.draw(renderStates, material, drawStrategy, bufferSource);
 
             if (!material)
                 continue;
@@ -154,7 +286,7 @@ namespace EvilTemple {
         }
     }
 
-    void ModelInstance::draw(MaterialState *overrideMaterial) const
+    void ModelInstance::draw(const RenderStates &renderStates, MaterialState *overrideMaterial) const
     {
         Q_ASSERT(overrideMaterial);
 
@@ -327,7 +459,7 @@ namespace EvilTemple {
 			for (int k = 0; k < attachment.count(); ++k) {
                 float weight = attachment.weights()[k];
 				uint boneId = attachment.bones()[k];
-				Q_ASSERT(boneId >= 0 && boneId <= mBoneStates.size());
+				Q_ASSERT(boneId >= 0 && boneId <= mModel->bones().size());
 
 				const Matrix4 &fullTransform = mFullTransform[boneId];
 
@@ -335,13 +467,12 @@ namespace EvilTemple {
                 resultNormal += weight * fullTransform.mapNormal(mModel->normals[i]);
             }
 
-            result.data()[2] *= -1;
             resultNormal.data()[2] *= -1;
-
+            result.data()[2] *= -1;
             result.data()[3] =  1;
 
 			mTransformedPositions[i] = result;
-			mTransformedNormals[i] = result;
+			mTransformedNormals[i] = resultNormal;
 		}
 		
 		glBindBuffer(GL_ARRAY_BUFFER, mPositionBuffer.bufferId());

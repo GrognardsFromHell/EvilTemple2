@@ -18,6 +18,18 @@ Material::~Material()
     mPasses.clear();
 }
 
+bool Material::loadFromFile(const QString &filename)
+{
+    QFile file(filename);
+
+    if (!file.open(QIODevice::ReadOnly)) {
+        mError = file.error();
+        return false;
+    }
+
+    return loadFromData(file.readAll());
+}
+
 bool Material::loadFromData(const QByteArray &data)
 {
     QString errorMsg;
@@ -187,6 +199,8 @@ bool MaterialShader::load(const QDomElement &shaderElement)
         return false;
     }
 
+    mVersion = shaderElement.attribute("version");
+
     QDomElement childElement = shaderElement.firstChildElement();
     while (!childElement.isNull()) {
         QString childName = childElement.nodeName();
@@ -290,6 +304,7 @@ bool MaterialUniformBinding::load(const QDomElement &element)
     Q_ASSERT(element.hasAttribute("name"));
     Q_ASSERT(element.hasAttribute("semantic"));
 
+    mOptional = element.attribute("optional", "true") == "true";
     mName = element.attribute("name");
     mSemantic = element.attribute("semantic");
 

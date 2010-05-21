@@ -2,6 +2,7 @@
 #ifndef MATERIALSTATE_H
 #define MATERIALSTATE_H
 
+#include <QtCore/QString>
 #include <QtCore/QScopedPointer>
 #include <QtCore/QScopedArrayPointer>
 #include <QtCore/QVector>
@@ -16,6 +17,8 @@ using namespace GameMath;
 #include "glslprogram.h"
 
 namespace EvilTemple {
+
+class RenderStates;
 
 /**
   Allows binding of a value to a uniform variable in a shader. Objects of this class
@@ -189,6 +192,7 @@ public:
     int passCount;
     QScopedArrayPointer<MaterialPassState> passes;
     bool createFrom(const Material &material, const RenderStates &renderState, TextureSource *textureSource);
+    bool createFromFile(const QString &filename, const RenderStates &renderState, TextureSource *textureSource);
     const QString &error() const;
 private:
     QString mError;

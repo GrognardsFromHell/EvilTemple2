@@ -70,6 +70,7 @@ public:
 
 	T operator()(float ratio) const
 	{
+        Q_UNUSED(ratio)
 		return mValue;
 	}
 
@@ -90,6 +91,7 @@ template<typename T> class RadiusProperty : public ParticleProperty<T> {
 public:
 	T operator()(float ratio) const
 	{
+        Q_UNUSED(ratio);
 		return 20;
 	}
 
@@ -113,6 +115,7 @@ public:
 
 	T operator()(float ratio) const
 	{
+        Q_UNUSED(ratio)
 		return mMinValue + (rand() / (float)RAND_MAX) * mSpan;
 	}
 
