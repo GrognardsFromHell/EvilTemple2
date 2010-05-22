@@ -10,26 +10,30 @@ struct LightSource {
 };
 
 uniform LightSource lightSource;
-uniform mat4 worldMatrix;
 uniform mat4 worldInverseMatrix;
+uniform mat4 worldViewMatrix;
 uniform mat4 worldViewInverseMatrix;
+uniform mat4 viewMatrix;
 
+varying vec3 normal;
 varying vec3 lightVector;
 varying vec3 halfVector;
 varying float lightDistance;
 
-void lighting(vec4 vertexPosition)
+void lighting(vec4 vertexPosition, vec4 vertexNormal)
 {
+	normal = normalize(vec3(worldViewMatrix * vertexNormal));
+
 	if (lightSource.type == Light_Directional) {
-		lightVector = - vec3(normalize(worldInverseMatrix * lightSource.position));
+		lightVector = normalize(- vec3(viewMatrix * lightSource.position));
 		lightDistance = 0;
 	} else {
-		lightVector = vec3(lightSource.position - worldMatrix * vertexPosition);
+		lightVector = vec3(viewMatrix * lightSource.position) - vec3(worldViewMatrix * vertexPosition);
 		// TODO: Scaling might negatively affect this. Maybe convert to world instead?
-		lightDistance = length(lightVector) * 2;
-		lightVector = lightVector; // Normalize
+		lightDistance = length(lightVector);
+		lightVector = normalize(lightVector); // Normalize
 	}
 	
-	vec3 eyeVector = vec3(worldViewInverseMatrix * vec4(0.0, 0.0, 1.0, 0.0));
+	vec3 eyeVector = vec3(0.0, 0.0, -1.0);
 	halfVector = normalize(lightVector + eyeVector);
 }

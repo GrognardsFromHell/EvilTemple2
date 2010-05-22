@@ -323,6 +323,21 @@ void ModelWriter::writeBoundingVolumes(const Troika::MeshModel *model)
     stream << box.minimum().x() << box.minimum().y() << box.minimum().z() << (float)1
             << box.maximum().x() << box.maximum().y() << box.maximum().z() << (float)1;
 
+	// In addition, find the maximum distance of a vertex from the origin for this model and use that as the bounding sphere
+	float lengthSquared = 0.0f;
+
+	foreach (const Troika::Vertex &vertex, model->vertices()) {
+		float distance = vertex.position().lengthSquared();
+		if (distance > lengthSquared) {
+			lengthSquared = distance;
+		}
+	}
+	
+	// Take sqrt
+	float length = std::sqrt(lengthSquared);
+
+	stream << length << lengthSquared;
+	
     finishChunk();
 }
 

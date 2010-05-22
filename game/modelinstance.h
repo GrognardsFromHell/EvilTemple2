@@ -30,6 +30,8 @@ public:
     void draw(const RenderStates &renderStates) const;
     void draw(const RenderStates &renderStates, MaterialState *overrideMaterial) const;
 
+    const SharedModel &model() const;
+
 private:
 	Matrix4 *mFullWorld;
 	Matrix4 *mFullTransform;
@@ -49,6 +51,11 @@ private:
 
     Q_DISABLE_COPY(ModelInstance);
 };
+
+inline const SharedModel &ModelInstance::model() const
+{
+    return mModel;
+}
 
 }
 

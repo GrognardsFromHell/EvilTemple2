@@ -26,7 +26,7 @@ namespace EvilTemple {
     Model::Model()
 	: faceGroups(0), positions(0), normals(0), texCoords(0), vertices(0), vertexData(0), faceData(0)
         , positionBuffer(0), normalBuffer(0), texcoordBuffer(0), materialState(0), textureData(0), faces(0),
-        attachments(0)
+        attachments(0), mRadius(std::numeric_limits<float>::infinity()), mRadiusSquared(std::numeric_limits<float>::infinity())
     {
     }
 
@@ -90,37 +90,7 @@ namespace EvilTemple {
 	QVector<unsigned char*> mTextures;
 	QVector<int> mTextureSizes;
     };
-
-	class FileTextureSource : public TextureSource {
-    public:
-		SharedTexture loadTexture(const QString &name)
-		{
-			bool ok;
-			
-			QByteArray hash = QCryptographicHash::hash(QDir::toNativeSeparators(name).toLower().toUtf8(), QCryptographicHash::Md5);
-			Md5Hash filenameHash = *reinterpret_cast<const Md5Hash*>(hash.constData());
-
-            // Check if there already is a texture in the cache
-            SharedTexture texture = GlobalTextureCache::instance().get(filenameHash);
-
-            if (!texture) {
-				QFile file(name);
-				if (!file.open(QIODevice::ReadOnly)) {
-					qWarning("Unable to open texture %s.", qPrintable(name));
-				} else {
-					QByteArray textureData = file.readAll();
-					texture = SharedTexture(new Texture);
-					texture->loadTga(textureData);
-					file.close();
-				}
-
-                GlobalTextureCache::instance().insert(filenameHash, texture);
-            }
-
-			return texture;
-		}
-	};
-
+    
     bool Model::open(const QString &filename, const RenderStates &renderState)
     {
 	mError.clear();
@@ -145,7 +115,7 @@ namespace EvilTemple {
             return false;
 	}
 
-        QVector<Md5Hash> hashes;
+    QVector<Md5Hash> hashes;
 	QVector<unsigned char*> textures;
 	QVector<int> texturesSize;
 
@@ -233,9 +203,7 @@ namespace EvilTemple {
 				stream >> materialNames;
 				
                 materialState.reset(new MaterialState[materialNames.size()]);
-
-				FileTextureSource textureSource;
-				
+                				
                 for (int j = 0; j < materialNames.size(); ++j) {
 
 					QFile file(materialNames[j]);
@@ -253,13 +221,18 @@ namespace EvilTemple {
                         return false;
                     }
 
-                    if (!materialState[j].createFrom(material, renderState, &textureSource)) {
+                    if (!materialState[j].createFrom(material, renderState, FileTextureSource::instance())) {
                         mError.append(QString("Unable to create material state for model %1:\n%2").arg(filename)
                                       .arg(materialState[j].error()));
                         return false;
                     }
                 }
+            } else if (chunkHeader.type == Chunk_BoundingVolumes) {
+                QDataStream stream(QByteArray::fromRawData(chunkData.data(), chunkHeader.size));
+				stream.setByteOrder(QDataStream::LittleEndian);
+				stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
 
+                stream >> mBoundingBox >> mRadius >> mRadiusSquared;
             } else if (chunkHeader.type == Chunk_Geometry) {
                 vertexData.reset(chunkData.take());
                 loadVertexData();
@@ -577,5 +550,11 @@ namespace EvilTemple {
         stream >> bone.rotationStream >> bone.scaleStream >> bone.translationStream;
         return stream;
     }
+
+     QDataStream &operator >>(QDataStream &stream, AABB &aabb)
+     {
+         stream >> aabb.mMinimum >> aabb.mMaximum;
+         return stream;
+     }
 
 }

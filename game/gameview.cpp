@@ -51,6 +51,15 @@ namespace EvilTemple {
         }
     }
 
+    enum ClippingPlanes {
+        Clip_Left = 0,
+        Clip_Right,
+        Clip_Top,
+        Clip_Bottom,
+        Clip_Near,
+        Clip_Far
+    };
+    
     class GameViewData
     {
     public:
@@ -234,6 +243,10 @@ namespace EvilTemple {
         ParticleSystems particleSystems;
 
         QTime animationTimer;
+        Vector4 clippingPlanes[6];
+
+        int objectsCulled;
+        int objectsDrawn;
 
         void resize(int width, int height) {
             float halfWidth = width * 0.5f;
@@ -242,6 +255,48 @@ namespace EvilTemple {
             Matrix4 projectionMatrix = Matrix4::ortho(-halfWidth, halfWidth, -halfHeight, halfHeight, 1, 3628);
             renderStates.setProjectionMatrix(projectionMatrix);
         }
+
+        void extractClippingPlanes()
+        {
+            Matrix4 matrix = (renderStates.worldViewProjectionMatrix()).transposed();
+
+            /*
+            This is inspired by: "Fast Extraction of Viewing Frustum Planes from the World-
+            View-Projection Matrix" by Gil Gribb and Klaus Hartmann.
+            */
+            clippingPlanes[Clip_Left] = matrix.column(3) + matrix.column(0);
+            clippingPlanes[Clip_Right] = matrix.column(3) - matrix.column(0);
+            clippingPlanes[Clip_Top] = matrix.column(3) + matrix.column(1);
+            clippingPlanes[Clip_Bottom] = matrix.column(3) - matrix.column(1);
+            clippingPlanes[Clip_Near] = matrix.column(3) + matrix.column(2);
+            clippingPlanes[Clip_Far] = matrix.column(3) - matrix.column(2);
+        }
+
+        bool insideFrustum(const Vector4 &point)
+        {
+            for (int i = Clip_Left; i <= Clip_Far; ++i) {
+                const Vector4 &plane = clippingPlanes[i];
+                float distance = plane.dot(point);
+                if (distance < 0)
+                    return false;
+            }
+
+            return true;
+        }
+
+        bool insideFrustum(const AABB &boundingBox)
+        {
+            for (int i = Clip_Left; i <= Clip_Far; ++i) {
+                const Vector4 &plane = clippingPlanes[i];
+                float distanceMin = plane.dot(boundingBox.minimum());
+                float distanceMax = plane.dot(boundingBox.maximum());
+                if (distanceMin < 0 && distanceMax < 0)
+                    return false;
+            }
+
+            return true;
+        }
+
     private:
         GameView *q;
     };
@@ -304,6 +359,8 @@ namespace EvilTemple {
 
         d->backgroundMap.render();
 
+        // AABB viewFrustum = d->getViewFrustum();
+
         d->clippingGeometry.draw();
 
         Matrix4 t;
@@ -327,23 +384,39 @@ namespace EvilTemple {
         d->model.draw(d->renderStates);
 
         d->renderStates.setWorldMatrix(Matrix4::identity());
+                
+        d->objectsCulled = 0;
+        d->objectsDrawn = 0;
 
         for (int i = 0; i < d->geometryMeshes.size(); ++i) {
             GMF &geometryMesh = d->geometryMeshes[i];
-            if (elapsed > 0) {
-                geometryMesh.modelInstance->elapseTime(elapsed);
-            }
-
+            
             Matrix4 positionMatrix = Matrix4::transformation(geometryMesh.scale,
                                                              geometryMesh.rotation,
                                                              geometryMesh.position);
+            
+            const AABB &boundingBox = geometryMesh.modelInstance->model()->boundingBox();
+
             d->renderStates.setWorldMatrix(positionMatrix);
+            d->extractClippingPlanes();
+
+            if (!d->insideFrustum(boundingBox))
+            {
+                d->objectsCulled++;        
+                continue;
+            }
+
+            d->objectsDrawn++;
+
+            if (elapsed > 0) {
+                geometryMesh.modelInstance->elapseTime(elapsed);
+            }           
 
             // Find all lights that affect this model.
             QVector<Light> activeLights;
             activeLights.reserve(d->lights.size());
             foreach (const Light &light, d->lights) {
-                float distance = (light.position() - geometryMesh.position).lengthSquared();
+                float distance = (light.position() - geometryMesh.position).lengthSquared() - geometryMesh.modelInstance->model()->radiusSquared();
                 // TODO: This ignores the bounding sphere of the mesh
                 if (distance > (light.range() * light.range()))
                     continue;
@@ -358,7 +431,7 @@ namespace EvilTemple {
 
         // Render debugging information for lights
         foreach (const Light &light, d->lights) {
-            d->lightDebugger.render(light);
+            //d->lightDebugger.render(light);
         }
 
         d->particleSystems.render();
@@ -501,6 +574,16 @@ namespace EvilTemple {
     void GameView::centerOnWorld(float worldX, float worldY)
     {
         d->centerOnWorld(worldX, worldY);
+    }
+
+    int GameView::objectsCulled() const
+    {
+        return d->objectsCulled;
+    }
+
+    int GameView::objectsDrawn() const
+    {
+        return d->objectsDrawn;
     }
 
 }

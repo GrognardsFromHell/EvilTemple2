@@ -10,10 +10,19 @@
 
 uniform mat4 worldViewProjection;
 
+uniform vec4 center;
+
 attribute vec4 vertexPosition;
+attribute vec2 vertexTexCoord;
+
+varying vec2 vposRel;
+varying vec2 texCoord;
+varying float distance;
 
 void main() {
+  vposRel = vec2(vertexPosition.x, vertexPosition.y);
   gl_Position = worldViewProjection * vertexPosition;
+  texCoord = vertexTexCoord;
 }
 ]]>
         </code>
@@ -25,24 +34,38 @@ void main() {
 #version 120
 
 uniform int type;
+uniform sampler2D texSampler;
+uniform float attenuation;
+uniform float range;
+
+varying vec2 vposRel;
+varying vec2 texCoord;
 
 void main() {
+  float distance = length(vposRel);
+  float att = distance * distance * 0.001;
+
   if (type == 1)
     gl_FragColor = vec4(0.25, 0.25, 0.25, 1);
-  else if (type == 2)
-    gl_FragColor = vec4(0.5, 0.5, 0, 1);
-  else
+  else if (type == 2) {
+    gl_FragColor = texture2D(texSampler, texCoord);
+    gl_FragColor.rgb = vec3(1,1,1) / att;
+    gl_FragColor.a = distance / range;
+  } else
     gl_FragColor = vec4(1, 1, 1, 1);
 }
 ]]>
         </code>
       </fragmentShader>
 
+      <uniform name="texSampler" semantic="Texture0" />
       <uniform name="worldViewProjection" semantic="WorldViewProjection" />
     </shader>
 
+    <textureSampler texture=":/material/light_debug.tga" />
+
     <blend>true</blend>
-    <blendFunc src="one" dest="one" />
+    <blendFunc src="srcAlpha" dest="one" />
     <cullFace>false</cullFace>
     <depthTest>false</depthTest>
     <depthWrite>false</depthWrite>

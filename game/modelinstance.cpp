@@ -85,7 +85,7 @@ namespace EvilTemple {
                 
                 SAFE_GL(glDrawElements(GL_TRIANGLES, mElementCount, GL_UNSIGNED_SHORT, 0));
 
-                SAFE_GL(glDepthFunc(GL_EQUAL));
+                SAFE_GL(glDepthFunc(GL_LEQUAL));
                 SAFE_GL(glEnable(GL_CULL_FACE));
 
                 if (renderStates.activeLights().size() > 0) {

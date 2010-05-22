@@ -143,7 +143,7 @@ private:
 inline void MaterialTextureSamplerState::bind()
 {
 	glActiveTexture(GL_TEXTURE0 + mSamplerId);
-	mTexture->bind();
+    mTexture->bind();
 	// TODO: Set sampler states (wrap+clam+filtering+etc)
 }
 

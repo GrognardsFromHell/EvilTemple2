@@ -18,13 +18,11 @@ varying vec2 texCoord;
 
 {{LIGHTING_ON}}
 attribute vec4 vertexNormal;
-varying vec3 normal;
 {{/LIGHTING_ON}}
 
 void main() {
 {{LIGHTING_ON}}        
-        lighting(vertexPosition);
-        normal = vec3(normalize(vertexNormal));
+        lighting(vertexPosition, vertexNormal);
 {{/LIGHTING_ON}}     
 
         gl_Position = worldViewProjectionMatrix * vertexPosition;
@@ -46,16 +44,13 @@ const vec4 materialColor = vec4({{MATERIAL_DIFFUSE}});
 const int shininess = 50;
 
 varying vec2 texCoord;
-{{LIGHTING_ON}}
-varying vec3 normal;
-{{/LIGHTING_ON}}
 
 {{SAMPLERS}}
 
 void main(void)
 {
 {{LIGHTING_ON}}
-  vec4 Idiff = lighting(normalize(normal), shininess);
+  vec4 Idiff = lighting(shininess);
 {{/LIGHTING_ON}}
 
    {{PIXEL_TERM}}
@@ -71,9 +66,8 @@ void main(void)
       <attribute name="vertexTexCoord" buffer="texCoords" components="2" />
       <uniform name="worldViewProjectionMatrix" semantic="WorldViewProjection" />
       {{LIGHTING_ON}}
-      <uniform name="worldMatrix" semantic="World" />
-      <uniform name="worldInverseMatrix" semantic="WorldInverse" />
-      <uniform name="worldViewInverseMatrix" semantic="WorldViewInverse" />
+      <uniform name="viewMatrix" semantic="View" />
+      <uniform name="worldViewMatrix" semantic="WorldView" />
       {{/LIGHTING_ON}}
       {{SAMPLER_UNIFORMS}}
     </shader>

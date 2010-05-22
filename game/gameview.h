@@ -27,6 +27,9 @@ public slots:
 
     QPoint screenCenter() const;
 
+    int objectsCulled() const;
+    int objectsDrawn() const;
+
 protected:
     void resizeEvent(QResizeEvent *event);
     void mouseMoveEvent(QMouseEvent *event);

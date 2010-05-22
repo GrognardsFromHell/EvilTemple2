@@ -13,6 +13,7 @@
 #include "renderstates.h"
 #include "util.h"
 
+#include <gamemath.h>
 using namespace GameMath;
 
 namespace EvilTemple {
@@ -450,6 +451,71 @@ inline void Bone::setRelativeWorld(const Matrix4 &relativeWorld)
     mRelativeWorld = relativeWorld;
 }
 
+class AABB {
+friend QDataStream &operator >>(QDataStream &stream, AABB &aabb);
+public:
+    AABB(const Vector4 &minimum, const Vector4 &maximum);
+    AABB();
+
+    const Vector4 &minimum() const;
+    const Vector4 &maximum() const;
+    void setMinimum(const Vector4 &minimum);
+    void setMaximum(const Vector4 &maximum);
+
+    bool intersects(const AABB &other) const;
+private:
+    Vector4 mMinimum;
+    Vector4 mMaximum;
+};
+
+inline AABB operator *(const Matrix4 &matrix, const AABB &box)
+{
+    Vector4 tMin = matrix.mapPosition(box.minimum());
+    Vector4 tMax = matrix.mapPosition(box.maximum());
+    return AABB(tMin, tMax);
+}
+
+inline AABB::AABB() : mMinimum(0, 0, 0, 0), mMaximum(0, 0, 0, 0)
+{
+}
+
+inline AABB::AABB(const Vector4 &minimum, const Vector4 &maximum) : mMinimum(minimum), mMaximum(maximum)
+{
+}
+
+inline const Vector4 &AABB::minimum() const
+{
+    return mMinimum;
+}
+
+inline const Vector4 &AABB::maximum() const
+{
+    return mMaximum;
+}
+
+inline void AABB::setMinimum(const Vector4 &minimum)
+{
+    mMinimum = minimum;
+}
+
+inline void AABB::setMaximum(const Vector4 &maximum)
+{
+    mMaximum = maximum;
+}
+
+inline bool AABB::intersects(const AABB &other) const
+{
+    // TODO: This can be SSE accelerated
+    return !(
+        mMinimum.x() > other.mMaximum.x() || 
+        mMinimum.y() > other.mMaximum.y() || 
+        mMinimum.z() > other.mMaximum.z() || 
+        other.mMinimum.x() > mMaximum.x() || 
+        other.mMinimum.y() > mMaximum.y() || 
+        other.mMinimum.z() > mMaximum.z()
+        );
+}
+
 class Model {
 public:
     Model();
@@ -472,6 +538,10 @@ public:
     QScopedArrayPointer<FaceGroup> faceGroups;
 
     void drawNormals() const;
+
+    float radius() const;
+    float radiusSquared() const;
+    const AABB &boundingBox() const;
 
     const QString &error() const;
 
@@ -507,8 +577,27 @@ private:
     void loadVertexData();
     void loadFaceData();
 
+    float mRadius;
+    float mRadiusSquared;
+    AABB mBoundingBox;
+
     QString mError;
 };
+
+inline float Model::radius() const
+{
+    return mRadius;
+}
+
+inline float Model::radiusSquared() const
+{
+    return mRadiusSquared;
+}
+
+inline const AABB &Model::boundingBox() const
+{
+    return mBoundingBox;
+}
 
 inline const Animation *Model::animation(const QString &name) const
 {

@@ -12,7 +12,7 @@ LightDebugRenderer::LightDebugRenderer(RenderStates &renderStates) : mRenderStat
 
 bool LightDebugRenderer::loadMaterial()
 {
-    if (!mMaterialState.createFromFile(":/material/light_material.xml", mRenderStates, NULL)) {
+    if (!mMaterialState.createFromFile(":/material/light_material.xml", mRenderStates, FileTextureSource::instance())) {
         qWarning("Unable to load light debugger material: %s.", qPrintable(mMaterialState.error()));
         return false;
     } else {
@@ -33,6 +33,10 @@ void LightDebugRenderer::render(const Light &light)
 
         pass.program.bind();
 
+        for (int j = 0; j < pass.textureSamplers.size(); ++j) {
+            pass.textureSamplers[i].bind();
+        }
+
         for (int j = 0; j < pass.uniforms.size(); ++j) {
             pass.uniforms[j].bind();
         }
@@ -42,7 +46,11 @@ void LightDebugRenderer::render(const Light &light)
         }
 
         int attribLocation = pass.program.attributeLocation("vertexPosition");
+        int texCoordLocation = pass.program.attributeLocation("vertexTexCoord");
         int typeLocation = pass.program.uniformLocation("type");
+        int attenuationLocation = pass.program.uniformLocation("attenuation");
+        int centerLocation = pass.program.uniformLocation("center");
+        int rangeLocation = pass.program.uniformLocation("range");
         glUniform1i(typeLocation, 1);
 
         glBegin(GL_QUADS);
@@ -53,12 +61,21 @@ void LightDebugRenderer::render(const Light &light)
         glEnd();
 
         glUniform1i(typeLocation, 2);
+        glUniform1f(rangeLocation, light.range());
+        glUniform1f(attenuationLocation, light.attenuation());
+        glUniform4fv(centerLocation, 1, light.position().data());
+
+        float r = light.range();
 
         glBegin(GL_QUADS);
-        glVertexAttrib4f(attribLocation, -10, light.position().y(), -10, 1);
-        glVertexAttrib4f(attribLocation, 10, light.position().y(), -10, 1);
-        glVertexAttrib4f(attribLocation, 10, light.position().y(), 10, 1);
-        glVertexAttrib4f(attribLocation, -10, light.position().y(), 10, 1);
+        glVertexAttrib2f(texCoordLocation, 0, 0);
+        glVertexAttrib4f(attribLocation, -r, light.position().y(), -r, 1);
+        glVertexAttrib2f(texCoordLocation, 1, 0);
+        glVertexAttrib4f(attribLocation, r, light.position().y(), -r, 1);
+        glVertexAttrib2f(texCoordLocation, 1, 1);
+        glVertexAttrib4f(attribLocation, r, light.position().y(), r, 1);
+        glVertexAttrib2f(texCoordLocation, 0, 1);
+        glVertexAttrib4f(attribLocation, -r, light.position().y(), r, 1);
         glEnd();
 
         glUniform1i(typeLocation, 3);
@@ -70,6 +87,10 @@ void LightDebugRenderer::render(const Light &light)
 
         for (int j = 0; j < pass.renderStates.size(); ++j) {
             pass.renderStates[j]->disable();
+        }
+
+        for (int j = 0; j < pass.textureSamplers.size(); ++j) {
+            pass.textureSamplers[i].unbind();
         }
 
         pass.program.unbind();

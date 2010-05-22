@@ -9,5 +9,6 @@
         <file>light_material.xml</file>
         <file>lighting.vs</file>
         <file>lighting.fs</file>
+        <file>light_debug.tga</file>
     </qresource>
 </RCC>

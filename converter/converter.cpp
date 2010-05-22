@@ -853,6 +853,8 @@ public:
 		writer.writeBones(model->skeleton());
 		writer.writeBoneAttachments(model->vertices());
 
+		writer.writeBoundingVolumes(model);
+
 		if (model->skeleton()->animations().size() > 0) {
 			writer.writeAnimations(model);
 		}

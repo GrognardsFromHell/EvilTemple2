@@ -149,6 +149,8 @@ namespace EvilTemple {
 
         QString windowTitle = QString("EvilTemple Bones: %1, Vertices: %2").arg(updateBones).arg(updateVertices);
 
+        windowTitle.append(QString(" (Drawn: %1, Culled: %2)").arg(d_ptr->gameView->objectsDrawn()).arg(d_ptr->gameView->objectsCulled()));
+
 #if defined(Q_OS_WIN32)
         // Open a handle to the current process
         HANDLE hProcess = GetCurrentProcess();
