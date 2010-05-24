@@ -17,23 +17,9 @@
 #include "lighting.h"
 #include "lighting_debug.h"
 
+#include "scene.h"
+
 namespace EvilTemple {
-
-    // TODO: THIS IS TEMP
-    class GMF {
-    public:
-        GMF() : modelInstance(new ModelInstance)
-        {
-        }
-
-        bool staticObject;
-        bool rotationFromPrototype;
-        bool customRotation;
-        Vector4 position;
-        Vector4 scale;
-        Quaternion rotation;
-        QSharedPointer<ModelInstance> modelInstance;
-    };
 
 #define HANDLE_GL_ERROR handleGlError(__FILE__, __LINE__);
     inline static void handleGlError(const char *file, int line) {
@@ -115,26 +101,17 @@ namespace EvilTemple {
                 QString modelFilename;
                 stream >> x >> y >> z >> modelFilename;
 
-                GMF obj;
-                obj.position = Vector4(x, y, z, 0);
+                Vector4 position(x, y, z, 0);
 
                 stream >> x >> y >> z >> w;
 
-                obj.rotation = Quaternion(x, y, z, w);
+                Quaternion rotation(x, y, z, w);
 
                 stream >> x >> y >> z;
-                obj.scale = Vector4(x, y, z, 1);
+                Vector4 scale(x, y, z, 1);
 
-                int flag;
-                stream >> flag;
-
-                obj.staticObject = flag;
-
-                stream >> flag;
-                obj.rotationFromPrototype = flag;
-
-                stream >> flag;
-                obj.customRotation = flag;
+                int staticObject, rotationFromPrototype, customRotation;
+                stream >> staticObject >> rotationFromPrototype >> customRotation;
 
                 SharedModel model(new Model);
 
@@ -143,12 +120,17 @@ namespace EvilTemple {
                 } else if (!model->open(modelFilename, renderStates)) {
                     qWarning("UNABLE TO LOAD GMF: %s (%s)", qPrintable(modelFilename), qPrintable(model->error()));
                     continue;
+                } else {
+                    modelCache[modelFilename] = model;
                 }
 
-                obj.modelInstance->setModel(model);
-
-                modelCache[modelFilename] = model;
-                geometryMeshes.append(obj);
+                SharedMeshSceneNode node(new MeshSceneNode);
+                node->setModel(model);
+                node->setPosition(position);
+                node->setRotation(rotation);
+                node->setScale(scale);
+                                
+                scene.addNode(node);
             }
 
             QFile partSys(mapDir + "particleSystems.txt");
@@ -167,7 +149,6 @@ namespace EvilTemple {
 
                 partSysStream >> x >> y >> z >> radius >> name;
 				
-               // particleSysPos.append(Vector4(x, y, z, 1));
 				particleSystems.create(name, Vector4(x, y, z, 1));
             }
 
@@ -220,6 +201,7 @@ namespace EvilTemple {
 
         RenderStates renderStates;
         ModelInstance model;
+        ModelInstance model2;
         bool modelLoaded;
 
         bool dragging;
@@ -229,8 +211,6 @@ namespace EvilTemple {
         typedef QPair<Vector4, QSharedPointer<Model> > GeometryMesh;
 
         QList< Light > lights;
-        QList< Vector4 > particleSysPos;
-        QList< GMF > geometryMeshes;
 
         QHash<QString, QWeakPointer<Model> > modelCache;
 
@@ -241,12 +221,12 @@ namespace EvilTemple {
         ClippingGeometry clippingGeometry;
 
         ParticleSystems particleSystems;
+        ParticleSystem *swordParticleSystem;
 
         QTime animationTimer;
         Vector4 clippingPlanes[6];
 
-        int objectsCulled;
-        int objectsDrawn;
+        Scene scene;
 
         void resize(int width, int height) {
             float halfWidth = width * 0.5f;
@@ -256,9 +236,9 @@ namespace EvilTemple {
             renderStates.setProjectionMatrix(projectionMatrix);
         }
 
-        void extractClippingPlanes()
+        void extractClippingPlanes(const Matrix4 &orgMatrix)
         {
-            Matrix4 matrix = (renderStates.worldViewProjectionMatrix()).transposed();
+            Matrix4 matrix = orgMatrix.transposed();
 
             /*
             This is inspired by: "Fast Extraction of Viewing Frustum Planes from the World-
@@ -271,25 +251,20 @@ namespace EvilTemple {
             clippingPlanes[Clip_Near] = matrix.column(3) + matrix.column(2);
             clippingPlanes[Clip_Far] = matrix.column(3) - matrix.column(2);
         }
-
-        bool insideFrustum(const Vector4 &point)
+        
+        bool insideFrustum(const AABB &boundingBox, const Matrix4 &worldMatrix)
         {
+            extractClippingPlanes(renderStates.viewProjectionMatrix() * worldMatrix);
+
+            Vector4 minPoint = boundingBox.minimum();
+            Vector4 maxPoint = boundingBox.maximum();
+            
+            // TODO: We need to make the box axis aligned again. Can we even do that?
+
             for (int i = Clip_Left; i <= Clip_Far; ++i) {
                 const Vector4 &plane = clippingPlanes[i];
-                float distance = plane.dot(point);
-                if (distance < 0)
-                    return false;
-            }
-
-            return true;
-        }
-
-        bool insideFrustum(const AABB &boundingBox)
-        {
-            for (int i = Clip_Left; i <= Clip_Far; ++i) {
-                const Vector4 &plane = clippingPlanes[i];
-                float distanceMin = plane.dot(boundingBox.minimum());
-                float distanceMax = plane.dot(boundingBox.maximum());
+                float distanceMin = plane.dot(minPoint);
+                float distanceMax = plane.dot(maxPoint);
                 if (distanceMin < 0 && distanceMax < 0)
                     return false;
             }
@@ -341,7 +316,14 @@ namespace EvilTemple {
             if (!model->open("meshes/monsters/demon/demon.model", d->renderStates)) {
                 qWarning("Unable to open model file: %s", qPrintable(model->error()));
             }
+            SharedModel model2(new Model);
+            if (!model2->open("meshes/monsters/demon/demon_balor_sword.model", d->renderStates)) {
+                qWarning("Unable to open model file: %s", qPrintable(model->error()));
+            }
+            d->swordParticleSystem = d->particleSystems.instantiate("ef-Balor Sword");
+            d->swordParticleSystem->setModelInstance(&d->model2);
             d->model.setModel(model);
+            d->model2.setModel(model2);
             d->modelLoaded = true;
         }
 
@@ -367,7 +349,7 @@ namespace EvilTemple {
         t.setToIdentity();
         t(0, 3) = 480 * 28.2842703f;
         t(2, 3) = 480 * 28.2842703f;
-		d->renderStates.setWorldMatrix(t * Matrix4::rotation(Quaternion::fromAxisAndAngle(0, 1, 0, deg2rad(-90))));
+		d->renderStates.setWorldMatrix(t * Matrix4::rotation(Quaternion::fromAxisAndAngle(0, 1, 0, deg2rad(-120))));
 
 		float elapsed = 0;
 
@@ -379,63 +361,40 @@ namespace EvilTemple {
 
 		if (elapsed > 0) {
 			d->model.elapseTime(elapsed);
+            d->model2.elapseTime(elapsed);
+            d->swordParticleSystem->setPosition(Vector4(482 * 28.2842703f, 10, 489 * 28.2842703f, 1));
+            d->swordParticleSystem->elapseSeconds(elapsed);
+            d->scene.elapseTime(elapsed);
 		}
 
         d->model.draw(d->renderStates);
 
+        Matrix4 flipZ;
+        flipZ.setToIdentity();
+        flipZ(2,2) *= -1;
+
+        Matrix4 boneTransform = d->model.getBoneSpace("HandL_ref");
+        // Remove scaling
+        float scaleX = boneTransform.column(0).length();
+        float scaleY = boneTransform.column(1).length();
+        float scaleZ = boneTransform.column(2).length();
+        for (int i = 0; i < 4; ++i) {
+            boneTransform(i, 0) /= scaleX;
+            boneTransform(i, 1) /= scaleY;
+            boneTransform(i, 2) /= scaleZ;
+        }
+
+        d->renderStates.setWorldMatrix(d->renderStates.worldMatrix() * flipZ * boneTransform * flipZ);
+
+        d->model2.draw(d->renderStates);
+        
+        d->swordParticleSystem->setPosition(Vector4(480 * 28.2842703f, 20, 480 * 28.2842703f, 1));
+        d->swordParticleSystem->render(d->renderStates, d->particleSystems.spriteMaterial());
+
         d->renderStates.setWorldMatrix(Matrix4::identity());
-                
-        d->objectsCulled = 0;
-        d->objectsDrawn = 0;
 
-        for (int i = 0; i < d->geometryMeshes.size(); ++i) {
-            GMF &geometryMesh = d->geometryMeshes[i];
-            
-            Matrix4 positionMatrix = Matrix4::transformation(geometryMesh.scale,
-                                                             geometryMesh.rotation,
-                                                             geometryMesh.position);
-            
-            const AABB &boundingBox = geometryMesh.modelInstance->model()->boundingBox();
-
-            d->renderStates.setWorldMatrix(positionMatrix);
-            d->extractClippingPlanes();
-
-            if (!d->insideFrustum(boundingBox))
-            {
-                d->objectsCulled++;        
-                continue;
-            }
-
-            d->objectsDrawn++;
-
-            if (elapsed > 0) {
-                geometryMesh.modelInstance->elapseTime(elapsed);
-            }           
-
-            // Find all lights that affect this model.
-            QVector<Light> activeLights;
-            activeLights.reserve(d->lights.size());
-            foreach (const Light &light, d->lights) {
-                float distance = (light.position() - geometryMesh.position).lengthSquared() - geometryMesh.modelInstance->model()->radiusSquared();
-                // TODO: This ignores the bounding sphere of the mesh
-                if (distance > (light.range() * light.range()))
-                    continue;
-                activeLights.append(light);
-            }
-            d->renderStates.setActiveLights(activeLights);
-
-            geometryMesh.modelInstance->draw(d->renderStates);
-
-            d->renderStates.setWorldMatrix(Matrix4::identity());
-        }
-
-        // Render debugging information for lights
-        foreach (const Light &light, d->lights) {
-            //d->lightDebugger.render(light);
-        }
-
-        d->particleSystems.render();
-
+        d->scene.render(d->renderStates);
+        
 		SAFE_GL(glDisable(GL_CULL_FACE));
 		SAFE_GL(glDisable(GL_DEPTH_TEST));
 		SAFE_GL(glDisable(GL_TEXTURE_2D));
@@ -450,19 +409,6 @@ namespace EvilTemple {
 		glLoadMatrixf(d->renderStates.projectionMatrix().data());
 
 		glMatrixMode(GL_MODELVIEW);
-		
-       for (int i = 0; i < d->geometryMeshes.size(); ++i) {
-            GMF &geometryMesh = d->geometryMeshes[i];
-
-            Matrix4 positionMatrix = Matrix4::transformation(geometryMesh.scale,
-                                                             geometryMesh.rotation,
-                                                             geometryMesh.position);
-            glLoadMatrixf(d->renderStates.viewMatrix().data());
-            glMultMatrixf(positionMatrix.data());
-
-            // geometryMesh.modelInstance->drawNormals();
-        }
-
         glLoadIdentity();
         glTranslatef(d->renderStates.viewMatrix()(0, 3), d->renderStates.viewMatrix()(1, 3), 0);
 
@@ -576,14 +522,9 @@ namespace EvilTemple {
         d->centerOnWorld(worldX, worldY);
     }
 
-    int GameView::objectsCulled() const
-    {
-        return d->objectsCulled;
-    }
-
     int GameView::objectsDrawn() const
     {
-        return d->objectsDrawn;
+        return d->scene.objectsDrawn();
     }
 
 }

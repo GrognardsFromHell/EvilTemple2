@@ -7,10 +7,16 @@
 
 #include "modelfile.h"
 #include "materialstate.h"
+#include "ray.h"
 
 namespace EvilTemple {
 
 class RenderStates;
+
+struct AddMesh {
+    QString boneName;
+    SharedModel model;
+};
 
 /**
     A model instance manages the per-instance state of models. This includes animation state
@@ -27,10 +33,16 @@ public:
     void elapseTime(float elapsedSeconds);
 
     void drawNormals() const;
-    void draw(const RenderStates &renderStates) const;
+    void draw(const RenderStates &renderStates);
     void draw(const RenderStates &renderStates, MaterialState *overrideMaterial) const;
 
     const SharedModel &model() const;
+
+    Matrix4 getBoneSpace(const QString &boneName) const;
+
+    void addMesh(const SharedModel &model);
+
+    IntersectionResult intersect(const Ray &ray) const;
 
 private:
 	Matrix4 *mFullWorld;
@@ -49,6 +61,8 @@ private:
     QGLBuffer mPositionBuffer;
     QGLBuffer mNormalBuffer;
 
+    QList<SharedModel> mAddMeshes;
+    
     Q_DISABLE_COPY(ModelInstance);
 };
 

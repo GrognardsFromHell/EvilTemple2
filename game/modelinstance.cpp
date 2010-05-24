@@ -1,6 +1,7 @@
 #include "modelinstance.h"
 #include "util.h"
 #include "drawhelper.h"
+#include "particlesystem.h"
 
 namespace EvilTemple {
 
@@ -58,6 +59,28 @@ namespace EvilTemple {
 		}
     }
 
+    void ModelInstance::addMesh(const SharedModel &model)
+    {
+        mAddMeshes.append(model);
+    }
+
+    Matrix4 ModelInstance::getBoneSpace(const QString &boneName) const
+    {
+        if (!mModel)
+            return Matrix4::identity();
+
+        // Search for the bone id
+        // TODO: We need a QHash that maps bone names to their id here
+        for (int i = 0; i < mModel->bones().size(); ++i) {
+            if (mModel->bones()[i].name() == boneName) {
+                return mFullWorld[i];
+            }
+        }
+
+        qWarning("Unknown bone name: %s.", qPrintable(boneName));
+        return Matrix4::identity();
+    }
+
     struct ModelDrawStrategy : public DrawStrategy {
         ModelDrawStrategy(GLint bufferId, int elementCount)
             : mBufferId(bufferId), mElementCount(elementCount)
@@ -80,7 +103,8 @@ namespace EvilTemple {
                 int attenuationPos = state.program.uniformLocation("lightSource.attenuation");
 
                 SAFE_GL(glUniform1i(typePos, 1));
-                SAFE_GL(glUniform4f(colorPos, 0.662745f, 0.564706f, 0.905882f, 0));
+                //SAFE_GL(glUniform4f(colorPos, 0.662745f, 0.564706f, 0.905882f, 0));
+                SAFE_GL(glUniform4f(colorPos, 0.962745f, 0.964706f, 0.965882f, 0));
                 SAFE_GL(glUniform4f(positionPos, -0.632409f, -0.774634f, 0, 0));              
                 
                 SAFE_GL(glDrawElements(GL_TRIANGLES, mElementCount, GL_UNSIGNED_SHORT, 0));
@@ -128,7 +152,6 @@ namespace EvilTemple {
             mModel->drawNormals();
             return;
         }
-
 
         SAFE_GL(glLineWidth(1.5));
         SAFE_GL(glEnable(GL_LINE_SMOOTH));
@@ -180,7 +203,7 @@ namespace EvilTemple {
         GLint mTexCoordBuffer;
     };
 
-    void ModelInstance::draw(const RenderStates &renderStates) const
+    void ModelInstance::draw(const RenderStates &renderStates)
     {
         const Model *model = mModel.data();
 
@@ -199,90 +222,6 @@ namespace EvilTemple {
             ModelDrawStrategy drawStrategy(faceGroup.buffer, faceGroup.elementCount);
             
             drawHelper.draw(renderStates, material, drawStrategy, bufferSource);
-
-            if (!material)
-                continue;
-
-            for (int i = 0; i < material->passCount; ++i) {
-                MaterialPassState &pass = material->passes[i];
-
-                pass.program.bind();
-
-                // Bind texture samplers
-                for (int j = 0; j < pass.textureSamplers.size(); ++j) {
-                    pass.textureSamplers[j].bind();
-                }
-
-                // Bind uniforms
-                for (int j = 0; j < pass.uniforms.size(); ++j) {
-                    pass.uniforms[j].bind();
-                }
-
-                // Bind attributes
-                for (int j = 0; j < pass.attributes.size(); ++j) {
-                    MaterialPassAttributeState &attribute = pass.attributes[j];
-
-                    // Bind the correct buffer
-                    switch (attribute.bufferType) {
-                    case 0:
-                        if (!mCurrentAnimation) {
-                            SAFE_GL(glBindBuffer(GL_ARRAY_BUFFER, model->positionBuffer));
-                        } else {
-                            SAFE_GL(glBindBuffer(GL_ARRAY_BUFFER, mPositionBuffer.bufferId()));
-                        }
-                        break;
-                    case 1:
-                        if (!mCurrentAnimation) {
-                            SAFE_GL(glBindBuffer(GL_ARRAY_BUFFER, model->normalBuffer));
-                        } else {
-                            SAFE_GL(glBindBuffer(GL_ARRAY_BUFFER, mNormalBuffer.bufferId()));
-                        }
-                        break;
-                    case 2:
-                        SAFE_GL(glBindBuffer(GL_ARRAY_BUFFER, model->texcoordBuffer));
-                        break;
-                    }
-
-                    // Assign the attribute
-                    SAFE_GL(glEnableVertexAttribArray(attribute.location));
-                    SAFE_GL(glVertexAttribPointer(attribute.location,
-                                                  attribute.binding.components(),
-                                                  attribute.binding.type(),
-                                                  attribute.binding.normalized(),
-                                                  attribute.binding.stride(),
-                                                  (GLvoid*)attribute.binding.offset()));
-
-                }
-                SAFE_GL(glBindBuffer(GL_ARRAY_BUFFER, 0)); // Unbind any previously bound buffers
-
-                // Set render states
-                foreach (const SharedMaterialRenderState &state, pass.renderStates) {
-                    state->enable();
-                }
-
-                // Draw the actual model
-                SAFE_GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, faceGroup.buffer));
-                SAFE_GL(glDrawElements(GL_TRIANGLES, faceGroup.elementCount, GL_UNSIGNED_SHORT, 0));
-                SAFE_GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
-
-                // Reset render states to default
-                foreach (const SharedMaterialRenderState &state, pass.renderStates) {
-                    state->disable();
-                }
-
-                // Unbind textures
-                for (int j = 0; j < pass.textureSamplers.size(); ++j) {
-                    pass.textureSamplers[j].unbind();
-                }
-
-                // Unbind attributes
-                for (int j = 0; j < pass.attributes.size(); ++j) {
-                    MaterialPassAttributeState &attribute = pass.attributes[j];
-                    SAFE_GL(glDisableVertexAttribArray(attribute.location));
-                }
-
-                pass.program.unbind();
-            }
         }
     }
 
@@ -485,5 +424,13 @@ namespace EvilTemple {
 
 		updateVertices += (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
     }
+
+    IntersectionResult ModelInstance::intersect(const Ray &ray) const
+    {
+        // Do a quick rejection using this models bounding sphere
+        IntersectionResult result;
+        return result;
+    }
+
 
 }

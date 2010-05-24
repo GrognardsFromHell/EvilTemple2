@@ -27,7 +27,6 @@ public slots:
 
     QPoint screenCenter() const;
 
-    int objectsCulled() const;
     int objectsDrawn() const;
 
 protected:

@@ -19,8 +19,11 @@
 #include "texture.h"
 #include "material.h"
 #include "materialstate.h"
+#include "modelinstance.h"
 
 namespace EvilTemple {
+
+const static float ParticlesTimeUnit = 1 / 30.0f; // All time-based values are in relation to this base value
 
 enum ParticleType {
 	Sprite,
@@ -37,6 +40,11 @@ enum ParticleBlendMode {
 	Blend_Add,
 	Blend_Subtract,
 	Blend_Blend,
+};
+
+enum SpaceType {
+    Space_World,
+    Space_Bones,
 };
 
 /**
@@ -248,30 +256,6 @@ inline ParticleProperty<float> *propertyFromString(const QString &string)
 	return result;
 }
 
-class Emitter;
-
-/**
-  Models a particle system in world space and it's emitters.
-  */
-class ParticleSystem
-{
-public:
-    ParticleSystem(const QString &id, const QList<Emitter*> &emitters);
-    ~ParticleSystem();
-
-    void setPosition(const Vector4 &position);
-    const Vector4 &position() const;
-
-    void elapseTime(float seconds);
-
-    void render(RenderStates &renderStates, MaterialState *material) const;
-
-private:
-    QScopedPointer<ParticleSystemData> d;
-	Q_DISABLE_COPY(ParticleSystem)
-};
-
-const float TimeUnit = 1 / 30.0f; // All time-based values are in relation to this base value
 
 class Particle {
 public:
@@ -300,7 +284,8 @@ public:
 
 	Emitter(float spawnRate, float particleLifetime) 
 		: mPartialSpawnedParticles(0), mElapsedTime(0), mExpired(false), 
-		mSpawnRate(1/(spawnRate *TimeUnit)), mParticleLifetime(particleLifetime), mLifetime(std::numeric_limits<float>::infinity())
+		mSpawnRate(1/(spawnRate *ParticlesTimeUnit)), mParticleLifetime(particleLifetime), mLifetime(std::numeric_limits<float>::infinity()),
+        mEmitterSpace(Space_World)
 	{
 	}
 
@@ -315,7 +300,7 @@ public:
 
 	void updateParticle(Particle &particle, float elapsedTimeUnits);
 
-    void render(RenderStates &renderStates, MaterialState *material) const;
+    void render(RenderStates &renderStates, MaterialState *material, const ModelInstance *modelInstance) const;
 
     void setLifetime(float lifetime)
     {
@@ -337,6 +322,11 @@ public:
 		mColorBlue = colorBlue;
 		mColorAlpha = colorAlpha;
 	}
+
+    void setEmitterSpace(SpaceType spaceType)
+    {
+        mEmitterSpace = spaceType;
+    }
 
 	void setRotation(Property rotationYaw, Property rotationPitch, Property rotationRoll)
 	{
@@ -416,6 +406,8 @@ private:
 	ParticleType mParticleType;
 
     QList<Particle> mParticles;
+
+    SpaceType mEmitterSpace;
 
 	QString mName;
 
@@ -577,17 +569,17 @@ void Emitter::updateParticle(Particle &particle, float elapsedTimeUnits)
 	if (mParticleVelocityX && mParticleVelocityX->isAnimated()) {
 		particle.velocityX = (*mParticleVelocityX)(lifecycle);
 	} else {
-		particle.velocityX += elapsedTimeUnits * particle.accelerationX * TimeUnit;
+		particle.velocityX += elapsedTimeUnits * particle.accelerationX * ParticlesTimeUnit;
 	}
 	if (mParticleVelocityY && mParticleVelocityY->isAnimated()) {
 		particle.velocityY = (*mParticleVelocityY)(lifecycle);
 	} else {
-		particle.velocityY += elapsedTimeUnits * particle.accelerationY * TimeUnit;
+		particle.velocityY += elapsedTimeUnits * particle.accelerationY * ParticlesTimeUnit;
 	}
 	if (mParticleVelocityZ && mParticleVelocityZ->isAnimated()) {
 		particle.velocityZ = (*mParticleVelocityZ)(lifecycle);
 	} else {
-		particle.velocityZ += elapsedTimeUnits * particle.accelerationZ * TimeUnit;
+		particle.velocityZ += elapsedTimeUnits * particle.accelerationZ * ParticlesTimeUnit;
 	}
 
 	if (mParticleVelocityType == Polar) {
@@ -613,7 +605,7 @@ void Emitter::updateParticle(Particle &particle, float elapsedTimeUnits)
 		}		
 	} else {
 		particle.position += Vector4(particle.velocityX, particle.velocityY, particle.velocityZ, 0) 
-			* elapsedTimeUnits * TimeUnit;
+			* elapsedTimeUnits * ParticlesTimeUnit;
 	}
 
 	// An animated position overrides any velocity calculations
@@ -660,12 +652,12 @@ void Emitter::elapseTime(float timeUnits) {
 		}
 	}
 
-	// TODO: Transform particles
 	updateParticles(timeUnits);
+	// TODO: Transform particles
 }
 
 
-void Emitter::render(RenderStates &renderStates, MaterialState *material) const
+void Emitter::render(RenderStates &renderStates, MaterialState *material, const ModelInstance *modelInstance) const
 {
 	MaterialPassState &pass = material->passes[0];
 
@@ -676,6 +668,7 @@ void Emitter::render(RenderStates &renderStates, MaterialState *material) const
 
 	pass.program.bind();			
 
+    glActiveTexture(GL_TEXTURE0);
 	mTexture->bind();
 	glDepthMask(GL_FALSE);
 	glEnable(GL_BLEND);
@@ -694,11 +687,26 @@ void Emitter::render(RenderStates &renderStates, MaterialState *material) const
 	}
 
 	Matrix4 oldWorld = renderStates.worldMatrix();
+
+    Matrix4 emitterWorld = oldWorld;
+    
+    // If we have "bones" as the space
+    if (modelInstance && mEmitterSpace == Space_Bones) {
+        Matrix4 flipZ;
+        flipZ.setToIdentity();
+        flipZ(2,2) *= -1;
+
+        // Choose a bone at random (?)
+
+        //emitterWorld = emitterWorld * flipZ * modelInstance->getBoneSpace("firer_ref1") * flipZ;
+    }
 	
-	foreach (const Particle &particle, mParticles) {			
-		renderStates.setWorldMatrix(oldWorld * Matrix4::translation(particle.position.x(),
+	foreach (const Particle &particle, mParticles) {
+        Vector4 origin = emitterWorld * particle.position;
+		/*renderStates.setWorldMatrix(emitterWorld * Matrix4::translation(particle.position.x(),
 			particle.position.y(),
-			particle.position.z()));
+			particle.position.z()));*/
+        renderStates.setWorldMatrix(Matrix4::translation(origin.x(), origin.y(), origin.z()));
 
 		// Bind uniforms
 		for (int j = 0; j < pass.uniforms.size(); ++j) {
@@ -707,7 +715,7 @@ void Emitter::render(RenderStates &renderStates, MaterialState *material) const
 				
 		glUniform4f(materialColorLoc, particle.colorRed / 255.0f, 
 			particle.colorGreen / 255.0f, 
-			particle.colorBlue / 255.0f, 
+			particle.colorBlue / 255.0f,
 			particle.colorAlpha / 255.0f);
 		glUniform1f(rotationLoc, particle.rotationYaw);
 
@@ -762,6 +770,7 @@ public:
 	QString id;
     QList<Emitter*> emitters;
     Vector4 position;
+    const ModelInstance *modelInstance;
 };
 
 static QHash<QString, QWeakPointer<Texture> > spriteCache;
@@ -806,11 +815,21 @@ ParticleSystem::~ParticleSystem()
 {
 }
 
+void ParticleSystem::setModelInstance(const ModelInstance *modelInstance)
+{
+    d->modelInstance = modelInstance;
+}
+
 void ParticleSystem::elapseTime(float timeUnits)
 {
 	foreach (Emitter *emitter, d->emitters) {
 		emitter->elapseTime(timeUnits);
 	}
+}
+
+void ParticleSystem::elapseSeconds(float seconds)
+{
+    elapseTime(seconds / ParticlesTimeUnit);
 }
 
 void ParticleSystem::setPosition(const Vector4 &position)
@@ -828,7 +847,7 @@ void ParticleSystem::render(RenderStates &renderStates, MaterialState *material)
 	renderStates.setWorldMatrix(Matrix4::translation(d->position.x(), d->position.y(), d->position.z(), 0));
 
     foreach (Emitter *emitter, d->emitters) {
-        emitter->render(renderStates, material);
+        emitter->render(renderStates, material, d->modelInstance);
     }
 
 	renderStates.setWorldMatrix(Matrix4::identity());
@@ -857,6 +876,7 @@ private:
 	QString mName;
 	float mLifespan;
 	ParticleBlendMode mBlendMode;
+    SpaceType mEmitterSpace;
 	Property mScale;
 	float mDelay;
 
@@ -967,6 +987,17 @@ bool EmitterTemplate::loadFromXml(const QDomElement &element)
 		qWarning("Invalid delay for emitter template: %s", qPrintable(element.attribute("delay")));
 		return false;
 	}
+
+    QString space = element.attribute("space", "world").toLower();
+
+    if (space == "bones") {
+        mEmitterSpace = Space_Bones;
+    } else if (space == "world") {
+        mEmitterSpace = Space_World;
+    } else {
+        // TODO: Implement them all
+        mEmitterSpace = Space_World;
+    }
 
 	QString blendMode = element.attribute("blendMode", "add").toLower();
 
@@ -1220,6 +1251,7 @@ Emitter *EmitterTemplate::instantiate() const
 {
 	Emitter *emitter = new Emitter(mParticleSpawnRate, mParticleLifespan);
 	emitter->setName(mName);
+    emitter->setEmitterSpace(mEmitterSpace);
 	emitter->setColor(mColorRed.data(), mColorGreen.data(), mColorBlue.data(), mColorAlpha.data());
 	emitter->setScale(mScale.data());
 	emitter->setLifetime(mLifespan);
@@ -1319,7 +1351,7 @@ void ParticleSystemsThread::run() {
         float elapsedSeconds = timer.restart() / 1000.0f;
 
         // Convert elapsed seconds into the internal particle system time unit
-        float elapsedTimeUnits = elapsedSeconds / TimeUnit;
+        float elapsedTimeUnits = elapsedSeconds / ParticlesTimeUnit;
 
         mData.mutex.lock();
         foreach (ParticleSystem *partSystem, mData.particleSystems) {
@@ -1376,6 +1408,16 @@ void ParticleSystems::create(const QString &name, const Vector4 &position)
 
     QMutexLocker locker(&d->mutex);
     d->particleSystems.append(system);
+}
+
+ParticleSystem *ParticleSystems::instantiate(const QString &name)
+{
+    return d->templates[name].instantiate();
+}
+
+MaterialState *ParticleSystems::spriteMaterial()
+{
+    return &d->spriteMaterial;
 }
 
 }
