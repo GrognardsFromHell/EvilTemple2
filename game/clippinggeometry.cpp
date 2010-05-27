@@ -12,6 +12,10 @@
 #include <QtCore/QDataStream>
 
 #include "util.h"
+#include "scenenode.h"
+#include "renderable.h"
+#include "drawhelper.h"
+#include "boxrenderable.h"
 
 using namespace GameMath;
 
@@ -68,57 +72,69 @@ public:
         return mIndexBuffer;
     }
 
+    const Box3d &boundingBox() const {
+        return mBoundingBox;
+    }
+
+    void setBoundingBox(const Box3d &box)
+    {
+        mBoundingBox = box;
+    }
+
 private:
+    Box3d mBoundingBox;
     uint mFaceCount;
     QGLBuffer mPositionBuffer;
     QGLBuffer mIndexBuffer;
 };
 
-class ClippingGeometryInstance {
+class ClippingGeometryInstance : public Renderable, public BufferSource, public DrawStrategy {
 public:
-    ClippingGeometryInstance()
+    
+    void render(RenderStates &renderStates)
     {
+        DrawHelper<ClippingGeometryInstance,ClippingGeometryInstance> drawHelper;
+        drawHelper.draw(renderStates, mMaterial, *this, *this);
     }
 
-    void setWorldMatrix(const Vector4 &position, const Quaternion &rotation, const Vector4 &scale)
+    const Box3d &boundingBox()
     {
-
-        // Old: -44
-        Quaternion rot1 = Quaternion::fromAxisAndAngle(1, 0, 0, -0.77539754);
-        Matrix4 rotate1matrix = Matrix4::transformation(Vector4(1,1,1,0), rot1, Vector4(0,0,0,0));
-
-        // Old: 90-135
-        Quaternion rot2 = Quaternion::fromAxisAndAngle(0, 1, 0, 2.3561945f);
-        Matrix4 rotate2matrix = Matrix4::transformation(Vector4(1,1,1,0), rot2, Vector4(0,0,0,0));
-
-        Matrix4 baseView = rotate1matrix * rotate2matrix;
-
-        Matrix4 baseViewInverse = baseView.inverted();
-
-        mWorldMatrix =
-                Matrix4::transformation(Vector4(1,1,1,1), Quaternion(0,0,0,1), position) *
-
-                Matrix4::transformation(Vector4(1,1,1,1), rotation, Vector4(0,0,0,0)) *
-                baseViewInverse *
-                Matrix4::transformation(Vector4(scale.x(), scale.z(), scale.y(), 0), Quaternion(0,0,0,1), Vector4(0,0,0,0)) *
-                baseView;
+        return mMesh->boundingBox();
     }
-
+    
     void setMesh(const ClippingGeometryMesh *mesh) {
         mMesh = mesh;
-    }
-
-    const Matrix4 &worldMatrix() const {
-        return mWorldMatrix;
     }
 
     const ClippingGeometryMesh *mesh() const {
         return mMesh;
     }
 
+    void setMaterial(MaterialState *material)
+    {
+        mMaterial = material;
+    }
+
+    void draw(const RenderStates &renderStates, MaterialPassState &state) const
+    {
+        SAFE_GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mMesh->indexBuffer().bufferId()));
+        SAFE_GL(glDrawElements(GL_TRIANGLES, mMesh->faceCount(), GL_UNSIGNED_SHORT, 0));
+        SAFE_GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
+    }
+
+    GLint buffer(const MaterialPassAttributeState &attribute) const
+    {
+        switch (attribute.bufferType) {
+        case 0:
+            return mMesh->positionBuffer().bufferId();
+        }
+
+        return -1;
+    }
+
 private:
+    MaterialState *mMaterial;
     const ClippingGeometryMesh *mMesh;
-    Matrix4 mWorldMatrix;
 };
 
 class ClippingGeometryData
@@ -154,7 +170,7 @@ public:
         unload();
     }
 
-    bool load(const QString &filename) {
+    bool load(const QString &filename, Scene *scene) {
         QFile clippingFile(filename);
 
         if (!clippingFile.open(QIODevice::ReadOnly)) {
@@ -168,13 +184,15 @@ public:
         stream >> mMeshCount >> mInstanceCount;
 
         mMeshes.reset(new ClippingGeometryMesh[mMeshCount]);
-        mInstances.reset(new ClippingGeometryInstance[mInstanceCount]);
 
         // Read meshes
         for (int i = 0; i < mMeshCount; ++i) {
             uint vertexCount, faceCount;
 
-            stream >> vertexCount >> faceCount;
+            Box3d boundingBox;
+            float radius, radiusSquared;
+
+            stream >> boundingBox >> radius >> radiusSquared >> vertexCount >> faceCount;
 
             QByteArray vertexData = clippingFile.read(vertexCount * sizeof(Vector4));
             QByteArray facesData = clippingFile.read(faceCount * sizeof(quint16));
@@ -183,6 +201,8 @@ public:
                 qWarning("Unable to load %d-th mesh in clipping file %s.", i, qPrintable(filename));
                 return false;
             }
+
+            mMeshes[i].setBoundingBox(boundingBox);
         }
 
         // Read instances
@@ -190,99 +210,30 @@ public:
         Vector4 scale;
         Quaternion rotation;
         int meshIndex;
-
-        for (int i = 0; i < mInstanceCount; ++i) {
+        
+        for (int i = 0; i < mInstanceCount; ++i) {            
             stream >> position >> rotation >> scale >> meshIndex;
 
             Q_ASSERT(meshIndex >= 0 && meshIndex < mMeshCount);
 
-            mInstances[i].setMesh(mMeshes.data() + meshIndex);
-            mInstances[i].setWorldMatrix(position, rotation, scale);
+            QSharedPointer<ClippingGeometryInstance> instance(new ClippingGeometryInstance);
+            instance->setMesh(mMeshes.data() + meshIndex);
+            instance->setMaterial(&mClippingMaterial);
+
+            SharedSceneNode node(new SceneNode);
+            node->setPosition(position);
+            node->setScale(scale);
+            node->setRotation(rotation);
+            node->setRenderCategory(RenderQueue::ClippingGeometry);
+            node->attachObject(instance);
+            
+            scene->addNode(node);
         }
 
         return true;
     }
 
     void unload() {
-
-    }
-
-    void draw() {
-
-        // Set up material and prepare to only bind new buffers / world matrices as we go along
-
-        for (int i = 0; i < mClippingMaterial.passCount; ++i) {
-            MaterialPassState &pass = mClippingMaterial.passes[i];
-
-            pass.program.bind();
-
-                    // Bind texture samplers
-            for (int j = 0; j < pass.textureSamplers.size(); ++j) {
-            pass.textureSamplers[j].bind();
-                    }
-
-            // Set render states
-            foreach (const SharedMaterialRenderState &state, pass.renderStates) {
-                state->enable();
-            }
-
-            for (int j = 0; j < mInstanceCount; ++j) {
-                const ClippingGeometryInstance &instance = mInstances[j];
-                const ClippingGeometryMesh *mesh = instance.mesh();
-
-                mRenderStates.setWorldMatrix(instance.worldMatrix());
-
-                // Bind uniforms
-                for (int j = 0; j < pass.uniforms.size(); ++j) {
-                    pass.uniforms[j].bind();
-                }
-
-                // Bind attributes
-                for (int j = 0; j < pass.attributes.size(); ++j) {
-                    MaterialPassAttributeState &attribute = pass.attributes[j];
-
-                    // Bind the correct buffer
-                    switch (attribute.bufferType) {
-                    case 0:
-                        SAFE_GL(glBindBuffer(GL_ARRAY_BUFFER, mesh->positionBuffer().bufferId()));
-                        break;
-                    }
-
-                    // Assign the attribute
-                    SAFE_GL(glEnableVertexAttribArray(attribute.location));
-                    SAFE_GL(glVertexAttribPointer(attribute.location, attribute.binding.components(), attribute.binding.type(),
-                                          attribute.binding.normalized(), attribute.binding.stride(), (GLvoid*)attribute.binding.offset()));
-
-                }
-
-                // Draw the actual model
-                SAFE_GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->indexBuffer().bufferId()));
-                SAFE_GL(glDrawElements(GL_TRIANGLES, mesh->faceCount(), GL_UNSIGNED_SHORT, 0));
-
-                // Bind attributes
-                for (int j = 0; j < pass.attributes.size(); ++j) {
-                    MaterialPassAttributeState &attribute = pass.attributes[j];
-                    SAFE_GL(glDisableVertexAttribArray(attribute.location));
-                }
-            }
-
-            // Unbind any previously bound buffers
-            SAFE_GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
-            SAFE_GL(glBindBuffer(GL_ARRAY_BUFFER, 0));
-
-            // Reset render states to default
-            foreach (const SharedMaterialRenderState &state, pass.renderStates) {
-                state->disable();
-            }
-
-            // Unbind textures
-            for (int j = 0; j < pass.textureSamplers.size(); ++j) {
-                pass.textureSamplers[j].unbind();
-            }
-
-            pass.program.unbind();
-        }
-
     }
 
 private:
@@ -295,7 +246,6 @@ private:
     uint mInstanceCount;
 
     QScopedArrayPointer<ClippingGeometryMesh> mMeshes;
-    QScopedArrayPointer<ClippingGeometryInstance> mInstances;
 
 };
 
@@ -307,19 +257,14 @@ ClippingGeometry::~ClippingGeometry()
 {
 }
 
-bool ClippingGeometry::load(const QString &filename)
+bool ClippingGeometry::load(const QString &filename, Scene *scene)
 {
-    return d->load(filename);
+    return d->load(filename, scene);
 }
 
 void ClippingGeometry::unload()
 {
     d->unload();
-}
-
-void ClippingGeometry::draw()
-{
-    d->draw();
 }
 
 }

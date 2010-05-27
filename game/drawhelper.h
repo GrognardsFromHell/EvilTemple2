@@ -16,7 +16,14 @@ struct BufferSource {
     virtual GLint buffer(const MaterialPassAttributeState &attribute) const = 0;
 };
 
-template<typename DrawStrategy, typename BufferSource>
+struct EmptyBufferSource : public BufferSource {
+    GLint buffer(const MaterialPassAttributeState &attribute) const
+    {
+        return -1;
+    }
+};
+
+template<typename DrawStrategy, typename BufferSource = EmptyBufferSource>
 class DrawHelper
 {
 public:

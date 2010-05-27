@@ -72,7 +72,9 @@ namespace EvilTemple {
                                                                          mTextureSizes[textureId]);
 
                         texture = SharedTexture(new Texture);
-                        texture->loadTga(textureData);
+                        if (!texture->loadTga(textureData)) {
+                            qWarning("Unable to load model texture.");
+                        }
 
                         GlobalTextureCache::instance().insert(mMd5Hashes[textureId], texture);
                     }
@@ -550,11 +552,5 @@ namespace EvilTemple {
         stream >> bone.rotationStream >> bone.scaleStream >> bone.translationStream;
         return stream;
     }
-
-     QDataStream &operator >>(QDataStream &stream, AABB &aabb)
-     {
-         stream >> aabb.mMinimum >> aabb.mMaximum;
-         return stream;
-     }
 
 }

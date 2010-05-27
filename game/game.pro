@@ -35,7 +35,16 @@ SOURCES += \
     tga.cpp \
     clippinggeometry.cpp \
     particlesystem.cpp \
-    modelinstance.cpp
+    modelinstance.cpp \
+    scenenode.cpp \
+    scene.cpp \
+    entity.cpp \
+    renderable.cpp \
+    boxrenderable.cpp \
+    materialcache.cpp \
+    texturesource.cpp \
+    lighting.cpp \
+    lighting_debug.cpp
 HEADERS += \
     ui/mainwindow.h \
     ui/gamegraphicsscene.h \
@@ -60,7 +69,17 @@ HEADERS += \
     tga.h \
     clippinggeometry.h \
     particlesystem.h \
-    modelinstance.h
+    modelinstance.h \
+    scenenode.h \
+    scene.h \
+    renderqueue.h \
+    entity.h \
+    renderable.h \
+    boxrenderable.h \
+    materialcache.h \
+    lighting.h \
+    lighting_debug.h \
+    drawhelper.h
 OTHER_FILES += materialfile.xsd \
     map_material.xml \
     clipping_material.xml

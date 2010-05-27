@@ -7,7 +7,10 @@
 
 #include "modelfile.h"
 #include "materialstate.h"
-#include "ray.h"
+#include "renderable.h"
+
+#include <gamemath.h>
+using namespace GameMath;
 
 namespace EvilTemple {
 
@@ -22,7 +25,7 @@ struct AddMesh {
     A model instance manages the per-instance state of models. This includes animation state
     and transformed position and normal data.
   */
-class ModelInstance
+class ModelInstance : public Renderable
 {
 public:
     ModelInstance();
@@ -33,7 +36,7 @@ public:
     void elapseTime(float elapsedSeconds);
 
     void drawNormals() const;
-    void draw(const RenderStates &renderStates);
+    void render(RenderStates &renderStates);
     void draw(const RenderStates &renderStates, MaterialState *overrideMaterial) const;
 
     const SharedModel &model() const;
@@ -42,7 +45,11 @@ public:
 
     void addMesh(const SharedModel &model);
 
-    IntersectionResult intersect(const Ray &ray) const;
+    IntersectionResult intersect(const Ray3d &ray) const;
+
+    const Box3d &boundingBox();
+
+    const Matrix4 &worldTransform() const;
 
 private:
 	Matrix4 *mFullWorld;

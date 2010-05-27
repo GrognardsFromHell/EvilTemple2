@@ -19,7 +19,7 @@ template <int T> bool checkBlack(unsigned char *pixels, int width, int height) {
             return false;
         if (*(current++) > 3)
             return false;
-        current += T;
+        current += (T - 3);
     }
 
     return true;

@@ -198,6 +198,8 @@ private:
     QString mError;
 };
 
+typedef QSharedPointer<MaterialState> SharedMaterialState;
+
 inline const QString &MaterialState::error() const
 {
 	return mError;

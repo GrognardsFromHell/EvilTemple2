@@ -2,6 +2,7 @@
 #include "util.h"
 #include "drawhelper.h"
 #include "particlesystem.h"
+#include "scenenode.h"
 
 namespace EvilTemple {
 
@@ -203,7 +204,7 @@ namespace EvilTemple {
         GLint mTexCoordBuffer;
     };
 
-    void ModelInstance::draw(const RenderStates &renderStates)
+    void ModelInstance::render(RenderStates &renderStates)
     {
         const Model *model = mModel.data();
 
@@ -424,13 +425,17 @@ namespace EvilTemple {
 
 		updateVertices += (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
     }
-
-    IntersectionResult ModelInstance::intersect(const Ray &ray) const
+    
+    const Box3d &ModelInstance::boundingBox()
     {
-        // Do a quick rejection using this models bounding sphere
-        IntersectionResult result;
-        return result;
+        return mModel->boundingBox();
     }
+    
+    const Matrix4 &ModelInstance::worldTransform() const
+    {
+        Q_ASSERT(mParentNode);
 
+        return mParentNode->fullTransform();
+    }
 
 }

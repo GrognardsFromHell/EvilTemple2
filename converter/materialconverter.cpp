@@ -171,20 +171,26 @@ public:
         }
         materialFile.replace("{{BLEND_DEST}}", blendFactor);
 
-        materialScripts.insert(getNewMaterialFilename(material->name()), HashedData(materialFile.toUtf8()));
+        HashedData materialScriptData(materialFile.toUtf8());
+        materialScripts.insert(getNewMaterialFilename(material->name()), materialScriptData);
+        materialList.append(materialScriptData);
 
         return true;
     }
 
     int getTexture(const QString &filename) {
-        if (loadedTextures.contains(filename.toLower())) {
-            return loadedTextures[filename.toLower()];
+        QString key = getNewTextureFilename(filename);
+
+        if (loadedTextures.contains(key)) {
+            return loadedTextures[key];
         } else {
             QByteArray texture = mVfs->openFile(filename);
             int textureId = textures.size();
-			textures.insert(getNewTextureFilename(filename), texture);
+			textures.insert(key, texture);
 
-            loadedTextures[filename.toLower()] = textureId;
+            textureList.append(HashedData(texture));
+
+            loadedTextures[key] = textureId;
             return textureId;
         }
     }
@@ -193,6 +199,8 @@ public:
 
     QMap<QString,HashedData> textures;
     QMap<QString,HashedData> materialScripts;
+    QList<HashedData> materialList;
+    QList<HashedData> textureList;
 };
 
 HashedData::HashedData(const QByteArray &_data) : data(_data), md5Hash(QCryptographicHash::hash(_data, QCryptographicHash::Md5))
@@ -227,6 +235,16 @@ const QMap<QString,HashedData> &MaterialConverter::materialScripts()
 void MaterialConverter::setExternal(bool external)
 {
 	d_ptr->external = external;
+}
+
+QList<HashedData> MaterialConverter::textureList()
+{
+    return d_ptr->textureList;
+}
+
+QList<HashedData> MaterialConverter::materialList()
+{
+    return d_ptr->materialList;
 }
 
 QDataStream &operator <<(QDataStream &stream, const HashedData &hashedData)

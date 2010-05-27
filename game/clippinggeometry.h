@@ -3,6 +3,7 @@
 
 #include <QtCore/QScopedPointer>
 #include <QtCore/QString>
+#include "scene.h"
 
 namespace EvilTemple {
 
@@ -18,10 +19,8 @@ public:
     ClippingGeometry(RenderStates &renderStates);
     ~ClippingGeometry();
 
-    bool load(const QString &filename);
+    bool load(const QString &filename, Scene *scene);
     void unload();
-
-    void draw();
 
 private:
     QScopedPointer<ClippingGeometryData> d;

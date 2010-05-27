@@ -381,4 +381,13 @@ inline QDataStream &operator >>(QDataStream &stream, GameMath::Quaternion &quate
     return stream;
 }
 
+inline QDataStream &operator >>(QDataStream &stream, GameMath::Box3d &aabb)
+{
+    GameMath::Vector4 minCorner, maxCorner;
+    stream >> minCorner >> maxCorner;
+    aabb.setMinimum(minCorner);
+    aabb.setMaximum(maxCorner);
+    return stream;
+}
+
 #endif // UTIL_H

@@ -94,7 +94,7 @@ public:
         mOutputPath = QDir::toNativeSeparators(mOutputPath);
         if (!mOutputPath.endsWith(QDir::separator()))
             mOutputPath.append(QDir::separator());
-
+        
         exclusions.load();
     }
 
@@ -264,6 +264,14 @@ public:
 
 		writer->addFile(zoneTemplate->directory() + "lighting.xml", document.toByteArray(), 9);
 	}
+    
+    bool compareScale(const Vector4 &a, const Vector4 &b) {
+        float scaleEpsilon = 0.0001f;
+
+        Vector4 diff = (b - a).absolute();
+
+        return (diff.x() <= scaleEpsilon && diff.y() <= scaleEpsilon && diff.z() <= scaleEpsilon);
+    }
 
     void convertClippingMeshes(ZoneTemplate *zoneTemplate, ZipWriter *writer)
     {
@@ -272,33 +280,122 @@ public:
         clippingStream.setFloatingPointPrecision(QDataStream::SinglePrecision);
         clippingStream.setByteOrder(QDataStream::LittleEndian);
 
+        // Create a list of all clipping geometry meshes
         QStringList clippingGeometryFiles;
-
+        QList< QList<Vector4> > scalingPerFile;
         foreach (GeometryObject *object, zoneTemplate->clippingGeometry()) {
             QString normalizedFilename = QDir::toNativeSeparators(object->mesh()).toLower();
 
             if (!clippingGeometryFiles.contains(normalizedFilename)) {
                 clippingGeometryFiles.append(normalizedFilename);
+                scalingPerFile.append(QList<Vector4>());
+            }
+        }
+        
+        /**
+        For each geometry file we will collect all the scales in which it is used. 
+        This is important since ToEE uses non-uniform scaling here (it scales in 2d space),
+        and we want to remove that scaling entirely. Instead, we will create a copy of the geometry
+        for each scaling level used.
+          */
+        foreach (GeometryObject *object, zoneTemplate->clippingGeometry()) {
+            QString normalizedFilename = QDir::toNativeSeparators(object->mesh()).toLower();
+            int fileIndex = (uint)clippingGeometryFiles.indexOf(normalizedFilename);
+
+            Vector4 scale(object->scale().x(), object->scale().y(), object->scale().z(), 1);
+
+            bool scaleExists = false;
+            foreach (Vector4 existingScale, scalingPerFile[fileIndex]) {
+                if (compareScale(existingScale, scale)) {
+                    scaleExists = true;
+                    break;
+                }
+            }
+
+            if (!scaleExists)
+                scalingPerFile[fileIndex].append(scale);
+        }
+
+        uint totalFileCount = 0;
+
+        // Now we test if for any geometry object there are more than one scale versions
+        for (int i = 0; i < clippingGeometryFiles.size(); ++i) {
+            totalFileCount += scalingPerFile[i].size();
+            if (scalingPerFile[i].size() > 1) {
+                qDebug("Clipping geometry file %s is used in %d different scales:", qPrintable(clippingGeometryFiles[i]), scalingPerFile[i].size());
             }
         }
 
         // File header
-        clippingStream << (uint)clippingGeometryFiles.size() << (uint)zoneTemplate->clippingGeometry().size();
+        clippingStream << totalFileCount << (uint)zoneTemplate->clippingGeometry().size();             
 
-        foreach (QString clippingGeometryFile, clippingGeometryFiles) {
-            Troika::DagReader reader(vfs.data(), clippingGeometryFile);
+
+        /**
+        These transformations come from the original game and are *constant*.
+        **/
+        // Old: -44
+        Quaternion rot1 = Quaternion::fromAxisAndAngle(1, 0, 0, -0.77539754f);
+        Matrix4 rotate1matrix = Matrix4::transformation(Vector4(1,1,1,0), rot1, Vector4(0,0,0,0));
+
+        // Old: 90-135
+        Quaternion rot2 = Quaternion::fromAxisAndAngle(0, 1, 0, 2.3561945f);
+        Matrix4 rotate2matrix = Matrix4::transformation(Vector4(1,1,1,0), rot2, Vector4(0,0,0,0));
+
+        Matrix4 baseView = rotate1matrix * rotate2matrix;
+        Matrix4 baseViewInverse = baseView.inverted();
+
+        for (int i = 0; i < clippingGeometryFiles.size(); ++i) {
+            Troika::DagReader reader(vfs.data(), clippingGeometryFiles[i]);
             MeshModel *model = reader.get();
 
             Q_ASSERT(model->faceGroups().size() == 1);
+            Q_ASSERT(model->vertices().size() > 0);
 
-            clippingStream << (uint)model->vertices().size() << (uint)model->faceGroups()[0]->faces().size() * 3;
+            /**
+              Calculate the scaling matrix for each instance and transform the vertices ahead-of-time.
+              */
+            foreach (Vector4 scale, scalingPerFile[i]) {
+                QVector<Vector4> scaledVertices(model->vertices().size());
+                
+                // Switch z/y
+                Matrix4 scaleMatrix2d = Matrix4::scaling(scale.x(), scale.z(), scale.y());
+                Matrix4 scaleMatrix = baseViewInverse * scaleMatrix2d * baseView;
+                
+                for (int j = 0; j < scaledVertices.size(); ++j) {
+                    const Troika::Vertex &vertex = model->vertices()[j];
+                    scaledVertices[j] = scaleMatrix.mapPosition(Vector4(vertex.positionX, vertex.positionY, vertex.positionZ, 1));
+                }
 
-            foreach (const Vertex &vertex, model->vertices()) {
-                clippingStream << vertex.positionX << vertex.positionY << vertex.positionZ << (float) 1;
-            }
+                Box3d boundingBox(scaledVertices[0], scaledVertices[0]);
 
-            foreach (const Face &face, model->faceGroups()[0]->faces()) {
-                clippingStream << face.vertices[0] << face.vertices[1] << face.vertices[2];
+                Vector4 firstVertex = scaledVertices[0];
+                firstVertex.setW(0);
+                float originDistance = firstVertex.length();
+                float originDistanceSquared = firstVertex.lengthSquared();
+
+                for (int j = 1; j < scaledVertices.size(); ++j) {
+                    Vector4 vertex = scaledVertices[j];
+                    boundingBox.merge(vertex);
+                    vertex.setW(0);
+                    originDistance = qMax<float>(originDistance, vertex.length());
+                    originDistanceSquared = qMax<float>(originDistance, vertex.lengthSquared());
+                }
+
+                clippingStream << boundingBox.minimum().x() << boundingBox.minimum().y() << boundingBox.minimum().z()
+                        << boundingBox.minimum().w() << boundingBox.maximum().x() << boundingBox.maximum().y()
+                        << boundingBox.maximum().z() << boundingBox.maximum().w() << originDistance << originDistanceSquared;
+
+                clippingStream << (uint)scaledVertices.size() << (uint)model->faceGroups()[0]->faces().size() * 3;
+
+                // We should apply the scaling here.
+
+                foreach (const Vector4 &vertex, scaledVertices) {
+                    clippingStream << vertex.x() << vertex.y() << vertex.z() << vertex.w();
+                }
+
+                foreach (const Face &face, model->faceGroups()[0]->faces()) {
+                    clippingStream << face.vertices[0] << face.vertices[1] << face.vertices[2];
+                }
             }
         }
 
@@ -306,11 +403,32 @@ public:
         foreach (GeometryObject *object, zoneTemplate->clippingGeometry()) {
             QString normalizedFilename = QDir::toNativeSeparators(object->mesh()).toLower();
 
+            uint fileNameIndex = (uint)clippingGeometryFiles.indexOf(normalizedFilename);
+            uint fileIndex = 0;
+
+            // Find the filename/scale pair appropriate for this instance
+            for (uint i = 0; i < fileNameIndex; ++i)
+                fileIndex += scalingPerFile[i].size();
+
+            bool found = false;
+            
+            Vector4 scale(object->scale().x(), object->scale().y(), object->scale().z(), 1);
+            for (int i = 0; i < scalingPerFile[fileNameIndex].size(); ++i) {
+                Vector4 existingScale = scalingPerFile[fileNameIndex][i];
+                if (compareScale(existingScale, scale)) {
+                    found = true;
+                    break;
+                }                    
+                fileIndex++;
+            }
+
+            Q_ASSERT(found);
+
             clippingStream << object->position().x() << object->position().y() << object->position().z() << (float)1
                     << object->rotation().x() << object->rotation().y() << object->rotation().z()
                     << object->rotation().scalar()
-                    << object->scale().x() << object->scale().y() << object->scale().z() << (float)1
-                    << (uint)clippingGeometryFiles.indexOf(normalizedFilename);
+                    << (float)1 << (float)1 << (float)1 << (float)1
+                    << fileIndex;
 
         }
 
@@ -824,8 +942,8 @@ public:
         }
 
 		if (!external) {
-			writer.writeTextures(converter.textures().values());
-			writer.writeMaterials(converter.materialScripts().values());
+			writer.writeTextures(converter.textureList());
+			writer.writeMaterials(converter.materialList());
 		} else {
 			QStringList materials;
 			for (int j = 0; j < i; ++j) {

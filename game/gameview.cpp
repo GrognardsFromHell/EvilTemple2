@@ -18,6 +18,10 @@
 #include "lighting_debug.h"
 
 #include "scene.h"
+#include "boxrenderable.h"
+
+#include <gamemath.h>
+using namespace GameMath;
 
 namespace EvilTemple {
 
@@ -36,15 +40,6 @@ namespace EvilTemple {
             qWarning("OpenGL error @ %s:%d: %s", file, line, qPrintable(error));
         }
     }
-
-    enum ClippingPlanes {
-        Clip_Left = 0,
-        Clip_Right,
-        Clip_Top,
-        Clip_Bottom,
-        Clip_Near,
-        Clip_Far
-    };
     
     class GameViewData
     {
@@ -52,6 +47,9 @@ namespace EvilTemple {
         GameViewData(GameView *view)
             : q(view), rootItem(0), modelLoaded(0), backgroundMap(renderStates),
             clippingGeometry(renderStates), particleSystems(renderStates), dragging(false), lightDebugger(renderStates) {
+
+            qDebug("Initializing glew...");
+
             if (glewInit() != GLEW_OK) {
                 qWarning("Unable to initialize GLEW.");
             }
@@ -77,15 +75,19 @@ namespace EvilTemple {
             renderStates.setViewMatrix(baseViewMatrix);
             centerOnWorld(480 * 28.2842703f, 480 * 28.2842703f);
 
+            qDebug("Loading background map...");
+
             backgroundMap.setMapDirectory("backgroundMaps/hommlet-exterior-night/");
             //backgroundMap.setMapDirectory("backgroundMaps/moathouse_interior/");
 
             QString mapDir = "maps/Map-2-Hommlet-Exterior/";
 
-            if (!clippingGeometry.load(mapDir + "clippingGeometry.dat")) {
+            if (!clippingGeometry.load(mapDir + "clippingGeometry.dat", &scene)) {
             //if (!clippingGeometry.load("maps/Map-7-Moathouse_Interior/clippingGeometry.dat")) {
                 qWarning("Loading clipping geometry failed.");
             }
+
+            qDebug("Loading static geometry...");
 
             QFile gmf(mapDir + "staticGeometry.txt");
             //QFile gmf("maps/Map-7-Moathouse_Interior/staticGeometry.txt");
@@ -124,20 +126,28 @@ namespace EvilTemple {
                     modelCache[modelFilename] = model;
                 }
 
-                SharedMeshSceneNode node(new MeshSceneNode);
-                node->setModel(model);
+                QSharedPointer<ModelInstance> modelInstance(new ModelInstance());
+                modelInstance->setModel(model);
+
+                SharedSceneNode node(new SceneNode);
                 node->setPosition(position);
                 node->setRotation(rotation);
                 node->setScale(scale);
-                                
                 scene.addNode(node);
+
+                node->attachObject(modelInstance);
+
+                SharedRenderable bbRenderable(new BoxRenderable);
+                //node->attachObject(bbRenderable);
             }
+
+            qDebug("Loading particle systems for map...");
 
             QFile partSys(mapDir + "particleSystems.txt");
 
             if (!partSys.open(QIODevice::ReadOnly)) {
                 qWarning("Unable to find particle system file.");
-            }
+            }                       
 
             QDataStream partSysStream(&partSys);
             partSysStream.setByteOrder(QDataStream::LittleEndian);
@@ -152,10 +162,12 @@ namespace EvilTemple {
 				particleSystems.create(name, Vector4(x, y, z, 1));
             }
 
+            qDebug("Loading lighting...");
+
             QFile lightingFile(mapDir + "lighting.xml");
             if (!lightingFile.open(QIODevice::ReadOnly)) {
                 qWarning("Missing lighting model.");
-            }
+            }           
 
             loadLighting(&lightingFile);
 
@@ -224,7 +236,6 @@ namespace EvilTemple {
         ParticleSystem *swordParticleSystem;
 
         QTime animationTimer;
-        Vector4 clippingPlanes[6];
 
         Scene scene;
 
@@ -234,42 +245,6 @@ namespace EvilTemple {
 			glViewport(0, 0, width, height);
             Matrix4 projectionMatrix = Matrix4::ortho(-halfWidth, halfWidth, -halfHeight, halfHeight, 1, 3628);
             renderStates.setProjectionMatrix(projectionMatrix);
-        }
-
-        void extractClippingPlanes(const Matrix4 &orgMatrix)
-        {
-            Matrix4 matrix = orgMatrix.transposed();
-
-            /*
-            This is inspired by: "Fast Extraction of Viewing Frustum Planes from the World-
-            View-Projection Matrix" by Gil Gribb and Klaus Hartmann.
-            */
-            clippingPlanes[Clip_Left] = matrix.column(3) + matrix.column(0);
-            clippingPlanes[Clip_Right] = matrix.column(3) - matrix.column(0);
-            clippingPlanes[Clip_Top] = matrix.column(3) + matrix.column(1);
-            clippingPlanes[Clip_Bottom] = matrix.column(3) - matrix.column(1);
-            clippingPlanes[Clip_Near] = matrix.column(3) + matrix.column(2);
-            clippingPlanes[Clip_Far] = matrix.column(3) - matrix.column(2);
-        }
-        
-        bool insideFrustum(const AABB &boundingBox, const Matrix4 &worldMatrix)
-        {
-            extractClippingPlanes(renderStates.viewProjectionMatrix() * worldMatrix);
-
-            Vector4 minPoint = boundingBox.minimum();
-            Vector4 maxPoint = boundingBox.maximum();
-            
-            // TODO: We need to make the box axis aligned again. Can we even do that?
-
-            for (int i = Clip_Left; i <= Clip_Far; ++i) {
-                const Vector4 &plane = clippingPlanes[i];
-                float distanceMin = plane.dot(minPoint);
-                float distanceMax = plane.dot(maxPoint);
-                if (distanceMin < 0 && distanceMax < 0)
-                    return false;
-            }
-
-            return true;
         }
 
     private:
@@ -341,10 +316,6 @@ namespace EvilTemple {
 
         d->backgroundMap.render();
 
-        // AABB viewFrustum = d->getViewFrustum();
-
-        d->clippingGeometry.draw();
-
         Matrix4 t;
         t.setToIdentity();
         t(0, 3) = 480 * 28.2842703f;
@@ -367,7 +338,7 @@ namespace EvilTemple {
             d->scene.elapseTime(elapsed);
 		}
 
-        d->model.draw(d->renderStates);
+        d->model.render(d->renderStates);
 
         Matrix4 flipZ;
         flipZ.setToIdentity();
@@ -386,7 +357,7 @@ namespace EvilTemple {
 
         d->renderStates.setWorldMatrix(d->renderStates.worldMatrix() * flipZ * boneTransform * flipZ);
 
-        d->model2.draw(d->renderStates);
+        d->model2.render(d->renderStates);
         
         d->swordParticleSystem->setPosition(Vector4(480 * 28.2842703f, 20, 480 * 28.2842703f, 1));
         d->swordParticleSystem->render(d->renderStates, d->particleSystems.spriteMaterial());
