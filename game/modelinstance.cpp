@@ -3,6 +3,7 @@
 #include "drawhelper.h"
 #include "particlesystem.h"
 #include "scenenode.h"
+#include "profiler.h"
 
 namespace EvilTemple {
 

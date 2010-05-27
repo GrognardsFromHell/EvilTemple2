@@ -118,6 +118,7 @@ inline const Box3d &SceneNode::worldBoundingBox() const
 {
     if (mWorldBoundingBoxInvalid) {
         mWorldBoundingBox = boundingBox().transformAffine(fullTransform());
+        mWorldBoundingBoxInvalid = false;
     }
 
     return mWorldBoundingBox;    

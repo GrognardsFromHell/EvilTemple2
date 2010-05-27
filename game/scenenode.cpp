@@ -13,6 +13,9 @@ SceneNode::SceneNode()
         mScale(1, 1, 1, 1), 
         mRotation(0, 0, 0, 1), 
         mWorldMatrixInvalid(true),
+        mFullTransformInvalid(true),
+        mBoundingBoxInvalid(true),
+        mWorldBoundingBoxInvalid(true),
         mAnimated(false),
         mParent(NULL),
         mRenderCategory(RenderQueue::Default)

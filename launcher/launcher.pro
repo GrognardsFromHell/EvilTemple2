@@ -14,4 +14,8 @@ CONFIG(debug, debug|release) {
     CONFIG += console
 }
 
+
+CONFIG += console
+
+
 include(../base.pri)

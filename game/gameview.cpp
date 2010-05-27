@@ -19,6 +19,7 @@
 
 #include "scene.h"
 #include "boxrenderable.h"
+#include "profiler.h"
 
 #include <gamemath.h>
 using namespace GameMath;
@@ -331,11 +332,14 @@ namespace EvilTemple {
         }
 
 		if (elapsed > 0) {
-			d->model.elapseTime(elapsed);
-            d->model2.elapseTime(elapsed);
             d->swordParticleSystem->setPosition(Vector4(482 * 28.2842703f, 10, 489 * 28.2842703f, 1));
             d->swordParticleSystem->elapseSeconds(elapsed);
+
+            Profiler::enter(Profiler::SceneElapseTime);
+			d->model.elapseTime(elapsed);
+            d->model2.elapseTime(elapsed);
             d->scene.elapseTime(elapsed);
+            Profiler::leave();
 		}
 
         d->model.render(d->renderStates);
@@ -364,7 +368,9 @@ namespace EvilTemple {
 
         d->renderStates.setWorldMatrix(Matrix4::identity());
 
+        Profiler::enter(Profiler::SceneRender);
         d->scene.render(d->renderStates);
+        Profiler::leave();
         
 		SAFE_GL(glDisable(GL_CULL_FACE));
 		SAFE_GL(glDisable(GL_DEPTH_TEST));

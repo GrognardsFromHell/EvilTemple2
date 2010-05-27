@@ -16,6 +16,7 @@
 #include "game.h"
 #include "savegames.h"
 #include "gameview.h"
+#include "profilerdialog.h"
 
 // Used to display the memory usage in the title bar
 #if defined(Q_OS_WIN32)
@@ -26,11 +27,12 @@ namespace EvilTemple {
 
     class MainWindowData {
     public:
-        MainWindowData(const Game &_game) : game(_game), gameView(0), consoleWidget(0) {}
+        MainWindowData(const Game &_game) : game(_game), gameView(0), consoleWidget(0), profilerDialog(0) {}
 
         const Game &game;
         GameView *gameView;
         QDeclarativeItem *consoleWidget;
+        ProfilerDialog *profilerDialog;
     };
 
     MainWindow *currentMainWindow;
@@ -231,6 +233,16 @@ namespace EvilTemple {
                 showFullScreen();
             }
             e->accept();
+        } else if (e->key() == Qt::Key_F11) {
+            if (d_ptr->profilerDialog) {
+                d_ptr->profilerDialog->close();
+                delete d_ptr->profilerDialog;
+                d_ptr->profilerDialog = 0;
+            } else {
+                d_ptr->profilerDialog = new ProfilerDialog;
+                d_ptr->profilerDialog->show();
+            }
+
         } else if (e->key() == Qt::Key_F12) {
             emit consoleToggled();
         }

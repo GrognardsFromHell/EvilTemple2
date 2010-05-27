@@ -44,7 +44,9 @@ SOURCES += \
     materialcache.cpp \
     texturesource.cpp \
     lighting.cpp \
-    lighting_debug.cpp
+    lighting_debug.cpp \
+    profiler.cpp \
+    profilerdialog.cpp
 HEADERS += \
     ui/mainwindow.h \
     ui/gamegraphicsscene.h \
@@ -79,7 +81,9 @@ HEADERS += \
     materialcache.h \
     lighting.h \
     lighting_debug.h \
-    drawhelper.h
+    drawhelper.h \
+    profiler.h \
+    profilerdialog.h
 OTHER_FILES += materialfile.xsd \
     map_material.xml \
     clipping_material.xml
@@ -97,3 +101,6 @@ include(../base.pri)
 
 RESOURCES += \
     resources.qrc
+
+FORMS += \
+    profilerdialog.ui
