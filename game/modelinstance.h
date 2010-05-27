@@ -52,18 +52,19 @@ public:
     const Matrix4 &worldTransform() const;
 
 private:
-	Matrix4 *mFullWorld;
-	Matrix4 *mFullTransform;
+    Matrix4 *mFullWorld;
+    Matrix4 *mFullTransform;
 
     SharedModel mModel;
 
     const Animation *mCurrentAnimation;
 
-	float mPartialFrameTime;
-	uint mCurrentFrame;
+    float mPartialFrameTime;
+    uint mCurrentFrame;
+    bool mCurrentFrameChanged;
 
-	Vector4 *mTransformedPositions;
-	Vector4 *mTransformedNormals;
+    Vector4 *mTransformedPositions;
+    Vector4 *mTransformedNormals;
 
     QGLBuffer mPositionBuffer;
     QGLBuffer mNormalBuffer;

@@ -371,21 +371,21 @@ namespace EvilTemple {
         Profiler::enter(Profiler::SceneRender);
         d->scene.render(d->renderStates);
         Profiler::leave();
-        
-		SAFE_GL(glDisable(GL_CULL_FACE));
-		SAFE_GL(glDisable(GL_DEPTH_TEST));
-		SAFE_GL(glDisable(GL_TEXTURE_2D));
-		SAFE_GL(glDisable(GL_LIGHTING));
-				
-		glDisable(GL_ALPHA_TEST); HANDLE_GL_ERROR
-		glDisable(GL_DEPTH_TEST); HANDLE_GL_ERROR
-		glAlphaFunc(GL_ALWAYS, 0); HANDLE_GL_ERROR
-		glDisable(GL_BLEND); HANDLE_GL_ERROR
 
-		glMatrixMode(GL_PROJECTION);
-		glLoadMatrixf(d->renderStates.projectionMatrix().data());
+        SAFE_GL(glDisable(GL_CULL_FACE));
+        SAFE_GL(glDisable(GL_DEPTH_TEST));
+        SAFE_GL(glDisable(GL_TEXTURE_2D));
+        SAFE_GL(glDisable(GL_LIGHTING));
 
-		glMatrixMode(GL_MODELVIEW);
+        glDisable(GL_ALPHA_TEST); HANDLE_GL_ERROR
+        glDisable(GL_DEPTH_TEST); HANDLE_GL_ERROR
+        glAlphaFunc(GL_ALWAYS, 0); HANDLE_GL_ERROR
+        glDisable(GL_BLEND); HANDLE_GL_ERROR
+
+        glMatrixMode(GL_PROJECTION);
+        glLoadMatrixf(d->renderStates.projectionMatrix().data());
+
+        glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
         glTranslatef(d->renderStates.viewMatrix()(0, 3), d->renderStates.viewMatrix()(1, 3), 0);
 

@@ -140,7 +140,7 @@ public:
 		delete [] mValueStream;
 	}
 		
-	T interpolate(FT frame, FT totalFrames) const
+        inline T interpolate(FT frame, FT totalFrames) const
 	{
 		Q_ASSERT(mSize > 0);
 
@@ -223,7 +223,6 @@ private:
 
 inline Matrix4 AnimationBone::getTransform(ushort frame, ushort totalFrames) const
 {
-	
 	Quaternion rotation = rotationStream.interpolate(frame, totalFrames);
 	Vector4 scale = scaleStream.interpolate(frame, totalFrames);
 	Vector4 translation = translationStream.interpolate(frame, totalFrames);
@@ -242,9 +241,9 @@ public:
     {
     }
 
-	~Animation()
-	{
-	}
+    ~Animation()
+    {
+    }
 
     enum DriveType {
         Time = 0,
@@ -253,10 +252,10 @@ public:
         DriveType_ForceDWord = 0x7fffffff
     };
 	
-	/**
-	 Type of the container that maps bone ids to their respective animated state.
-	 */
-	typedef QHash<uint, const AnimationBone*> BoneMap;
+    /**
+     Type of the container that maps bone ids to their respective animated state.
+     */
+    typedef QHash<uint, const AnimationBone*> BoneMap;
 
     const QString &name() const;
 
@@ -283,7 +282,7 @@ private:
     DriveType mDriveType;
     QVector<AnimationEvent> mEvents;
     BoneMap mAnimationBonesMap;
-	AnimationBone *mAnimationBones;
+    AnimationBone *mAnimationBones;
     Q_DISABLE_COPY(Animation);
 };
 

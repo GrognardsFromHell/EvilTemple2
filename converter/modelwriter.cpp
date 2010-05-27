@@ -62,26 +62,26 @@ void ModelWriter::writeBones(const Troika::Skeleton *skeleton)
     stream << (uint)skeleton->bones().size();
 
     foreach (const Troika::Bone &bone, skeleton->bones()) {
-		stream << bone.name.toUtf8();
+        stream << bone.name.toUtf8();
 
         // Id of parent (or -1)
         stream << (int)bone.parentId;
 
-		// This is the full world inverse for the bone
-		for (int col = 0; col < 4; ++col) {
+        // This is the full world inverse for the bone
+        for (int col = 0; col < 4; ++col) {
             for (int row = 0; row < 4; ++row) {
-				stream << (float)bone.fullWorldInverse(row, col);
+                stream << (float)bone.fullWorldInverse(row, col);
             }
         }
 
-		// This is the default relative world matrix
-		for (int col = 0; col < 4; ++col) {
+        // This is the default relative world matrix
+        for (int col = 0; col < 4; ++col) {
             for (int row = 0; row < 4; ++row) {
-				stream << (float)bone.relativeWorld(row, col);
+                stream << (float)bone.relativeWorld(row, col);
             }
         }
 
-		// This is the full bone transform in case the bone is not animated
+        // This is the full bone transform in case the bone is not animated
         for (int col = 0; col < 4; ++col) {
             for (int row = 0; row < 4; ++row) {
                 stream << (float)bone.defaultPoseWorld(row, col);
@@ -128,21 +128,21 @@ void ModelWriter::writeAnimations(const Troika::MeshModel *model)
 
     stream << (uint)skeleton->animations().size() << RESERVED << RESERVED << RESERVED;
 
-	QMap<uint, QString> animDataStartMap;
+    QMap<uint, QString> animDataStartMap;
 
     foreach (const Troika::Animation &animation, skeleton->animations()) {
 
-		if (animDataStartMap.contains(animation.keyFramesDataStart())) {
-			// qWarning("%s reuses %s.", qPrintable(animation.name()), qPrintable(animDataStartMap[animation.keyFramesDataStart()]));
-			continue;
-		}
+        if (animDataStartMap.contains(animation.keyFramesDataStart())) {
+            // qWarning("%s reuses %s.", qPrintable(animation.name()), qPrintable(animDataStartMap[animation.keyFramesDataStart()]));
+            continue;
+        }
 
-		animDataStartMap[animation.keyFramesDataStart()] = animation.name();
+        animDataStartMap[animation.keyFramesDataStart()] = animation.name();
 
         // How do we ensure padding if the animations have variable length names?
         stream << animation.name().toUtf8();
         stream << (uint)animation.frames() << animation.frameRate() << animation.dps()
-			<< (uint)animation.driveType() << animation.loopable() << (uint)animation.events().size();
+                << (uint)animation.driveType() << animation.loopable() << (uint)animation.events().size();
 
         foreach (const Troika::AnimationEvent &event, animation.events()) {
             uint frameId = event.frameId;
@@ -170,22 +170,22 @@ void ModelWriter::writeAnimations(const Troika::MeshModel *model)
                 streams[i].appendCurrentState(boneState);
             }
         }
-		int nextFrame = animStream->getNextFrameId();
+        int nextFrame = animStream->getNextFrameId();
         while (!animStream->atEnd()) {
             animStream->readNextFrame();
-			if (animStream->getNextFrameId() <= nextFrame && !animStream->atEnd()) {
-				_CrtDbgBreak();
-			}
-			nextFrame = animStream->getNextFrameId();
+            if (animStream->getNextFrameId() <= nextFrame && !animStream->atEnd()) {
+                _CrtDbgBreak();
+            }
+            nextFrame = animStream->getNextFrameId();
 
-			for (int i = 0; i < skeleton->bones().size(); ++i) {
-				const AnimationBoneState *boneState = animStream->getBoneState(i);
+            for (int i = 0; i < skeleton->bones().size(); ++i) {
+                const AnimationBoneState *boneState = animStream->getBoneState(i);
 
-				if (boneState) {
-					streams[i].appendCurrentState(boneState);
-				}
-			}
-		}
+                if (boneState) {
+                    streams[i].appendCurrentState(boneState);
+                }
+            }
+        }
 
         // Also append the state of the last frame
         for (int i = 0; i < skeleton->bones().size(); ++i) {
@@ -196,32 +196,32 @@ void ModelWriter::writeAnimations(const Troika::MeshModel *model)
             }
         }
 
-		delete animStream;
+        delete animStream;
 
-		// Write out the number of bones affected by the animation
-		stream << (uint)streams.size();
-		
+        // Write out the number of bones affected by the animation
+        stream << (uint)streams.size();
+
         // At this point, we have the entire keyframe stream
-		// IMPORTANT NOTE: Due to the use of QMap as the container, the keys will be guaranteed to be in ascending order for both bones and frames!
-		foreach (uint boneId, streams.keys()) {
-			// Write the keyframe streams for every bone
-			const Streams &boneStreams = streams[boneId];
-			stream << boneId << (uint)boneStreams.rotationFrames.size();
-			foreach (uint frameId, boneStreams.rotationFrames.keys()) {
-				const QQuaternion &rotation = boneStreams.rotationFrames[frameId];
-				stream << (quint16)frameId << rotation.x() << rotation.y() << rotation.z() << rotation.scalar();
-			}
-			stream << (uint)boneStreams.scaleFrames.size();
-			foreach (uint frameId, boneStreams.scaleFrames.keys()) {
-				const QVector3D &scale = boneStreams.scaleFrames[frameId];
-				stream << (quint16)frameId << scale.x() << scale.y() << scale.z() << (float)0;
-			}
-			stream << (uint)boneStreams.translationFrames.size();
-			foreach (uint frameId, boneStreams.translationFrames.keys()) {
-				const QVector3D &translation = boneStreams.translationFrames[frameId];
-				stream << (quint16)frameId << translation.x() << translation.y() << translation.z() << (float)0;
-			}
-		}
+        // IMPORTANT NOTE: Due to the use of QMap as the container, the keys will be guaranteed to be in ascending order for both bones and frames!
+        foreach (uint boneId, streams.keys()) {
+            // Write the keyframe streams for every bone
+            const Streams &boneStreams = streams[boneId];
+            stream << boneId << (uint)boneStreams.rotationFrames.size();
+            foreach (uint frameId, boneStreams.rotationFrames.keys()) {
+                const QQuaternion &rotation = boneStreams.rotationFrames[frameId];
+                stream << (quint16)frameId << rotation.x() << rotation.y() << rotation.z() << rotation.scalar();
+            }
+            stream << (uint)boneStreams.scaleFrames.size();
+            foreach (uint frameId, boneStreams.scaleFrames.keys()) {
+                const QVector3D &scale = boneStreams.scaleFrames[frameId];
+                stream << (quint16)frameId << scale.x() << scale.y() << scale.z() << (float)0;
+            }
+            stream << (uint)boneStreams.translationFrames.size();
+            foreach (uint frameId, boneStreams.translationFrames.keys()) {
+                const QVector3D &translation = boneStreams.translationFrames[frameId];
+                stream << (quint16)frameId << translation.x() << translation.y() << translation.z() << (float)0;
+            }
+        }
     }
 
     finishChunk();
@@ -229,11 +229,11 @@ void ModelWriter::writeAnimations(const Troika::MeshModel *model)
 
 void ModelWriter::writeMaterialReferences(const QStringList &materials)
 {
-	startChunk(MaterialReferences, true);
+    startChunk(MaterialReferences, true);
 
-	stream << materials;
+    stream << materials;
 
-	finishChunk();
+    finishChunk();
 }
 
 void ModelWriter::writeBoneAttachments(const QVector<Troika::Vertex> &vertices)
@@ -270,7 +270,7 @@ void ModelWriter::writeTextures(const QList<HashedData> &textures)
     stream << (uint)textures.size() << RESERVED << RESERVED << RESERVED;
 
     foreach (const HashedData &hashedData, textures) {
-       stream << hashedData;
+        stream << hashedData;
     }
 
     finishChunk();
@@ -323,21 +323,21 @@ void ModelWriter::writeBoundingVolumes(const Troika::MeshModel *model)
     stream << box.minimum().x() << box.minimum().y() << box.minimum().z() << (float)1
             << box.maximum().x() << box.maximum().y() << box.maximum().z() << (float)1;
 
-	// In addition, find the maximum distance of a vertex from the origin for this model and use that as the bounding sphere
-	float lengthSquared = 0.0f;
+    // In addition, find the maximum distance of a vertex from the origin for this model and use that as the bounding sphere
+    float lengthSquared = 0.0f;
 
-	foreach (const Troika::Vertex &vertex, model->vertices()) {
-		float distance = vertex.position().lengthSquared();
-		if (distance > lengthSquared) {
-			lengthSquared = distance;
-		}
-	}
-	
-	// Take sqrt
-	float length = std::sqrt(lengthSquared);
+    foreach (const Troika::Vertex &vertex, model->vertices()) {
+        float distance = vertex.position().lengthSquared();
+        if (distance > lengthSquared) {
+            lengthSquared = distance;
+        }
+    }
 
-	stream << length << lengthSquared;
-	
+    // Take sqrt
+    float length = std::sqrt(lengthSquared);
+
+    stream << length << lengthSquared;
+
     finishChunk();
 }
 

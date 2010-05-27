@@ -9,56 +9,56 @@ namespace EvilTemple {
 
     ModelInstance::ModelInstance()
         : mPositionBuffer(QGLBuffer::VertexBuffer), mNormalBuffer(QGLBuffer::VertexBuffer),
-		mCurrentAnimation(NULL), mPartialFrameTime(0), mCurrentFrame(0),
-		mTransformedPositions(NULL), mTransformedNormals(NULL), mFullTransform(NULL),
-		mFullWorld(NULL)
+        mCurrentAnimation(NULL), mPartialFrameTime(0), mCurrentFrame(0),
+        mTransformedPositions(NULL), mTransformedNormals(NULL), mFullTransform(NULL),
+        mFullWorld(NULL), mCurrentFrameChanged(true)
     {
-		mPositionBuffer.setUsagePattern(QGLBuffer::StreamDraw);
-		mNormalBuffer.setUsagePattern(QGLBuffer::StreamDraw);
+        mPositionBuffer.setUsagePattern(QGLBuffer::StreamDraw);
+        mNormalBuffer.setUsagePattern(QGLBuffer::StreamDraw);
     }
 
-	ModelInstance::~ModelInstance()
-	{
-		delete [] mTransformedPositions;
-		delete [] mTransformedNormals;
-		delete [] mFullWorld;
-		delete [] mFullTransform;
-	}
+    ModelInstance::~ModelInstance()
+    {
+        delete [] mTransformedPositions;
+        delete [] mTransformedNormals;
+        delete [] mFullWorld;
+        delete [] mFullTransform;
+    }
 
     void ModelInstance::setModel(const SharedModel &model)
     {
-		delete [] mTransformedPositions;
-		mTransformedPositions = 0;
-		delete [] mTransformedNormals;
-		mTransformedNormals = 0;
-		delete [] mFullWorld;
-		mFullWorld = 0;
-		delete [] mFullTransform;
-		mFullTransform = 0;
+        delete [] mTransformedPositions;
+        mTransformedPositions = 0;
+        delete [] mTransformedNormals;
+        mTransformedNormals = 0;
+        delete [] mFullWorld;
+        mFullWorld = 0;
+        delete [] mFullTransform;
+        mFullTransform = 0;
 
         mModel = model;
 
-		mCurrentAnimation = model->animation("item_idle");
+        mCurrentAnimation = model->animation("item_idle");
 
-		if (!mCurrentAnimation) {
-			mCurrentAnimation = model->animation("unarmed_unarmed_idle");
-		}
+        if (!mCurrentAnimation) {
+            mCurrentAnimation = model->animation("unarmed_unarmed_idle");
+        }
 
-		if (mCurrentAnimation) {
-			mTransformedPositions = new Vector4[mModel->vertices];
-			mTransformedNormals = new Vector4[mModel->vertices];
+        if (mCurrentAnimation) {
+            mTransformedPositions = new Vector4[mModel->vertices];
+            mTransformedNormals = new Vector4[mModel->vertices];
 
-			mPositionBuffer.create();
-			mPositionBuffer.bind();
-			mPositionBuffer.allocate(model->positions, sizeof(Vector4) * model->vertices);
+            mPositionBuffer.create();
+            mPositionBuffer.bind();
+            mPositionBuffer.allocate(model->positions, sizeof(Vector4) * model->vertices);
 
-			mNormalBuffer.create();
-			mNormalBuffer.bind();
-			mNormalBuffer.allocate(model->normals, sizeof(Vector4) * model->vertices);
+            mNormalBuffer.create();
+            mNormalBuffer.bind();
+            mNormalBuffer.allocate(model->normals, sizeof(Vector4) * model->vertices);
 
-			mFullWorld = new Matrix4[mModel->bones().size()];
-			mFullTransform = new Matrix4[mModel->bones().size()];
-		}
+            mFullWorld = new Matrix4[mModel->bones().size()];
+            mFullTransform = new Matrix4[mModel->bones().size()];
+        }
     }
 
     void ModelInstance::addMesh(const SharedModel &model)
@@ -212,10 +212,82 @@ namespace EvilTemple {
         if (!model)
             return;
 
+        if (mCurrentAnimation && mCurrentFrameChanged) {
+            const QVector<Bone> &bones = mModel->bones();
+
+            // Create a bone state map for all bones
+            const Animation::BoneMap &animationBones = mCurrentAnimation->animationBones();
+
+            for (int i = 0; i < bones.size(); ++i) {
+                const Bone &bone = bones[i];
+
+                Matrix4 relativeWorld;
+
+                if (animationBones.contains(i)) {
+                    const AnimationBone *animationBone = animationBones[i];
+
+                    relativeWorld = animationBone->getTransform(mCurrentFrame, mCurrentAnimation->frames());
+                } else {
+                    relativeWorld = bone.relativeWorld();
+                }
+
+                // Use relative world and fullWorld of parent to build this bone's full world
+                const Bone *parent = bone.parent();
+
+                if (parent) {
+                    Q_ASSERT(parent->boneId() >= 0 && parent->boneId() < bone.boneId());
+                    mFullWorld[i] = mFullWorld[parent->boneId()] * relativeWorld;
+                } else {
+                    mFullWorld[i] = relativeWorld;
+                }
+
+                mFullTransform[i] = mFullWorld[i] * bone.fullWorldInverse();
+            }
+
+            for (int i = 0; i < mModel->vertices; ++i) {
+                const BoneAttachment &attachment = mModel->attachments[i];
+
+                Q_ASSERT(attachment.count() > 0);
+
+                float weight = attachment.weights()[0];
+                uint boneId = attachment.bones()[0];
+                const Matrix4 &firstTransform = mFullTransform[boneId];
+
+                __m128 factor = _mm_set_ps(weight, - weight, weight, weight);
+
+                Vector4 result = _mm_mul_ps(factor, firstTransform * mModel->positions[i]);
+                Vector4 resultNormal = _mm_mul_ps(factor, firstTransform.mapNormal(mModel->normals[i]));
+
+                for (int k = 1; k < attachment.count(); ++k) {
+                    weight = attachment.weights()[k];
+                    boneId = attachment.bones()[k];
+                    Q_ASSERT(boneId >= 0 && boneId <= mModel->bones().size());
+
+                    const Matrix4 &fullTransform = mFullTransform[boneId];
+
+                    // This flips the z coordinate, since the models are geared towards DirectX
+                    factor = _mm_set_ps(weight, - weight, weight, weight);
+
+                    result += _mm_mul_ps(factor, fullTransform * mModel->positions[i]);
+                    resultNormal += _mm_mul_ps(factor, fullTransform.mapNormal(mModel->normals[i]));
+                }
+
+                mTransformedPositions[i] = result;
+                mTransformedNormals[i] = resultNormal;
+            }
+
+            glBindBuffer(GL_ARRAY_BUFFER, mPositionBuffer.bufferId());
+            glBufferData(GL_ARRAY_BUFFER, sizeof(Vector4) * mModel->vertices, mTransformedPositions, GL_STREAM_DRAW);
+
+            glBindBuffer(GL_ARRAY_BUFFER, mNormalBuffer.bufferId());
+            glBufferData(GL_ARRAY_BUFFER, sizeof(Vector4) * mModel->vertices, mTransformedNormals, GL_STREAM_DRAW);
+            mCurrentFrameChanged = false;
+        }
+
         DrawHelper<ModelDrawStrategy, ModelBufferSource> drawHelper;
         ModelBufferSource bufferSource(mCurrentAnimation ? mPositionBuffer.bufferId() : model->positionBuffer,
-            mCurrentAnimation ? mNormalBuffer.bufferId() : model->normalBuffer,
-            model->texcoordBuffer);
+                                       mCurrentAnimation ? mNormalBuffer.bufferId() : model->normalBuffer,
+                                       model->texcoordBuffer);
 
         for (int faceGroupId = 0; faceGroupId < model->faces; ++faceGroupId) {
             const FaceGroup &faceGroup = model->faceGroups[faceGroupId];
@@ -323,108 +395,27 @@ namespace EvilTemple {
         }
     }
 
-	double updateBones = 0;
-	double updateVertices = 0;
-
     void ModelInstance::elapseTime(float elapsedSeconds)
     {
-		if (!mModel || !mCurrentAnimation)
-			return;
+        if (!mModel || !mCurrentAnimation)
+            return;
 
-		mPartialFrameTime += elapsedSeconds;
-		
-		float timePerFrame = 1 / mCurrentAnimation->frameRate();
+        mPartialFrameTime += elapsedSeconds;
 
-		if (mPartialFrameTime < timePerFrame)
-			return;
+        float timePerFrame = 1 / mCurrentAnimation->frameRate();
 
-		while (mPartialFrameTime >= timePerFrame) {
-			mCurrentFrame++;
+        if (mPartialFrameTime < timePerFrame)
+            return;
 
-			if (mCurrentFrame >= mCurrentAnimation->frames()) {
-				mCurrentFrame = 0;
-			}
-			mPartialFrameTime -= timePerFrame;
-		}
+        while (mPartialFrameTime >= timePerFrame) {
+            mCurrentFrame++;
 
-		LARGE_INTEGER freq, start, end;
-		QueryPerformanceFrequency(&freq);
-		QueryPerformanceCounter(&start);
-
-		const QVector<Bone> &bones = mModel->bones();
-
-		// Create a bone state map for all bones
-		const Animation::BoneMap &animationBones = mCurrentAnimation->animationBones();
-
-		for (int i = 0; i < bones.size(); ++i) {
-			const Bone &bone = bones[i];
-						
-			Matrix4 relativeWorld;
-
-			if (animationBones.contains(i)) {
-				const AnimationBone *animationBone = animationBones[i];
-				
-				relativeWorld = animationBone->getTransform(mCurrentFrame, mCurrentAnimation->frames());
-			} else {
-				relativeWorld = bone.relativeWorld();
-			}
-
-			// Use relative world and fullWorld of parent to build this bone's full world
-			const Bone *parent = bone.parent();
-
-			if (parent) {
-				Q_ASSERT(parent->boneId() >= 0 && parent->boneId() < bone.boneId());
-				mFullWorld[i] = mFullWorld[parent->boneId()] * relativeWorld;
-			} else {
-				mFullWorld[i] = relativeWorld;
-			}
-
-			mFullTransform[i] = mFullWorld[i] * bone.fullWorldInverse();
-		}
-
-		QueryPerformanceCounter(&end);
-
-		updateBones += (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
-
-		QueryPerformanceCounter(&start);
-
-		for (int i = 0; i < mModel->vertices; ++i) {
-			if (mModel->attachments[i].count() == 0)
-				continue;
-
-            Vector4 result(0, 0, 0, 0);
-            Vector4 resultNormal(0, 0, 0, 0);
-
-			const BoneAttachment &attachment = mModel->attachments[i];
-
-			for (int k = 0; k < attachment.count(); ++k) {
-                float weight = attachment.weights()[k];
-				uint boneId = attachment.bones()[k];
-				Q_ASSERT(boneId >= 0 && boneId <= mModel->bones().size());
-
-				const Matrix4 &fullTransform = mFullTransform[boneId];
-
-                result += weight * fullTransform.mapPosition(mModel->positions[i]);
-                resultNormal += weight * fullTransform.mapNormal(mModel->normals[i]);
+            if (mCurrentFrame >= mCurrentAnimation->frames()) {
+                mCurrentFrame = 0;
             }
-
-            resultNormal.data()[2] *= -1;
-            result.data()[2] *= -1;
-            result.data()[3] =  1;
-
-			mTransformedPositions[i] = result;
-			mTransformedNormals[i] = resultNormal;
-		}
-		
-		glBindBuffer(GL_ARRAY_BUFFER, mPositionBuffer.bufferId());
-		glBufferData(GL_ARRAY_BUFFER, sizeof(Vector4) * mModel->vertices, mTransformedPositions, GL_STREAM_DRAW);
-
-		glBindBuffer(GL_ARRAY_BUFFER, mNormalBuffer.bufferId());
-		glBufferData(GL_ARRAY_BUFFER, sizeof(Vector4) * mModel->vertices, mTransformedNormals, GL_STREAM_DRAW);
-		
-		QueryPerformanceCounter(&end);
-
-		updateVertices += (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
+            mCurrentFrameChanged = true;
+            mPartialFrameTime -= timePerFrame;
+        }
     }
     
     const Box3d &ModelInstance::boundingBox()

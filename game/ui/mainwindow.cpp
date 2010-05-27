@@ -142,14 +142,11 @@ namespace EvilTemple {
         emit logMessage(varMessage, varType);
     }
 
-	extern double updateBones;
-	extern double updateVertices;
-
     void MainWindow::updateTitle()
     {
         QPoint centeredOn = d_ptr->gameView->screenCenter();
 
-        QString windowTitle = QString("EvilTemple Bones: %1, Vertices: %2").arg(updateBones).arg(updateVertices);
+        QString windowTitle = QString("Evil Temple");
 
         windowTitle.append(QString(" (Drawn: %1)").arg(d_ptr->gameView->objectsDrawn()));
 
