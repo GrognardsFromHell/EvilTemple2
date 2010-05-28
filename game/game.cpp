@@ -4,16 +4,13 @@
 #include <QFileDialog>
 
 #include "game.h"
-#include "ui/mainwindow.h"
-#include "io/basepathfinder.h"
-#include "camera.h"
+#include "mainwindow.h"
 #include "scriptengine.h"
 
 namespace EvilTemple {
 
     class GameData {
     public:
-        Camera *camera;
         ScriptEngine *scriptEngine;
     };
 
@@ -21,17 +18,6 @@ namespace EvilTemple {
         QObject(parent),
         d_ptr(new GameData)
     {
-        // Set default values for org+app so QSettings uses them everywhere
-        QCoreApplication::setOrganizationName("Sebastian Hartte");
-        QCoreApplication::setOrganizationDomain("toee.hartte.de");
-        QCoreApplication::setApplicationName("EvilTemple");
-
-        d_ptr->camera = new Camera(this);
-        d_ptr->camera->setObjectName("camera");
-
-        // d_ptr->cursors = new Cursors(d_ptr->vfs, this);
-        // d_ptr->cursors->setObjectName("cursors");
-
         d_ptr->scriptEngine = new ScriptEngine(this);
         d_ptr->scriptEngine->setObjectName("scriptEngine");
     }
@@ -40,12 +26,11 @@ namespace EvilTemple {
     }
 
     bool Game::start() {
+        scriptEngine()->loadScripts();
+
+        scriptEngine()->callGlobalFunction("startup");
 
         return true;
-    }
-
-    Camera *Game::camera() const {
-        return d_ptr->camera;
     }
 
     ScriptEngine *Game::scriptEngine() const

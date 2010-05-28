@@ -18,10 +18,24 @@ namespace EvilTemple {
         explicit ScriptEngine(Game *parent = 0);
         ~ScriptEngine();
 
+        /**
+          Loads user scripts from the scripts directory.
+          */
+        bool loadScripts();
+
         QScriptEngine *engine() const;
 
+    public slots:
+        void handleException(const QScriptValue &exception);
+
+        void callGlobalFunction(const QString &name);
+
+        void callGlobalFunction(const QString &name, const QList<QVariant> &arguments);
+
     private:
-        QScopedPointer<ScriptEngineData> d_ptr;
+        void handleUncaughtException();
+
+        QScopedPointer<ScriptEngineData> d;
 
         Q_DISABLE_COPY(ScriptEngine)
     };

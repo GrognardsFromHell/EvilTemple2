@@ -23,4 +23,32 @@ const Matrix4 &Renderable::worldTransform() const
     return mParentNode->fullTransform();
 }
 
+IntersectionResult Renderable::intersect(const Ray3d &ray) const
+{
+    Q_UNUSED(ray);
+    IntersectionResult result;
+    result.intersects = false;
+    return result;
+}
+
+void Renderable::mousePressEvent()
+{
+    emit mousePressed();
+}
+
+void Renderable::mouseReleaseEvent()
+{
+    emit mouseReleased();
+}
+
+void Renderable::mouseEnterEvent()
+{
+    emit mouseEnter();
+}
+
+void Renderable::mouseLeaveEvent()
+{
+    emit mouseLeave();
+}
+
 };

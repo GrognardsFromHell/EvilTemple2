@@ -23,6 +23,12 @@ public:
     SharedMaterialState get(const QString &filename);
 
     /**
+      Loads a material from disk, stores it in the cache and returns it. If the
+      material is already loaded, its retrieved from the cache and returned instead.
+      */
+    SharedMaterialState load(const QString &filename, RenderStates &renderStates);
+
+    /**
       Inserts a texture into the cache.
       */
     void insert(const QString &filename, const SharedMaterialState &texture);

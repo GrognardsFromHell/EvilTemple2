@@ -67,6 +67,8 @@ public:
 
     void attachObject(const SharedRenderable &sharedRenderable);
 
+    const QList<SharedRenderable> &attachedObjects() const;
+
 private:
     void updateFullTransform() const;
     void updateBoundingBox() const;
@@ -206,6 +208,11 @@ inline void SceneNode::setAnimated(bool animated)
 inline void SceneNode::setScene(Scene *scene) 
 {
     mScene = scene;
+}
+
+inline const QList<SharedRenderable> &SceneNode::attachedObjects() const
+{
+    return mAttachedObjects;
 }
 
 }

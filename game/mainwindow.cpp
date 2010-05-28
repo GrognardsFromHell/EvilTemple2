@@ -9,13 +9,11 @@
 #include <QDir>
 #include <QtDeclarative>
 
-#include "ui/mainwindow.h"
-#include "ui/gamegraphicsscene.h"
-#include "ui/gamegraphicsview.h"
-#include "camera.h"
+#include "mainwindow.h"
 #include "game.h"
 #include "savegames.h"
 #include "gameview.h"
+#include "scriptengine.h"
 #include "profilerdialog.h"
 
 // Used to display the memory usage in the title bar
@@ -71,8 +69,8 @@ namespace EvilTemple {
         d_ptr->gameView->setMouseTracking(true);
         setCentralWidget(d_ptr->gameView);
 
-        connect(game.camera(), SIGNAL(positionChanged()), SLOT(updateTitle()));
-
+        QScriptEngine *engine = game.scriptEngine()->engine();
+        engine->globalObject().setProperty("gameView", engine->newQObject(d_ptr->gameView));
 
         // Ensure constant updates
         QTimer *animTimer = new QTimer(this);
@@ -208,7 +206,6 @@ namespace EvilTemple {
             show();
         }
 
-        d_ptr->gameView->showView("interface/Startup.qml");
         //d_ptr->guiView->setSource(QUrl("interface/Startup.qml"));
 
         // TODO: Wait for the loading state here

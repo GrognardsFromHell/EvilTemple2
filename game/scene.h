@@ -29,6 +29,10 @@ public:
     */
     int objectsDrawn() const;
 
+    SceneNode *pickNode(const Ray3d &ray) const;
+
+    SharedRenderable pickRenderable(const Ray3d &ray) const;
+
 private:
     QScopedPointer<SceneData> d;
 };

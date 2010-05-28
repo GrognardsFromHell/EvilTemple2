@@ -84,4 +84,44 @@ int Scene::objectsDrawn() const
     return d->objectsDrawn;
 }
 
+SceneNode *Scene::pickNode(const Ray3d &ray) const
+{
+    SceneNode *picked = NULL;
+
+    for (int i = 0; i < d->sceneNodes.size(); ++i) {
+        const SharedSceneNode &node = d->sceneNodes.at(i);
+
+        Ray3d localRay = node->fullTransform().inverted() * ray;
+
+        if (localRay.intersects(node->boundingBox())) {picked = node.data();
+        }
+    }
+
+    return picked;
+}
+
+SharedRenderable Scene::pickRenderable(const Ray3d &ray) const
+{
+    SharedRenderable picked;
+    float distance = std::numeric_limits<float>::infinity();
+
+    for (int i = 0; i < d->sceneNodes.size(); ++i) {
+        const SharedSceneNode &node = d->sceneNodes.at(i);
+
+        Ray3d localRay = node->fullTransform().inverted() * ray;
+
+        if (localRay.intersects(node->boundingBox())) {
+            foreach (const SharedRenderable &renderable, node->attachedObjects()) {
+                IntersectionResult intersection = renderable->intersect(localRay);
+                if (intersection.intersects && intersection.distance < distance) {
+                    picked = renderable;
+                    distance = intersection.distance;
+                }
+            }
+        }
+    }
+
+    return picked;
+}
+
 };

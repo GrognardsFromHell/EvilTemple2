@@ -1,7 +1,7 @@
 
 #include <GL/glew.h>
 
-#include <QtCore/QTime>
+#include <QtCore/QElapsedTimer>
 #include <QtDeclarative/QtDeclarative>
 #include <QtGui/QResizeEvent>
 
@@ -47,12 +47,18 @@ namespace EvilTemple {
     public:
         GameViewData(GameView *view)
             : q(view), rootItem(0), modelLoaded(0), backgroundMap(renderStates),
-            clippingGeometry(renderStates), particleSystems(renderStates), dragging(false), lightDebugger(renderStates) {
+            clippingGeometry(renderStates), dragging(false), lightDebugger(renderStates) {
+
+            sceneTimer.invalidate();
 
             qDebug("Initializing glew...");
 
             if (glewInit() != GLEW_OK) {
                 qWarning("Unable to initialize GLEW.");
+            }
+
+            if (!particleSystems.loadTemplates()) {
+                qWarning("Unable to load particle system templates: %s.", qPrintable(particleSystems.error()));
             }
 
             // Old: -44
@@ -129,6 +135,7 @@ namespace EvilTemple {
 
                 QSharedPointer<ModelInstance> modelInstance(new ModelInstance());
                 modelInstance->setModel(model);
+                QObject::connect(modelInstance.data(), SIGNAL(mousePressed()), view, SLOT(objectMousePressed()));
 
                 SharedSceneNode node(new SceneNode);
                 node->setPosition(position);
@@ -137,9 +144,6 @@ namespace EvilTemple {
                 scene.addNode(node);
 
                 node->attachObject(modelInstance);
-
-                SharedRenderable bbRenderable(new BoxRenderable);
-                //node->attachObject(bbRenderable);
             }
 
             qDebug("Loading particle systems for map...");
@@ -148,7 +152,7 @@ namespace EvilTemple {
 
             if (!partSys.open(QIODevice::ReadOnly)) {
                 qWarning("Unable to find particle system file.");
-            }                       
+            }
 
             QDataStream partSysStream(&partSys);
             partSysStream.setByteOrder(QDataStream::LittleEndian);
@@ -159,8 +163,14 @@ namespace EvilTemple {
                 QString name;
 
                 partSysStream >> x >> y >> z >> radius >> name;
-				
-				particleSystems.create(name, Vector4(x, y, z, 1));
+
+                SharedSceneNode node(new SceneNode);
+                node->setPosition(Vector4(x, y, z, 1));
+
+                SharedRenderable renderable(particleSystems.instantiate(name));
+                node->attachObject(renderable);
+
+                scene.addNode(node);
             }
 
             qDebug("Loading lighting...");
@@ -208,6 +218,31 @@ namespace EvilTemple {
             renderStates.setViewMatrix(baseViewMatrix * matrix);
         }
 
+        SharedRenderable pickObject(const QPoint &point) {
+            GLint viewport[4];
+            glGetIntegerv(GL_VIEWPORT, viewport);
+
+            float width = viewport[2];
+            float height = viewport[3];
+
+            // Construct a picking ray
+            Vector4 nearPlanePoint(2 * point.x() / width - 1,
+                                       2 * (height - point.y()) / height - 1,
+                                       0,
+                                       1);
+
+            Vector4 farPlanePoint = nearPlanePoint;
+            farPlanePoint.setZ(1);
+
+            Matrix4 matrix = renderStates.viewProjectionMatrix().inverted();
+
+            Vector4 pickingRayOrigin = matrix.mapPosition(nearPlanePoint);
+            Vector4 pickingRayDirection = (matrix.mapPosition(farPlanePoint) - pickingRayOrigin).normalized();
+
+            Ray3d pickingRay(pickingRayOrigin, pickingRayDirection);
+            return scene.pickRenderable(pickingRay);
+        }
+
         QDeclarativeEngine uiEngine;
         QGraphicsScene uiScene;
         QDeclarativeItem* rootItem;
@@ -236,8 +271,7 @@ namespace EvilTemple {
         ParticleSystems particleSystems;
         ParticleSystem *swordParticleSystem;
 
-        QTime animationTimer;
-
+        QElapsedTimer sceneTimer;
         Scene scene;
 
         void resize(int width, int height) {
@@ -280,6 +314,14 @@ namespace EvilTemple {
     {
     }
 
+    void GameView::objectMousePressed()
+    {
+        Renderable *renderable = qobject_cast<Renderable*>(sender());
+
+        SceneNode *parent = renderable->parentNode();
+        qDebug("Pressed mouse on object @ %f,%f,%f", parent->position().x(), parent->position().y(), parent->position().z());
+    }
+
     void GameView::drawBackground(QPainter *painter, const QRectF &rect)
     {
         Q_UNUSED(painter);
@@ -317,30 +359,24 @@ namespace EvilTemple {
 
         d->backgroundMap.render();
 
+        if (!d->sceneTimer.isValid()) {
+            d->sceneTimer.start();
+        } else {
+            qint64 elapsedMs = d->sceneTimer.restart();
+            double elapsedSeconds = elapsedMs / 1000.0;
+
+            Profiler::enter(Profiler::SceneElapseTime);
+            d->model.elapseTime(elapsedSeconds);
+            d->model2.elapseTime(elapsedSeconds);
+            d->scene.elapseTime(elapsedSeconds);
+            Profiler::leave();
+        }
+
         Matrix4 t;
         t.setToIdentity();
         t(0, 3) = 480 * 28.2842703f;
         t(2, 3) = 480 * 28.2842703f;
-		d->renderStates.setWorldMatrix(t * Matrix4::rotation(Quaternion::fromAxisAndAngle(0, 1, 0, deg2rad(-120))));
-
-		float elapsed = 0;
-
-        if (!d->animationTimer.isNull()) {
-            elapsed = d->animationTimer.restart() / 1000.0f;
-        } else {
-            d->animationTimer.start();
-        }
-
-		if (elapsed > 0) {
-            d->swordParticleSystem->setPosition(Vector4(482 * 28.2842703f, 10, 489 * 28.2842703f, 1));
-            d->swordParticleSystem->elapseSeconds(elapsed);
-
-            Profiler::enter(Profiler::SceneElapseTime);
-			d->model.elapseTime(elapsed);
-            d->model2.elapseTime(elapsed);
-            d->scene.elapseTime(elapsed);
-            Profiler::leave();
-		}
+        d->renderStates.setWorldMatrix(t * Matrix4::rotation(Quaternion::fromAxisAndAngle(0, 1, 0, deg2rad(-120))));
 
         d->model.render(d->renderStates);
 
@@ -362,9 +398,6 @@ namespace EvilTemple {
         d->renderStates.setWorldMatrix(d->renderStates.worldMatrix() * flipZ * boneTransform * flipZ);
 
         d->model2.render(d->renderStates);
-        
-        d->swordParticleSystem->setPosition(Vector4(480 * 28.2842703f, 20, 480 * 28.2842703f, 1));
-        d->swordParticleSystem->render(d->renderStates, d->particleSystems.spriteMaterial());
 
         d->renderStates.setWorldMatrix(Matrix4::identity());
 
@@ -440,7 +473,6 @@ namespace EvilTemple {
         if (d->dragging) {
             int diffX = evt->pos().x() - d->lastPoint.x();
             int diffY = evt->pos().y() - d->lastPoint.y();
-            d->lastPoint = evt->pos();
 
             Vector4 diff(diffX, -diffY, 0, 0);
 
@@ -463,6 +495,8 @@ namespace EvilTemple {
             d->renderStates.setViewMatrix(viewMatrix * transform);
             evt->accept();
         }
+
+        d->lastPoint = evt->pos();
     }
 
     void GameView::mousePressEvent(QMouseEvent *evt)
@@ -470,9 +504,16 @@ namespace EvilTemple {
         QGraphicsView::mousePressEvent(evt);
         
         if (!evt->isAccepted()) {
-            d->dragging = true;
-            d->lastPoint = evt->pos();
+            SharedRenderable renderable = d->pickObject(evt->pos());
+
+            if (renderable) {
+                renderable->mousePressEvent();
+            } else {
+                d->dragging = true;
+            }
+
             evt->accept();
+            d->lastPoint = evt->pos();
         }
     }
 

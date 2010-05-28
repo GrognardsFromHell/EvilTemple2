@@ -4,7 +4,85 @@
 #include "scriptengine.h"
 #include "game.h"
 
-namespace EvilTemple {   
+namespace EvilTemple {
+
+    class ScriptEngineData {
+    public:
+        QScriptEngine *engine; // Owned by the parent, not this class
+
+        ScriptEngineData(ScriptEngine *parent, Game *game);
+    };
+
+    ScriptEngine::ScriptEngine(Game *game) :
+            QObject(game), d(new ScriptEngineData(this, game))
+    {
+        connect(d->engine, SIGNAL(signalHandlerException(QScriptValue)), SLOT(handleException(QScriptValue)));
+    }
+
+    ScriptEngine::~ScriptEngine()
+    {
+    }
+
+    void ScriptEngine::handleException(const QScriptValue &exception)
+    {
+        qWarning("Unhandled scripting exception: %s.", qPrintable(exception.toString()));
+    }
+
+    void ScriptEngine::callGlobalFunction(const QString &name)
+    {
+        d->engine->evaluate(name + "()");
+        handleUncaughtException();
+    }
+
+    void ScriptEngine::handleUncaughtException()
+    {
+        if (d->engine->hasUncaughtException()) {
+            qWarning("Uncaught scripting exception: %s", qPrintable(d->engine->uncaughtException().toString()));
+            QStringList backtrace = d->engine->uncaughtExceptionBacktrace();
+            foreach (QString line, backtrace) {
+                qWarning("    %s", qPrintable(line));
+            }
+        }
+    }
+
+    void ScriptEngine::callGlobalFunction(const QString &name, const QList<QVariant> &arguments)
+    {
+    }
+
+    QScriptEngine *ScriptEngine::engine() const
+    {
+        return d->engine;
+    }
+
+    bool ScriptEngine::loadScripts()
+    {
+        QDir scriptDir("data/scripts");
+
+        QStringList scriptFileNames = scriptDir.entryList(QStringList() << "*.js",
+                                                          QDir::Files|QDir::Readable,
+                                                          QDir::Name);
+
+        foreach (QString scriptFileName, scriptFileNames) {
+            qDebug("Loading script file %s.", qPrintable(scriptFileName));
+
+            QFile scriptFile(scriptDir.absoluteFilePath(scriptFileName));
+
+            if (!scriptFile.open(QIODevice::ReadOnly|QIODevice::Text)) {
+                qWarning("Unable to read script file %s: %s", qPrintable(scriptFile.fileName()),
+                         qPrintable(scriptFile.errorString()));
+                continue;
+            }
+
+            QString scriptCode(scriptFile.readAll());
+            scriptFile.close();
+
+            d->engine->evaluate(scriptCode, scriptFileName);
+
+            handleUncaughtException();
+        }
+
+        return true;
+    }
 
     QVector2DClass::QVector2DClass(QScriptEngine *engine) : QObject(engine), QScriptClass(engine)
     {
@@ -141,41 +219,23 @@ namespace EvilTemple {
      void gameFromScriptValue(const QScriptValue &object, Game* &out)
      { out = qobject_cast<Game*>(object.toQObject()); }
 
-    class ScriptEngineData {
-    public:
-        QScriptEngine *engine; // Owned by the parent, not this class
+     ScriptEngineData::ScriptEngineData(ScriptEngine *parent, Game *game)
+     {
+        engine = new QScriptEngine(parent);
 
-        ScriptEngineData(ScriptEngine *parent, Game *game) {
-            engine = new QScriptEngine(parent);
+        QScriptValue global = engine->globalObject();
 
-            QScriptValue global = engine->globalObject();
+        // Expose default objects
+        QScriptValue gameObject = engine->newQObject(game);
+        global.setProperty("game", gameObject);
 
-            // Expose default objects
-            QScriptValue gameObject = engine->newQObject(game);
-            global.setProperty("game", gameObject);
+        // Register conversion functions for frequently used data types
+        QVector2DClass *qv2Class = new QVector2DClass(engine);
+        global.setProperty("QVector2D", qv2Class->constructor());
 
-            // Register conversion functions for frequently used data types
-            QVector2DClass *qv2Class = new QVector2DClass(engine);
-            global.setProperty("QVector2D", qv2Class->constructor());
-
-            // Some standard meta types used as arguments throughout the code
-            qRegisterMetaType<EvilTemple::Game*>("Game*");
-            qScriptRegisterMetaType(engine, gameToScriptValue, gameFromScriptValue);
-        }
-    };
-
-    ScriptEngine::ScriptEngine(Game *parent) :
-            QObject(parent), d_ptr(new ScriptEngineData(this, parent))
-    {
-    }
-
-    ScriptEngine::~ScriptEngine()
-    {
-    }
-
-    QScriptEngine *ScriptEngine::engine() const
-    {
-        return d_ptr->engine;
+        // Some standard meta types used as arguments throughout the code
+        qRegisterMetaType<EvilTemple::Game*>("Game*");
+        qScriptRegisterMetaType(engine, gameToScriptValue, gameFromScriptValue);
     }
 
 }

@@ -17,11 +17,8 @@ include(../3rdparty/game-math/game-math.pri)
 DEFINES += GAME_LIBRARY
 
 SOURCES += \
-    ui/mainwindow.cpp \
-    ui/gamegraphicsscene.cpp \
+    mainwindow.cpp \
     game.cpp \
-    ui/gamegraphicsview.cpp \
-    camera.cpp \
     scriptengine.cpp \
     datafileengine.cpp \
     material.cpp \
@@ -48,13 +45,9 @@ SOURCES += \
     profiler.cpp \
     profilerdialog.cpp
 HEADERS += \
-    ui/mainwindow.h \
-    ui/gamegraphicsscene.h \
+    mainwindow.h \
     game.h \
     stable.h \
-    io/basepathfinder.h \
-    ui/gamegraphicsview.h \
-    camera.h \
     util.h \
     scriptengine.h \
     datafileengine.h \
@@ -84,18 +77,14 @@ HEADERS += \
     drawhelper.h \
     profiler.h \
     profilerdialog.h
-OTHER_FILES += materialfile.xsd \
-    map_material.xml \
+OTHER_FILES += map_material.xml \
     clipping_material.xml
 
 INCLUDEPATH += .
 
 PRECOMPILED_HEADER = stable.h
 
-# Win32 specific code
-win32:SOURCES += io/basepathfinder_win32.cpp
-else:SOURCES += io/basepathfinder.cpp
-win32:LIBS += -ladvapi32 -lpsapi
+win32:LIBS += -lpsapi
 
 include(../base.pri)
 

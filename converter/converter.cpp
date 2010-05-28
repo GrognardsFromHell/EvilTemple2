@@ -25,6 +25,7 @@
 #include "material.h"
 #include "exclusions.h"
 #include "mapconverter.h"
+#include "prototypeconverter.h"
 
 #include "util.h"
 #include "converter.h"

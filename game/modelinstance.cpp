@@ -430,4 +430,110 @@ namespace EvilTemple {
         return mParentNode->fullTransform();
     }
 
+    /**
+      Intersects the ray with a triangle.
+
+      This algorithm is equivalent to the algorithm presented in Realtime Rendering p.750
+      as RayTriIntersect.
+
+      @param uOut If not null, this pointer receives the barycentric weight of
+                    p1 for the point of intersection. But only if there is an intersection.
+      @param vOut If not null, this pointer receives the barycentric weight of
+                    p2 for the point of intersection. But only if there is an intersection.
+
+      @returns True if the ray shoots through the triangle.
+      */
+    inline bool intersectRay(const Ray3d &ray,
+                           const Vector4 &p0,
+                           const Vector4 &p1,
+                           const Vector4 &p2,
+                           float &distance,
+                           float *uOut = 0,
+                           float *vOut = 0) {
+
+        Vector4 e1 = p1 - p0;
+        Vector4 e2 = p2 - p0;
+
+        Vector4 q = ray.direction().cross(e2);
+        float determinant = e1.dot(q);
+
+        /**
+          If the determinant is close to zero, the ray lies in the plane of the triangle and thus
+          is very unlikely to intersect it.
+          */
+        if (qFuzzyIsNull(determinant))
+            return false;
+
+        float invertedDeterminant = 1 / determinant;
+
+        // Distance from vertex 0 to ray origin
+        Vector4 s = ray.origin() - p0;
+
+        // Calculate the first barycentric coordinate
+        float u = invertedDeterminant * s.dot(q);
+
+        if (u < 0)
+            return false; // Definetly outside the triangle
+
+        Vector4 r = s.cross(e1);
+
+        // Calcaulate the second barycentric coordinate
+        float v = invertedDeterminant * ray.direction().dot(r);
+
+        if (v < 0 || u + v > 1)
+            return false; // Definetly outside the triangle
+
+        // Store u + v for further use
+        if (uOut)
+            *uOut = u;
+        if (vOut)
+            *vOut = v;
+
+        // Calculate the exact point of intersection and then the distance to the ray's origin
+        Vector4 point = (1 - u - v) * p0 + u * p1 + v * p2;
+        distance = (ray.origin() - point).length();
+        return true;
+    }
+
+    /*
+        Intersects the given ray with this models geometry
+     */
+    IntersectionResult ModelInstance::intersect(const Ray3d &ray) const
+    {
+        IntersectionResult result;
+        result.intersects = false;
+        result.distance = std::numeric_limits<float>::infinity();
+
+        if (!mModel || !mCurrentAnimation) {
+            result.intersects = false;
+            return result;
+        }
+
+        // Do it per-face
+        for (int i = 0; i < mModel->faces; ++i) {
+            const FaceGroup &group = mModel->faceGroups[i];
+
+            glBindBuffer(GL_ARRAY_BUFFER, group.buffer);
+            ushort *indices = (ushort*)glMapBuffer(GL_ARRAY_BUFFER, GL_READ_ONLY);
+
+            for (int j = 0; j < group.elementCount; j += 3) {
+                const Vector4 &va = mTransformedPositions[indices[j]];
+                const Vector4 &vb = mTransformedPositions[indices[j+1]];
+                const Vector4 &vc = mTransformedPositions[indices[j+2]];
+
+                float distance;
+                if (intersectRay(ray, va, vb, vc, distance) && distance < result.distance) {
+                    result.distance = distance;
+                    result.intersects = true;
+                }
+            }
+
+            glUnmapBuffer(GL_ARRAY_BUFFER);
+        }
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+        return result;
+    }
+
 }

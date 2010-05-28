@@ -23,7 +23,6 @@ public:
     explicit Game(QObject *parent = 0);
     ~Game();
 
-    Camera *camera() const;
     ScriptEngine *scriptEngine() const;
 
 signals:

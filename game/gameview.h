@@ -17,11 +17,11 @@ public:
 
     QDeclarativeEngine *uiEngine();
 
-    void showView(const QString &url);
-
 signals:
 
 public slots:
+
+    void showView(const QString &url);
 
     void centerOnWorld(float worldX, float worldY);
 
@@ -29,15 +29,18 @@ public slots:
 
     int objectsDrawn() const;
 
+    void objectMousePressed();
+
 protected:
     void resizeEvent(QResizeEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
     void mousePressEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
 
-private:
-    QScopedPointer<GameViewData> d;
     void drawBackground(QPainter *painter, const QRectF &rect);
+
+private:
+    QScopedPointer<GameViewData> d;    
 
 };
 

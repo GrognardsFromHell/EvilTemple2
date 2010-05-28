@@ -1,6 +1,6 @@
 #include <QScopedPointer>
 
-#include "io/basepathfinder.h"
+#include "basepathfinder.h"
 
 // Make SURE it's unicode based
 #if !defined(UNICODE)

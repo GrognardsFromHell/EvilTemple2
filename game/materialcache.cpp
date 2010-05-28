@@ -1,6 +1,8 @@
 
 #include "materialcache.h"
 
+#include <QFile>
+
 namespace EvilTemple {
 
 class GlobalMaterialCacheCleanupThread : public QThread
@@ -80,6 +82,26 @@ void GlobalMaterialCache::insert(const QString &filename, const SharedMaterialSt
     QMutexLocker locker(&mCleanupMutex);
 
     mMaterials[filename] = QWeakPointer<MaterialState>(texture);
+}
+
+SharedMaterialState GlobalMaterialCache::load(const QString &filename, RenderStates &renderStates)
+{
+    QMutexLocker locker(&mCleanupMutex);
+
+    if (mMaterials.contains(filename)) {
+        return mMaterials[filename];
+    } else {
+        SharedMaterialState material(new MaterialState);
+
+        if (!material->createFromFile(filename, renderStates, FileTextureSource::instance())) {
+            qWarning("Unable to open material file %s: %s", qPrintable(filename),
+                     qPrintable(material->error()));
+        }
+
+        mMaterials[filename] = material;
+
+        return material;
+    }
 }
 
 GlobalMaterialCache GlobalMaterialCache::mInstance;
