@@ -179,8 +179,7 @@ namespace Troika
             // Create the geometry mesh object and add it to the zone template.
             GeometryObject *meshObject = new GeometryObject(QVector3D(x, y, z),
                                                             QQuaternion::fromAxisAndAngle(0, 1, 0, rotation),
-                                                            geometryMeshFiles[fileIndex].modelFilename);
-            meshObject->staticObject = false;
+                                                            geometryMeshFiles[fileIndex].modelFilename);            
             zoneTemplate->addStaticGeometry(meshObject);
         }
 
@@ -309,7 +308,6 @@ namespace Troika
             // TODO: Zone templates need to store not only the runtime version, but rather a prototype reference
             // zoneTemplate->addStaticGeometry(reader.createMeshObject(models));
             GeometryObject *object = reader.createObject(meshMapping);
-            object->staticObject = true;
             zoneTemplate->addStaticGeometry(object);
 
             stream >> header;

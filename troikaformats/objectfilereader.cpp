@@ -19,28 +19,6 @@ namespace Troika
     const quint16 ObjectGuidEmbedded = 0; // Guid should be null
     const quint16 ObjectGuidMobile = 2; // Standard mobile guid
 
-    enum ObjectType
-    {
-        Portal = 0,
-        Container,
-        Scenery,
-        Projectile,
-        Weapon,
-        Ammo,
-        Armor,
-        Money,
-        Food,
-        Scroll,
-        Key,
-        Written,
-        Generic,
-        PlayerCharacter,
-        NonPlayerCharacter,
-        Trap,
-        Bag,
-        ObjectTypeCount
-    };
-
     // The length of the property bitfield for each object type in byte
     static int PropertyBlockSize[ObjectTypeCount] = {
         16, // Portal
@@ -201,9 +179,12 @@ namespace Troika
             prototype = prototypes->get(prototypeId);
             if (prototype)
             {
-                if (prototype->hasRotation)
-                    rotation = prototype->rotation(); // This is already in degrees
-                scale = prototype->scale();
+                if (prototype->rotation.isDefined())
+                    rotation = prototype->rotation.value(); // This is already in degrees
+                if (prototype->scale.isDefined())
+                    scale = prototype->scale.value();
+                else
+                    scale = 1;
             }
 
             stream.skipRawData(3 * sizeof(quint32));
@@ -698,14 +679,7 @@ namespace Troika
             GeometryObject *obj = new GeometryObject(position,
                                                      QQuaternion::fromAxisAndAngle(0, 1, 0, rad2deg(rotation + LegacyBaseRotation)),
                                                      QVector3D(scale, scale, scale),
-                                                     meshMapping[prototype->modelId()]);
-
-            obj->staticObject = true;
-            if (prototype) {
-                obj->rotationFromPrototype = prototype->hasRotation;
-            }
-            obj->customRotation = customRotation;
-
+                                                     meshMapping[prototype->modelId]);
             return obj;
         }
     };

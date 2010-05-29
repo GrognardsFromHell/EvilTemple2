@@ -147,9 +147,7 @@ public:
                             << getNewModelFilename(object->mesh()) << SPACE
                             << object->rotation().x() << SPACE << object->rotation().y() << SPACE << object->rotation().z() << SPACE
                             << object->rotation().scalar() << SPACE
-                            << object->scale().x() << SPACE << object->scale().y() << SPACE << object->scale().z() << SPACE
-                            << object->staticObject << SPACE << object->rotationFromPrototype << SPACE << object->customRotation
-                            << endl;
+                            << object->scale().x() << SPACE << object->scale().y() << SPACE << object->scale().z() << endl;
 
                     MeshReference &reference = meshReferences[QDir::toNativeSeparators(object->mesh()).toLower()];
                     reference.source |= MeshReference::StaticGeometry;
@@ -983,6 +981,26 @@ public:
         return true;
     }
 
+    /**
+      Converts scripts and global definition files.
+      */
+    void convertScripts()
+    {
+        ZipWriter writer(mOutputPath + "scripts.zip");
+
+        convertPrototypes(&writer);
+
+        writer.close();
+    }
+
+    void convertPrototypes(ZipWriter *writer)
+    {
+        PrototypeConverter converter;
+        QDomDocument document = converter.convertPrototypes(prototypes.data());
+
+        writer->addFile("prototypes.xml", document.toByteArray(), 9);
+    }
+
     bool convert()
     {
         if (!openInput()) {
@@ -999,9 +1017,9 @@ public:
 		
         convertModels();               
 
-        convertInterface();               
+        convertInterface();
 
-        printEventTypes();
+        convertScripts();
 
         return true;
     }
