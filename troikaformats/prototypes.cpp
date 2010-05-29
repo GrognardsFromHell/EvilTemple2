@@ -235,7 +235,7 @@ namespace Troika
     }
 
     void Prototype::parse(const QStringList &parts)
-    {
+    {        
         bool ok;
 
         Q_ASSERT(isPartDefined(parts[1]));
@@ -358,11 +358,13 @@ namespace Troika
 
     void PortalProperties::parse(const QStringList &parts)
     {
-
+        ScriptProperties::parse(parts);
     }
 
     void ContainerProperties::parse(const QStringList &parts)
     {
+        ScriptProperties::parse(parts);
+
         locked = parts[41].trimmed() == "OCOF_LOCKED";
 
         optionalPart(parts, 42, lockDc);
@@ -385,12 +387,14 @@ namespace Troika
 
     void SceneryProperties::parse(const QStringList &parts)
     {
+        ScriptProperties::parse(parts);
+
         readFlagList(parts, 46, flags, convertSceneryFlag);
     }
 
     void ProjectileProperties::parse(const QStringList &parts)
     {
-
+        ScriptProperties::parse(parts);
     }
 
     inline QString convertWeaponFlag(const QString &weaponFlag)
@@ -562,7 +566,7 @@ namespace Troika
             foreach (QString faction, factionStrings) {
                 bool ok;
                 factions.append(faction.toUInt(&ok));
-                Q_ASSERT(ok, "read faction", qPrintable(parts[154]));
+                Q_ASSERT_X(ok, "read faction", qPrintable(parts[154]));
             }
         }
 
@@ -587,6 +591,8 @@ namespace Troika
 
         if (isPartDefined(parts[165]))
             lootShareAmount = parts[165];
+
+        optionalPart(parts, 311, additionalMeshId);
     }
 
     void TrapProperties::parse(const QStringList &parts)
@@ -647,6 +653,8 @@ namespace Troika
 
     void ItemProperties::parse(const QStringList &parts)
     {
+        EntityProperties::parse(parts);
+
         readFlagList(parts, 50, flags, convertItemFlag);
         optionalPart(parts, 51, weight);
         optionalPart(parts, 52, worth);
@@ -682,6 +690,8 @@ namespace Troika
 
     void CritterProperties::parse(const QStringList &parts)
     {
+        EntityProperties::parse(parts);
+
         readFlagList(parts, 99, flags, convertCritterFlag);
         bool ok;
         strength = parts[101].toInt(&ok);
@@ -729,6 +739,159 @@ namespace Troika
 
         hairColor = parts[148];
         hairType = parts[149];
+
+        // Read class levels (up to 5 classes)
+        for (int i = 228; i < 228 + 5 * 2; i += 2) {
+            if (!isPartDefined(parts[i]))
+                continue;
+
+            ClassLevel level;
+            level.name = parts[i];
+            level.count = parts[i+1].toUInt(&ok);
+
+            Q_ASSERT_X(ok && level.count >= 1, "CritterProperties::parse", qPrintable(parts[i+1]));
+        }
+
+        // Read skills (up to 10)
+        for (int i = 238; i < 238 + 10 * 2; i += 2) {
+            if (!isPartDefined(parts[i]))
+                continue;
+
+            SkillLevel level;
+            level.name = parts[i];
+            level.count = parts[i+1].toInt(&ok);
+
+            Q_ASSERT_X(ok, "CritterProperties::parse", qPrintable(parts[i+1]));
+        }
+
+        // Read feats (up to 10)
+        for (int i = 258; i < 268; ++i) {
+            if (!isPartDefined(parts[i]))
+                continue;
+
+            feats.append(parts[i]);
+        }
+
+        if (isPartDefined(parts[332]))
+            levelUpScheme = parts[332];
+
+        if (isPartDefined(parts[333]))
+            strategy = parts[333];
+    }
+
+    void EntityProperties::parse(const QStringList &parts)
+    {
+        ScriptProperties::parse(parts);
+
+        // There are up to 20 additional properties per entry
+        for (int i = 168; i < 168 + 20 * 3; i += 3) {
+            if (!isPartDefined(parts[i]))
+                continue;
+
+            AdditionalProperty property;
+            property.type = parts[i];
+            if (isPartDefined(parts[i+1]))
+                property.param1 = parts[i+1];
+            if (isPartDefined(parts[i+2]))
+                property.param1 = parts[i+2];
+
+            properties.append(property);
+        }
+
+        // Up to 20 spells
+        for (int i = 312; i < 332; ++i) {
+            if (!isPartDefined(parts[i]))
+                continue;
+
+            // Try parsing the spell definition
+            // It's: '........' \\w+ \\d+
+            QRegExp spellPattern("\\s*'(.*)'\\s+(\\w+)\\s+(\\d+)\\s*");
+            bool exactMatch = spellPattern.exactMatch(parts[i]);
+            Q_ASSERT_X(exactMatch, "EntityProperties::match", qPrintable(parts[i]));
+
+            bool ok;
+            KnownSpell knownSpell;
+            knownSpell.name = spellPattern.cap(1);
+            knownSpell.source = spellPattern.cap(2);
+            knownSpell.level = spellPattern.cap(3).toUInt(&ok);
+            Q_ASSERT_X(ok, "EntityProperties::match (level)", qPrintable(parts[i]));
+            spells.append(knownSpell);
+        }
+    }
+
+    static const uint eventCount = 43;
+
+    static const QString eventNames[eventCount] = {
+        "OnExamine",
+        "OnUse",
+        "OnDestroy",
+        "OnUnlock",
+        "OnGet",
+        "OnDrop",
+        "OnThrow",
+        "OnHit",
+        "OnMiss",
+        "OnDialog",
+        "OnFirstHeartbeat",
+        "OnCatchingThief",
+        "OnDying",
+        "OnEnterCombat",
+        "OnExitCombat",
+        "OnStartCombat",
+        "OnEndCombat",
+        "OnBuyObject",
+        "OnResurrect",
+        "OnHeartbeat",
+        "OnLeaderKilling",
+        "OnInsertItem",
+        "OnWillKos",
+        "OnTakingDamage",
+        "OnWieldOn",
+        "OnWieldOff",
+        "OnCritterHits",
+        "OnNewSector",
+        "OnRemoveItem",
+        "OnLeaderSleeping",
+        "OnBust",
+        "OnDialogOverride",
+        "OnTransfer",
+        "OnCaughtThief",
+        "OnCriticalHit",
+        "OnCriticalMiss",
+        "OnJoin",
+        "OnDisband",
+        "OnNewMap",
+        "OnTrap",
+        "OnTrueSeeing",
+        "OnSpellCast",
+        "OnUnlockAttempt"
+    };
+
+    void ScriptProperties::parse(const QStringList &parts)
+    {
+        for (int i = 0; i < eventCount; ++i) {
+            if (!isPartDefined(parts[268 + i]))
+                continue;
+
+            QString scriptPart = parts[268 + i];
+
+            QRegExp scriptPattern("\\s*(\\d+)\\s+(\\d+)\\s+0\\s+0\\s+0\\s*");
+
+            bool exactMatch = scriptPattern.exactMatch(scriptPart);
+            Q_ASSERT_X(exactMatch, "ScriptProperties::parse", qPrintable(scriptPart));
+
+            ScriptAttachment script;
+            script.event = eventNames[i];
+            bool ok;
+            script.scriptId = scriptPattern.cap(1).toUInt(&ok);
+            Q_ASSERT_X(ok, "ScriptProperties::parse", qPrintable(scriptPart));
+            if (scriptPattern.cap(2) != "0") {
+                script.parameter.setValue(scriptPattern.cap(2).toUInt(&ok));
+                Q_ASSERT_X(ok, "ScriptProperties::parse", qPrintable(scriptPart));
+            }
+
+            scripts.append(script);
+        }
     }
 
     const QMap<uint, Prototype*> &Prototypes::prototypes() const

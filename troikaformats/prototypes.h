@@ -55,11 +55,29 @@ namespace Troika
         ObjectTypeCount
     };
 
-    class TROIKAFORMATS_EXPORT PortalProperties : public QObject
+    class TROIKAFORMATS_EXPORT ScriptAttachment {
+    public:
+        QString event; // The event to which this script is attached
+        uint scriptId; // The id of the attached script
+        Integer parameter; // This additional parameter is only used by traps
+    };
+
+    class TROIKAFORMATS_EXPORT ScriptProperties : public QObject
     {
     Q_OBJECT
     public:
-        PortalProperties(QObject *parent) : QObject(parent) {}
+        ScriptProperties(QObject *parent) : QObject(parent) {}
+
+        void parse(const QStringList &parts);
+
+        QList<ScriptAttachment> scripts;
+    };
+
+    class TROIKAFORMATS_EXPORT PortalProperties : public ScriptProperties
+    {
+    Q_OBJECT
+    public:
+        PortalProperties(QObject *parent) : ScriptProperties(parent) {}
 
         void parse(const QStringList &parts);
 
@@ -72,11 +90,11 @@ namespace Troika
         Integer notifyNpc; // 40
     };
 
-    class TROIKAFORMATS_EXPORT ContainerProperties : public QObject
+    class TROIKAFORMATS_EXPORT ContainerProperties : public ScriptProperties
     {
     Q_OBJECT
     public:
-        ContainerProperties(QObject *parent) : QObject(parent) {}
+        ContainerProperties(QObject *parent) : ScriptProperties(parent) {}
 
         void parse(const QStringList &parts);
 
@@ -87,11 +105,11 @@ namespace Troika
         Integer notifyNpc; // 45, Seems unused
     };
 
-    class TROIKAFORMATS_EXPORT SceneryProperties : public QObject
+    class TROIKAFORMATS_EXPORT SceneryProperties : public ScriptProperties
     {
     Q_OBJECT
     public:
-        SceneryProperties(QObject *parent) : QObject(parent) {}
+        SceneryProperties(QObject *parent) : ScriptProperties(parent) {}
 
         void parse(const QStringList &parts);
 
@@ -99,11 +117,11 @@ namespace Troika
         Integer respawnDelay; // 47, Seems unused
     };
 
-    class TROIKAFORMATS_EXPORT ProjectileProperties : public QObject
+    class TROIKAFORMATS_EXPORT ProjectileProperties : public ScriptProperties
     {
     Q_OBJECT
     public:
-        ProjectileProperties(QObject *parent) : QObject(parent) {}
+        ProjectileProperties(QObject *parent) : ScriptProperties(parent) {}
 
         void parse(const QStringList &parts);
 
@@ -111,11 +129,42 @@ namespace Troika
         QStringList dmgFlags; // 49, Unused
     };
 
-    class TROIKAFORMATS_EXPORT ItemProperties : public QObject
+    class TROIKAFORMATS_EXPORT AdditionalProperty
+    {
+    public:
+        QString type;
+        QString param1;
+        QString param2;
+    };
+
+    /**
+      Represents a spell known by a critter or imbued in an item or weapon.
+      */
+    class TROIKAFORMATS_EXPORT KnownSpell
+    {
+    public:
+        QString name;
+        QString source; // Class, or "domain_special" for instance
+        uint level; // Spell level
+    };
+
+    class TROIKAFORMATS_EXPORT EntityProperties : public ScriptProperties
     {
     Q_OBJECT
     public:
-        ItemProperties(QObject *parent) : QObject(parent) {}
+        EntityProperties(QObject *parent) : ScriptProperties(parent) {}
+
+        void parse(const QStringList &parts);
+
+        QList<AdditionalProperty> properties;
+        QList<KnownSpell> spells;
+    };
+
+    class TROIKAFORMATS_EXPORT ItemProperties : public EntityProperties
+    {
+    Q_OBJECT
+    public:
+        ItemProperties(QObject *parent) : EntityProperties(parent) {}
 
         void parse(const QStringList &parts);
 
@@ -268,11 +317,23 @@ namespace Troika
         int attackBonus;
     };
 
-    class TROIKAFORMATS_EXPORT CritterProperties : public QObject
+    class TROIKAFORMATS_EXPORT ClassLevel {
+    public:
+        QString name;
+        uint count; // min: 1
+    };
+
+    class TROIKAFORMATS_EXPORT SkillLevel {
+    public:
+        QString name;
+        int count;
+    };
+
+    class TROIKAFORMATS_EXPORT CritterProperties : public EntityProperties
     {
     Q_OBJECT
     public:
-        CritterProperties(QObject *parent) : QObject(parent) {}
+        CritterProperties(QObject *parent) : EntityProperties(parent) {}
 
         void parse(const QStringList &parts);
 
@@ -295,6 +356,13 @@ namespace Troika
         QList<NaturalAttack> naturalAttacks; // at most 4 different ones
         QString hairColor;
         QString hairType;
+
+        QList<ClassLevel> classLevels;
+        QList<SkillLevel> skills;
+        QStringList feats;
+
+        QString levelUpScheme; // Defines auto-leveling stuff (which feats to take, etc.)
+        QString strategy; // Which AI is used in auto fighting situations
     };
 
     class TROIKAFORMATS_EXPORT NonPlayerCharacterProperties : public CritterProperties
@@ -319,6 +387,7 @@ namespace Troika
         QString type;
         QString subType;
         QString lootShareAmount;
+        Integer additionalMeshId; // An addmesh that should always be present (used for bugbear equipment)
     };
 
     class TROIKAFORMATS_EXPORT PlayerCharacterProperties : public NonPlayerCharacterProperties
