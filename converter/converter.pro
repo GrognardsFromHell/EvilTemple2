@@ -28,7 +28,8 @@ HEADERS += \
     exclusions.h \
     mapconverter.h \
     basepathfinder.h \
-    prototypeconverter.h
+    prototypeconverter.h \
+    stable.h
 
 win32:SOURCES += basepathfinder_win32.cpp
 else:SOURCES += basepathfinder.cpp
@@ -45,3 +46,5 @@ OTHER_FILES += exclusions.txt \
     material_template.xml \
     shadow_caster.txt \
     particlefiles.txt
+
+PRECOMPILED_HEADER = stable.h

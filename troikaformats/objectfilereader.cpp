@@ -124,6 +124,406 @@ namespace Troika
         NpcStandpoints = 391,
     };
 
+    static const QString ObjectFlagNames[32] = {
+        "Destroyed",
+        "Off",
+        "Flat",
+        "Text",
+        "SeeThrough",
+        "ShootThrough",
+        "Translucent",
+        "Shrunk",
+        "DontDraw",
+        "Invisible",
+        "NoBlock",
+        "ClickThrough",
+        "Inventory",
+        "Dynamic",
+        "ProvidesCover",
+        "RandomSize",
+        "NoHeight",
+        "Wading",
+        "Unknown18",
+        "Stoned",
+        "DontLight",
+        "TextFloater",
+        "Invulnerable",
+        "Extinct",
+        "TrapPc",
+        "TrapSpotted",
+        "DisallowWading",
+        "Unknown27",
+        "", // HeightSet
+        "AnimatedDead",
+        "Teleported",
+        "" // RadiusSet
+    };
+
+    static const QString SceneryFlagNames[32] = {
+        "NoAutoAnimate",
+        "Busted",
+        "Nocturnal",
+        "MarksTownmap",
+        "IsFire",
+        "Respawnable",
+        "SoundSmall",
+        "SoundMedium",
+        "SoundExtraLarge",
+        "UnderAll",
+        "Respawning",
+        "TaggedScenery",
+        "UseOpenWorldmap",
+        "Unknown13",
+        "Unknown14",
+        "Unknown15",
+        "Unknown16",
+        "Unknown17",
+        "Unknown18",
+        "Unknown19",
+        "Unknown20",
+        "Unknown21",
+        "Unknown22",
+        "Unknown23",
+        "Unknown24",
+        "Unknown25",
+        "Unknown26",
+        "Unknown27",
+        "Unknown28",
+        "Unknown29",
+        "Unknown30",
+        "Unknown31"
+    };
+
+    static const QString ContainerFlagNames[32] = {
+        "Unknown0",
+        "Unknown1",
+        "Unknown2",
+        "Unknown3",
+        "Unknown4",
+        "Unknown5",
+        "Unknown6",
+        "Unknown7",
+        "Unknown8",
+        "Unknown9",
+        "Unknown10",
+        "Unknown11",
+        "Unknown12",
+        "Unknown13",
+        "Unknown14",
+        "Unknown15",
+        "Unknown16",
+        "Unknown17",
+        "Unknown18",
+        "Unknown19",
+        "Unknown20",
+        "Unknown21",
+        "Unknown22",
+        "Unknown23",
+        "Unknown24",
+        "Unknown25",
+        "Unknown26",
+        "Unknown27",
+        "Unknown28",
+        "Unknown29",
+        "Unknown30",
+        "Unknown31"
+    };
+
+    static const QString PortalFlagNames[32] = {
+        "Unknown0",
+        "Unknown1",
+        "Unknown2",
+        "Unknown3",
+        "Unknown4",
+        "Unknown5",
+        "Unknown6",
+        "Unknown7",
+        "Unknown8",
+        "Unknown9",
+        "Unknown10",
+        "Unknown11",
+        "Unknown12",
+        "Unknown13",
+        "Unknown14",
+        "Unknown15",
+        "Unknown16",
+        "Unknown17",
+        "Unknown18",
+        "Unknown19",
+        "Unknown20",
+        "Unknown21",
+        "Unknown22",
+        "Unknown23",
+        "Unknown24",
+        "Unknown25",
+        "Unknown26",
+        "Unknown27",
+        "Unknown28",
+        "Unknown29",
+        "Unknown30",
+        "Unknown31"
+    };
+
+    static const QString SecretDoorFlagNames[32] = {
+        "Unknown0",
+        "Unknown1",
+        "Unknown2",
+        "Unknown3",
+        "Unknown4",
+        "Unknown5",
+        "Unknown6",
+        "Unknown7",
+        "Unknown8",
+        "Unknown9",
+        "Unknown10",
+        "Unknown11",
+        "Unknown12",
+        "Unknown13",
+        "Unknown14",
+        "Unknown15",
+        "Unknown16",
+        "Unknown17",
+        "Unknown18",
+        "Unknown19",
+        "Unknown20",
+        "Unknown21",
+        "Unknown22",
+        "Unknown23",
+        "Unknown24",
+        "Unknown25",
+        "Unknown26",
+        "Unknown27",
+        "Unknown28",
+        "Unknown29",
+        "Unknown30",
+        "Unknown31"
+    };
+
+    static const QString ItemFlagNames[32] = {
+        "Unknown0",
+        "Unknown1",
+        "Unknown2",
+        "Unknown3",
+        "Unknown4",
+        "Unknown5",
+        "Unknown6",
+        "Unknown7",
+        "Unknown8",
+        "Unknown9",
+        "Unknown10",
+        "Unknown11",
+        "Unknown12",
+        "Unknown13",
+        "Unknown14",
+        "Unknown15",
+        "Unknown16",
+        "Unknown17",
+        "Unknown18",
+        "Unknown19",
+        "Unknown20",
+        "Unknown21",
+        "Unknown22",
+        "Unknown23",
+        "Unknown24",
+        "Unknown25",
+        "Unknown26",
+        "Unknown27",
+        "Unknown28",
+        "Unknown29",
+        "Unknown30",
+        "Unknown31"
+    };
+
+    static const QString WeaponFlagNames[32] = {
+        "Unknown0",
+        "Unknown1",
+        "Unknown2",
+        "Unknown3",
+        "Unknown4",
+        "Unknown5",
+        "Unknown6",
+        "Unknown7",
+        "Unknown8",
+        "Unknown9",
+        "Unknown10",
+        "Unknown11",
+        "Unknown12",
+        "Unknown13",
+        "Unknown14",
+        "Unknown15",
+        "Unknown16",
+        "Unknown17",
+        "Unknown18",
+        "Unknown19",
+        "Unknown20",
+        "Unknown21",
+        "Unknown22",
+        "Unknown23",
+        "Unknown24",
+        "Unknown25",
+        "Unknown26",
+        "Unknown27",
+        "Unknown28",
+        "Unknown29",
+        "Unknown30",
+        "Unknown31"
+    };
+
+    static const QString ArmorFlagNames[32] = {
+        "Unknown0",
+        "Unknown1",
+        "Unknown2",
+        "Unknown3",
+        "Unknown4",
+        "Unknown5",
+        "Unknown6",
+        "Unknown7",
+        "Unknown8",
+        "Unknown9",
+        "Unknown10",
+        "Unknown11",
+        "Unknown12",
+        "Unknown13",
+        "Unknown14",
+        "Unknown15",
+        "Unknown16",
+        "Unknown17",
+        "Unknown18",
+        "Unknown19",
+        "Unknown20",
+        "Unknown21",
+        "Unknown22",
+        "Unknown23",
+        "Unknown24",
+        "Unknown25",
+        "Unknown26",
+        "Unknown27",
+        "Unknown28",
+        "Unknown29",
+        "Unknown30",
+        "Unknown31"
+    };
+
+
+    static const QString CritterFlagNames[32] = {
+        "Unknown0",
+        "Unknown1",
+        "Unknown2",
+        "Unknown3",
+        "Unknown4",
+        "Unknown5",
+        "Unknown6",
+        "Unknown7",
+        "Unknown8",
+        "Unknown9",
+        "Unknown10",
+        "Unknown11",
+        "Unknown12",
+        "Unknown13",
+        "Unknown14",
+        "Unknown15",
+        "Unknown16",
+        "Unknown17",
+        "Unknown18",
+        "Unknown19",
+        "Unknown20",
+        "Unknown21",
+        "Unknown22",
+        "Unknown23",
+        "Unknown24",
+        "Unknown25",
+        "Unknown26",
+        "Unknown27",
+        "Unknown28",
+        "Unknown29",
+        "Unknown30",
+        "Unknown31"
+    };
+
+    static const QString CritterFlagNames2[32] = {
+        "Unknown0",
+        "Unknown1",
+        "Unknown2",
+        "Unknown3",
+        "Unknown4",
+        "Unknown5",
+        "Unknown6",
+        "Unknown7",
+        "Unknown8",
+        "Unknown9",
+        "Unknown10",
+        "Unknown11",
+        "Unknown12",
+        "Unknown13",
+        "Unknown14",
+        "Unknown15",
+        "Unknown16",
+        "Unknown17",
+        "Unknown18",
+        "Unknown19",
+        "Unknown20",
+        "Unknown21",
+        "Unknown22",
+        "Unknown23",
+        "Unknown24",
+        "Unknown25",
+        "Unknown26",
+        "Unknown27",
+        "Unknown28",
+        "Unknown29",
+        "Unknown30",
+        "Unknown31"
+    };
+
+    static const QString NpcFlagNames[32] = {
+        "Unknown0",
+        "Unknown1",
+        "Unknown2",
+        "Unknown3",
+        "Unknown4",
+        "Unknown5",
+        "Unknown6",
+        "Unknown7",
+        "Unknown8",
+        "Unknown9",
+        "Unknown10",
+        "Unknown11",
+        "Unknown12",
+        "Unknown13",
+        "Unknown14",
+        "Unknown15",
+        "Unknown16",
+        "Unknown17",
+        "Unknown18",
+        "Unknown19",
+        "Unknown20",
+        "Unknown21",
+        "Unknown22",
+        "Unknown23",
+        "Unknown24",
+        "Unknown25",
+        "Unknown26",
+        "Unknown27",
+        "Unknown28",
+        "Unknown29",
+        "Unknown30",
+        "Unknown31"
+    };
+
+    GameObject::GameObject() : prototype(0), position(0, 0, 0, 1)
+    {
+
+    }
+
+    template<typename T>
+    inline QDataStream &operator >>(QDataStream &stream, Property<T> &property)
+    {
+        T value;
+        stream >> value;
+        property.setValue(value);
+        return stream;
+    }
+
     class ObjectFileReaderData
     {
     public:
@@ -131,22 +531,10 @@ namespace Troika
         QDataStream &stream;
         QString errorMessage;
 
-        quint32 prototypeId;
-        QUuid guid;
-        ObjectType objectType;
-        Prototype *prototype;
-        QVector3D position;
-
-        bool customRotation;
-
-        float scale;
-        float rotation; // Degrees
+        GameObject object;
 
         ObjectFileReaderData(QDataStream &_stream) : stream(_stream)
         {
-            scale = 1.f;
-            customRotation = false;
-            rotation = 0;
         }
 
         /**
@@ -175,17 +563,10 @@ namespace Troika
 
             stream.skipRawData(6); // Unknown short+int
 
+            uint prototypeId;
             stream >> prototypeId;
-            prototype = prototypes->get(prototypeId);
-            if (prototype)
-            {
-                if (prototype->rotation.isDefined())
-                    rotation = prototype->rotation.value(); // This is already in degrees
-                if (prototype->scale.isDefined())
-                    scale = prototype->scale.value();
-                else
-                    scale = 1;
-            }
+            object.prototype = prototypes->get(prototypeId);
+            Q_ASSERT_X(object.prototype, "ObjectFileReader::read", qPrintable(QString("%1").arg(prototypeId)));
 
             stream.skipRawData(3 * sizeof(quint32));
 
@@ -194,7 +575,9 @@ namespace Troika
 
             quint32 objectTypeInt;
             stream >> objectTypeInt;
-            objectType = (ObjectType)objectTypeInt;
+            object.objectType = (ObjectType)objectTypeInt;
+
+            Q_ASSERT(object.prototype->type == object.objectType);
 
             stream.skipRawData(sizeof(quint16)); // Unused, Some form of property count
 
@@ -221,7 +604,10 @@ namespace Troika
 
             stream.skipRawData(6); // Unknown bytes
 
+            QUuid guid;
             stream >> guid;
+            if (guidType == ObjectGuidMobile)
+                object.id = guid.toString();
 
             return true;
         }
@@ -231,7 +617,7 @@ namespace Troika
           */
         bool readPropertyBlocks()
         {
-            int blockSize = PropertyBlockSize[objectType];
+            int blockSize = PropertyBlockSize[object.objectType];
 
             QByteArray propertyBlock(blockSize, Qt::Uninitialized);
             stream.readRawData(propertyBlock.data(), blockSize);
@@ -259,6 +645,16 @@ namespace Troika
             return true;
         }
 
+        void convertFlags(const QString *flagNames, uint flags, QStringList &flagList)
+        {
+            for (int i = 0; i < 32; ++i) {
+                bool set = ((flags >> i) & 1) == 1;
+                if (set && !flagNames[i].isEmpty()) {
+                    flagList.append(flagNames[i]);
+                }
+            }
+        }
+
         /**
           Reads a single optional property from the object file.
           */
@@ -266,6 +662,8 @@ namespace Troika
         {
             quint32 x, y, ui32;
             float posOffset;
+            QUuid guid;
+            uint flags;
 
             switch (property)
             {
@@ -273,78 +671,94 @@ namespace Troika
                 stream.skipRawData(1); // Unused
                 stream >> x >> y;
 
-                position.setX((x + .5f) * PixelPerWorldTile);
-                position.setZ((y + .5f) * PixelPerWorldTile);
-
-                /*reader.ReadByte(); // Unused
-                var x = reader.ReadUInt32(); // X
-                var y = reader.ReadUInt32(); // Y
-                mobile.Position += new Vector3((x + 0.5f)*GraphicsEngine.PixelPerTile,
-                                               (y + 0.5f)*GraphicsEngine.PixelPerTile, mobile.Position.Z);*/
-                //Console.WriteLine("Location: {0},{1}", x, y);
+                object.position.setX((x + .5f) * PixelPerWorldTile);
+                object.position.setZ((y + .5f) * PixelPerWorldTile);
                 break;
             case Scale:
                 stream >> ui32;
-                scale = ui32 / 100.f;
+                object.scale.setValue(ui32);
+                if (object.scale == object.prototype->scale)
+                    object.scale.clear();
                 break;
             case OffsetX:
                 stream >> posOffset;
-                position.setX(position.x() + posOffset);
-                // mobile.Position += new Vector3(reader.ReadSingle(), 0, 0);
+                object.position.setX(object.position.x() + posOffset);
                 break;
             case OffsetY:
                 stream >> posOffset;
-                position.setZ(position.z() + posOffset);
-                // mobile.Position += new Vector3(0, reader.ReadSingle(), 0);
+                object.position.setZ(object.position.z() + posOffset);
                 break;
             case OffsetZ:
                 stream >> posOffset;
-                position.setY(position.y() + posOffset);
-                // mobile.Position += new Vector3(0, 0, reader.ReadSingle());
+                object.position.setY(object.position.y() + posOffset);
                 break;
             case Name:
-                stream.skipRawData(4); // Index of some sort
+                stream >> object.name;
                 break;
             case SceneryFlags:
-                stream.skipRawData(4);
+                stream >> flags;
+                convertFlags(SceneryFlagNames, flags, object.sceneryFlags);
+                if (object.sceneryFlags == object.prototype->sceneryProperties->flags)
+                    object.sceneryFlags.clear();
                 break;
             case Description:
-                stream.skipRawData(4);
+                stream >> object.descriptionId;
+                if (object.descriptionId.value() == object.prototype->descriptionId)
+                    object.descriptionId.clear();
                 break;
             case SecretDoorFlags:
-                stream.skipRawData(4);
+                stream >> flags;
+                convertFlags(SecretDoorFlagNames, flags, object.secretDoorFlags);
                 break;
             case PortalFlags:
-                stream.skipRawData(4);
+                stream >> flags;
+                convertFlags(PortalFlagNames, flags, object.portalFlags);
+                if (object.portalFlags == object.prototype->portalProperties->flags)
+                    object.portalFlags.clear();
                 break;
             case SecretDoorDc:
-                stream.skipRawData(4);
+                stream >> object.secretDoorDc;
                 break;
             case PortalLockDc:
-                stream.skipRawData(4);
+                stream >> object.portalLockDc;
+                if (object.portalLockDc == object.prototype->portalProperties->lockDc)
+                    object.portalLockDc.clear();
                 break;
             case PortalKeyId:
-                stream.skipRawData(4);
+                stream >> object.portalKeyId;
+                if (object.portalKeyId == object.prototype->portalProperties->keyId)
+                    object.portalKeyId.clear();
                 break;
             case Flags:
-                stream.skipRawData(4);
-                //Console.WriteLine("Flags: {0}", flags);
+                stream >> flags;
+                convertFlags(ObjectFlagNames, flags, object.flags);
+                if (object.flags == object.prototype->objectFlags)
+                    object.flags.clear();
                 break;
             case Radius:
-                stream.skipRawData(4); // Float
-                //Console.WriteLine("Radius: {0}", radius);
+                stream >> object.radius;
+                // the first object that is encountered sets the prototype's radius
+                if (!object.prototype->radius.isDefined())
+                    object.prototype->radius.setValue(object.radius.value());
+                if (object.radius == object.prototype->radius)
+                    object.radius.clear();
                 break;
             case RenderHeight3d:
-                stream.skipRawData(4); // Float
-                //Console.WriteLine("Radius: {0}", renderHeight);
+                stream >> object.renderHeight;
+                // the first object that is encountered sets the prototype's render height
+                if (!object.prototype->renderHeight.isDefined())
+                    object.prototype->renderHeight.setValue(object.renderHeight.value());
+                if (object.renderHeight == object.prototype->renderHeight)
+                    object.renderHeight.clear();
                 break;
             case SceneryTeleportTo:
-                stream.skipRawData(4); // Teleport target
-                //Console.WriteLine("Teleport Target: {0}", teleportTarget);
+                stream >> object.teleportTarget;
                 break;
             case Rotation:
-                stream >> rotation;
-                customRotation = true;
+                stream >> object.rotation;
+                object.rotation.setValue(rad2deg(LegacyBaseRotation + object.rotation.value()));
+                if (object.rotation == object.prototype->rotation)
+                    object.rotation.clear();
                 break;
             case Unknown1:
                 stream.skipRawData(4);
@@ -354,43 +768,41 @@ namespace Troika
                 skipPropertyArray();
                 break;
             case ItemParent:
-                stream.skipRawData(1 + 8 + 16);
-                // reader.ReadByte(); // GUID Type?
-                // reader.ReadBytes(8); // Unknown/Unused, Probably same as in guid above
-                // var guid = new Guid(reader.ReadBytes(16));
+                stream.skipRawData(1 + 8);
+                stream >> guid;
+                object.parentItemId = guid.toString();
                 break;
             case NpcSubstituteInventory:
-                stream.skipRawData(1 + 8 + 16);
-                // reader.ReadByte(); // GUID Type?
-                // reader.ReadBytes(8); // Unknown/Unused, Probably same as in guid above
-                // var guid2 = new Guid(reader.ReadBytes(16));
+                stream.skipRawData(1 + 8);
+                stream >> guid;
+                object.substituteInventoryId = guid.toString();
                 break;
             case ItemInventoryLocation:
-                stream.skipRawData(4);
-                // reader.ReadUInt32();
+                stream >> object.itemInventoryLocation;
                 break;
             case Conditions:
                 skipPropertyArray(); // Further structure unknown
                 break;
             case HpPts:
-                stream.skipRawData(4);
-                //reader.ReadUInt32();
+                stream >> object.hitPoints;
+                if (object.hitPoints == object.prototype->hitPoints)
+                    object.hitPoints.clear();
                 break;
             case HpDamage:
-                stream.skipRawData(4);
-                //reader.ReadUInt32();
+                stream >> object.hitPointsDamage;
                 break;
             case HpAdj:
-                stream.skipRawData(4);
-                //reader.ReadUInt32();
+                stream >> object.hitPointsAdjustment;
                 break;
             case SpeedWalk:
-                stream.skipRawData(4);
-                // reader.ReadSingle();
+                stream >> object.walkSpeedFactor;
+                if (object.walkSpeedFactor == object.prototype->walkSpeedFactor)
+                    object.walkSpeedFactor.clear();
                 break;
             case SpeedRun:
-                stream.skipRawData(4);
-                // reader.ReadSingle();
+                stream >> object.runSpeedFactor;
+                if (object.runSpeedFactor == object.prototype->runSpeedFactor)
+                    object.runSpeedFactor.clear();
                 break;
             case ConditionsArg0:
                 skipPropertyArray();
@@ -399,152 +811,123 @@ namespace Troika
                 skipPropertyArray();
                 break;
             case Dispatcher:
-                stream.skipRawData(4);
-                // reader.ReadUInt32();
+                stream >> object.dispatcher;
                 break;
             case SecretDoorEffectName:
-                stream.skipRawData(4);
-                // reader.ReadUInt32();
+                stream >> object.secretDoorEffect; // Hashed particle system name?
                 break;
             case PermanentModData:
                 skipPropertyArray();
                 break;
             case PortalNotifyNpc:
-                stream.skipRawData(4);
-                //reader.ReadUInt32();
+                stream >> object.notifyNpc;
                 break;
             case ContainerFlags:
-                stream.skipRawData(4);
-                //reader.ReadUInt32();
+                stream >> flags;
+                convertFlags(ContainerFlagNames, flags, object.containerFlags);
                 break;
             case ContainerLockDc:
-                stream.skipRawData(4);
-                //reader.ReadUInt32();
+                stream >> object.containerLockDc;
                 break;
             case ContainerKeyId:
-                stream.skipRawData(4);
-                // reader.ReadUInt32();
+                stream >> object.containerKeyId;
                 break;
             case ContainerInventoryNum:
-                stream.skipRawData(4);
-                // reader.ReadUInt32();
+                stream >> object.containerInventoryId;
                 break;
             case ContainerInventoryListIndex:
-                stream.skipRawData(4);
-                // reader.ReadUInt32();
+                stream >> object.containerInventoryListIndex;
                 break;
             case ContainerInventorySource:
-                stream.skipRawData(4);
-                // reader.ReadUInt32();
+                stream >> object.containerInventorySource;
                 break;
             case ItemFlags:
-                stream.skipRawData(4);
-                // reader.ReadUInt32();
+                stream >> flags;
+                convertFlags(ItemFlagNames, flags, object.itemFlags);
                 break;
             case ItemWeight:
-                stream.skipRawData(4);
-                // reader.ReadUInt32();
+                stream >> object.itemWeight;
                 break;
             case ItemWorth:
-                stream.skipRawData(4);
-                // reader.ReadUInt32();
+                stream >> object.itemWorth;
                 break;
             case ItemQuantity:
-                stream.skipRawData(4);
-                // reader.ReadUInt32();
+                stream >> object.itemQuantity;
                 break;
             case WeaponFlags:
-                stream.skipRawData(4);
-                // reader.ReadUInt32();
+                stream >> flags;
+                convertFlags(WeaponFlagNames, flags, object.weaponFlags);
                 break;
             case AmmoQuantity:
-                stream.skipRawData(4);
-                // reader.ReadUInt32();
+                stream >> object.ammoQuantity;
                 break;
             case ArmorFlags:
-                stream.skipRawData(4);
-                // reader.ReadUInt32();
+                stream >> flags;
+                convertFlags(ArmorFlagNames, flags, object.armorFlags);
                 break;
             case ArmoryACAdjustment:
-                stream.skipRawData(4);
-                // reader.ReadInt32();
+                stream >> object.armorAcAdjustment;
                 break;
             case ArmorMaxDexBonus:
-                stream.skipRawData(4);
-                // reader.ReadInt32();
+                stream >> object.armorMaxDexBonus;
                 break;
             case ArmorArmorCheckPenalty:
-                stream.skipRawData(4);
-                // reader.ReadInt32();
+                stream >> object.armorCheckPenalty;
                 break;
             case MoneyQuantity:
-                stream.skipRawData(4);
-                // reader.ReadUInt32();
+                stream >> object.moneyQuantity;
                 break;
             case KeyKeyId:
-                stream.skipRawData(4);
-                // reader.ReadUInt32();
+                stream >> object.keyId;
                 break;
             case CritterFlags:
-                stream.skipRawData(4);
-                // reader.ReadUInt32();
+                stream >> flags;
+                convertFlags(CritterFlagNames, flags, object.critterFlags);
                 break;
             case CritterFlags2:
-                stream.skipRawData(4);
-                // reader.ReadUInt32();
+                stream >> flags;
+                convertFlags(CritterFlagNames2, flags, object.critterFlags2);
                 break;
             case CritterRace:
-                stream.skipRawData(4);
-                //reader.ReadUInt32();
+                stream >> object.critterRace;
                 break;
             case CritterGender:
-                stream.skipRawData(4);
-                // reader.ReadUInt32();
+                stream >> object.critterGender;
                 break;
             case CritterMoneyIndex:
-                stream.skipRawData(4);
-                //reader.ReadUInt32();
+                stream >> object.critterMoneyIndex;
                 break;
             case CritterInventoryNum:
-                stream.skipRawData(4);
-                //reader.ReadUInt32();
+                stream >> object.critterInventoryNum;
                 break;
             case CritterInventorySource:
-                stream.skipRawData(4);
-                //reader.ReadUInt32();
+                stream >> object.critterInventorySource;
                 break;
             case CritterTeleportDestination:
-                stream.skipRawData(1 + 4 + 4);
-                //reader.ReadByte();
-                //reader.ReadInt32(); // x
-                //reader.ReadInt32(); // y
+                stream >> object.critterTeleportTo.unknown >> object.critterTeleportTo.x >> object.critterTeleportTo.y;
+                object.critterTeleportTo.defined = true;
                 break;
             case CritterTeleportMap:
-                stream.skipRawData(4);
-                //reader.ReadUInt32();
+                stream >> object.critterTeleportMap;
                 break;
             case CritterReach:
-                stream.skipRawData(4);
-                //reader.ReadUInt32();
+                stream >> object.critterReach;
                 break;
             case CritterLevelUpScheme:
-                stream.skipRawData(4);
-                //reader.ReadUInt32();
+                stream >> object.critterLevelUpScheme;
                 break;
             case NpcFlags:
-                stream.skipRawData(4);
-                //reader.ReadUInt32();
+                stream >> flags;
+                convertFlags(NpcFlagNames, flags, object.npcFlags);
                 break;
             case NpcStandpointDayInternal:
                 stream.skipRawData(9);
                 break;
             case NpcStandpointNightInternal:
                 stream.skipRawData(9);
-                // reader.ReadBytes(9);
                 break;
             case BlitAlpha:
-                stream.skipRawData(4);
-                // reader.ReadUInt32();
+                stream >> object.blitAlpha;
                 break;
             case NpcWaypoints:
                 // LoadWaypoints(reader);
@@ -572,12 +955,10 @@ namespace Troika
                 skipPropertyArray();
                 break;
             case NpcGeneratorData:
-                stream.skipRawData(4);
-                // reader.ReadUInt32(); // This information is packed.
+                stream >> object.npcGeneratorData; // This information is packed.
                 break;
             case CritterAlignment:
-                stream.skipRawData(4);
-                // reader.ReadUInt32(); // Format unknown
+                stream >> object.critterAlignment; // Format unknown
                 break;
             case ItemPadWielderArgumentArray:
                 skipPropertyArray();
@@ -676,11 +1057,11 @@ namespace Troika
             result->setScale(QVector3D(scale, scale, scale));
             result->setModelSource(new LegacyModelSource(models, prototype->modelId()));*/
 
-            GeometryObject *obj = new GeometryObject(position,
+            /*GeometryObject *obj = new GeometryObject(object.position,
                                                      QQuaternion::fromAxisAndAngle(0, 1, 0, rad2deg(rotation + LegacyBaseRotation)),
                                                      QVector3D(scale, scale, scale),
-                                                     meshMapping[prototype->modelId]);
-            return obj;
+                                                     meshMapping[prototype->modelId]);*/
+            return NULL;
         }
     };
 
@@ -710,6 +1091,11 @@ namespace Troika
     GeometryObject *ObjectFileReader::createObject(QHash<uint,QString> meshMapping)
     {
         return d_ptr->createMeshObject(meshMapping);
+    }
+
+    const GameObject &ObjectFileReader::getObject()
+    {
+        return d_ptr->object;
     }
 
 }

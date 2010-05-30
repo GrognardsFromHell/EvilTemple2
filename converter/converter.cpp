@@ -157,7 +157,9 @@ public:
 
                 writer.addFile(zoneTemplate->directory() + "staticGeometry.txt", objectPosData, 9);
 
-				convertLighting(zoneTemplate.data(), &writer);
+                convertStaticObjects(zoneTemplate.data(), &writer);
+
+                convertLighting(zoneTemplate.data(), &writer);
 
                 convertClippingMeshes(zoneTemplate.data(), &writer);
 
@@ -170,6 +172,103 @@ public:
         writer.close();
 
         return true;
+    }
+
+    void convertStaticObjects(ZoneTemplate *zoneTemplate, ZipWriter *writer)
+    {
+        QHash<uint,QString> descriptions = MessageFile::parse(vfs->openFile("mes/description.mes"));
+
+        QByteArray data;
+        QXmlStreamWriter xml(&data);
+        xml.setAutoFormatting(true);
+
+        xml.writeStartDocument("1.0");
+
+        xml.writeStartElement("objects");
+
+        QList<GameObject> objects;
+        objects.append(zoneTemplate->staticObjects());
+        objects.append(zoneTemplate->mobiles());
+
+        foreach (const GameObject &object, objects) {
+            if (object.descriptionId.isDefined())
+                xml.writeComment(descriptions[object.descriptionId.value()]);
+            else if (object.prototype->descriptionId)
+                xml.writeComment(descriptions[object.prototype->descriptionId]);
+
+            xml.writeStartElement("object");
+
+            if (!object.id.isNull())
+                xml.writeAttribute("id", object.id);
+
+            xml.writeAttribute("prototype", QString("%1").arg(object.prototype->id));
+
+            xml.writeEmptyElement("position");
+            xml.writeAttribute("x", QString("%1").arg(object.position.x()));
+            xml.writeAttribute("y", QString("%1").arg(object.position.y()));
+            xml.writeAttribute("z", QString("%1").arg(object.position.z()));
+
+            PropertyWriter props(xml);
+            props.write("name", object.name);
+            props.write("flags", object.flags);
+            props.write("scale", object.scale);
+            props.write("rotation", object.rotation);
+            props.write("radius", object.radius);
+            props.write("height", object.renderHeight);
+            props.write("sceneryFlags", object.sceneryFlags);
+            props.write("descriptionId", object.descriptionId);
+            props.write("secretDoorFlags", object.secretDoorFlags);
+            props.write("portalFlags", object.portalFlags);
+            props.write("portalLockDc", object.portalLockDc);
+            props.write("teleportTarget", object.teleportTarget);
+            props.write("parentItemId", object.parentItemId);
+            props.write("substituteInventoryId", object.substituteInventoryId);
+            props.write("itemInventoryLocation", object.itemInventoryLocation);
+            props.write("hitPoints", object.hitPoints);
+            props.write("hitPointsAdjustment", object.hitPointsAdjustment);
+            props.write("hitPointsDamage", object.hitPointsDamage);
+            props.write("walkSpeedFactor", object.walkSpeedFactor);
+            props.write("runSpeedFactor", object.runSpeedFactor);
+            props.write("dispatcher", object.dispatcher);
+            props.write("secretDoorEffect", object.secretDoorEffect);
+            props.write("notifyNpc", object.notifyNpc);
+            props.write("containerFlags", object.containerFlags);
+            props.write("containerLockDc", object.containerLockDc);
+            props.write("containerKeyId", object.containerKeyId);
+            props.write("containerInventoryId", object.containerInventoryId);
+            props.write("containerInventoryListIndex", object.containerInventoryListIndex);
+            props.write("containerInventorySource", object.containerInventorySource);
+            props.write("itemFlags", object.itemFlags);
+            props.write("itemWeight", object.itemWeight);
+            props.write("itemWorth", object.itemWorth);
+            props.write("itemQuantity", object.itemQuantity);
+            props.write("weaponFlags", object.weaponFlags);
+            props.write("ammoQuantity", object.ammoQuantity);
+            props.write("armorFlags", object.armorFlags);
+            props.write("armorAcAdjustment", object.armorAcAdjustment);
+            props.write("armorMaxDexBonus", object.armorMaxDexBonus);
+            props.write("armorCheckPenalty", object.armorCheckPenalty);
+            props.write("moneyQuantity", object.moneyQuantity);
+            props.write("keyId", object.keyId);
+            props.write("critterFlags", object.critterFlags);
+            props.write("critterFlags2", object.critterFlags2);
+            props.write("critterRace", object.critterRace);
+            props.write("critterGender", object.critterGender);
+            props.write("critterMoneyIndex", object.critterMoneyIndex);
+            props.write("critterInventoryNum", object.critterInventoryNum);
+            props.write("critterInventorySource", object.critterInventorySource);
+            props.write("npcFlags", object.npcFlags);
+
+            xml.writeEndElement();
+
+            xml.writeCharacters("\n\n    "); // For better readability
+        }
+
+        xml.writeEndElement();
+
+        xml.writeEndDocument();
+
+        writer->addFile(zoneTemplate->directory() + "staticObjects.xml", data, 9);
     }
 
 	void convertLighting(ZoneTemplate *zoneTemplate, ZipWriter *writer)
@@ -995,10 +1094,16 @@ public:
 
     void convertPrototypes(ZipWriter *writer)
     {
-        PrototypeConverter converter;
-        QDomDocument document = converter.convertPrototypes(prototypes.data());
+        PrototypeConverter converter(vfs.data());
 
-        writer->addFile("prototypes.xml", document.toByteArray(), 9);
+        QByteArray result;
+        QXmlStreamWriter xml(&result);
+        xml.setAutoFormatting(true);
+        xml.setAutoFormattingIndent(4);
+
+        converter.convertPrototypes(prototypes.data(), xml);
+
+        writer->addFile("prototypes.xml", result, 9);
     }
 
     bool convert()
@@ -1011,15 +1116,15 @@ public:
             qFatal("Unable to create output directory %s.", qPrintable(mOutputPath));
         }
 
+        convertScripts();
+
         convertParticleSystems();
 
         convertMaps();
 		
         convertModels();               
 
-        convertInterface();
-
-        convertScripts();
+        convertInterface();        
 
         return true;
     }

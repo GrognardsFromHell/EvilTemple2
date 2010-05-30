@@ -272,6 +272,9 @@ namespace Troika
             categoryId.setValue(categoryId.value() + type * 1000);
 
         optionalPart(parts, 31, rotation);
+        if (rotation.isDefined()) {
+            rotation.setValue(rad2deg(LegacyBaseRotation + rotation.value()));
+        }
 
         optionalPart(parts, 32, walkSpeedFactor);
 

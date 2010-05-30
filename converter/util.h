@@ -1,8 +1,11 @@
 #ifndef UTIL_H
 #define UTIL_H
 
+#include "prototypes.h"
+
 #include <QString>
 #include <QRegExp>
+#include <QXmlStreamWriter>
 
 inline QString &mangleMaterialName(QString &materialName)
 {
@@ -59,5 +62,53 @@ inline QString getNewTextureFilename(const QString &mdfFilename) {
     }
     return newFilename;
 }
+
+class PropertyWriter {
+public:
+    PropertyWriter(QXmlStreamWriter &xml) : mXml(xml)
+    {
+    }
+
+    void write(const QString &name, const QString &text) {
+        if (text.isEmpty())
+            return;
+
+        mXml.writeTextElement(name, text);
+    }
+
+    void write(const QString &name, float value) {
+        write(name, QString("%1").arg(value));
+    }
+
+    void write(const QString &name, int value) {
+        write(name, QString("%1").arg(value));
+    }
+
+    void write(const QString &name, uint value) {
+        write(name, QString("%1").arg(value));
+    }
+
+    template<typename T>
+    void write(const QString &name, Troika::Property<T> value) {
+        if (value.isDefined())
+            write(name, QString("%1").arg(value.value()));
+    }
+
+    void write(const QString &name, const QStringList &flagList) {
+        if (flagList.isEmpty())
+            return;
+
+        mXml.writeStartElement(name);
+
+        foreach (const QString &flag, flagList) {
+            mXml.writeEmptyElement(flag);
+        }
+
+        mXml.writeEndElement();
+    }
+
+private:
+    QXmlStreamWriter &mXml;
+};
 
 #endif // UTIL_H

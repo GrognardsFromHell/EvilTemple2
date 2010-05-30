@@ -1,4 +1,7 @@
 
+#include <gamemath.h>
+using namespace GameMath;
+
 #include <QQuaternion>
 
 #include "dagreader.h"
@@ -11,9 +14,6 @@
 #include "zonebackgroundmap.h"
 #include "model.h"
 #include "util.h"
-
-#define GAMEMATH_NO_MEMORY_OPERATORS
-#include <gamemath.h>
 
 namespace Troika
 {
@@ -45,6 +45,7 @@ namespace Troika
                 && readGeometryMeshFiles()
                 && readGeometryMeshInstances()
                 && readSectors()
+                && readMobiles()
                 && readClippingMeshFiles()
                 && readClippingMeshInstances()
 				&& readGlobalLight();
@@ -198,6 +199,36 @@ namespace Troika
         return true;
     }
 
+    bool ZoneTemplateReader::readMobiles()
+    {
+        QStringList mobFiles = vfs->listFiles(mapDirectory, "*.mob");
+
+        foreach (QString mobFile, mobFiles)
+        {
+            readMobile(mobFile);
+        }
+
+        return true;
+    }
+
+    bool ZoneTemplateReader::readMobile(const QString &filename)
+    {
+        QByteArray data = vfs->openFile(filename);
+        QDataStream stream(data);
+        stream.setByteOrder(QDataStream::LittleEndian);
+        stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
+
+        ObjectFileReader reader(prototypes, stream);
+
+        if (!reader.read(false)) {
+            qWarning("Unable to read mobile file: %s", qPrintable(filename));
+        }
+
+        zoneTemplate->addMobile(reader.getObject());
+
+        return true;
+    }
+
     bool ZoneTemplateReader::readSector(const QString &filename)
     {
         QByteArray data = vfs->openFile(filename);
@@ -305,10 +336,7 @@ namespace Troika
                 return false;
             }
 
-            // TODO: Zone templates need to store not only the runtime version, but rather a prototype reference
-            // zoneTemplate->addStaticGeometry(reader.createMeshObject(models));
-            GeometryObject *object = reader.createObject(meshMapping);
-            zoneTemplate->addStaticGeometry(object);
+            zoneTemplate->addStaticObject(reader.getObject());
 
             stream >> header;
         }
@@ -432,6 +460,7 @@ namespace Troika
 		}
 
 		zoneTemplate->setGlobalLight(globalLight);
+                return true;
 	}
 
 }

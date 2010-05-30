@@ -212,6 +212,8 @@ namespace Troika
           */
         AnimationStream *openStream(const Skeleton *skeleton) const;
 
+        void freeStream(AnimationStream *stream) const;
+
     private:
         QString _name;
         DriveType _driveType;

@@ -1,3 +1,6 @@
 [submodule "3rdparty/game-math"]
 	path = 3rdparty/game-math
 	url = git://gitorious.org/game-math/game-math.git
+[submodule "3rdparty/qjson"]
+	path = 3rdparty/qjson
+	url = git://gitorious.org/qjson/qjson.git

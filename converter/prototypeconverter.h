@@ -2,14 +2,27 @@
 #define PROTOTYPECONVERTER_H
 
 #include "prototypes.h"
+#include "virtualfilesystem.h"
 
-#include <QDomDocument>
+#include <QXmlStreamWriter>
+#include <QHash>
 
 class PrototypeConverter
 {
 public:
 
-    QDomDocument convertPrototypes(Troika::Prototypes *prototypes);
+    PrototypeConverter(Troika::VirtualFileSystem *vfs);
+
+    void convertPrototypes(Troika::Prototypes *prototypes, QXmlStreamWriter &xml);
+
+    void convertPrototype(Troika::Prototype *prototype, QXmlStreamWriter &xml);
+
+private:
+
+    QHash<uint, QString> mInternalDescriptions;
+    QHash<uint, QString> mDescriptions;
+
+    Troika::VirtualFileSystem *mVfs;
 
 };
 

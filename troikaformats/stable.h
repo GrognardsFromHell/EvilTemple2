@@ -3,8 +3,8 @@
   This is the precompiled header.
  */
 
-#define GAMEMATH_NO_MEMORY_OPERATORS
 #include <gamemath.h>
+using namespace GameMath;
 
 #include <GL/glew.h>
 

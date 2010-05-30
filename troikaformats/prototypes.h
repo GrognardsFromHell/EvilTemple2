@@ -17,12 +17,23 @@ namespace Troika
     template<typename T>
     class Property {
     public:
+        Property() : mDefined(false) {}
+
         T value() const { return mValue; }
         bool isDefined() const { return mDefined; }
 
         void setValue(T value) {
             mDefined = true;
             mValue = value;
+        }
+
+        void clear() {
+            mDefined = false;
+        }
+
+        bool operator ==(const Property &value) {
+            return !mDefined && !value.mDefined
+                    || (mDefined == value.mDefined && mValue == value.mValue);
         }
 
     private:

@@ -1,3 +1,7 @@
+
+#include <gamemath.h>
+using namespace GameMath;
+
 #include "modelwriter.h"
 
 #include "material.h"
@@ -196,7 +200,7 @@ void ModelWriter::writeAnimations(const Troika::MeshModel *model)
             }
         }
 
-        delete animStream;
+        animation.freeStream(animStream);
 
         // Write out the number of bones affected by the animation
         stream << (uint)streams.size();

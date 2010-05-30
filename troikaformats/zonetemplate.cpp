@@ -14,7 +14,8 @@ namespace Troika
         ZoneBackgroundMap *dayBackground;
         ZoneBackgroundMap *nightBackground;
         QList<GeometryObject*> staticGeometry;
-        QList<GeometryObject*> staticObjects;
+        QList<GameObject> staticObjects;
+        QList<GameObject> mobiles;
         QList<GeometryObject*> clippingGeometry;
 
         QList<ParticleSystem> particleSystems;
@@ -232,4 +233,24 @@ namespace Troika
 	{
 		d_ptr->globalLight = light;
 	}
+
+        const QList<GameObject> &ZoneTemplate::staticObjects() const
+        {
+            return d_ptr->staticObjects;
+        }
+
+    const QList<GameObject> &ZoneTemplate::mobiles() const
+    {
+        return d_ptr->mobiles;
+    }
+
+    void ZoneTemplate::addStaticObject(const GameObject &gameObject)
+    {
+        d_ptr->staticObjects.append(gameObject);
+    }
+
+    void ZoneTemplate::addMobile(const GameObject &gameObject)
+    {
+        d_ptr->mobiles.append(gameObject);
+    }
 }

@@ -64,6 +64,8 @@ namespace Troika
         bool readSectorLights(QDataStream &stream);
         bool readSectorTiles(QDataStream &stream);
         bool readSectorObjects(QDataStream &stream);
+        bool readMobiles(); // Loads *.mob
+        bool readMobile(const QString &filename);
         bool readClippingMeshFiles(); // Loads clipping.cgf
         bool readClippingMeshInstances(); // Loads dag files + clipping.cif
 		bool readGlobalLight(); // Loads global.lit

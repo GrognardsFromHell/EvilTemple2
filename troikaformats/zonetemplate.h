@@ -1,15 +1,18 @@
 #ifndef ZONETEMPLATE_H
 #define ZONETEMPLATE_H
 
+
+#include <gamemath.h>
+using namespace GameMath;
+
 #include "troikaformatsglobal.h"
+
+#include "objectfilereader.h"
 
 #include <QObject>
 #include <QQuaternion>
 #include <QVector3D>
 
-#define GAMEMATH_NO_MEMORY_OPERATORS
-#include <gamemath.h>
-using namespace GameMath;
 
 class QBox3D;
 
@@ -86,7 +89,7 @@ namespace Troika
         bool hasDayNightTransfer() const;
         bool allowsBedrest() const;
 
-		const Light &globalLight() const;
+        const Light &globalLight() const;
 
         const QList<Light> &lights() const;
 
@@ -99,6 +102,9 @@ namespace Troika
           on this map.
           */
         const QBox3D &scrollBox() const;
+
+        const QList<GameObject> &staticObjects() const;
+        const QList<GameObject> &mobiles() const;
 
     public:
         /**
@@ -142,6 +148,9 @@ namespace Troika
         void setBedrest(bool enabled);
         void setScrollBox(const QBox3D &scrollBox);
 		void setGlobalLight(const Light &light);
+
+        void addStaticObject(const GameObject &gameObject);
+        void addMobile(const GameObject &gameObject);
 
     private:
         QScopedPointer<ZoneTemplateData> d_ptr;

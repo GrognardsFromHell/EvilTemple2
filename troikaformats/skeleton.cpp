@@ -15,6 +15,11 @@ namespace Troika
             return new AnimationStream(_keyFramesData, _keyFramesDataStart, boneCount, _frames);
     }
 
+    void Animation::freeStream(AnimationStream *stream) const
+    {
+        delete stream;
+    }
+
     class SkeletonData
     {
     private:
