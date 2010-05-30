@@ -11,6 +11,7 @@ using namespace GameMath;
 #include <QDataStream>
 #include <QHash>
 #include <QString>
+#include <QVector3D>
 
 namespace Troika
 {
@@ -34,7 +35,7 @@ namespace Troika
         Prototype *prototype;
         QString id; // object guid
         ObjectType objectType; // Must match prototype type
-        Vector4 position; // Object position
+        QVector3D position; // Object position
         Integer name;
         Float scale; // (percent)
         Float rotation; // (degrees)

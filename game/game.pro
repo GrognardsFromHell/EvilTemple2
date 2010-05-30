@@ -11,6 +11,8 @@ TEMPLATE = lib
 
 TARGET = game
 
+CONFIG += dll
+
 TEMPLE_LIBS += qt3d minizip model glew jpeg
 include(../3rdparty/game-math/game-math.pri)
 

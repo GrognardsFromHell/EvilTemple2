@@ -33,6 +33,9 @@
 #include "interfaceconverter.h"
 #include "modelwriter.h"
 
+#include "serializer.h"
+using namespace QJson;
+
 void printEventTypes();
 
 /**
@@ -76,6 +79,8 @@ public:
 	QHash<QString,bool> mWrittenTextures;
 
 	QHash<QString,bool> mWrittenMaterials;
+
+        QHash<uint, QString> mInternalDescription;
 
 	bool external;
 
@@ -174,101 +179,181 @@ public:
         return true;
     }
 
+    QVariantList vectorToList(QVector3D vector) {
+        QVariantList result;
+        result.append(vector.x());
+        result.append(vector.y());
+        result.append(vector.z());
+        return result;
+    }
+
+    QVariant toVariant(const GameObject &object)
+    {
+        QVariantMap objectMap;
+
+        // JSON doesn't support comments
+        // if (object.descriptionId.isDefined())
+        // xml.writeComment(descriptions[object.descriptionId.value()]);
+
+        if (!object.id.isNull())
+            objectMap["id"] = object.id;
+
+        objectMap["prototype"] = object.prototype->id;
+
+        QVariantList vector;
+        vector.append(object.position.x());
+        vector.append(object.position.y());
+        vector.append(object.position.z());
+        objectMap["position"] = QVariant(vector);
+
+        JsonPropertyWriter props(objectMap);
+        if (object.name.isDefined())
+            props.write("internalDescription", mInternalDescription[object.name.value()]);
+        props.write("flags", object.flags);
+        props.write("scale", object.scale);
+        props.write("rotation", object.rotation);
+        props.write("radius", object.radius);
+        props.write("height", object.renderHeight);
+        props.write("sceneryFlags", object.sceneryFlags);
+        props.write("descriptionId", object.descriptionId);
+        props.write("secretDoorFlags", object.secretDoorFlags);
+        props.write("portalFlags", object.portalFlags);
+        props.write("portalLockDc", object.portalLockDc);
+        props.write("teleportTarget", object.teleportTarget);
+        props.write("parentItemId", object.parentItemId);
+        props.write("substituteInventoryId", object.substituteInventoryId);
+        props.write("itemInventoryLocation", object.itemInventoryLocation);
+        props.write("hitPoints", object.hitPoints);
+        props.write("hitPointsAdjustment", object.hitPointsAdjustment);
+        props.write("hitPointsDamage", object.hitPointsDamage);
+        props.write("walkSpeedFactor", object.walkSpeedFactor);
+        props.write("runSpeedFactor", object.runSpeedFactor);
+        props.write("dispatcher", object.dispatcher);
+        props.write("secretDoorEffect", object.secretDoorEffect);
+        props.write("notifyNpc", object.notifyNpc);
+        props.write("containerFlags", object.containerFlags);
+        props.write("containerLockDc", object.containerLockDc);
+        props.write("containerKeyId", object.containerKeyId);
+        props.write("containerInventoryId", object.containerInventoryId);
+        props.write("containerInventoryListIndex", object.containerInventoryListIndex);
+        props.write("containerInventorySource", object.containerInventorySource);
+        props.write("itemFlags", object.itemFlags);
+        props.write("itemWeight", object.itemWeight);
+        props.write("itemWorth", object.itemWorth);
+        props.write("itemQuantity", object.itemQuantity);
+        props.write("weaponFlags", object.weaponFlags);
+        props.write("ammoQuantity", object.ammoQuantity);
+        props.write("armorFlags", object.armorFlags);
+        props.write("armorAcAdjustment", object.armorAcAdjustment);
+        props.write("armorMaxDexBonus", object.armorMaxDexBonus);
+        props.write("armorCheckPenalty", object.armorCheckPenalty);
+        props.write("moneyQuantity", object.moneyQuantity);
+        props.write("keyId", object.keyId);
+        props.write("critterFlags", object.critterFlags);
+        props.write("critterFlags2", object.critterFlags2);
+        props.write("critterRace", object.critterRace);
+        props.write("critterGender", object.critterGender);
+        props.write("critterMoneyIndex", object.critterMoneyIndex);
+        props.write("critterInventoryNum", object.critterInventoryNum);
+        props.write("critterInventorySource", object.critterInventorySource);
+        props.write("npcFlags", object.npcFlags);
+
+        return objectMap;
+    }
+
     void convertStaticObjects(ZoneTemplate *zoneTemplate, ZipWriter *writer)
     {
         QHash<uint,QString> descriptions = MessageFile::parse(vfs->openFile("mes/description.mes"));
 
-        QByteArray data;
-        QXmlStreamWriter xml(&data);
-        xml.setAutoFormatting(true);
+        QVariantMap mapObject;
 
-        xml.writeStartDocument("1.0");
+        mapObject["name"] = zoneTemplate->name();
 
-        xml.writeStartElement("objects");
+        mapObject["scrollBox"] = QVariantList() << zoneTemplate->scrollBox().minimum().x()
+                                 << zoneTemplate->scrollBox().minimum().y()
+                                 << zoneTemplate->scrollBox().maximum().x()
+                                 << zoneTemplate->scrollBox().maximum().y();
 
-        QList<GameObject> objects;
-        objects.append(zoneTemplate->staticObjects());
-        objects.append(zoneTemplate->mobiles());
+        mapObject["id"] = zoneTemplate->id(); // This is actually legacy...
+        if (zoneTemplate->dayBackground()) {
+            mapObject["dayBackground"] = zoneTemplate->dayBackground()->directory();
+        }
+        if (zoneTemplate->nightBackground()) {
+            mapObject["nightBackground"] = zoneTemplate->dayBackground()->directory();
+        }
+        mapObject["startPosition"] = vectorToList(zoneTemplate->startPosition());
+        if (zoneTemplate->movie())
+            mapObject["movie"] = zoneTemplate->movie();
+        mapObject["outdoor"] = zoneTemplate->isOutdoor();
+        mapObject["unfogged"] = zoneTemplate->isUnfogged();
+        mapObject["dayNightTransfer"] = zoneTemplate->hasDayNightTransfer();
+        mapObject["allowsBedrest"] = zoneTemplate->allowsBedrest();
+        mapObject["menuMap"] = zoneTemplate->isMenuMap();
+        mapObject["tutorialMap"] = zoneTemplate->isTutorialMap();
 
-        foreach (const GameObject &object, objects) {
-            if (object.descriptionId.isDefined())
-                xml.writeComment(descriptions[object.descriptionId.value()]);
-            else if (object.prototype->descriptionId)
-                xml.writeComment(descriptions[object.prototype->descriptionId]);
+        Light globalLight = zoneTemplate->globalLight();
+        QVariantMap globalLightMap;
+        globalLightMap["color"] = QVariantList() << globalLight.r << globalLight.g << globalLight.b;
+        globalLightMap["direction"] = QVariantList() << globalLight.dirX << globalLight.dirY << globalLight.dirZ;
+        mapObject["globalLight"] = globalLightMap;
 
-            xml.writeStartElement("object");
+        QVariantList lightList;
+        foreach (const Light &light, zoneTemplate->lights()) {
+            QVariantMap lightMap;
 
-            if (!object.id.isNull())
-                xml.writeAttribute("id", object.id);
+            lightMap["type"] = light.type; // 1 = Point, 2 = Spot, 3 = Directional
+            lightMap["color"] = QVariantList() << light.r << light.g << light.b;
+            lightMap["position"] = QVariantList() << light.position.x() << light.position.y() << light.position.z();
+            // 1 == PointLight
+            if (light.type != 1)
+                lightMap["direction"] = QVariantList() << light.dirX << light.dirY << light.dirZ;
+            if (light.handle)
+                lightMap["handle"] = light.handle;
+            lightMap["range"] = light.range;
+            // 2 == SpotLight
+            if (light.type == 2)
+                lightMap["phi"] = light.phi;
 
-            xml.writeAttribute("prototype", QString("%1").arg(object.prototype->id));
+            lightList.append(lightMap);
+        }
+        mapObject["lights"] = lightList;
 
-            xml.writeEmptyElement("position");
-            xml.writeAttribute("x", QString("%1").arg(object.position.x()));
-            xml.writeAttribute("y", QString("%1").arg(object.position.y()));
-            xml.writeAttribute("z", QString("%1").arg(object.position.z()));
+        QVariantList particleSystemList;
 
-            PropertyWriter props(xml);
-            props.write("name", object.name);
-            props.write("flags", object.flags);
-            props.write("scale", object.scale);
-            props.write("rotation", object.rotation);
-            props.write("radius", object.radius);
-            props.write("height", object.renderHeight);
-            props.write("sceneryFlags", object.sceneryFlags);
-            props.write("descriptionId", object.descriptionId);
-            props.write("secretDoorFlags", object.secretDoorFlags);
-            props.write("portalFlags", object.portalFlags);
-            props.write("portalLockDc", object.portalLockDc);
-            props.write("teleportTarget", object.teleportTarget);
-            props.write("parentItemId", object.parentItemId);
-            props.write("substituteInventoryId", object.substituteInventoryId);
-            props.write("itemInventoryLocation", object.itemInventoryLocation);
-            props.write("hitPoints", object.hitPoints);
-            props.write("hitPointsAdjustment", object.hitPointsAdjustment);
-            props.write("hitPointsDamage", object.hitPointsDamage);
-            props.write("walkSpeedFactor", object.walkSpeedFactor);
-            props.write("runSpeedFactor", object.runSpeedFactor);
-            props.write("dispatcher", object.dispatcher);
-            props.write("secretDoorEffect", object.secretDoorEffect);
-            props.write("notifyNpc", object.notifyNpc);
-            props.write("containerFlags", object.containerFlags);
-            props.write("containerLockDc", object.containerLockDc);
-            props.write("containerKeyId", object.containerKeyId);
-            props.write("containerInventoryId", object.containerInventoryId);
-            props.write("containerInventoryListIndex", object.containerInventoryListIndex);
-            props.write("containerInventorySource", object.containerInventorySource);
-            props.write("itemFlags", object.itemFlags);
-            props.write("itemWeight", object.itemWeight);
-            props.write("itemWorth", object.itemWorth);
-            props.write("itemQuantity", object.itemQuantity);
-            props.write("weaponFlags", object.weaponFlags);
-            props.write("ammoQuantity", object.ammoQuantity);
-            props.write("armorFlags", object.armorFlags);
-            props.write("armorAcAdjustment", object.armorAcAdjustment);
-            props.write("armorMaxDexBonus", object.armorMaxDexBonus);
-            props.write("armorCheckPenalty", object.armorCheckPenalty);
-            props.write("moneyQuantity", object.moneyQuantity);
-            props.write("keyId", object.keyId);
-            props.write("critterFlags", object.critterFlags);
-            props.write("critterFlags2", object.critterFlags2);
-            props.write("critterRace", object.critterRace);
-            props.write("critterGender", object.critterGender);
-            props.write("critterMoneyIndex", object.critterMoneyIndex);
-            props.write("critterInventoryNum", object.critterInventoryNum);
-            props.write("critterInventorySource", object.critterInventorySource);
-            props.write("npcFlags", object.npcFlags);
+        foreach (const ParticleSystem &particleSystem, zoneTemplate->particleSystems()) {
+            QVariantMap particleSystemMap;
 
-            xml.writeEndElement();
+            // Look up the hash of the particle system
+            if (!particleSystemHashes.contains(particleSystem.hash))
+                continue;
 
-            xml.writeCharacters("\n\n    "); // For better readability
+            particleSystemMap["name"] = particleSystemHashes[particleSystem.hash];
+            particleSystemMap["id"] = particleSystem.id;
+            Light light = particleSystem.light;
+            particleSystemMap["position"] = QVariantList() << light.position.x() << light.position.y() << light.position.z();
+
+            particleSystemList.append(particleSystemMap);
         }
 
-        xml.writeEndElement();
+        mapObject["particleSystems"] = particleSystemList;
 
-        xml.writeEndDocument();
+        QVariantList objectList;
+        foreach (const GameObject &object, zoneTemplate->staticObjects()) {
+            objectList.append(toVariant(object));
+        }
+        mapObject["staticObjects"] = objectList;
 
-        writer->addFile(zoneTemplate->directory() + "staticObjects.xml", data, 9);
+        objectList.clear();
+
+        foreach (const GameObject &object, zoneTemplate->mobiles()) {
+            objectList.append(toVariant(object));
+        }
+        mapObject["dynamicObjects"] = objectList;
+
+        Serializer serializer;
+        QByteArray data = serializer.serialize(mapObject);
+
+        writer->addFile(zoneTemplate->directory() + "map.js", data, 9);
     }
 
 	void convertLighting(ZoneTemplate *zoneTemplate, ZipWriter *writer)
@@ -1115,6 +1200,8 @@ public:
         if (!createOutputDirectory()) {
             qFatal("Unable to create output directory %s.", qPrintable(mOutputPath));
         }
+
+        mInternalDescription = MessageFile::parse(vfs->openFile("oemes/oname.mes"));
 
         convertScripts();
 

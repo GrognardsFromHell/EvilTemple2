@@ -95,6 +95,11 @@ contains(TEMPLE_LIBS,audioengine) {
     }
 }
 
+contains(TEMPLE_LIBS,qjson) {
+    INCLUDEPATH += $${PWD}/3rdparty/qjson/src/
+    LIBS += -L$${PWD}/3rdparty/qjson/lib/ -lqjson
+}
+
 # Add game libraries
 contains(TEMPLE_LIBS,binkplayer) {
     INCLUDEPATH += ../binkplayer/

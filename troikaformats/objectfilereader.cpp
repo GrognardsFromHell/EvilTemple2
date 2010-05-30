@@ -510,9 +510,8 @@ namespace Troika
         "Unknown31"
     };
 
-    GameObject::GameObject() : prototype(0), position(0, 0, 0, 1)
+    GameObject::GameObject() : prototype(0)
     {
-
     }
 
     template<typename T>

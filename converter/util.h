@@ -6,6 +6,7 @@
 #include <QString>
 #include <QRegExp>
 #include <QXmlStreamWriter>
+#include <QVariant>
 
 inline QString &mangleMaterialName(QString &materialName)
 {
@@ -62,6 +63,46 @@ inline QString getNewTextureFilename(const QString &mdfFilename) {
     }
     return newFilename;
 }
+
+class JsonPropertyWriter {
+public:
+    JsonPropertyWriter(QVariantMap &variantMap) : mMap(variantMap)
+    {
+    }
+
+    void write(const QString &name, const QString &text) {
+        if (text.isEmpty())
+            return;
+
+        mMap[name] = text;
+    }
+
+    template<typename T>
+    void write(const QString &name, T value) {
+        mMap[name] = QVariant(value);
+    }
+
+    template<>
+    void write<Troika::Float>(const QString &name, Troika::Float value) {
+        if (value.isDefined())
+            mMap[name] = QVariant(value.value());
+    }
+
+    template<>
+    void write<Troika::Integer>(const QString &name, Troika::Integer value) {
+        if (value.isDefined())
+            mMap[name] = QVariant(value.value());
+    }
+
+    void write(const QString &name, const QStringList &flagList) {
+        if (flagList.isEmpty())
+            return;
+        mMap[name] = flagList;
+    }
+
+private:
+    QVariantMap &mMap;
+};
 
 class PropertyWriter {
 public:

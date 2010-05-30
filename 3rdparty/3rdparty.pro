@@ -6,3 +6,4 @@ SUBDIRS += tga
 SUBDIRS += qt3d
 SUBDIRS += minizip
 SUBDIRS += miniziptests
+SUBDIRS += qjson

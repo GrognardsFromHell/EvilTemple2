@@ -7,7 +7,7 @@ TARGET = converter
 
 QT += xml opengl xmlpatterns
 
-TEMPLE_LIBS += troikaformats qt3d minizip jpeg
+TEMPLE_LIBS += troikaformats qt3d minizip jpeg qjson
 
 SOURCES += converter.cpp \
     collada.cpp \

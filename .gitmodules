@@ -4,3 +4,6 @@
 [submodule "3rdparty/qjson"]
 	path = 3rdparty/qjson
 	url = git://gitorious.org/qjson/qjson.git
+[submodule "3rdparty\\qjson"]
+	path = 3rdparty\\qjson
+	url = git://gitorious.org/qjson/qjson.git

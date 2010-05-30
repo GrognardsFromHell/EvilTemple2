@@ -9,6 +9,7 @@
 #include "prototypes.h"
 #include "virtualfilesystem.h"
 #include "zonetemplatereader.h"
+#include "constants.h"
 
 namespace Troika
 {
@@ -45,6 +46,18 @@ namespace Troika
           */
         bool parse(const QString &text)
         {
+            tutorialMap = false;
+            shoppingMap = false;
+            startMap = false;
+            unfogged = false;
+            outdoor = false;
+            dayNightTransfer = false;
+            bedrest = false;
+            movie = 0;
+            worldmap = 0;
+            startX = 0;
+            startY = 0;
+
             QStringList parts = text.split(QRegExp("\\s*,\\s*"), QString::KeepEmptyParts);
 
             // Needs at least 3 parts (mapdir, x, y)
@@ -202,7 +215,9 @@ namespace Troika
 
             ZoneTemplate *result = new ZoneTemplate(id);
             // Transform to world coordinate
-            result->setStartPosition(QVector3D(mapListEntry.startX, mapListEntry.startY, 0));
+            float y = (mapListEntry.startY + 0.5f) * PixelPerWorldTile;
+            float x = (mapListEntry.startX + 0.5f) * PixelPerWorldTile;
+            result->setStartPosition(QVector3D(x, 0, y));
             result->setMovie(mapListEntry.movie);
             result->setBedrest(mapListEntry.bedrest);
             result->setMenuMap(mapListEntry.shoppingMap);
