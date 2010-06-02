@@ -30,9 +30,6 @@ public:
     bool isAnimated() const;
     Scene *scene() const;
 
-    RenderQueue::Category renderCategory() const;
-    void setRenderCategory(RenderQueue::Category category);
-
     void setPosition(const Vector4 &position);
     void setRotation(const Quaternion &rotation);
     void setScale(const Vector4 &scale);
@@ -81,7 +78,6 @@ private:
     Scene *mScene; // The scene that contains this node
     QList<SceneNode*> mChildren; // List of children.
     SceneNode *mParent; // Parent of this node
-    RenderQueue::Category mRenderCategory; // In which category should the content of this node be rendered.
 
     QList<SharedRenderable> mAttachedObjects;
 
@@ -95,17 +91,6 @@ private:
     mutable bool mFullTransformInvalid;
     mutable Matrix4 mFullTransform;
 };
-
-inline RenderQueue::Category SceneNode::renderCategory() const
-{
-    return mRenderCategory;
-}
-
-inline void SceneNode::setRenderCategory(RenderQueue::Category category)
-{
-    Q_ASSERT(category >= RenderQueue::Default && category <= RenderQueue::Count);
-    mRenderCategory = category;
-}
 
 inline const Box3d &SceneNode::boundingBox() const
 {
@@ -181,18 +166,24 @@ inline void SceneNode::setPosition(const Vector4 &position)
 {
     mPosition = position;
     mWorldMatrixInvalid = true;
+    mFullTransformInvalid = true;
+    mWorldBoundingBoxInvalid = true;
 }
 
 inline void SceneNode::setRotation(const Quaternion &rotation)
 {
     mRotation = rotation;
     mWorldMatrixInvalid = true;
+    mFullTransformInvalid = true;
+    mWorldBoundingBoxInvalid = true;
 }
 
 inline void SceneNode::setScale(const Vector4 &scale)
 {
     mScale = scale;
     mWorldMatrixInvalid = true;
+    mFullTransformInvalid = true;
+    mWorldBoundingBoxInvalid = true;
 }
 
 inline void SceneNode::setInteractive(bool interactive)

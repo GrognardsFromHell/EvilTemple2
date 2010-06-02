@@ -4,7 +4,7 @@
 #include "prototypes.h"
 #include "virtualfilesystem.h"
 
-#include <QXmlStreamWriter>
+#include <QVariantMap>
 #include <QHash>
 
 class PrototypeConverter
@@ -13,14 +13,15 @@ public:
 
     PrototypeConverter(Troika::VirtualFileSystem *vfs);
 
-    void convertPrototypes(Troika::Prototypes *prototypes, QXmlStreamWriter &xml);
+    QVariantMap convertPrototypes(Troika::Prototypes *prototypes);
 
-    void convertPrototype(Troika::Prototype *prototype, QXmlStreamWriter &xml);
+    QVariantMap convertPrototype(Troika::Prototype *prototype);
 
 private:
 
     QHash<uint, QString> mInternalDescriptions;
     QHash<uint, QString> mDescriptions;
+    QHash<uint, QString> mModelFiles;
 
     Troika::VirtualFileSystem *mVfs;
 

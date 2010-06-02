@@ -203,15 +203,33 @@ namespace Troika
     {
         QStringList mobFiles = vfs->listFiles(mapDirectory, "*.mob");
 
+        QMap<QString, GameObject*> gameObjects;
+
         foreach (QString mobFile, mobFiles)
         {
-            readMobile(mobFile);
+            GameObject *gameObject = readMobile(mobFile);
+
+            Q_ASSERT(!gameObject->id.isNull());
+
+            gameObjects[gameObject->id] = gameObject;
+
+            if (gameObject->parentItemId.isNull()) {
+                zoneTemplate->addMobile(gameObject);
+            }
+        }
+
+        foreach (GameObject *gameObject, gameObjects.values()) {
+            if (gameObject->parentItemId.isNull())
+                continue;
+
+            Q_ASSERT(gameObjects.contains(gameObject->parentItemId));
+            gameObjects[gameObject->parentItemId]->content.append(gameObject);
         }
 
         return true;
     }
 
-    bool ZoneTemplateReader::readMobile(const QString &filename)
+    GameObject *ZoneTemplateReader::readMobile(const QString &filename)
     {
         QByteArray data = vfs->openFile(filename);
         QDataStream stream(data);
@@ -224,9 +242,7 @@ namespace Troika
             qWarning("Unable to read mobile file: %s", qPrintable(filename));
         }
 
-        zoneTemplate->addMobile(reader.getObject());
-
-        return true;
+        return new GameObject(reader.getObject());
     }
 
     bool ZoneTemplateReader::readSector(const QString &filename)
@@ -249,6 +265,7 @@ namespace Troika
             quint32 flags;
 
             Light light;
+            light.day = true;
             ParticleSystem particleSystem;
 
             quint32 xPos, yPos;
@@ -281,6 +298,7 @@ namespace Troika
 
             if ((flags & 0x40) != 0)
             {
+                light.day = false;
                 stream >> light.type >> light.r >> light.b >> light.g >>
                         light.unknown >>
                         light.dirX >> light.dirY >> light.dirZ >>
@@ -336,9 +354,17 @@ namespace Troika
                 return false;
             }
 
-            zoneTemplate->addStaticObject(reader.getObject());
+            Q_ASSERT(reader.getObject().parentItemId.isNull()); // No parent-child relation for static objects
+
+            zoneTemplate->addStaticObject(new GameObject(reader.getObject()));
 
             stream >> header;
+
+            if (header != ObjectFileVersion && !stream.atEnd())
+            {
+                int remaining = stream.device()->size() - stream.device()->pos();
+                qWarning("Sector file has %d bytes beyond last object.", remaining);
+            }
         }
 
         if (!stream.atEnd())

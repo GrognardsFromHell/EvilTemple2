@@ -55,7 +55,8 @@ void Scene::render(RenderStates &renderStates)
 
     const RenderQueue::Category renderOrder[RenderQueue::Count] = { 
         RenderQueue::ClippingGeometry,
-        RenderQueue::Default
+        RenderQueue::Default,
+        RenderQueue::Lights
     };
 
     for (int catOrder = 0; catOrder < RenderQueue::Count; ++catOrder) {
@@ -84,16 +85,17 @@ int Scene::objectsDrawn() const
     return d->objectsDrawn;
 }
 
-SceneNode *Scene::pickNode(const Ray3d &ray) const
+SharedSceneNode Scene::pickNode(const Ray3d &ray) const
 {
-    SceneNode *picked = NULL;
+    SharedSceneNode picked;
 
     for (int i = 0; i < d->sceneNodes.size(); ++i) {
         const SharedSceneNode &node = d->sceneNodes.at(i);
 
         Ray3d localRay = node->fullTransform().inverted() * ray;
 
-        if (localRay.intersects(node->boundingBox())) {picked = node.data();
+        if (localRay.intersects(node->boundingBox())) {
+            picked = node;
         }
     }
 

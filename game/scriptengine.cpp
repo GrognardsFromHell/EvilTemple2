@@ -3,6 +3,10 @@
 
 #include "scriptengine.h"
 #include "game.h"
+#include "backgroundmap.h"
+#include "scene.h"
+#include "scriptables.h"
+#include "clippinggeometry.h"
 
 namespace EvilTemple {
 
@@ -213,11 +217,36 @@ namespace EvilTemple {
         ba = qvariant_cast<QVector2D>(obj.data().toVariant());
     }
 
-    QScriptValue gameToScriptValue(QScriptEngine *engine, Game* const &in)
-     { return engine->newQObject(in); }
+    template<typename T>
+    QScriptValue qobjectToScriptValue(QScriptEngine *engine, T* const &in)
+    {
+        return engine->newQObject(in);
+    }
 
-     void gameFromScriptValue(const QScriptValue &object, Game* &out)
-     { out = qobject_cast<Game*>(object.toQObject()); }
+    template<typename T>
+    void qobjectFromScriptValue(const QScriptValue &object, T* &out)
+    {
+        out = qobject_cast<T*>(object.toQObject());
+    }
+
+    template<typename T>
+    void registerQObject(QScriptEngine *engine, const char *name)
+    {
+        qRegisterMetaType<T*>(name);
+        qScriptRegisterMetaType(engine, qobjectToScriptValue<T>, qobjectFromScriptValue<T>);
+    }
+
+     static QScriptValue readFile(QScriptContext *context, QScriptEngine *engine)
+     {
+        QScriptValue filename = context->argument(0);
+        QFile file(filename.toString());
+
+        if (!file.open(QIODevice::ReadOnly|QIODevice::Text)) {
+            return engine->undefinedValue();
+        }
+
+        return engine->newVariant(file.readAll());
+     }
 
      ScriptEngineData::ScriptEngineData(ScriptEngine *parent, Game *game)
      {
@@ -234,8 +263,23 @@ namespace EvilTemple {
         global.setProperty("QVector2D", qv2Class->constructor());
 
         // Some standard meta types used as arguments throughout the code
-        qRegisterMetaType<EvilTemple::Game*>("Game*");
-        qScriptRegisterMetaType(engine, gameToScriptValue, gameFromScriptValue);
+        registerQObject<EvilTemple::Game>(engine, "Game*");
+        registerQObject<EvilTemple::BackgroundMap>(engine, "BackgroundMap*");
+        registerQObject<EvilTemple::ClippingGeometry>(engine, "ClippingGeometry*");
+        registerQObject<EvilTemple::Scene>(engine, "Scene*");
+
+        // Add a function to read files
+        QScriptValue readFileFn = engine->newFunction(readFile, 1);
+        global.setProperty("readFile", readFileFn);
+
+        // Register scriptable objects
+        Vector4Scriptable::registerWith(engine);
+        Box3dScriptable::registerWith(engine);
+        QuaternionScriptable::registerWith(engine);
+        SceneNodeScriptable::registerWith(engine);
+        ModelScriptable::registerWith(engine);
+        ModelInstanceScriptable::registerWith(engine);
+        registerRenderableScriptable(engine);
     }
 
 }

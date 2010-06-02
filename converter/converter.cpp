@@ -50,7 +50,7 @@ struct MeshReference {
     enum Sources {
         MeshesMes = 0x1,
         StaticGeometry = 0x2, // from a map
-		AddMesh = 0x4, // Added from addmesh.mes
+        AddMesh = 0x4, // Added from addmesh.mes
         FORCE_DWORD = 0x7FFFFFFF, // force 32-bit size (whatever)
     };
 
@@ -76,13 +76,13 @@ public:
 
     QHash<uint,QString> particleSystemHashes;
 
-	QHash<QString,bool> mWrittenTextures;
+    QHash<QString,bool> mWrittenTextures;
 
-	QHash<QString,bool> mWrittenMaterials;
+    QHash<QString,bool> mWrittenMaterials;
 
-        QHash<uint, QString> mInternalDescription;
+    QHash<uint, QString> mInternalDescription;
 
-	bool external;
+    bool external;
 
     // Maps lower-case mesh filenames (normalized separators) to an information structure
     QHash<QString, MeshReference> meshReferences;
@@ -127,6 +127,9 @@ public:
 
         // Convert all maps
         foreach (quint32 mapId, zoneTemplates->mapIds()) {
+            if (exclusions.isExcluded(QString("%1").arg(mapId)))
+                continue;
+
             QScopedPointer<Troika::ZoneTemplate> zoneTemplate(zoneTemplates->load(mapId));
 
             converter.convert(zoneTemplate.data());
@@ -164,11 +167,7 @@ public:
 
                 convertStaticObjects(zoneTemplate.data(), &writer);
 
-                convertLighting(zoneTemplate.data(), &writer);
-
                 convertClippingMeshes(zoneTemplate.data(), &writer);
-
-                convertParticleSystemInstances(zoneTemplate.data(), &writer);
             } else {
                 qWarning("Unable to load zone template for map id %d.", mapId);
             }
@@ -187,76 +186,84 @@ public:
         return result;
     }
 
-    QVariant toVariant(const GameObject &object)
+    QVariant toVariant(GameObject *object)
     {
         QVariantMap objectMap;
 
         // JSON doesn't support comments
-        // if (object.descriptionId.isDefined())
-        // xml.writeComment(descriptions[object.descriptionId.value()]);
+        // if (object->descriptionId.isDefined())
+        // xml.writeComment(descriptions[object->descriptionId.value()]);
 
-        if (!object.id.isNull())
-            objectMap["id"] = object.id;
+        if (!object->id.isNull())
+            objectMap["id"] = object->id;
 
-        objectMap["prototype"] = object.prototype->id;
+        objectMap["prototype"] = object->prototype->id;
 
         QVariantList vector;
-        vector.append(object.position.x());
-        vector.append(object.position.y());
-        vector.append(object.position.z());
+        vector.append(object->position.x());
+        vector.append(object->position.y());
+        vector.append(object->position.z());
         objectMap["position"] = QVariant(vector);
 
         JsonPropertyWriter props(objectMap);
-        if (object.name.isDefined())
-            props.write("internalDescription", mInternalDescription[object.name.value()]);
-        props.write("flags", object.flags);
-        props.write("scale", object.scale);
-        props.write("rotation", object.rotation);
-        props.write("radius", object.radius);
-        props.write("height", object.renderHeight);
-        props.write("sceneryFlags", object.sceneryFlags);
-        props.write("descriptionId", object.descriptionId);
-        props.write("secretDoorFlags", object.secretDoorFlags);
-        props.write("portalFlags", object.portalFlags);
-        props.write("portalLockDc", object.portalLockDc);
-        props.write("teleportTarget", object.teleportTarget);
-        props.write("parentItemId", object.parentItemId);
-        props.write("substituteInventoryId", object.substituteInventoryId);
-        props.write("itemInventoryLocation", object.itemInventoryLocation);
-        props.write("hitPoints", object.hitPoints);
-        props.write("hitPointsAdjustment", object.hitPointsAdjustment);
-        props.write("hitPointsDamage", object.hitPointsDamage);
-        props.write("walkSpeedFactor", object.walkSpeedFactor);
-        props.write("runSpeedFactor", object.runSpeedFactor);
-        props.write("dispatcher", object.dispatcher);
-        props.write("secretDoorEffect", object.secretDoorEffect);
-        props.write("notifyNpc", object.notifyNpc);
-        props.write("containerFlags", object.containerFlags);
-        props.write("containerLockDc", object.containerLockDc);
-        props.write("containerKeyId", object.containerKeyId);
-        props.write("containerInventoryId", object.containerInventoryId);
-        props.write("containerInventoryListIndex", object.containerInventoryListIndex);
-        props.write("containerInventorySource", object.containerInventorySource);
-        props.write("itemFlags", object.itemFlags);
-        props.write("itemWeight", object.itemWeight);
-        props.write("itemWorth", object.itemWorth);
-        props.write("itemQuantity", object.itemQuantity);
-        props.write("weaponFlags", object.weaponFlags);
-        props.write("ammoQuantity", object.ammoQuantity);
-        props.write("armorFlags", object.armorFlags);
-        props.write("armorAcAdjustment", object.armorAcAdjustment);
-        props.write("armorMaxDexBonus", object.armorMaxDexBonus);
-        props.write("armorCheckPenalty", object.armorCheckPenalty);
-        props.write("moneyQuantity", object.moneyQuantity);
-        props.write("keyId", object.keyId);
-        props.write("critterFlags", object.critterFlags);
-        props.write("critterFlags2", object.critterFlags2);
-        props.write("critterRace", object.critterRace);
-        props.write("critterGender", object.critterGender);
-        props.write("critterMoneyIndex", object.critterMoneyIndex);
-        props.write("critterInventoryNum", object.critterInventoryNum);
-        props.write("critterInventorySource", object.critterInventorySource);
-        props.write("npcFlags", object.npcFlags);
+        if (object->name.isDefined())
+            props.write("internalDescription", mInternalDescription[object->name.value()]);
+        props.write("flags", object->flags);
+        props.write("scale", object->scale);
+        props.write("rotation", object->rotation);
+        props.write("radius", object->radius);
+        props.write("height", object->renderHeight);
+        props.write("sceneryFlags", object->sceneryFlags);
+        props.write("descriptionId", object->descriptionId);
+        props.write("secretDoorFlags", object->secretDoorFlags);
+        props.write("portalFlags", object->portalFlags);
+        props.write("portalLockDc", object->portalLockDc);
+        props.write("teleportTarget", object->teleportTarget);
+        // props.write("parentItemId", object->parentItemId);
+        props.write("substituteInventoryId", object->substituteInventoryId);
+        props.write("itemInventoryLocation", object->itemInventoryLocation);
+        props.write("hitPoints", object->hitPoints);
+        props.write("hitPointsAdjustment", object->hitPointsAdjustment);
+        props.write("hitPointsDamage", object->hitPointsDamage);
+        props.write("walkSpeedFactor", object->walkSpeedFactor);
+        props.write("runSpeedFactor", object->runSpeedFactor);
+        props.write("dispatcher", object->dispatcher);
+        props.write("secretDoorEffect", object->secretDoorEffect);
+        props.write("notifyNpc", object->notifyNpc);
+        props.write("containerFlags", object->containerFlags);
+        props.write("containerLockDc", object->containerLockDc);
+        props.write("containerKeyId", object->containerKeyId);
+        props.write("containerInventoryId", object->containerInventoryId);
+        props.write("containerInventoryListIndex", object->containerInventoryListIndex);
+        props.write("containerInventorySource", object->containerInventorySource);
+        props.write("itemFlags", object->itemFlags);
+        props.write("itemWeight", object->itemWeight);
+        props.write("itemWorth", object->itemWorth);
+        props.write("itemQuantity", object->itemQuantity);
+        props.write("weaponFlags", object->weaponFlags);
+        props.write("ammoQuantity", object->ammoQuantity);
+        props.write("armorFlags", object->armorFlags);
+        props.write("armorAcAdjustment", object->armorAcAdjustment);
+        props.write("armorMaxDexBonus", object->armorMaxDexBonus);
+        props.write("armorCheckPenalty", object->armorCheckPenalty);
+        props.write("moneyQuantity", object->moneyQuantity);
+        props.write("keyId", object->keyId);
+        props.write("critterFlags", object->critterFlags);
+        props.write("critterFlags2", object->critterFlags2);
+        props.write("critterRace", object->critterRace);
+        props.write("critterGender", object->critterGender);
+        props.write("critterMoneyIndex", object->critterMoneyIndex);
+        props.write("critterInventoryNum", object->critterInventoryNum);
+        props.write("critterInventorySource", object->critterInventorySource);
+        props.write("npcFlags", object->npcFlags);
+
+        if (!object->content.isEmpty()) {
+            QVariantList content;
+            foreach (GameObject *subObject, object->content) {
+                content.append(toVariant(subObject));
+            }
+            objectMap["content"] = content;
+        }
 
         return objectMap;
     }
@@ -276,10 +283,10 @@ public:
 
         mapObject["id"] = zoneTemplate->id(); // This is actually legacy...
         if (zoneTemplate->dayBackground()) {
-            mapObject["dayBackground"] = zoneTemplate->dayBackground()->directory();
+            mapObject["dayBackground"] = getNewBackgroundMapFolder(zoneTemplate->dayBackground()->directory());
         }
         if (zoneTemplate->nightBackground()) {
-            mapObject["nightBackground"] = zoneTemplate->dayBackground()->directory();
+            mapObject["nightBackground"] = getNewBackgroundMapFolder(zoneTemplate->dayBackground()->directory());
         }
         mapObject["startPosition"] = vectorToList(zoneTemplate->startPosition());
         if (zoneTemplate->movie())
@@ -290,6 +297,7 @@ public:
         mapObject["allowsBedrest"] = zoneTemplate->allowsBedrest();
         mapObject["menuMap"] = zoneTemplate->isMenuMap();
         mapObject["tutorialMap"] = zoneTemplate->isTutorialMap();
+        mapObject["clippingGeometry"] = zoneTemplate->directory() + "clipping.dat";
 
         Light globalLight = zoneTemplate->globalLight();
         QVariantMap globalLightMap;
@@ -301,6 +309,7 @@ public:
         foreach (const Light &light, zoneTemplate->lights()) {
             QVariantMap lightMap;
 
+            lightMap["day"] = light.day;
             lightMap["type"] = light.type; // 1 = Point, 2 = Spot, 3 = Directional
             lightMap["color"] = QVariantList() << light.r << light.g << light.b;
             lightMap["position"] = QVariantList() << light.position.x() << light.position.y() << light.position.z();
@@ -327,6 +336,7 @@ public:
             if (!particleSystemHashes.contains(particleSystem.hash))
                 continue;
 
+            particleSystemMap["day"] = particleSystem.light.day;
             particleSystemMap["name"] = particleSystemHashes[particleSystem.hash];
             particleSystemMap["id"] = particleSystem.id;
             Light light = particleSystem.light;
@@ -338,14 +348,14 @@ public:
         mapObject["particleSystems"] = particleSystemList;
 
         QVariantList objectList;
-        foreach (const GameObject &object, zoneTemplate->staticObjects()) {
+        foreach (GameObject *object, zoneTemplate->staticObjects()) {
             objectList.append(toVariant(object));
         }
         mapObject["staticObjects"] = objectList;
 
         objectList.clear();
 
-        foreach (const GameObject &object, zoneTemplate->mobiles()) {
+        foreach (GameObject *object, zoneTemplate->mobiles()) {
             objectList.append(toVariant(object));
         }
         mapObject["dynamicObjects"] = objectList;
@@ -356,98 +366,6 @@ public:
         writer->addFile(zoneTemplate->directory() + "map.js", data, 9);
     }
 
-	void convertLighting(ZoneTemplate *zoneTemplate, ZipWriter *writer)
-	{
-		QDomDocument document;
-		QDomElement root = document.createElement("lighting");
-		document.appendChild(root);
-
-		// Insert global lighting first
-		QDomElement globalLight = document.createElement("global");
-		root.appendChild(globalLight);
-		QDomElement color = document.createElement("color");
-		color.setAttribute("red", zoneTemplate->globalLight().r);
-		color.setAttribute("green", zoneTemplate->globalLight().g);
-		color.setAttribute("blue", zoneTemplate->globalLight().b);
-		globalLight.appendChild(color);
-
-		QDomElement direction = document.createElement("direction");
-		direction.setAttribute("x", zoneTemplate->globalLight().dirX);
-		direction.setAttribute("y", zoneTemplate->globalLight().dirY);
-		direction.setAttribute("z", zoneTemplate->globalLight().dirZ);
-		globalLight.appendChild(direction);
-
-		QDomElement lightSources = document.createElement("lightSources");
-		root.appendChild(lightSources);
-
-		foreach (const Light &light, zoneTemplate->lights())
-		{
-			QDomElement element;
-			switch (light.type) {
-			case 1:
-				element = document.createElement("pointLight");
-				break;
-			case 2:
-				element = document.createElement("spotLight");
-				break;
-			case 3:
-				element = document.createElement("directionalLight");				
-				break;
-			default:
-				qWarning("Invalid light type: %d.", light.type);
-				continue;
-			}
-
-			element.setAttribute("range", light.range);
-			if (light.type != 3) {
-				// ToEE does not allow custom attenuation per light. We might add this later, so convert it here and add it as a modifiable attribute
-				element.setAttribute("attenuation", 4 / (light.range * light.range));
-			}
-			if (light.type == 2) {
-				element.setAttribute("phi", light.phi);
-				element.setAttribute("theta", light.phi * 0.6f);
-			}
-			
-			QDomElement pos = document.createElement("position");
-			element.appendChild(pos);
-			pos.setAttribute("x", light.position.x());
-			pos.setAttribute("y", light.position.y());
-			pos.setAttribute("z", light.position.z());
-
-			// Makes only sense for spot/directional, right?
-			if (light.type != 1) {
-				QDomElement dir = document.createElement("direction");
-				element.appendChild(dir);
-				dir.setAttribute("x", light.dirX);
-				dir.setAttribute("y", light.dirY);
-				dir.setAttribute("z", light.dirZ);
-			}
-
-			if (light.r > 0 || light.g > 0 || light.b > 0) {
-				QDomElement color = document.createElement("color");
-				element.appendChild(color);
-				color.setAttribute("red", light.r);
-				color.setAttribute("green", light.g);
-				color.setAttribute("blue", light.b);
-			}
-
-			/**
-				This seems to be truly unused.
-				if (light.ur > 0 || light.ug > 0 || light.ub > 0) {
-					color = document.createElement("specularColor");
-					element.appendChild(color);
-					color.setAttribute("red", light.ur);
-					color.setAttribute("green", light.ug);
-					color.setAttribute("blue", light.ub);
-				}
-			*/
-			
-			lightSources.appendChild(element);
-		}
-
-		writer->addFile(zoneTemplate->directory() + "lighting.xml", document.toByteArray(), 9);
-	}
-    
     bool compareScale(const Vector4 &a, const Vector4 &b) {
         float scaleEpsilon = 0.0001f;
 
@@ -615,29 +533,9 @@ public:
 
         }
 
-        writer->addFile(zoneTemplate->directory() + "clippingGeometry.dat", clippingData, 9);
+        writer->addFile(zoneTemplate->directory() + "clipping.dat", clippingData, 9);
     }
 
-    void convertParticleSystemInstances(const ZoneTemplate *zoneTemplate, ZipWriter *writer)
-    {
-        QByteArray particleSystems;
-        QDataStream stream(&particleSystems, QIODevice::WriteOnly);
-        stream.setByteOrder(QDataStream::LittleEndian);
-        stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
-
-        foreach (const ParticleSystem &particleSystem, zoneTemplate->particleSystems()) {
-            if (!particleSystemHashes.contains(particleSystem.hash)) {
-                qWarning("Found particle-system with unknown hash id: %d", particleSystem.hash);
-                continue;
-            }
-
-            const Vector4 &pos = particleSystem.light.position;
-            stream << pos.x() << pos.y() << pos.z() << particleSystem.light.range << particleSystemHashes[particleSystem.hash];
-        }
-
-        writer->addFile(zoneTemplate->directory() + "particleSystems.txt", particleSystems, 9);
-    }
-	
     QString getNewModelFilename(const QString &modelFilename) {
         QString newFilename = QDir::toNativeSeparators(modelFilename);
         if (newFilename.startsWith(QString("art") + QDir::separator(), Qt::CaseInsensitive)) {
@@ -701,10 +599,10 @@ public:
         qDebug("Converting particle systems.");
 
         QByteArray particleSystemData = vfs->openFile("rules/partsys0.tab")
-            .append('\n')
-            .append(vfs->openFile("rules/partsys1.tab"))
-            .append('\n')
-            .append(vfs->openFile("rules/partsys2.tab"));
+                                        .append('\n')
+                                        .append(vfs->openFile("rules/partsys1.tab"))
+                                        .append('\n')
+                                        .append(vfs->openFile("rules/partsys2.tab"));
 
         QDomDocument particleSystemsDoc;
         QDomElement particleSystems = particleSystemsDoc.createElement("particleSystems");
@@ -1027,18 +925,18 @@ public:
         }
     }
 
-	void addAddMeshesMesReferences()
+    void addAddMeshesMesReferences()
     {
         QHash<quint32, QString> meshesIndex = Troika::MessageFile::parse(vfs->openFile("rules/addmesh.mes"));
 
         foreach (quint32 meshId, meshesIndex.keys()) {
-			QString filename = meshesIndex[meshId].trimmed();
+            QString filename = meshesIndex[meshId].trimmed();
 
-			if (filename.isEmpty())
-				continue;
+            if (filename.isEmpty())
+                continue;
 
             MeshReference &reference = meshReferences[filename];
-			reference.source |= MeshReference::AddMesh;
+            reference.source |= MeshReference::AddMesh;
         }
     }
 
@@ -1048,7 +946,7 @@ public:
 
         // Convert all valid meshes in meshes.mes
         addMeshesMesReferences();
-		addAddMeshesMesReferences();
+        addAddMeshesMesReferences();
 
         foreach (const QString &meshFilename, meshReferences.keys()) {
             if (exclusions.isExcluded(meshFilename)) {
@@ -1096,14 +994,14 @@ public:
         return zip->addFile(newFilename, modelData, 9);
     }
 
-	bool writeModel(Troika::MeshModel *model, QDataStream &stream, ZipWriter *zip)
+    bool writeModel(Troika::MeshModel *model, QDataStream &stream, ZipWriter *zip)
     {
         ModelWriter writer(stream);
 
         QHash< QString, QSharedPointer<Troika::Material> > groupedMaterials;
 
         MaterialConverter converter(vfs.data());
-		converter.setExternal(external);
+        converter.setExternal(external);
 
         // Convert materials used by the model
         foreach (const QSharedPointer<Troika::FaceGroup> &faceGroup, model->faceGroups()) {
@@ -1113,52 +1011,52 @@ public:
         }
 
         QHash<QString,int> materialMapping;
-		QHash<uint,QString> materialFileMapping;
+        QHash<uint,QString> materialFileMapping;
         int i = 0;
 
         foreach (const QString &materialName, groupedMaterials.keys()) {
             qDebug("Converting %s.", qPrintable(materialName));
             converter.convert(groupedMaterials[materialName].data());
-			
-			materialFileMapping[i] = getNewMaterialFilename(materialName);
-			materialMapping[materialName] = i++;
+
+            materialFileMapping[i] = getNewMaterialFilename(materialName);
+            materialMapping[materialName] = i++;
         }
 
-		if (!external) {
-			writer.writeTextures(converter.textureList());
-			writer.writeMaterials(converter.materialList());
-		} else {
-			QStringList materials;
-			for (int j = 0; j < i; ++j) {
-				materials.append(materialFileMapping[j]);
-			}
-			writer.writeMaterialReferences(materials);
+        if (!external) {
+            writer.writeTextures(converter.textureList());
+            writer.writeMaterials(converter.materialList());
+        } else {
+            QStringList materials;
+            for (int j = 0; j < i; ++j) {
+                materials.append(materialFileMapping[j]);
+            }
+            writer.writeMaterialReferences(materials);
 
-			foreach (const QString &filename, converter.materialScripts().keys()) {
-				if (!mWrittenMaterials[filename]) {
-					mWrittenMaterials[filename] = true;
-					zip->addFile(filename, converter.materialScripts()[filename].data, 9);
-				}
-			}
-			foreach (const QString &filename, converter.textures().keys()) {
-				if (!mWrittenTextures[filename]) {
-					mWrittenTextures[filename] = true;
-					zip->addFile(filename, converter.textures()[filename].data, 9);
-				}
-			}
-		}
+            foreach (const QString &filename, converter.materialScripts().keys()) {
+                if (!mWrittenMaterials[filename]) {
+                    mWrittenMaterials[filename] = true;
+                    zip->addFile(filename, converter.materialScripts()[filename].data, 9);
+                }
+            }
+            foreach (const QString &filename, converter.textures().keys()) {
+                if (!mWrittenTextures[filename]) {
+                    mWrittenTextures[filename] = true;
+                    zip->addFile(filename, converter.textures()[filename].data, 9);
+                }
+            }
+        }
 
         writer.writeVertices(model->vertices());
         writer.writeFaces(model->faceGroups(), materialMapping);
 
-		writer.writeBones(model->skeleton());
-		writer.writeBoneAttachments(model->vertices());
+        writer.writeBones(model->skeleton());
+        writer.writeBoneAttachments(model->vertices());
 
-		writer.writeBoundingVolumes(model);
+        writer.writeBoundingVolumes(model);
 
-		if (model->skeleton()->animations().size() > 0) {
-			writer.writeAnimations(model);
-		}
+        if (model->skeleton()->animations().size() > 0) {
+            writer.writeAnimations(model);
+        }
 
         writer.finish();
 
@@ -1181,14 +1079,12 @@ public:
     {
         PrototypeConverter converter(vfs.data());
 
-        QByteArray result;
-        QXmlStreamWriter xml(&result);
-        xml.setAutoFormatting(true);
-        xml.setAutoFormattingIndent(4);
+        QVariantMap result = converter.convertPrototypes(prototypes.data());
 
-        converter.convertPrototypes(prototypes.data(), xml);
+        Serializer serializer;
+        QByteArray data = serializer.serialize(result);
 
-        writer->addFile("prototypes.xml", result, 9);
+        writer->addFile("prototypes.js", data, 9);
     }
 
     bool convert()
@@ -1208,7 +1104,7 @@ public:
         convertParticleSystems();
 
         convertMaps();
-		
+
         convertModels();               
 
         convertInterface();        
@@ -1234,7 +1130,7 @@ bool Converter::convert()
 
 void Converter::setExternal(bool ext)
 {
-	d_ptr->external = ext;
+    d_ptr->external = ext;
 }
 
 int main(int argc, char **argv) {
@@ -1250,11 +1146,11 @@ int main(int argc, char **argv) {
 
     Converter converter(QString::fromLocal8Bit(argv[1]), QString("data/"));
 
-	for (int i = 2; i < argc; ++i) {
-		if (!strcmp(argv[i], "-external")) {
-			converter.setExternal(true);
-		}
-	}
+    for (int i = 2; i < argc; ++i) {
+        if (!strcmp(argv[i], "-external")) {
+            converter.setExternal(true);
+        }
+    }
 
     if (!converter.convert()) {
         std::cout << "ERROR: Conversion failed." << std::endl;

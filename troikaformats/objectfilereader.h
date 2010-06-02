@@ -31,6 +31,7 @@ namespace Troika
     class GameObject {
     public:
         GameObject();
+        ~GameObject();
 
         Prototype *prototype;
         QString id; // object guid
@@ -102,6 +103,9 @@ namespace Troika
         Integer blitAlpha;
         Integer npcGeneratorData;
         Integer critterAlignment;
+
+
+        QList<GameObject*> content; // Based on parentitemid relation
 
     };
 

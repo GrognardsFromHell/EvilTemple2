@@ -16,7 +16,7 @@ CONFIG += dll
 TEMPLE_LIBS += qt3d minizip model glew jpeg
 include(../3rdparty/game-math/game-math.pri)
 
-DEFINES += GAME_LIBRARY
+DEFINES += GAME_LIBRARY GAMEMATH_MEMORY_OPERATORS
 
 SOURCES += \
     mainwindow.cpp \
@@ -45,7 +45,8 @@ SOURCES += \
     lighting.cpp \
     lighting_debug.cpp \
     profiler.cpp \
-    profilerdialog.cpp
+    profilerdialog.cpp \
+    scriptables.cpp
 HEADERS += \
     mainwindow.h \
     game.h \
@@ -78,9 +79,12 @@ HEADERS += \
     lighting_debug.h \
     drawhelper.h \
     profiler.h \
-    profilerdialog.h
+    profilerdialog.h \
+    scriptables.h
 OTHER_FILES += map_material.xml \
-    clipping_material.xml
+    clipping_material.xml \
+    lighting.vs \
+    lighting.fs
 
 INCLUDEPATH += .
 

@@ -64,6 +64,15 @@ inline QString getNewTextureFilename(const QString &mdfFilename) {
     return newFilename;
 }
 
+inline QString getNewBackgroundMapFolder(const QString &directory) {
+    // Get last directory name
+    QStringList parts = directory.toLower().split('/', QString::SkipEmptyParts);
+    QString dirname = parts.last();
+    // Remove superflous information from the dirname
+    dirname.replace(QRegExp("map\\d*\\-?\\d+\\-?", Qt::CaseInsensitive), "");
+    return "backgroundMaps/" + dirname + "/";
+}
+
 class JsonPropertyWriter {
 public:
     JsonPropertyWriter(QVariantMap &variantMap) : mMap(variantMap)

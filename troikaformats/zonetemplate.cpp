@@ -18,12 +18,18 @@ namespace Troika
             dayNightTransfer(false),
             bedrest(false) {}
 
+        ~ZoneTemplateData()
+        {
+            qDeleteAll(staticObjects);
+            qDeleteAll(mobiles);
+        }
+
         quint32 id;
         ZoneBackgroundMap *dayBackground;
         ZoneBackgroundMap *nightBackground;
         QList<GeometryObject*> staticGeometry;
-        QList<GameObject> staticObjects;
-        QList<GameObject> mobiles;
+        QList<GameObject*> staticObjects;
+        QList<GameObject*> mobiles;
         QList<GeometryObject*> clippingGeometry;
 
         QList<ParticleSystem> particleSystems;
@@ -242,22 +248,22 @@ namespace Troika
 		d_ptr->globalLight = light;
 	}
 
-        const QList<GameObject> &ZoneTemplate::staticObjects() const
+        const QList<GameObject*> &ZoneTemplate::staticObjects() const
         {
             return d_ptr->staticObjects;
         }
 
-    const QList<GameObject> &ZoneTemplate::mobiles() const
+    const QList<GameObject*> &ZoneTemplate::mobiles() const
     {
         return d_ptr->mobiles;
     }
 
-    void ZoneTemplate::addStaticObject(const GameObject &gameObject)
+    void ZoneTemplate::addStaticObject(GameObject *gameObject)
     {
         d_ptr->staticObjects.append(gameObject);
     }
 
-    void ZoneTemplate::addMobile(const GameObject &gameObject)
+    void ZoneTemplate::addMobile(GameObject *gameObject)
     {
         d_ptr->mobiles.append(gameObject);
     }

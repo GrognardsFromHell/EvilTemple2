@@ -1,4 +1,4 @@
-import Qt 4.6
+import Qt 4.7
 
 /*
     The root rectangle will be resized by the view to the maximum viewport size.

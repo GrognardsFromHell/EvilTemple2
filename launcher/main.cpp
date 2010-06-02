@@ -21,13 +21,13 @@ int main(int argc, char *argv[])
 
     Game game;
 
-    MainWindow mainWindow(game);
-    mainWindow.readSettings();
-    mainWindow.showFromSettings();
-
     if (!game.start()) {
         return -1;
     }
+
+    MainWindow mainWindow(game);
+    mainWindow.readSettings();
+    mainWindow.showFromSettings();
 
     return a.exec();
 }

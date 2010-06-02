@@ -58,8 +58,8 @@ public:
     GLint uniformLocation(const char *name);
 
 private:
-    GLuint vertexShader, fragmentShader, program;
     QString mError;
+    GLuint vertexShader, fragmentShader, program;
     bool handleGlError(const char *file, int line);
     bool checkProgramError(const char *file, int line);
     bool checkShaderError(GLuint shader, const char *file, int line);

@@ -1,4 +1,4 @@
-import Qt 4.6
+import Qt 4.7
 
 /*
     This is the first file loaded by the engine.
@@ -6,10 +6,6 @@ import Qt 4.6
 
 Loader {
     id: startupLoader
-
-    // The loader will be fitted to the viewport since its the root item,
-    // but items loaded by the loader itself should also fill the viewport.
-    resizeMode: "SizeLoaderToItem"
 
     function startup() {
         console.log("Starting up");

@@ -514,6 +514,11 @@ namespace Troika
     {
     }
 
+    GameObject::~GameObject()
+    {
+        qDeleteAll(content);
+    }
+
     template<typename T>
     inline QDataStream &operator >>(QDataStream &stream, Property<T> &property)
     {
@@ -769,7 +774,11 @@ namespace Troika
             case ItemParent:
                 stream.skipRawData(1 + 8);
                 stream >> guid;
-                object.parentItemId = guid.toString();
+                if (guid.isNull()) {
+                    qWarning("Null GUID read from file.");
+                } else {
+                    object.parentItemId = guid.toString();
+                }
                 break;
             case NpcSubstituteInventory:
                 stream.skipRawData(1 + 8);

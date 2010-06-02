@@ -64,6 +64,7 @@ contains(TEMPLE_LIBS,libavcodec) {
     win32:LIBS += -L$${PWD}/3rdparty/libavcodec/lib
 
     win32-msvc2008:INCLUDEPATH += $${PWD}/3rdparty/libavcodec/msvc
+    win32-msvc2010:INCLUDEPATH += $${PWD}/3rdparty/libavcodec/msvc
 
     LIBS += -lavcodec -lavformat -lavutil -lswscale
 }

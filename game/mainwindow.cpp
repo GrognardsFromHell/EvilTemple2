@@ -1,6 +1,7 @@
 
 #include <GL/glew.h>
 
+#include <QEventLoop>
 #include <QGraphicsView>
 #include <QGLWidget>
 #include <QSettings>
@@ -15,6 +16,7 @@
 #include "gameview.h"
 #include "scriptengine.h"
 #include "profilerdialog.h"
+#include "scene.h"
 
 // Used to display the memory usage in the title bar
 #if defined(Q_OS_WIN32)
@@ -87,15 +89,25 @@ namespace EvilTemple {
 
         // Create the console
         QDeclarativeComponent *component = new QDeclarativeComponent(d_ptr->gameView->uiEngine(), this);
-        component->loadUrl(QUrl("interface/Console.qml"));
-        d_ptr->consoleWidget = qobject_cast<QDeclarativeItem*>(component->create());
-        if (!d_ptr->consoleWidget) {
-            qWarning("Console widget doesn't inherit from QDeclarativeItem.");
-        } else {
-            connect(this, SIGNAL(consoleToggled()), d_ptr->consoleWidget, SLOT(toggle()));
+        component->loadUrl(QUrl::fromLocalFile("interface/Console.qml")); // This is asynchronous
+
+        QEventLoop eventLoop;
+        while (!component->isReady()) {
+            if (component->isError()) {
+                qFatal("Error creating console: %s.", qPrintable(component->errorString()));
+                break;
+            }
+            eventLoop.processEvents();
         }
 
-        connect(this, SIGNAL(logMessage(QVariant,QVariant)), d_ptr->consoleWidget, SLOT(addMessage(QVariant,QVariant)));
+        d_ptr->consoleWidget = qobject_cast<QDeclarativeItem*>(component->create());
+        if (!d_ptr->consoleWidget) {
+            qFatal("Console widget doesn't inherit from QDeclarativeItem.");
+        } else {
+            connect(this, SIGNAL(consoleToggled()), d_ptr->consoleWidget, SLOT(toggle()));
+            connect(this, SIGNAL(logMessage(QVariant,QVariant)), d_ptr->consoleWidget, SLOT(addMessage(QVariant,QVariant)));
+        }
+
         currentMainWindow = this;
         qInstallMsgHandler(consoleMessageHandler);
 
@@ -205,6 +217,16 @@ namespace EvilTemple {
         } else {
             show();
         }
+
+        qobject_cast<QGLWidget*>( d_ptr->gameView->viewport() )->makeCurrent();
+
+        GLenum err = glGetError();
+        while (err != GL_NO_ERROR)
+            err = glGetError();
+
+        d_ptr->game.scriptEngine()->callGlobalFunction("startup");
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0); // TODO: necessity?
 
         //d_ptr->guiView->setSource(QUrl("interface/Startup.qml"));
 

@@ -2,14 +2,9 @@
 const int Light_Directional = 1;
 const int Light_Point = 2;
 
-struct LightSource {
-	int type;
-	vec4 color;
-	vec4 position;
-	float attenuation; // 4/(light.Range*light.Range)
-};
+uniform int lightSourceType;
+uniform vec4 lightSourcePosition;
 
-uniform LightSource lightSource;
 uniform mat4 worldInverseMatrix;
 uniform mat4 worldViewMatrix;
 uniform mat4 worldViewInverseMatrix;
@@ -24,11 +19,11 @@ void lighting(vec4 vertexPosition, vec4 vertexNormal)
 {
 	normal = normalize(vec3(worldViewMatrix * vertexNormal));
 
-	if (lightSource.type == Light_Directional) {
-		lightVector = normalize(- vec3(viewMatrix * lightSource.position));
+	if (lightSourceType == Light_Directional) {
+		lightVector = normalize(- vec3(viewMatrix * lightSourcePosition));
 		lightDistance = 0;
 	} else {
-		lightVector = vec3(viewMatrix * lightSource.position) - vec3(worldViewMatrix * vertexPosition);
+		lightVector = vec3(viewMatrix * lightSourcePosition) - vec3(worldViewMatrix * vertexPosition);
 		// TODO: Scaling might negatively affect this. Maybe convert to world instead?
 		lightDistance = length(lightVector);
 		lightVector = normalize(lightVector); // Normalize

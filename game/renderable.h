@@ -2,12 +2,19 @@
 #ifndef RENDERABLE_H
 #define RENDERABLE_H
 
+#include <QObject>
+#include <QSharedPointer>
+
 #include "renderstates.h"
-#include "modelfile.h"
+#include "renderqueue.h"
+
+#include <gamemath.h>
+using namespace GameMath;
 
 namespace EvilTemple {
 
 class SceneNode;
+class RenderStates;
 
 class Renderable : public QObject {
 Q_OBJECT
@@ -36,6 +43,9 @@ public:
     virtual void mouseEnterEvent();
     virtual void mouseLeaveEvent();
 
+    RenderQueue::Category renderCategory() const;
+    void setRenderCategory(RenderQueue::Category category);
+
 signals:
     void mousePressed();
     void mouseReleased();
@@ -45,6 +55,7 @@ signals:
 protected:
     SceneNode *mParentNode;
     bool mAnimated;
+    RenderQueue::Category mRenderCategory; // In which category should the content of this node be rendered.
 
 private:
     Q_DISABLE_COPY(Renderable)
@@ -70,6 +81,18 @@ inline SceneNode *Renderable::parentNode() const
 {
     return mParentNode;
 }
+
+inline RenderQueue::Category Renderable::renderCategory() const
+{
+    return mRenderCategory;
+}
+
+inline void Renderable::setRenderCategory(RenderQueue::Category category)
+{
+    Q_ASSERT(category >= RenderQueue::Default && category <= RenderQueue::Count);
+    mRenderCategory = category;
+}
+
 
 typedef QSharedPointer<Renderable> SharedRenderable;
 

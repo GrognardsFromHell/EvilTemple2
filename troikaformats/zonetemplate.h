@@ -47,6 +47,7 @@ namespace Troika
 
     struct Light
     {
+        bool day;
         quint64 handle;
         quint32 type;
         quint8 r, g, b; // Diffuse/Specular
@@ -103,8 +104,8 @@ namespace Troika
           */
         const QBox3D &scrollBox() const;
 
-        const QList<GameObject> &staticObjects() const;
-        const QList<GameObject> &mobiles() const;
+        const QList<GameObject*> &staticObjects() const;
+        const QList<GameObject*> &mobiles() const;
 
     public:
         /**
@@ -149,8 +150,8 @@ namespace Troika
         void setScrollBox(const QBox3D &scrollBox);
 		void setGlobalLight(const Light &light);
 
-        void addStaticObject(const GameObject &gameObject);
-        void addMobile(const GameObject &gameObject);
+        void addStaticObject(GameObject *gameObject);
+        void addMobile(GameObject *gameObject);
 
     private:
         QScopedPointer<ZoneTemplateData> d_ptr;

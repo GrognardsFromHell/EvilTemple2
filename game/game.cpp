@@ -28,8 +28,6 @@ namespace EvilTemple {
     bool Game::start() {
         scriptEngine()->loadScripts();
 
-        scriptEngine()->callGlobalFunction("startup");
-
         return true;
     }
 

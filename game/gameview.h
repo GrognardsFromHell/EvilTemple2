@@ -4,18 +4,31 @@
 #include <QGraphicsView>
 #include <QtDeclarative/QDeclarativeEngine>
 
+#include "clippinggeometry.h"
+#include "modelfile.h"
+
 namespace EvilTemple {
 
 class GameViewData;
+class BackgroundMap;
+class Scene;
+class ClippingGeometry;
 
 class GameView : public QGraphicsView
 {
     Q_OBJECT
+    Q_PROPERTY(BackgroundMap *backgroundMap READ backgroundMap)
+    Q_PROPERTY(Scene *scene READ scene)
+    Q_PROPERTY(ClippingGeometry *clippingGeometry READ clippingGeometry)
 public:
     explicit GameView(QWidget *parent = 0);
     ~GameView();
 
     QDeclarativeEngine *uiEngine();
+
+    BackgroundMap *backgroundMap() const;
+    Scene *scene() const;
+    ClippingGeometry *clippingGeometry() const;
 
 signals:
 
@@ -29,7 +42,9 @@ public slots:
 
     int objectsDrawn() const;
 
-    void objectMousePressed();
+    void objectMousePressed();    
+
+    SharedModel loadModel(const QString &filename);
 
 protected:
     void resizeEvent(QResizeEvent *event);

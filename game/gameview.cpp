@@ -81,7 +81,7 @@ namespace EvilTemple {
 
             renderStates.setViewMatrix(baseViewMatrix);
             centerOnWorld(480 * 28.2842703f, 480 * 28.2842703f);
-
+/*
             qDebug("Loading background map...");
 
             backgroundMap.setMapDirectory("backgroundMaps/hommlet-exterior-night/");
@@ -89,7 +89,7 @@ namespace EvilTemple {
 
             QString mapDir = "maps/Map-2-Hommlet-Exterior/";
 
-            if (!clippingGeometry.load(mapDir + "clippingGeometry.dat", &scene)) {
+            if (!clippingGeometry.load(mapDir + "clipping.dat", &scene)) {
             //if (!clippingGeometry.load("maps/Map-7-Moathouse_Interior/clippingGeometry.dat")) {
                 qWarning("Loading clipping geometry failed.");
             }
@@ -180,36 +180,9 @@ namespace EvilTemple {
                 qWarning("Missing lighting model.");
             }           
 
-            loadLighting(&lightingFile);
+            loadLighting(&lightingFile);*/
 
             lightDebugger.loadMaterial();
-        }
-
-        void loadLighting(QIODevice *lightingSrc)
-        {
-            QDomDocument document;
-
-            QString errorMsg;
-            int errorLine, errorColumn;
-            if (!document.setContent(lightingSrc, false, &errorMsg, &errorLine, &errorColumn)) {
-                qWarning("Couldn't parse lighting XML file: %s (%d:%d)", qPrintable(errorMsg), errorLine, errorColumn);
-                return;
-            }
-
-            QDomElement root = document.documentElement();
-
-            QDomElement global = root.firstChildElement("global");
-            // Not used yet
-
-            QDomElement lightSources = root.firstChildElement("lightSources");
-            for (QDomElement element = lightSources.firstChildElement(); 
-                !element.isNull(); 
-                element = element.nextSiblingElement()) {
-                    Light light;
-                    if (light.load(element))
-                        lights.append(light);
-                        
-            }
         }
 
         void centerOnWorld(float worldX, float worldY)
@@ -258,8 +231,6 @@ namespace EvilTemple {
 
         typedef QPair<Vector4, QSharedPointer<Model> > GeometryMesh;
 
-        QList< Light > lights;
-
         QHash<QString, QWeakPointer<Model> > modelCache;
 
         LightDebugRenderer lightDebugger;
@@ -278,7 +249,7 @@ namespace EvilTemple {
             float halfWidth = width * 0.5f;
             float halfHeight = height * 0.5f;
 			glViewport(0, 0, width, height);
-            Matrix4 projectionMatrix = Matrix4::ortho(-halfWidth, halfWidth, -halfHeight, halfHeight, 1, 3628);
+            Matrix4 projectionMatrix = Matrix4::ortho(-halfWidth / 2, halfWidth / 2, -halfHeight / 2, halfHeight / 2, 1, 3628);
             renderStates.setProjectionMatrix(projectionMatrix);
         }
 
@@ -330,20 +301,14 @@ namespace EvilTemple {
         HANDLE_GL_ERROR
 
         if (!d->modelLoaded) {
-            SharedModel model(new Model);
-            if (!model->open("meshes/monsters/demon/demon.model", d->renderStates)) {
-                qWarning("Unable to open model file: %s", qPrintable(model->error()));
-            }
-            SharedModel model2(new Model);
-            if (!model2->open("meshes/monsters/demon/demon_balor_sword.model", d->renderStates)) {
-                qWarning("Unable to open model file: %s", qPrintable(model->error()));
-            }
+            SharedModel model = loadModel("meshes/monsters/demon/demon.model");
+            SharedModel model2 = loadModel("meshes/monsters/demon/demon_balor_sword.model");
             d->swordParticleSystem = d->particleSystems.instantiate("ef-Balor Sword");
             d->swordParticleSystem->setModelInstance(&d->model2);
             d->model.setModel(model);
             d->model2.setModel(model2);
             d->modelLoaded = true;
-        }
+        }               
 
         glUseProgram(0);
 
@@ -378,7 +343,7 @@ namespace EvilTemple {
         t(2, 3) = 480 * 28.2842703f;
         d->renderStates.setWorldMatrix(t * Matrix4::rotation(Quaternion::fromAxisAndAngle(0, 1, 0, deg2rad(-120))));
 
-        d->model.render(d->renderStates);
+        //d->model.render(d->renderStates);
 
         Matrix4 flipZ;
         flipZ.setToIdentity();
@@ -431,19 +396,32 @@ namespace EvilTemple {
         glVertex3f(-8180, -18712, -1);
         glEnd();
 
+        glClear(GL_DEPTH_BUFFER_BIT);HANDLE_GL_ERROR
+
         glLoadIdentity();HANDLE_GL_ERROR
         glMatrixMode(GL_PROJECTION);HANDLE_GL_ERROR
         glLoadIdentity();HANDLE_GL_ERROR
         glMatrixMode(GL_MODELVIEW);HANDLE_GL_ERROR
 
-        glClear(GL_DEPTH_BUFFER_BIT);HANDLE_GL_ERROR
+        glUseProgram(0);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
 
     void GameView::showView(const QString &url)
     {
         // Create the console
         QDeclarativeComponent *component = new QDeclarativeComponent(&d->uiEngine, this);
-        component->loadUrl(url);
+        component->loadUrl(QUrl::fromLocalFile(url));
+
+        QEventLoop eventLoop;
+        while (!component->isReady()) {
+            if (component->isError()) {
+                qFatal("Error creating console: %s.", qPrintable(component->errorString()));
+                break;
+            }
+            eventLoop.processEvents();
+        }
+
         QDeclarativeItem *widget = qobject_cast<QDeclarativeItem*>(component->create());
 
         d->uiScene.addItem(widget);
@@ -543,6 +521,43 @@ namespace EvilTemple {
     int GameView::objectsDrawn() const
     {
         return d->scene.objectsDrawn();
+    }
+
+    Scene *GameView::scene() const
+    {
+        return &d->scene;
+    }
+
+    BackgroundMap *GameView::backgroundMap() const
+    {
+        return &d->backgroundMap;
+    }
+
+    ClippingGeometry *GameView::clippingGeometry() const
+    {
+        return &d->clippingGeometry;
+    }
+
+    SharedModel GameView::loadModel(const QString &filename)
+    {
+        SharedModel model;
+
+        if (d->modelCache.contains(filename)) {
+            model = d->modelCache[filename];
+        }
+
+        if (model)
+            return model;
+
+        model = SharedModel(new Model);
+        if (!model->open(filename, d->renderStates)) {
+            qWarning("UNABLE TO LOAD MODEL: %s (%s)", qPrintable(filename), qPrintable(model->error()));
+        }
+
+        // This assumes that repeatedly loading a model won't fix the error.
+        d->modelCache[filename] = model;
+
+        return model;
     }
 
 }

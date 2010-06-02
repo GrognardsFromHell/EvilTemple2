@@ -219,12 +219,12 @@ public:
             QSharedPointer<ClippingGeometryInstance> instance(new ClippingGeometryInstance);
             instance->setMesh(mMeshes.data() + meshIndex);
             instance->setMaterial(&mClippingMaterial);
+            instance->setRenderCategory(RenderQueue::ClippingGeometry);
 
             SharedSceneNode node(new SceneNode);
             node->setPosition(position);
             node->setScale(scale);
-            node->setRotation(rotation);
-            node->setRenderCategory(RenderQueue::ClippingGeometry);
+            node->setRotation(rotation);            
             node->attachObject(instance);
             
             scene->addNode(node);

@@ -4,6 +4,7 @@
 #include "mapconverter.h"
 #include "zonebackgroundmap.h"
 #include "turbojpeg.h"
+#include "util.h"
 
 static tjhandle jpegHandle = 0;
 
@@ -71,14 +72,7 @@ public:
             return convertedGroundMaps[directory];
         }
 
-        QString newFolder = "backgroundMaps/";
-
-        // Get last directory name
-        QStringList parts = directory.split('/', QString::SkipEmptyParts);
-        QString dirname = parts.last();
-        // Remove superflous information from the dirname
-        dirname.replace(QRegExp("map\\d*\\-?\\d+\\-?", Qt::CaseInsensitive), "");
-        newFolder = newFolder + dirname + "/";
+        QString newFolder = getNewBackgroundMapFolder(background->directory());
 
         // Get all jpg files in the directory and load them
         QList<QPoint> tilesPresent; // Indicates which tiles are actually present in the background map

@@ -18,7 +18,7 @@ SceneNode::SceneNode()
         mWorldBoundingBoxInvalid(true),
         mAnimated(false),
         mParent(NULL),
-        mRenderCategory(RenderQueue::Default)
+        mScene(NULL)
 {
 }
 
@@ -47,7 +47,8 @@ void SceneNode::addVisibleObjects(const Frustum &viewFrustum, RenderQueue *rende
 
     if (viewFrustum.isVisible(worldBoundingBox())) {
         for (int i = 0; i < mAttachedObjects.size(); ++i) {
-            renderQueue->addRenderable(mRenderCategory, mAttachedObjects[i].data());
+            Renderable *renderable = mAttachedObjects[i].data();
+            renderQueue->addRenderable(renderable->renderCategory(), renderable);
         }
 
         if (addChildren) {

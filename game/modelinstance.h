@@ -27,6 +27,7 @@ struct AddMesh {
   */
 class ModelInstance : public Renderable
 {
+Q_OBJECT
 public:
     ModelInstance();
 	~ModelInstance();

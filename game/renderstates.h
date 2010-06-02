@@ -5,14 +5,13 @@
 #include <QtCore/QString>
 #include <QtCore/QScopedPointer>
 
-#include "gamemath.h"
-#include "lighting.h"
-
+#include <gamemath.h>
 using namespace GameMath;
 
 namespace EvilTemple {
 
 class UniformBinder;
+class Light;
 
 /**
  * Encapsulates various render state settings that influence the rendering of the scene.
@@ -38,8 +37,8 @@ public:
     /**
     Returns the active lights in the scene.
     */
-    const QVector<Light> &activeLights() const;
-    void setActiveLights(const QVector<Light> &activeLights);
+    const QList<const Light*> &activeLights() const;
+    void setActiveLights(const QList<const Light*> &activeLights);
 
     /**
       Returns a 2D box that encapsulates the viewport in absolute screen coordinates.
@@ -87,7 +86,7 @@ private:
     Matrix4 mWorldViewProjectionMatrix;
     QScopedPointer<UniformBinder> mWorldViewProjectionMatrixBinder;
 
-    QVector<Light> mActiveLights;
+    QList<const Light*> mActiveLights;
 };
 
 inline const Box2d &RenderStates::screenViewport() const
@@ -153,12 +152,12 @@ inline const Matrix4 &RenderStates::worldViewProjectionMatrix() const
     return mWorldViewProjectionMatrix;
 }
 
-inline const QVector<Light> &RenderStates::activeLights() const
+inline const QList<const Light*> &RenderStates::activeLights() const
 {
     return mActiveLights;
 }
 
-inline void RenderStates::setActiveLights(const QVector<Light> &activeLights)
+inline void RenderStates::setActiveLights(const QList<const Light*> &activeLights)
 {
     mActiveLights = activeLights;
 }

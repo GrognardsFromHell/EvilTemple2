@@ -27,16 +27,14 @@ static const QString typeTagNames[ObjectTypeCount] = {
     "Bag"
 };
 
-void PrototypeConverter::convertPrototype(Prototype *prototype, QXmlStreamWriter &xml)
+QVariantMap PrototypeConverter::convertPrototype(Prototype *prototype)
 {
-    // Add a comment with the description
-    xml.writeComment(mDescriptions[prototype->descriptionId]);
+    QVariantMap result;
 
-    xml.writeStartElement(typeTagNames[prototype->type]);
+    result["type"] = typeTagNames[prototype->type];
+    result["id"] = prototype->id;
 
-    xml.writeAttribute("id", QString("%1").arg(prototype->id));
-
-    PropertyWriter writer(xml);
+    JsonPropertyWriter writer(result);
 
     if (prototype->internalDescriptionId.isDefined()) {
         writer.write("internalDescription", mInternalDescriptions[prototype->internalDescriptionId.value()]);
@@ -54,33 +52,31 @@ void PrototypeConverter::convertPrototype(Prototype *prototype, QXmlStreamWriter
     writer.write("rotation", prototype->rotation);
     writer.write("walkSpeedFactor", prototype->walkSpeedFactor);
     writer.write("runSpeedFactor", prototype->runSpeedFactor);
-    writer.write("modelId", prototype->modelId);
+    writer.write("model", mModelFiles[prototype->modelId]);
     writer.write("radius", prototype->radius);
     writer.write("height", prototype->renderHeight);
 
-    xml.writeEndElement();
+    return result;
 }
 
-void PrototypeConverter::convertPrototypes(Troika::Prototypes *prototypes, QXmlStreamWriter &xml)
+QVariantMap PrototypeConverter::convertPrototypes(Troika::Prototypes *prototypes)
 {
-    xml.writeStartDocument("1.0");
-
-    xml.writeStartElement("prototypes");
+    QVariantMap result;
 
     foreach (Prototype *prototype, prototypes->prototypes()) {
-        convertPrototype(prototype, xml);
-
-        // Nicer to read
-        xml.writeCharacters("\n\n    ");
+        result[QString("%1").arg(prototype->id)] = convertPrototype(prototype);
     }
 
-    xml.writeEndElement();
-
-    xml.writeEndDocument();
+    return result;
 }
 
 PrototypeConverter::PrototypeConverter(VirtualFileSystem *vfs) : mVfs(vfs)
 {
     mInternalDescriptions = MessageFile::parse(mVfs->openFile("oemes/oname.mes"));
     mDescriptions = MessageFile::parse(mVfs->openFile("mes/description.mes"));
+    mModelFiles = MessageFile::parse(mVfs->openFile("art/meshes/meshes.mes"));
+
+    foreach (uint key, mModelFiles.keys()) {
+        mModelFiles[key] = "meshes/" + mModelFiles[key] + ".model";
+    }
 }

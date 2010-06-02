@@ -1,24 +1,25 @@
 #ifndef LIGHTING_H
 #define LIGHTING_H
 
+#include "renderable.h"
+
 #include <gamemath.h>
 using namespace GameMath;
 
 namespace EvilTemple {
     
-class Light
+class Light : public Renderable
 {
+Q_OBJECT
 public:
     Light();
-		
-	bool load(const QDomElement &element);
 
-	enum Type
-	{
+    enum Type
+    {
         Directional = 1,
         Point,
-		Spot,		
-	};
+        Spot,
+    };
 
     Type type() const {
         return mType;
@@ -28,9 +29,7 @@ public:
         return mRange;
     }
 
-    const Vector4 &position() const {
-        return mPosition;
-    }
+    Vector4 position() const;
 
     const Vector4 &direction() const {
         return mDirection;
@@ -52,21 +51,67 @@ public:
         return mTheta;
     }
 
+    void setType(Type type) {
+        mType = type;
+    }
+
+    void setRange(float range)
+    {
+        mRange = range;
+        mBoundingBox.setMinimum(Vector4(-range, -range, -range, 1));
+        mBoundingBox.setMaximum(Vector4(range, range, range, 1));
+
+        // TODO: Invalidate PARENT'S bounding box
+    }
+
+    void setColor(const Vector4 &color)
+    {
+        mColor = color;
+    }
+
+    void setAttenuation(float attenuation)
+    {
+        mAttenuation = attenuation;
+    }
+
+    void setPhi(float phi)
+    {
+        mPhi = phi;
+    }
+
+    void setTheta(float theta)
+    {
+        mTheta = theta;
+    }
+
+    void setDirection(const Vector4 &direction)
+    {
+        mDirection = direction;
+    }
+
+    void render(RenderStates &renderStates)
+    {
+    }
+
+    const Box3d &boundingBox()
+    {
+        return mBoundingBox;
+    }
+
 private:
-	Type mType;
-	float mRange;
+    Type mType;
+    float mRange;
     float mPhi;
     float mTheta;
     float mAttenuation;
-	Vector4 mPosition;
-	Vector4 mDirection; // Invalid for point lights
-	Vector4 mColor;
+    Vector4 mDirection; // Invalid for point lights
+    Vector4 mColor;
+    Box3d mBoundingBox;
 
-    bool parseColor(const QDomElement &element, Vector4 &result) const;
-    bool parsePosition(const QDomElement &element, Vector4 &result) const;
+    Q_DISABLE_COPY(Light)
 };
 
-inline Light::Light() : mColor(0,0,0,0)
+inline Light::Light() : mColor(0,0,0,0), mDirection(0, 0, 0, 0)
 {
 }
 

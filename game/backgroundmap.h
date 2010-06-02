@@ -1,6 +1,7 @@
 #ifndef BACKGROUNDMAP_H
 #define BACKGROUNDMAP_H
 
+#include <QObject>
 #include <QScopedPointer>
 
 namespace EvilTemple {
@@ -8,15 +9,18 @@ namespace EvilTemple {
 class RenderStates;
 class BackgroundMapData;
 
-class BackgroundMap
+class BackgroundMap : public QObject
 {
+Q_OBJECT
+Q_PROPERTY(QString directory READ directory WRITE setDirectory)
 public:
     BackgroundMap(const RenderStates &states);
     ~BackgroundMap();
 
     void render();
 
-    bool setMapDirectory(const QString &directory);
+    bool setDirectory(const QString &directory);
+    const QString &directory();
 
 private:
     QScopedPointer<BackgroundMapData> d;
@@ -24,5 +28,7 @@ private:
 };
 
 }
+
+Q_DECLARE_METATYPE(EvilTemple::BackgroundMap*)
 
 #endif // BACKGROUNDMAP_H

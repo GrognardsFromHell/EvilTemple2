@@ -18,6 +18,7 @@ win32:DEFINES += HAVE_CONFIG_H
 win32:HEADERS += win32/config.h
 
 win32-msvc2008:DEFINES += _CRT_SECURE_NO_WARNINGS
+win32-msvc2010:DEFINES += _CRT_SECURE_NO_WARNINGS
 
 HEADERS += include/AL/alut.h \
     src/alutInternal.h

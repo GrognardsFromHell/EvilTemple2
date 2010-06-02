@@ -1,4 +1,4 @@
-import Qt 4.6
+import Qt 4.7
 
 Rectangle {
     id: consoleRectangle
@@ -8,9 +8,9 @@ Rectangle {
     clip: true
     color: "transparent"
 
-    anchors.left: parent.left
+    /*anchors.left: parent.left
     anchors.right: parent.right
-    anchors.top: parent.top
+    anchors.top: parent.top*/
 
     // Adds a message to the console
     // Type can be one of the following:
@@ -64,7 +64,6 @@ Rectangle {
         width: 628
         textFormat: 'StyledText'
         height: 446
-        wrap: true
         text: ""
         color: "white"
         anchors.bottom: inputLine.top

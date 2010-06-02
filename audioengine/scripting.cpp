@@ -115,12 +115,10 @@ void registerAudioEngine(QScriptEngine *engine)
     qScriptRegisterMetaType<SoundCategory>(engine, SoundCategory_toScriptValue, SoundCategory_fromScriptValue);
 
     int metaId = qRegisterMetaType<SharedSound>();
-    engine->setDefaultPrototype(metaId,
-                                      engine->newQObject(new ISoundPrototype, QScriptEngine::ScriptOwnership));
+    engine->setDefaultPrototype(metaId, engine->newQObject(new ISoundPrototype, QScriptEngine::ScriptOwnership));
 
     metaId = qRegisterMetaType<SharedSoundHandle>();
-    engine->setDefaultPrototype(metaId,
-                                      engine->newQObject(new ISoundHandlePrototype, QScriptEngine::ScriptOwnership));
+    engine->setDefaultPrototype(metaId, engine->newQObject(new ISoundHandlePrototype, QScriptEngine::ScriptOwnership));
 
     // Register SoundCategory strings in global object
     QScriptValue globalObject = engine->globalObject();

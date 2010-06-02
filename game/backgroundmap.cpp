@@ -92,6 +92,10 @@ public:
         textures.clear();
         tilesPresent.clear();
 
+        // Can also be null in case the map should be unloaded
+        if (mapDirectory.isNull())
+            return true;
+
         QFile indexFile(mapDirectory + "index.dat");
         indexFile.open(QIODevice::ReadOnly);
         QDataStream stream(&indexFile);
@@ -200,7 +204,12 @@ BackgroundMap::~BackgroundMap()
 
 }
 
-bool BackgroundMap::setMapDirectory(const QString &directory)
+const QString &BackgroundMap::directory()
+{
+    return d->mapDirectory;
+}
+
+bool BackgroundMap::setDirectory(const QString &directory)
 {
     return d->setMapDirectory(directory);
 }

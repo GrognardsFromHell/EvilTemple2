@@ -100,7 +100,11 @@ bool GLSLProgram::handleGlError(const char *file, int line) {
 
 	GLenum glErr = glGetError();
 	while (glErr != GL_NO_ERROR) {
-            mError.append(QString("OpenGL error @ %1:%2: %3").arg(file).arg(line).arg((char*)gluErrorString(glErr)));
+            const char *errorString = (const char*)gluErrorString(glErr);
+            if (errorString)
+                mError.append(QString("OpenGL error @ %1:%2: %3").arg(file).arg(line).arg(errorString));
+            else
+                mError.append(QString("Unknown OpenGL error @ %1:%2").arg(file).arg(line));
             errorOccured = true;
             glErr = glGetError();
 	}
@@ -136,7 +140,8 @@ bool GLSLProgram::loadFromFile( const QString &vertexShaderFile, const QString &
 
 bool GLSLProgram::load( const char *vertexShaderCode, const char *fragmentShaderCode )
 {
-	release();
+
+	release();               
 
 	HANDLE_GL_ERROR
 

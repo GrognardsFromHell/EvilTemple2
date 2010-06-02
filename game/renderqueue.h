@@ -2,9 +2,10 @@
 #define RENDERQUEUE_H
 
 #include "renderstates.h"
-#include "renderable.h"
 
 namespace EvilTemple {
+
+class Renderable;
 
 /**
   A utility class that is used to assemble a list of objects for rendering.
@@ -15,6 +16,7 @@ public:
     enum Category {
         Default = 0,
         ClippingGeometry,
+        Lights,
         Count
     };
 

@@ -4,6 +4,7 @@
 #include "particlesystem.h"
 #include "scenenode.h"
 #include "profiler.h"
+#include "lighting.h"
 
 namespace EvilTemple {
 
@@ -95,14 +96,14 @@ namespace EvilTemple {
             Q_UNUSED(renderStates);
 
             // Render once without diffuse/specular, then render again without ambient
-            int typePos = state.program.uniformLocation("lightSource.type");
+            int typePos = state.program.uniformLocation("lightSourceType");
             if (typePos != -1) {
                 SAFE_GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mBufferId));
 
-                typePos = state.program.uniformLocation("lightSource.type");
-                int colorPos = state.program.uniformLocation("lightSource.color");
-                int positionPos = state.program.uniformLocation("lightSource.position");
-                int attenuationPos = state.program.uniformLocation("lightSource.attenuation");
+                typePos = state.program.uniformLocation("lightSourceType");
+                int colorPos = state.program.uniformLocation("lightSourceColor");
+                int positionPos = state.program.uniformLocation("lightSourcePosition");
+                int attenuationPos = state.program.uniformLocation("lightSourceAttenuation");
 
                 SAFE_GL(glUniform1i(typePos, 1));
                 //SAFE_GL(glUniform4f(colorPos, 0.662745f, 0.564706f, 0.905882f, 0));
@@ -119,11 +120,11 @@ namespace EvilTemple {
                     SAFE_GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE));
 
                     // Draw again for every light affecting this mesh
-                    foreach (const Light &light, renderStates.activeLights()) {
-                        SAFE_GL(glUniform1i(typePos, light.type()));
-                        SAFE_GL(glUniform4f(colorPos, light.color().x(), light.color().y(), light.color().z(), light.color().w()));
-                        SAFE_GL(glUniform4f(positionPos, light.position().x(), light.position().y(), light.position().z(), 1));
-                        SAFE_GL(glUniform1f(attenuationPos, light.attenuation()));
+                    foreach (const Light *light, renderStates.activeLights()) {
+                        SAFE_GL(glUniform1i(typePos, light->type()));
+                        SAFE_GL(glUniform4fv(colorPos, 1, light->color().data()));
+                        SAFE_GL(glUniform4fv(positionPos, 1, light->position().data()));
+                        SAFE_GL(glUniform1f(attenuationPos, light->attenuation()));
 
                         SAFE_GL(glDrawElements(GL_TRIANGLES, mElementCount, GL_UNSIGNED_SHORT, 0));
                     }
@@ -291,11 +292,14 @@ namespace EvilTemple {
 
         for (int faceGroupId = 0; faceGroupId < model->faces; ++faceGroupId) {
             const FaceGroup &faceGroup = model->faceGroups[faceGroupId];
-            MaterialState *material = faceGroup.material;
-
+            
+            // This needs special handling (material replacement)
+            if (!faceGroup.material)
+                continue;
+            
             ModelDrawStrategy drawStrategy(faceGroup.buffer, faceGroup.elementCount);
             
-            drawHelper.draw(renderStates, material, drawStrategy, bufferSource);
+            drawHelper.draw(renderStates, faceGroup.material, drawStrategy, bufferSource);
         }
     }
 
@@ -420,7 +424,11 @@ namespace EvilTemple {
     
     const Box3d &ModelInstance::boundingBox()
     {
-        return mModel->boundingBox();
+        static Box3d emptyBox;
+        if (mModel)
+            return mModel->boundingBox();
+        else
+            return emptyBox;
     }
     
     const Matrix4 &ModelInstance::worldTransform() const
