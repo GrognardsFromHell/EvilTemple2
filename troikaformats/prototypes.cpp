@@ -245,7 +245,7 @@ namespace Troika
             QString scaleText = parts[6];
             scaleText.replace(".", ""); // Sometimes the scale is incorrectly defined as .25,
             // instead of 25 (at least i hope that)
-            scale.setValue(scaleText.toFloat() / 100.f);
+            scale.setValue(scaleText.toFloat());
         }
 
         readFlagList(parts, 20, objectFlags, translateObjectFlag);

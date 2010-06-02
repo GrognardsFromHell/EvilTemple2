@@ -1,6 +1,7 @@
 
 #include "renderqueue.h"
 #include "scene.h"
+#include "lighting.h"
 
 #include <gamemath.h>
 using namespace GameMath;
@@ -59,11 +60,33 @@ void Scene::render(RenderStates &renderStates)
         RenderQueue::Lights
     };
 
+    // Find all light sources that are visible.
+    QList<const Light*> visibleLights;
+
+    foreach (Renderable *lightCanidate, d->renderQueue.queuedObjects(RenderQueue::Lights)) {
+        Light *light = qobject_cast<Light*>(lightCanidate);
+        if (light) {
+            visibleLights.append(light);
+        }
+    }
+
     for (int catOrder = 0; catOrder < RenderQueue::Count; ++catOrder) {
         RenderQueue::Category category = renderOrder[catOrder];
         const QList<Renderable*> &renderables = d->renderQueue.queuedObjects(category);
-        for (int i = 0; i < renderables.size(); ++i) {
+        for (int i = 0; i < renderables.size(); ++i) {            
             Renderable *renderable = renderables.at(i);
+
+            // Find all light sources that intersect the bounding volume of the given object
+            QList<const Light*> activeLights;
+
+            for (int j = 0; j < visibleLights.size(); ++j) {
+                // TODO: This ignores the full position
+                float squaredDistance = (visibleLights[j]->position() - renderable->parentNode()->position()).lengthSquared();
+                if (squaredDistance < visibleLights[j]->range() * visibleLights[j]->range())
+                    activeLights.append(visibleLights[j]);
+            }
+
+            renderStates.setActiveLights(activeLights);
 
             // TODO: Remove this.
             glEnable(GL_BLEND);
@@ -78,6 +101,8 @@ void Scene::render(RenderStates &renderStates)
             d->objectsDrawn++;
         }
     }
+
+    renderStates.setActiveLights(QList<const Light*>());
 }
 
 int Scene::objectsDrawn() const

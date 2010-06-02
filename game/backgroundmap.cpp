@@ -69,7 +69,9 @@ public:
         texCoordBuffer.create();
         texCoordBuffer.bind();
 
-        static const float texCoords[8] = {0, 0, 1, 0, 0, 1, 1, 1};
+        static const float bias = 0.5f / 256.0f;
+
+        static const float texCoords[8] = {bias, bias, 1 - bias, bias, bias, 1 - bias, 1 - bias, 1 - bias};
         texCoordBuffer.allocate(texCoords, sizeof(texCoords));
         texCoordBuffer.release();
 
@@ -165,8 +167,10 @@ public:
         QFile backgroundTexture(filename);
 
         SharedTexture result(new Texture);
-        result->setMagFilter(GL_NEAREST);
-        result->setMinFilter(GL_NEAREST);
+        result->setMagFilter(GL_LINEAR);
+        result->setMinFilter(GL_LINEAR);
+        result->setWrapModeS(GL_CLAMP);
+        result->setWrapModeT(GL_CLAMP);
         textures.insert(point, result);
 
         if (backgroundTexture.open(QIODevice::ReadOnly)) {

@@ -279,6 +279,7 @@ namespace EvilTemple {
         SceneNodeScriptable::registerWith(engine);
         ModelScriptable::registerWith(engine);
         ModelInstanceScriptable::registerWith(engine);
+        LightScriptable::registerWith(engine);
         registerRenderableScriptable(engine);
     }
 

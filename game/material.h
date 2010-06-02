@@ -110,6 +110,70 @@ private:
     bool mRed, mGreen, mBlue, mAlpha;
 };
 
+class StencilFuncState : public MaterialRenderState
+{
+public:
+    StencilFuncState(GLenum func, GLint ref, GLuint mask)
+        : mFunc(func), mRef(ref), mMask(mask)
+    {
+    }
+
+    void enable() {
+        SAFE_GL(glStencilFunc(mFunc, mRef, mMask));
+    }
+
+    void disable() {
+        // TODO: This encodes how the default state of glStencilFunc should look
+        SAFE_GL(glStencilFunc(GL_ALWAYS, 0, ~0));
+    }
+
+private:
+    GLenum mFunc;
+    GLint mRef;
+    GLuint mMask;
+};
+
+class ClearStencilState : public MaterialRenderState
+{
+public:
+    ClearStencilState(GLint value)
+        : mValue(value)
+    {
+    }
+
+    void enable() {
+        //SAFE_GL(glClearStencil(mValue));
+        //SAFE_GL(glClear(GL_STENCIL_BUFFER_BIT));
+    }
+
+    void disable() {
+    }
+
+private:
+    GLint mValue;
+};
+
+class StencilOpState : public MaterialRenderState
+{
+public:
+    StencilOpState(GLenum fail, GLenum zfail, GLenum zpass)
+        : mFail(fail), mZFail(zfail), mZPass(zpass)
+    {
+    }
+
+    void enable() {
+        SAFE_GL(glStencilOp(mFail, mZFail, mZPass));
+    }
+
+    void disable() {
+        // TODO: This encodes how the default state of glStencilop should look
+        SAFE_GL(glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP));
+    }
+
+private:
+    GLenum mFail, mZFail, mZPass;
+};
+
 typedef QSharedPointer<MaterialRenderState> SharedMaterialRenderState;
 
 /**

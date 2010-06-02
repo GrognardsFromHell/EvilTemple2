@@ -6,6 +6,7 @@
 
 #include "scene.h"
 #include "scenenode.h"
+#include "lighting.h"
 
 #include <gamemath.h>
 using namespace GameMath;
@@ -52,6 +53,46 @@ namespace EvilTemple {
         void setClickHandler(const QScriptValue &handler);
     private:
         ModelInstance *data() const;
+    };
+
+    class LightScriptable : public QObject, protected QScriptable {
+    Q_OBJECT
+    Q_PROPERTY(uint lightType READ lightType WRITE setLightType)
+    Q_PROPERTY(float attenuation READ attenuation WRITE setAttenuation)
+    Q_PROPERTY(float phi READ phi WRITE setPhi)
+    Q_PROPERTY(float theta READ theta WRITE setTheta)
+    Q_PROPERTY(Vector4 color READ color WRITE setColor)
+    Q_PROPERTY(Vector4 direction READ direction WRITE setDirection)
+    Q_PROPERTY(float range READ range WRITE setRange)
+    Q_PROPERTY(bool debugging READ isDebugging WRITE setDebugging)
+    public:
+        static void registerWith(QScriptEngine *engine);
+    private:
+        Light *data() const;
+
+        uint lightType() const;
+        void setLightType(uint type);
+
+        float attenuation() const;
+        void setAttenuation(float attenuation);
+
+        float phi() const;
+        void setPhi(float phi);
+
+        float range() const;
+        void setRange(float range);
+
+        const Vector4 &color() const;
+        void setColor(const Vector4 &color);
+
+        float theta() const;
+        void setTheta(float theta);
+
+        const Vector4 &direction() const;
+        void setDirection(const Vector4 &direction);
+
+        void setDebugging(bool debugging);
+        bool isDebugging() const;
     };
 
     class SceneNodeScriptable : public QObject, protected QScriptable {

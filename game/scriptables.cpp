@@ -12,11 +12,13 @@ using EvilTemple::SharedModel;
 using EvilTemple::SharedSceneNode;
 using EvilTemple::SharedRenderable;
 using EvilTemple::SharedModelInstance;
+using EvilTemple::SharedLight;
 
 Q_DECLARE_METATYPE(SharedSceneNode)
 Q_DECLARE_METATYPE(SharedModel)
 Q_DECLARE_METATYPE(SharedRenderable)
 Q_DECLARE_METATYPE(SharedModelInstance)
+Q_DECLARE_METATYPE(SharedLight)
 
 Q_DECLARE_METATYPE(Vector4)
 Q_DECLARE_METATYPE(Quaternion)
@@ -72,6 +74,9 @@ void renderableFromScriptValue(const QScriptValue &object, SharedRenderable &out
     if (userType == qMetaTypeId<SharedModelInstance>()) {
         SharedModelInstance modelInstance = qvariant_cast<SharedModelInstance>(variant);
         out = modelInstance.objectCast<Renderable>();
+    } else if (userType == qMetaTypeId<SharedLight>()) {
+            SharedLight modelInstance = qvariant_cast<SharedLight>(variant);
+            out = modelInstance.objectCast<Renderable>();
     } else {
         qWarning("Unable to convert to SharedRenderable.");
     }
@@ -206,6 +211,145 @@ ModelInstance *ModelInstanceScriptable::data() const
     }
 
     return data;
+}
+
+QScriptValue LightScriptableCtor(QScriptContext *context, QScriptEngine *engine)
+{
+    if (!context->isCalledAsConstructor())
+        return context->throwError(QScriptContext::SyntaxError, "please use the 'new' operator");
+    SharedLight node(new Light);
+    QScriptValue result = engine->newVariant(context->thisObject(), qVariantFromValue(node));
+    result.setPrototype(engine->defaultPrototype(qMetaTypeId<SharedLight>()));
+    return result;
+}
+
+void LightScriptable::registerWith(QScriptEngine *engine)
+{
+    QScriptValue prototype = engine->newQObject(new LightScriptable, QScriptEngine::ScriptOwnership);
+
+    int typeId = qRegisterMetaType<SharedLight>("SharedLight");
+    engine->setDefaultPrototype(typeId, prototype);
+
+    QScriptValue ctor = engine->newFunction(LightScriptableCtor);
+    engine->globalObject().setProperty("Light", ctor);
+}
+
+Light *LightScriptable::data() const
+{
+    SharedRenderable renderable = qscriptvalue_cast<SharedRenderable>(thisObject());
+
+    Light *data = renderable.objectCast<Light>().data();
+
+    if (!data) {
+        context()->throwError("Light object not associated with a shared renderable.");
+        return NULL;
+    }
+
+    return data;
+}
+
+uint LightScriptable::lightType() const
+{
+    Light *light = data();
+    return light ? light->type() : 0;
+}
+
+void LightScriptable::setLightType(uint type)
+{
+    Light *light = data();
+    if (light)
+        light->setType((Light::Type)type);
+}
+
+float LightScriptable::attenuation() const
+{
+    Light *light = data();
+    return light ? light->attenuation() : 0;
+}
+
+void LightScriptable::setAttenuation(float attenuation)
+{
+    Light *light = data();
+    if (light)
+        light->setAttenuation(attenuation);
+}
+
+float LightScriptable::phi() const
+{
+    Light *light = data();
+    return light ? light->phi() : 0;
+}
+
+void LightScriptable::setPhi(float phi)
+{
+    Light *light = data();
+    if (light)
+        light->setPhi(phi);
+}
+
+float LightScriptable::range() const
+{
+    Light *light = data();
+    return light ? light->range() : 0;
+}
+
+void LightScriptable::setRange(float range)
+{
+    Light *light = data();
+    if (light)
+        light->setRange(range);
+}
+
+const Vector4 &LightScriptable::color() const
+{
+    Light *light = data();
+    return light ? light->color() : nullVector;
+}
+
+void LightScriptable::setColor(const Vector4 &color)
+{
+    Light *light = data();
+    if (light)
+        light->setColor(color);
+}
+
+float LightScriptable::theta() const
+{
+    Light *light = data();
+    return light ? light->theta() : 0;
+}
+
+void LightScriptable::setTheta(float theta)
+{
+    Light *light = data();
+    if (light)
+        light->setTheta(theta);
+}
+
+const Vector4 &LightScriptable::direction() const
+{
+    Light *light = data();
+    return light ? light->direction() : nullVector;
+}
+
+void LightScriptable::setDirection(const Vector4 &direction)
+{
+    Light *light = data();
+    if (light)
+        light->setDirection(direction);
+}
+
+void LightScriptable::setDebugging(bool debugging)
+{
+    Light *light = data();
+    if (light)
+        light->setDebugging(debugging);
+}
+
+bool LightScriptable::isDebugging() const
+{
+    Light *light = data();
+    return light ? light->isDebugging() : false;
 }
 
 SharedSceneNode SceneNodeScriptable::sceneNode() const

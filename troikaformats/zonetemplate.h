@@ -23,24 +23,24 @@ namespace Troika
 	
     class TROIKAFORMATS_EXPORT GeometryObject {
     public:
-        GeometryObject(const QVector3D &position, const QQuaternion &rotation, const QString &mesh) :
+        GeometryObject(const QVector3D &position, float rotation, const QString &mesh) :
                 mPosition(position), mRotation(rotation), mScale(1, 1, 1), mMesh(mesh) {
         }
 
         GeometryObject(const QVector3D &position,
-                       const QQuaternion &rotation,
+                       float rotation,
                        const QVector3D &scale,
                        const QString &mesh) :
                 mPosition(position), mRotation(rotation), mScale(scale), mMesh(mesh) {}
 
         const QVector3D &position() const { return mPosition; }
-        const QQuaternion &rotation() const { return mRotation; }
+        float rotation() const { return mRotation; }
         const QVector3D &scale() const { return mScale; }
         const QString &mesh() const { return mMesh; }
     private:
 
         QVector3D mPosition;
-        QQuaternion mRotation;
+        float mRotation; // in degrees
         QVector3D mScale;
         QString mMesh;
     };

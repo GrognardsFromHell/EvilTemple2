@@ -207,8 +207,8 @@ public:
 
         // Read instances
         Vector4 position;
-        Vector4 scale;
-        Quaternion rotation;
+        float scale;
+        float rotation;
         int meshIndex;
         
         for (int i = 0; i < mInstanceCount; ++i) {            
@@ -223,8 +223,8 @@ public:
 
             SharedSceneNode node(new SceneNode);
             node->setPosition(position);
-            node->setScale(scale);
-            node->setRotation(rotation);            
+            node->setScale(Vector4(scale, scale, scale, 1));
+            node->setRotation(Quaternion::fromAxisAndAngle(0, 1, 0, rotation));
             node->attachObject(instance);
             
             scene->addNode(node);

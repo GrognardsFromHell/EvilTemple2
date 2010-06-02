@@ -8,6 +8,15 @@
 #include <QXmlStreamWriter>
 #include <QVariant>
 
+/**
+  Converts radians to degree.
+  */
+inline float deg2rad(float rad)
+{
+    static const float Pi = 3.14159265358979323846f;
+    return rad / 180.f * Pi;
+}
+
 inline QString &mangleMaterialName(QString &materialName)
 {
     return materialName.replace(QRegExp("\\.\\w+$"), "").replace('/', '-');

@@ -81,108 +81,9 @@ namespace EvilTemple {
 
             renderStates.setViewMatrix(baseViewMatrix);
             centerOnWorld(480 * 28.2842703f, 480 * 28.2842703f);
-/*
-            qDebug("Loading background map...");
-
-            backgroundMap.setMapDirectory("backgroundMaps/hommlet-exterior-night/");
-            //backgroundMap.setMapDirectory("backgroundMaps/moathouse_interior/");
-
-            QString mapDir = "maps/Map-2-Hommlet-Exterior/";
-
-            if (!clippingGeometry.load(mapDir + "clipping.dat", &scene)) {
-            //if (!clippingGeometry.load("maps/Map-7-Moathouse_Interior/clippingGeometry.dat")) {
-                qWarning("Loading clipping geometry failed.");
-            }
-
-            qDebug("Loading static geometry...");
-
-            QFile gmf(mapDir + "staticGeometry.txt");
-            //QFile gmf("maps/Map-7-Moathouse_Interior/staticGeometry.txt");
-
-            if (!gmf.open(QIODevice::ReadOnly)) {
-                qFatal("Couldn't open GMF: %s", qPrintable(gmf.fileName()));
-            }
-
-            QTextStream stream(&gmf);
-
-            while (!stream.atEnd()) {
-                float x, y, z, w;
-                QString modelFilename;
-                stream >> x >> y >> z >> modelFilename;
-
-                Vector4 position(x, y, z, 0);
-
-                stream >> x >> y >> z >> w;
-
-                Quaternion rotation(x, y, z, w);
-
-                stream >> x >> y >> z;
-                Vector4 scale(x, y, z, 1);
-
-                int staticObject, rotationFromPrototype, customRotation;
-                stream >> staticObject >> rotationFromPrototype >> customRotation;
-
-                SharedModel model(new Model);
-
-                if (modelCache.contains(modelFilename)) {
-                    model = modelCache[modelFilename];
-                } else if (!model->open(modelFilename, renderStates)) {
-                    qWarning("UNABLE TO LOAD GMF: %s (%s)", qPrintable(modelFilename), qPrintable(model->error()));
-                    continue;
-                } else {
-                    modelCache[modelFilename] = model;
-                }
-
-                QSharedPointer<ModelInstance> modelInstance(new ModelInstance());
-                modelInstance->setModel(model);
-                QObject::connect(modelInstance.data(), SIGNAL(mousePressed()), view, SLOT(objectMousePressed()));
-
-                SharedSceneNode node(new SceneNode);
-                node->setPosition(position);
-                node->setRotation(rotation);
-                node->setScale(scale);
-                scene.addNode(node);
-
-                node->attachObject(modelInstance);
-            }
-
-            qDebug("Loading particle systems for map...");
-
-            QFile partSys(mapDir + "particleSystems.txt");
-
-            if (!partSys.open(QIODevice::ReadOnly)) {
-                qWarning("Unable to find particle system file.");
-            }
-
-            QDataStream partSysStream(&partSys);
-            partSysStream.setByteOrder(QDataStream::LittleEndian);
-            partSysStream.setFloatingPointPrecision(QDataStream::SinglePrecision);
-
-            while (!partSysStream.atEnd()) {
-                float x, y, z, radius;
-                QString name;
-
-                partSysStream >> x >> y >> z >> radius >> name;
-
-                SharedSceneNode node(new SceneNode);
-                node->setPosition(Vector4(x, y, z, 1));
-
-                SharedRenderable renderable(particleSystems.instantiate(name));
-                node->attachObject(renderable);
-
-                scene.addNode(node);
-            }
-
-            qDebug("Loading lighting...");
-
-            QFile lightingFile(mapDir + "lighting.xml");
-            if (!lightingFile.open(QIODevice::ReadOnly)) {
-                qWarning("Missing lighting model.");
-            }           
-
-            loadLighting(&lightingFile);*/
 
             lightDebugger.loadMaterial();
+            Light::setDebugRenderer(&lightDebugger);
         }
 
         void centerOnWorld(float worldX, float worldY)
@@ -249,7 +150,10 @@ namespace EvilTemple {
             float halfWidth = width * 0.5f;
             float halfHeight = height * 0.5f;
 			glViewport(0, 0, width, height);
-            Matrix4 projectionMatrix = Matrix4::ortho(-halfWidth / 2, halfWidth / 2, -halfHeight / 2, halfHeight / 2, 1, 3628);
+
+            const float zoom = 1.25f;
+
+            Matrix4 projectionMatrix = Matrix4::ortho(-halfWidth / zoom, halfWidth / zoom, -halfHeight / zoom, halfHeight / zoom, 1, 3628);
             renderStates.setProjectionMatrix(projectionMatrix);
         }
 
@@ -320,7 +224,8 @@ namespace EvilTemple {
         SAFE_GL(glDisable(GL_STENCIL_TEST));
 
         glClearColor(0.2f, 0.2f, 0.2f, 0.0f);
-        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+        glClearStencil(1);
+        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
 
         d->backgroundMap.render();
 

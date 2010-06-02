@@ -1,12 +1,16 @@
 #ifndef LIGHTING_H
 #define LIGHTING_H
 
+#include <QSharedPointer>
+
 #include "renderable.h"
 
 #include <gamemath.h>
 using namespace GameMath;
 
 namespace EvilTemple {
+
+class LightDebugRenderer;
     
 class Light : public Renderable
 {
@@ -89,14 +93,14 @@ public:
         mDirection = direction;
     }
 
-    void render(RenderStates &renderStates)
-    {
-    }
+    void render(RenderStates &renderStates);
 
     const Box3d &boundingBox()
     {
         return mBoundingBox;
     }
+
+    static void setDebugRenderer(LightDebugRenderer *debugRenderer);
 
 private:
     Type mType;
@@ -108,11 +112,16 @@ private:
     Vector4 mColor;
     Box3d mBoundingBox;
 
+    static LightDebugRenderer *mDebugRenderer;
+
     Q_DISABLE_COPY(Light)
 };
 
+typedef QSharedPointer<Light> SharedLight;
+
 inline Light::Light() : mColor(0,0,0,0), mDirection(0, 0, 0, 0)
 {
+    setRenderCategory(RenderQueue::Lights);
 }
 
 } 

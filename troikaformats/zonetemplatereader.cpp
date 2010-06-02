@@ -24,10 +24,10 @@ namespace Troika
                                            Prototypes *_prototypes,
                                            ZoneTemplate *_zoneTemplate,
                                            const QString &_mapDirectory) :
-        vfs(_vfs),
-        prototypes(_prototypes),
-        zoneTemplate(_zoneTemplate),
-        mapDirectory(_mapDirectory)
+    vfs(_vfs),
+    prototypes(_prototypes),
+    zoneTemplate(_zoneTemplate),
+    mapDirectory(_mapDirectory)
     {
 
         meshMapping = MessageFile::parse(vfs->openFile("art/meshes/meshes.mes"));
@@ -48,7 +48,7 @@ namespace Troika
                 && readMobiles()
                 && readClippingMeshFiles()
                 && readClippingMeshInstances()
-				&& readGlobalLight();
+                && readGlobalLight();
     }
 
     bool ZoneTemplateReader::readMapProperties()
@@ -179,7 +179,7 @@ namespace Troika
 
             // Create the geometry mesh object and add it to the zone template.
             GeometryObject *meshObject = new GeometryObject(QVector3D(x, y, z),
-                                                            QQuaternion::fromAxisAndAngle(0, 1, 0, rotation),
+                                                            rotation,
                                                             geometryMeshFiles[fileIndex].modelFilename);            
             zoneTemplate->addStaticGeometry(meshObject);
         }
@@ -438,10 +438,8 @@ namespace Troika
 
             // TODO: The following transformation is incorrect and needs to be copied from the clipping geometry class
 
-            QQuaternion rotationQuaternion = QQuaternion::fromAxisAndAngle(0, 1, 0, rad2deg(rotation));
-
             GeometryObject *geometryMesh = new GeometryObject(position,
-                                                              rotationQuaternion,
+                                                              rad2deg(rotation),
                                                               scale,
                                                               clippingMeshFiles[meshIndex]);
 
@@ -451,42 +449,42 @@ namespace Troika
         return true;
     }
 
-	bool ZoneTemplateReader::readGlobalLight()
-	{
+    bool ZoneTemplateReader::readGlobalLight()
+    {
         QByteArray data = vfs->openFile(mapDirectory + "global.lit");
 
         if (data.isNull()) {
-			qWarning("Missing global lighting information for %s.", qPrintable(mapDirectory));
+            qWarning("Missing global lighting information for %s.", qPrintable(mapDirectory));
             return false;
-		}
+        }
 
-		QDataStream stream(data);
-		stream.setByteOrder(QDataStream::LittleEndian);
-		stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
+        QDataStream stream(data);
+        stream.setByteOrder(QDataStream::LittleEndian);
+        stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
 
-		Light globalLight;
-		uint flags;
-		float cr, cg, cb;
-		stream >> flags >> globalLight.type >> cr >> cg >> cb;
-		globalLight.r = cr * 255.0f;
-		globalLight.g = cg * 255.0f;
-		globalLight.b = cb * 255.0f;
-		stream.skipRawData(3 * sizeof(float)); // Unknown data.
-		stream >> globalLight.dirX >> globalLight.dirY >> globalLight.dirZ >> globalLight.range;
+        Light globalLight;
+        uint flags;
+        float cr, cg, cb;
+        stream >> flags >> globalLight.type >> cr >> cg >> cb;
+        globalLight.r = cr * 255.0f;
+        globalLight.g = cg * 255.0f;
+        globalLight.b = cb * 255.0f;
+        stream.skipRawData(3 * sizeof(float)); // Unknown data.
+        stream >> globalLight.dirX >> globalLight.dirY >> globalLight.dirZ >> globalLight.range;
 
-		// ToEE normalizes the global.lit direction after loading the file. We do it ahead of time here.
-		Vector4 lightDir(globalLight.dirX, globalLight.dirY, globalLight.dirZ, 0);
-		lightDir.normalize();
-		globalLight.dirX = lightDir.x();
-		globalLight.dirY = lightDir.y();
-		globalLight.dirZ = lightDir.z();
-		
-		if (globalLight.type != 3) {
-			qWarning("Found a non-directional global light.");
-		}
+        // ToEE normalizes the global.lit direction after loading the file. We do it ahead of time here.
+        Vector4 lightDir(globalLight.dirX, globalLight.dirY, globalLight.dirZ, 0);
+        lightDir.normalize();
+        globalLight.dirX = lightDir.x();
+        globalLight.dirY = lightDir.y();
+        globalLight.dirZ = lightDir.z();
 
-		zoneTemplate->setGlobalLight(globalLight);
-                return true;
-	}
+        if (globalLight.type != 3) {
+            qWarning("Found a non-directional global light.");
+        }
+
+        zoneTemplate->setGlobalLight(globalLight);
+        return true;
+    }
 
 }

@@ -144,26 +144,11 @@ public:
                     qWarning("Zone has no daylight background: %d.", mapId);
                 }
 
-                QByteArray objectPosData;
-                QTextStream objectPosStream(&objectPosData, QIODevice::WriteOnly);
-
                 // Add all static geometry files to the list of referenced models
                 foreach (Troika::GeometryObject *object, zoneTemplate->staticGeometry()) {
-                    QVector3D objectPos = object->position();
-                    const char SPACE = ' ';
-                    objectPosStream << objectPos.x() << SPACE << objectPos.y() << SPACE << objectPos.z() << SPACE
-                            << getNewModelFilename(object->mesh()) << SPACE
-                            << object->rotation().x() << SPACE << object->rotation().y() << SPACE << object->rotation().z() << SPACE
-                            << object->rotation().scalar() << SPACE
-                            << object->scale().x() << SPACE << object->scale().y() << SPACE << object->scale().z() << endl;
-
                     MeshReference &reference = meshReferences[QDir::toNativeSeparators(object->mesh()).toLower()];
                     reference.source |= MeshReference::StaticGeometry;
                 }
-
-                objectPosStream.flush();
-
-                writer.addFile(zoneTemplate->directory() + "staticGeometry.txt", objectPosData, 9);
 
                 convertStaticObjects(zoneTemplate.data(), &writer);
 
@@ -351,6 +336,26 @@ public:
         foreach (GameObject *object, zoneTemplate->staticObjects()) {
             objectList.append(toVariant(object));
         }
+
+        // Static geometry objects are treated the same way, although they don't have
+        // a prototype.
+        foreach (GeometryObject *object, zoneTemplate->staticGeometry()) {
+            QVariantMap map;
+
+            map["model"] = getNewModelFilename(object->mesh());
+            map["position"] = vectorToList(object->position());
+            if (object->rotation() != 0)
+                map["rotation"] = object->rotation();
+            float scale = object->scale().x();
+            if (scale != 1)
+                map["scale"] = object->scale().x() * 100;
+            // The assumption here is, that for static objects the scale is uniform
+            Q_ASSERT_X(scale == object->scale().y() && scale == object->scale().z(), "convertStaticObjects",
+                     qPrintable(QString("%1 %2 %3").arg(scale).arg(object->scale().y()).arg(object->scale().z())));
+
+            objectList.append(map);
+        }
+
         mapObject["staticObjects"] = objectList;
 
         objectList.clear();
@@ -519,18 +524,15 @@ public:
                 if (compareScale(existingScale, scale)) {
                     found = true;
                     break;
-                }                    
+                }
                 fileIndex++;
             }
 
             Q_ASSERT(found);
 
             clippingStream << object->position().x() << object->position().y() << object->position().z() << (float)1
-                    << object->rotation().x() << object->rotation().y() << object->rotation().z()
-                    << object->rotation().scalar()
-                    << (float)1 << (float)1 << (float)1 << (float)1
+                    << deg2rad(object->rotation()) << (float)1
                     << fileIndex;
-
         }
 
         writer->addFile(zoneTemplate->directory() + "clipping.dat", clippingData, 9);

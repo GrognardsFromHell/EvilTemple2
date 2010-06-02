@@ -46,6 +46,9 @@ public:
     RenderQueue::Category renderCategory() const;
     void setRenderCategory(RenderQueue::Category category);
 
+    void setDebugging(bool debugging);
+    bool isDebugging() const;
+
 signals:
     void mousePressed();
     void mouseReleased();
@@ -55,6 +58,7 @@ signals:
 protected:
     SceneNode *mParentNode;
     bool mAnimated;
+    bool mDebugging;
     RenderQueue::Category mRenderCategory; // In which category should the content of this node be rendered.
 
 private:
@@ -69,6 +73,16 @@ inline bool Renderable::isAnimated() const
 inline void Renderable::setAnimated(bool animated)
 {
     mAnimated = animated;
+}
+
+inline void Renderable::setDebugging(bool debugging)
+{
+    mDebugging = debugging;
+}
+
+inline bool Renderable::isDebugging() const
+{
+    return mDebugging;
 }
 
 inline void Renderable::setParentNode(SceneNode *parent)

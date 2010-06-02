@@ -2,6 +2,7 @@
 #include "renderstates.h"
 #include "util.h"
 #include "lighting.h"
+#include "lighting_debug.h"
 #include "scenenode.h"
 
 namespace EvilTemple {
@@ -15,5 +16,20 @@ Vector4 Light::position() const
         return fullTransform.column(3);
     }
 }
+
+void Light::render(RenderStates &renderStates)
+{
+    if (!mDebugging || !mDebugRenderer)
+        return;
+
+    mDebugRenderer->render(*this);
+}
+
+void Light::setDebugRenderer(LightDebugRenderer *debugRenderer)
+{
+    mDebugRenderer = debugRenderer;
+}
+
+LightDebugRenderer *Light::mDebugRenderer = NULL;
 
 }

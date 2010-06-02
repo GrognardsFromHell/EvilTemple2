@@ -130,7 +130,13 @@ void main(void)
       <uniform name="worldMatrix" semantic="World" />
     </shader>
 
+    <blend>true</blend>
+    <blendFunc src="srcAlpha" dest="oneMinusSrcAlpha" />
     <depthWrite>false</depthWrite>
+    <clearStencil value="1" />
+    <stencilTest>true</stencilTest>
+    <stencilFunc reference="0" function="notequal" />
+    <stencilOp stencilFail="keep" depthFail="keep" depthPass="replace" />
   </pass>
 {{/SHADOW_ON}}
 

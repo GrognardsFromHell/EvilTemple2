@@ -56,6 +56,29 @@ bool Material::loadFromData(const QByteArray &data)
     return true;
 }
 
+inline GLenum convertStencilOp(const QString &stencilOp) {
+    if (stencilOp == "keep")
+        return GL_KEEP;
+    else if (stencilOp == "zero")
+        return GL_ZERO;
+    else if (stencilOp == "replace")
+        return GL_REPLACE;
+    else if (stencilOp == "increment")
+        return GL_INCR;
+    else if (stencilOp == "incrementWrap")
+        return GL_INCR_WRAP;
+    else if (stencilOp == "decrement")
+        return GL_DECR;
+    else if (stencilOp == "decrementWrap")
+        return GL_DECR_WRAP;
+    else if (stencilOp == "invert")
+        return GL_INVERT;
+    else
+        qWarning("Invalid stencil op: %s.", qPrintable(stencilOp));
+
+    return GL_KEEP;
+}
+
 bool MaterialPass::load(const QDomElement &passElement)
 {
     QDomElement shaderElement = passElement.firstChildElement("shader");
@@ -169,6 +192,80 @@ bool MaterialPass::load(const QDomElement &passElement)
             SharedMaterialRenderState renderState(new MaterialDisableState(GL_DEPTH_TEST));
             mRenderStates.append(renderState);
         }
+    }
+
+    QDomElement stencilTestElement = passElement.firstChildElement("stencilTest");
+    if (!stencilTestElement.isNull()) {
+        QString stencilTest = stencilTestElement.text();
+
+        // TODO: Sanity check
+        if (stencilTest == "true") {
+            SharedMaterialRenderState renderState(new MaterialEnableState(GL_STENCIL_TEST));
+            mRenderStates.append(renderState);
+        }
+    }
+
+    QDomElement stencilFuncElement = passElement.firstChildElement("stencilFunc");
+    if (!stencilFuncElement.isNull()) {
+        // This encodes default state
+        GLenum func = GL_ALWAYS;
+        GLint ref = 0;
+        GLuint mask = ~0;
+
+        QString funcString = stencilFuncElement.attribute("function", "always");
+        if (funcString == "always")
+            func = GL_ALWAYS;
+        else if (funcString == "never")
+            func = GL_NEVER;
+        else if (funcString == "less")
+            func = GL_LESS;
+        else if (funcString == "lequal")
+            func = GL_LEQUAL;
+        else if (funcString == "greater")
+            func = GL_GREATER;
+        else if (funcString == "gequal")
+            func = GL_GEQUAL;
+        else if (funcString == "equal")
+            func = GL_EQUAL;
+        else if (funcString == "notequal")
+            func = GL_NOTEQUAL;
+        else
+            qWarning("Unknown stencil function: %s", qPrintable(funcString));
+
+        bool ok;
+        ref = stencilFuncElement.attribute("reference", "0").toInt(&ok);
+
+        if (!ok)
+            qWarning("Invalid stencil function reference: %s", stencilFuncElement.attribute("reference"));
+
+        if (stencilFuncElement.hasAttribute("mask"))
+            mask = stencilFuncElement.attribute("mask").toUInt(&ok);
+
+        if (!ok)
+            qWarning("Invalid stencil function mask: %s", stencilFuncElement.attribute("mask"));
+
+        SharedMaterialRenderState renderState(new StencilFuncState(func, ref, mask));
+        mRenderStates.append(renderState);
+    }
+
+    QDomElement clearStencilElement = passElement.firstChildElement("clearStencil");
+    if (!clearStencilElement.isNull()) {
+        bool ok;
+        GLint value = clearStencilElement.attribute("value", "0").toInt(&ok);
+        Q_ASSERT(ok);
+
+        SharedMaterialRenderState renderState(new ClearStencilState(value));
+        mRenderStates.append(renderState);
+    }
+
+    QDomElement stencilOpElement = passElement.firstChildElement("stencilOp");
+    if (!stencilOpElement.isNull()) {
+        GLenum fail = convertStencilOp(stencilOpElement.attribute("stencilFail", "keep"));
+        GLenum zFail = convertStencilOp(stencilOpElement.attribute("depthFail", "keep"));
+        GLenum zPass= convertStencilOp(stencilOpElement.attribute("depthPass", "keep"));
+
+        SharedMaterialRenderState renderState(new StencilOpState(fail, zFail, zPass));
+        mRenderStates.append(renderState);
     }
 
     QDomElement colorMaskElement = passElement.firstChildElement("colorMask");
