@@ -5,7 +5,7 @@ CONFIG += console
 
 TARGET = converter
 
-QT += xml opengl xmlpatterns
+QT += xml opengl xmlpatterns script
 
 TEMPLE_LIBS += troikaformats qt3d minizip jpeg qjson
 
@@ -45,6 +45,7 @@ RESOURCES += \
 OTHER_FILES += exclusions.txt \
     material_template.xml \
     shadow_caster.txt \
-    particlefiles.txt
+    particlefiles.txt \
+    scripts/converter.js
 
 PRECOMPILED_HEADER = stable.h

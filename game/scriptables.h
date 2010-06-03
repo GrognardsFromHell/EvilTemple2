@@ -43,10 +43,8 @@ namespace EvilTemple {
 
         void addMesh(const SharedModel &model);
 
-
         uint renderCategory() const;
-        void setRenderCategory(uint category);
-
+        void setRenderCategory(uint category);       
 
         const Box3d &boundingBox() const;
     public slots:

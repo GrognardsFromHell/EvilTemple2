@@ -88,7 +88,7 @@ namespace EvilTemple {
 
         void centerOnWorld(float worldX, float worldY)
         {
-            Matrix4 matrix = Matrix4::translation(-worldY, 0, -worldX);
+            Matrix4 matrix = Matrix4::translation(-worldX, 0, -worldY);
             renderStates.setViewMatrix(baseViewMatrix * matrix);
         }
 
@@ -218,8 +218,6 @@ namespace EvilTemple {
 
         SAFE_GL(glEnable(GL_DEPTH_TEST));
         SAFE_GL(glEnable(GL_CULL_FACE));
-        SAFE_GL(glEnable(GL_ALPHA_TEST));
-        SAFE_GL(glAlphaFunc(GL_NOTEQUAL, 0));
         SAFE_GL(glEnable(GL_BLEND));
         SAFE_GL(glDisable(GL_STENCIL_TEST));
 
@@ -280,7 +278,6 @@ namespace EvilTemple {
         SAFE_GL(glDisable(GL_TEXTURE_2D));
         SAFE_GL(glDisable(GL_LIGHTING));
 
-        glDisable(GL_ALPHA_TEST); HANDLE_GL_ERROR
         glDisable(GL_DEPTH_TEST); HANDLE_GL_ERROR
         glAlphaFunc(GL_ALWAYS, 0); HANDLE_GL_ERROR
         glDisable(GL_BLEND); HANDLE_GL_ERROR

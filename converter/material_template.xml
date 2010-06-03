@@ -54,6 +54,9 @@ void main(void)
 {{/LIGHTING_ON}}
 
    {{PIXEL_TERM}}
+
+    if (gl_FragColor.a == 0)
+        discard;
 }
 ]]>
         </code>

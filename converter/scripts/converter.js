@@ -1,0 +1,6 @@
+
+function processPrototype(prototype) {
+
+
+
+}

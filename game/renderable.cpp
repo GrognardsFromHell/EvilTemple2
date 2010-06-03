@@ -5,7 +5,7 @@
 namespace EvilTemple {
 
 Renderable::Renderable()
-    : mParentNode(NULL), mRenderCategory(RenderQueue::Default)
+    : mParentNode(NULL), mRenderCategory(RenderQueue::Default), mDebugging(false)
 {
 }
 

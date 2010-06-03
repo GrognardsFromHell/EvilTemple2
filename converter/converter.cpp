@@ -6,6 +6,7 @@
 #include <QFileInfo>
 #include <QTextStream>
 #include <QBuffer>
+#include <QScriptEngine>
 
 #include <iostream>
 
@@ -57,6 +58,75 @@ struct MeshReference {
     uint meshId; // From meshes.mes
     uint source; // bitfield
 };
+
+static QScriptValue readMesFile(QScriptContext *ctx, QScriptEngine *engine, Troika::VirtualFileSystem *vfs) {
+    if (ctx->argumentCount() != 1) {
+        return ctx->throwError("readMesFile takes one string argument.");
+    }
+
+    QString filename = ctx->argument(0).toString();
+
+    QHash<uint,QString> mapping = MessageFile::parse(vfs->openFile(filename));
+
+    QScriptValue result = engine->newObject();
+
+    foreach (uint key, mapping.keys()) {
+        result.setProperty(QString("%1").arg(key), QScriptValue(mapping[key]));
+    }
+
+    return result;
+}
+
+static QScriptValue addFile(QScriptContext *ctx, QScriptEngine *engine, ZipWriter *writer) {
+    if (ctx->argumentCount() != 3) {
+        return ctx->throwError("addFile takes three arguments: filename, content, compression.");
+    }
+
+    QString filename = ctx->argument(0).toString();
+    QString content = ctx->argument(1).toString();
+    int compression = ctx->argument(2).toInt32();
+
+    writer->addFile(filename, content.toUtf8(), compression);
+
+    return QScriptValue(true);
+}
+
+static QScriptValue readTabFile(QScriptContext *ctx, QScriptEngine *engine, Troika::VirtualFileSystem *vfs) {
+    if (ctx->argumentCount() != 1) {
+        return ctx->throwError("readTabFile takes one string argument.");
+    }
+
+    QString filename = ctx->argument(0).toString();
+
+    QByteArray content = vfs->openFile(filename);
+    QList<QByteArray> lines = content.split('\n');
+    QList< QList<QByteArray> > tabFileContent;
+
+    for (int i = 0; i < lines.length(); ++i) {
+        QByteArray line = lines[i];
+        if (line.endsWith('\r')) {
+            line = line.left(line.length() - 1);
+        }
+
+        if (line.isEmpty())
+            continue;
+
+        tabFileContent.append(line.split('\t'));
+    }
+
+    QScriptValue result = engine->newArray(tabFileContent.length());
+
+    for (int i = 0; i < tabFileContent.length(); ++i) {
+        QList<QByteArray> line = tabFileContent[i];
+        QScriptValue record = engine->newArray(line.length());
+        for (int j = 0; j < line.length(); ++j) {
+            record.setProperty(j, QScriptValue(QString(line[j])));
+        }
+        result.setProperty(i, record);
+    }
+
+    return result;
+}
 
 class ConverterData {
 public:
@@ -919,11 +989,15 @@ public:
         QHash<quint32, QString> meshesIndex = Troika::MessageFile::parse(vfs->openFile("art/meshes/meshes.mes"));
 
         foreach (quint32 meshId, meshesIndex.keys()) {
-            QString meshFilename = QDir::toNativeSeparators("art/meshes/" + meshesIndex[meshId] + ".skm");
+            QStringList meshes = meshesIndex[meshId].split(';');
 
-            MeshReference &reference = meshReferences[meshFilename.toLower()];
-            reference.meshId = meshId;
-            reference.source |= MeshReference::MeshesMes;
+            foreach (const QString &mesh, meshes) {
+                QString meshFilename = QDir::toNativeSeparators("art/meshes/" + mesh + ".skm");
+
+                MeshReference &reference = meshReferences[meshFilename.toLower()];
+                reference.meshId = meshId;
+                reference.source |= MeshReference::MeshesMes;
+            }
         }
     }
 
@@ -1072,21 +1146,48 @@ public:
     {
         ZipWriter writer(mOutputPath + "scripts.zip");
 
-        convertPrototypes(&writer);
+        QScriptEngine engine;
+
+        QScriptValue readMesFn = engine.newFunction((QScriptEngine::FunctionWithArgSignature)readMesFile, vfs.data());
+        engine.globalObject().setProperty("readMes", readMesFn);
+
+        QScriptValue readTabFn = engine.newFunction((QScriptEngine::FunctionWithArgSignature)readTabFile, vfs.data());
+        engine.globalObject().setProperty("readTab", readTabFn);
+
+        QScriptValue addFileFn = engine.newFunction((QScriptEngine::FunctionWithArgSignature)addFile, &writer);
+        engine.globalObject().setProperty("addFile", addFileFn);
+
+        QFile scriptFile("scripts/converter.js");
+
+        if (!scriptFile.open(QIODevice::ReadOnly|QIODevice::Text)) {
+            qFatal("Unable to open converter script: scripts/converter.js");
+        }
+
+        QString scriptCode = scriptFile.readAll();
+
+        engine.evaluate(scriptCode, "scripts/converter.js");
+
+        convertPrototypes(&writer, &engine);
 
         writer.close();
     }
 
-    void convertPrototypes(ZipWriter *writer)
+    void convertPrototypes(ZipWriter *writer, QScriptEngine *engine)
     {
         PrototypeConverter converter(vfs.data());
 
         QVariantMap result = converter.convertPrototypes(prototypes.data());
 
-        Serializer serializer;
-        QByteArray data = serializer.serialize(result);
+        QScriptValue postprocess = engine->globalObject().property("postprocess");
 
-        writer->addFile("prototypes.js", data, 9);
+        QScriptValueList args;
+        args.append(engine->toScriptValue<QVariantMap>(result));
+
+        postprocess.call(QScriptValue(), args);
+
+        if (engine->hasUncaughtException()) {
+            qFatal("JS Error: %s", qPrintable(engine->uncaughtException().toString()));
+        }
     }
 
     bool convert()

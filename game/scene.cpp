@@ -117,6 +117,9 @@ SharedSceneNode Scene::pickNode(const Ray3d &ray) const
     for (int i = 0; i < d->sceneNodes.size(); ++i) {
         const SharedSceneNode &node = d->sceneNodes.at(i);
 
+        if (!node->isInteractive())
+            continue;
+
         Ray3d localRay = node->fullTransform().inverted() * ray;
 
         if (localRay.intersects(node->boundingBox())) {
@@ -135,6 +138,9 @@ SharedRenderable Scene::pickRenderable(const Ray3d &ray) const
     for (int i = 0; i < d->sceneNodes.size(); ++i) {
         const SharedSceneNode &node = d->sceneNodes.at(i);
 
+        if (!node->isInteractive())
+            continue;
+
         Ray3d localRay = node->fullTransform().inverted() * ray;
 
         if (localRay.intersects(node->boundingBox())) {
@@ -149,6 +155,11 @@ SharedRenderable Scene::pickRenderable(const Ray3d &ray) const
     }
 
     return picked;
+}
+
+void Scene::clear()
+{
+    d->sceneNodes.clear();
 }
 
 };

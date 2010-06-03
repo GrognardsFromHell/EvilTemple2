@@ -27,6 +27,8 @@ public:
 public slots:
     void addNode(const SharedSceneNode &node);
 
+    void clear();
+
     /**
     Returns the number of objects drawn by the last call to render.
     */
