@@ -1,5 +1,6 @@
 
 #include "skeleton.h"
+#include "model.h"
 
 #include <QDataStream>
 
@@ -12,7 +13,7 @@ namespace Troika
         if (_frames == 0)
             return 0;
         else
-            return new AnimationStream(_keyFramesData, _keyFramesDataStart, boneCount, _frames);
+            return new AnimationStream(_keyFramesData, _keyFramesDataStart, boneCount, _frames, skeleton->remappedBones());
     }
 
     void Animation::freeStream(AnimationStream *stream) const
@@ -22,10 +23,12 @@ namespace Troika
 
     class SkeletonData
     {
-    private:
+    public:
         QByteArray data; // SKA data
         QDataStream stream;
         QString filename;
+        QVector<Bone> skmBones;
+        QHash<uint,uint> remappedBones;
 
         void loadBones(quint32 count, quint32 dataStart)
         {
@@ -38,9 +41,21 @@ namespace Troika
                 bones.reserve(count); // Reserve memory for later appends
             }
 
+            skmBones = bones;
+
             for (quint32 i = 0; i < count; ++i) {
                 loadBone(i);
             }
+
+            // Build default-poses after-the-fact, since bone remapping can break them
+            /* for (quint32 boneId = 0; boneId< bones.size(); ++boneId) {
+                // Calculate the full world matrix for the default pose
+                QMatrix4x4 fullWorld;
+                for (uint parentId = boneId; parentId != -1; parentId = bones[parentId].parentId) {
+                    fullWorld = bones[parentId].relativeWorld * fullWorld;
+                }
+                bones[boneId].defaultPoseWorld = fullWorld * bones[boneId].fullWorldInverse;
+            }*/
         }
 
         void loadBone(quint32 boneId)
@@ -53,6 +68,8 @@ namespace Troika
             rawBoneName[48] = 0;
             stream.readRawData(rawBoneName, 48);
 
+            QString boneName = QString::fromLatin1(rawBoneName);
+
             // Bones in the skeleton file are associated with bones from the original model
             // It's possible that the skeleton defines additional bones.
             if (int(boneId) >= bones.count()) {
@@ -61,11 +78,42 @@ namespace Troika
                 Bone &newBone = bones[boneId];
                 newBone.id = boneId;
                 newBone.flags = flags;
-                newBone.name = QString::fromLatin1(rawBoneName);
-                newBone.parentId = parentId;
-                if (parentId != -1)
-                    bones[parentId].childrenIds.append(boneId);
+                newBone.name = boneName;
+            } else if (boneName != bones[boneId].name) {
+                int skmBoneId = -1;
+
+                // Try to find the skmBone with the same name
+                for (int i = 0; i < skmBones.size(); ++i) {
+                    if (skmBones[i].name == boneName) {
+                        skmBoneId = i;
+                        break;
+                    }
+                }
+
+                if (skmBoneId == -1) {
+                    qWarning("Found a SKA bone with name '%s' that has no corresponding bone in the SKM"
+                             " and overlaps with SKM bone '%s'",
+                             qPrintable(boneName), qPrintable(bones[boneId].name));
+                } else {
+                    qWarning("SKA bone has different name than SKM bone, remapping.");
+
+                    bones[boneId].name = boneName;
+                    bones[boneId].fullWorldInverse = skmBones[skmBoneId].fullWorldInverse;
+
+                    remappedBones[skmBoneId] = boneId;
+
+                    // For all vertices, re-wire bone attachments from the skmBoneId to our bone id
+                    for (int i = 0; i < vertexCount; ++i) {
+                        for (int j = 0; j < MaxBoneAttachments; ++j) {
+                            if (vertices[i].attachmentBone[j] == skmBoneId) {
+                                vertices[i].attachmentBone[j] = boneId;
+                            }
+                        }
+                    }
+                }
             }
+
+            bones[boneId].parentId = parentId;
 
             QVector4D scale; // The fourth component is discarded
             QVector4D rotation; // Order is: X,Y,Z,Scalar
@@ -79,13 +127,6 @@ namespace Troika
             relativeWorld.translate(translation.x(), translation.y(), translation.z());
             relativeWorld.rotate(QQuaternion(rotation.w(), rotation.x(), rotation.y(), rotation.z()));
             relativeWorld.scale(scale.x(), scale.y(), scale.z());
-
-            // Calculate the full world matrix for the default pose
-            QMatrix4x4 fullWorld;
-            for (parentId = boneId; parentId != -1; parentId = bones[parentId].parentId) {
-                fullWorld = bones[parentId].relativeWorld * fullWorld;
-            }
-            bones[boneId].defaultPoseWorld = fullWorld * bones[boneId].fullWorldInverse;
         }
 
         void loadAnimations(quint32 count, quint32 dataStart)
@@ -181,8 +222,13 @@ namespace Troika
         QVector<Animation> animations;
         QHash<QString, Animation*> animationMap;
 
-        SkeletonData(const QVector<Bone> &bones, const QByteArray &_data,
-                     const QString &_filename) : data(_data), stream(data), bones(bones), filename(_filename)
+        // Used to fix broken bone assignments
+        Vertex* vertices;
+        int vertexCount;
+
+        SkeletonData(Vertex* _vertices, int _vertexCount, const QVector<Bone> &_bones, const QByteArray &_data,
+                     const QString &_filename) : data(_data), stream(data), bones(_bones), filename(_filename),
+        vertices(_vertices), vertexCount(_vertexCount)
         {
             stream.setByteOrder(QDataStream::LittleEndian);
             stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
@@ -193,9 +239,9 @@ namespace Troika
           */
         void load()
         {
-			if (data.isNull()) {
-				return; // No animation data present.
-			}
+            if (data.isNull()) {
+                return; // No animation data present.
+            }
 
             quint32 boneCount; // Number of bones in skeleton
             quint32 bonesDataStart; // Start of bones data in bytes
@@ -217,8 +263,9 @@ namespace Troika
         }
     };
 
-    Skeleton::Skeleton(const QVector<Bone> &bones, const QByteArray &data, const QString &filename)
-        : d_ptr(new SkeletonData(bones, data, filename))
+    Skeleton::Skeleton(Vertex *vertices, int vertexCount, const QVector<Bone> &bones,
+                       const QByteArray &data, const QString &filename)
+                           : d_ptr(new SkeletonData(vertices, vertexCount, bones, data, filename))
     {
         d_ptr->load();
     }
@@ -256,8 +303,9 @@ namespace Troika
 
     const float AnimationStream::rotationFactor = 1 / 32766.0f;
 
-    AnimationStream::AnimationStream(const QByteArray &data, int dataStart, int boneCount, int _frameCount)
-        : _dataStart(dataStart), _boneCount(boneCount), _boneMap(new AnimationBoneState*[boneCount]), stream(data), frameCount(_frameCount)
+    AnimationStream::AnimationStream(const QByteArray &data, int dataStart, int boneCount, int _frameCount, const QHash<uint,uint> &remappedBones)
+        : _dataStart(dataStart), _boneCount(boneCount), _boneMap(new AnimationBoneState*[boneCount]), stream(data), frameCount(_frameCount),
+        _remappedBones(remappedBones)
     {
         stream.setByteOrder(QDataStream::LittleEndian);
         stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
@@ -316,6 +364,10 @@ namespace Troika
         // The LSB is the flag whether this is a bone-chunk or the id of the next frame
         while ((boneHeader & 1) == 1) {
             int boneId = boneHeader >> 4;
+
+            //if (_remappedBones.contains(boneId)) {
+            //    boneId = _remappedBones[boneId];
+            //}
 
             // Would be nice. But doesnt work. Q_ASSERT(boneId < _boneCount);
 
@@ -429,6 +481,9 @@ namespace Troika
 
         while (boneId != -2) {
 
+            //if (_remappedBones.contains(boneId))
+            //    boneId = _remappedBones[boneId];
+
             AnimationBoneState &boneState = _boneStates[i++];
             _boneMap[boneId] = &boneState;
 
@@ -460,17 +515,17 @@ namespace Troika
             stream >> boneId;
         }
 
-		if (!stream.atEnd()) {
-			stream >> nextFrameId;
+        if (!stream.atEnd()) {
+            stream >> nextFrameId;
 
-			if (nextFrameId == -2) {
-				nextFrameId = -1; // No idea why this happens
-			} else {
-				readNextFrame();
-			}
-		} else {
-			qWarning("Stream ended after initial bone list.");
-		}
+            if (nextFrameId == -2) {
+                nextFrameId = -1; // No idea why this happens
+            } else {
+                readNextFrame();
+            }
+        } else {
+            qWarning("Stream ended after initial bone list.");
+        }
     }
 
     void AnimationStream::seek(int frame)
@@ -478,6 +533,11 @@ namespace Troika
         while (nextFrameId < frame && nextFrameId > 0) {
             readNextFrame();
         }
+    }
+
+    const QHash<uint,uint> &Skeleton::remappedBones() const
+    {
+        return d_ptr->remappedBones;
     }
 
 }

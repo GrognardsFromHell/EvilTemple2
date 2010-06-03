@@ -1067,7 +1067,166 @@ public:
 
         modelBuffer.close();
 
+        // writeDebugModel(model, newFilename + ".debug", zip);
+
         return zip->addFile(newFilename, modelData, 9);
+    }
+
+    // We convert the streams to non-interleaved data, which makes it easier to read them into vectors
+    struct Streams {
+        QMap<uint, QQuaternion> rotationFrames;
+        QMap<uint, QVector3D> scaleFrames;
+        QMap<uint, QVector3D> translationFrames;
+
+        void appendCurrentState(const AnimationBoneState *state) {
+            rotationFrames[state->rotationFrame] = state->rotation;
+            scaleFrames[state->scaleFrame] = state->scale;
+            translationFrames[state->translationFrame] = state->translation;
+        }
+
+        void appendNextState(const AnimationBoneState *state) {
+            rotationFrames[state->nextRotationFrame] = state->nextRotation;
+            scaleFrames[state->nextScaleFrame] = state->nextScale;
+            translationFrames[state->nextTranslationFrame] = state->nextTranslation;
+        }
+    };
+
+    void writeDebugModel(Troika::MeshModel *model, QString modelDir, ZipWriter *writer) {
+        const Troika::Skeleton *skeleton = model->skeleton();
+
+        QMap<uint, QString> animDataStartMap;
+
+        foreach (const Troika::Animation &animation, skeleton->animations()) {
+
+            if (animDataStartMap.contains(animation.keyFramesDataStart())) {
+                continue;
+            }
+
+            animDataStartMap[animation.keyFramesDataStart()] = animation.name();
+
+            QFile output(modelDir + "/" + animation.name() + ".txt");
+            QDir current;
+            current.mkpath(modelDir);
+
+            output.open(QIODevice::WriteOnly|QIODevice::Text|QIODevice::Truncate);
+
+            QTextStream stream(&output);
+            stream.setRealNumberNotation(QTextStream::FixedNotation);
+            stream.setRealNumberPrecision(5);
+            stream.setFieldAlignment(QTextStream::AlignRight);
+
+            // How do we ensure padding if the animations have variable length names?
+            stream << "Name: " << animation.name().toUtf8() << endl;
+            stream << "Frames: " << (uint)animation.frames() << endl << "Rate: " << animation.frameRate() << endl
+                    << "DPS: " << animation.dps() << endl
+                    << "Drive Type: " << (uint)animation.driveType() << endl
+                    << "Loopable: " << animation.loopable() << endl << endl;
+
+            foreach (const Troika::AnimationEvent &event, animation.events()) {
+                stream << "Event @ " << event.frameId << " '" << event.type << "' '" << event.action << "'" << endl;
+            }
+
+            if (!animation.events().isEmpty())
+                stream << endl;
+
+            AnimationStream *animStream = animation.openStream(skeleton);
+
+            QMap<uint,Streams> streams;
+
+            // Write out the state of the first bones
+            for (int i = 0; i < skeleton->bones().size(); ++i) {
+                const AnimationBoneState *boneState = animStream->getBoneState(i);
+
+                if (boneState) {
+                    streams[i].appendCurrentState(boneState);
+                }
+            }
+            int nextFrame = animStream->getNextFrameId();
+            while (!animStream->atEnd()) {
+                animStream->readNextFrame();
+                if (animStream->getNextFrameId() <= nextFrame && !animStream->atEnd()) {
+                    _CrtDbgBreak();
+                }
+                nextFrame = animStream->getNextFrameId();
+
+                for (int i = 0; i < skeleton->bones().size(); ++i) {
+                    const AnimationBoneState *boneState = animStream->getBoneState(i);
+
+                    if (boneState) {
+                        streams[i].appendCurrentState(boneState);
+                    }
+                }
+            }
+
+            // Also append the state of the last frame
+            for (int i = 0; i < skeleton->bones().size(); ++i) {
+                const AnimationBoneState *boneState = animStream->getBoneState(i);
+
+                if (boneState) {
+                    streams[i].appendNextState(boneState);
+                }
+            }
+
+            animation.freeStream(animStream);
+
+            // Write out the number of bones affected by the animation
+
+            // At this point, we have the entire keyframe stream
+            // IMPORTANT NOTE: Due to the use of QMap as the container, the keys will be guaranteed to be in ascending order for both bones and frames!
+            foreach (uint boneId, streams.keys()) {
+                // Write the keyframe streams for every bone
+                const Streams &boneStreams = streams[boneId];
+                stream << "Keyframes for bone " << model->skeleton()->bones()[boneId].name
+                        << " (" << boneId << "):" << endl;
+
+                stream << "Rotation:" << endl;
+                foreach (uint frameId, boneStreams.rotationFrames.keys()) {
+                    const QQuaternion &rotation = boneStreams.rotationFrames[frameId];
+                    stream << " " << qSetFieldWidth(5) << (quint16)frameId << qSetFieldWidth(0)
+                            << ": " << qSetFieldWidth(12) << rotation.x() << rotation.y() << rotation.z()
+                            << rotation.scalar() << qSetFieldWidth(0) << endl;
+                }
+                stream << endl << "Scale:" << endl;
+                foreach (uint frameId, boneStreams.scaleFrames.keys()) {
+                    const QVector3D &scale = boneStreams.scaleFrames[frameId];
+                    stream << " " << qSetFieldWidth(5) << (quint16)frameId << qSetFieldWidth(0) << ": "
+                            << qSetFieldWidth(12) << scale.x() << scale.y() << scale.z() << qSetFieldWidth(0) << endl;
+                }
+                stream << endl << "Translation:" << endl;
+                foreach (uint frameId, boneStreams.translationFrames.keys()) {
+                    const QVector3D &translation = boneStreams.translationFrames[frameId];
+                    stream << " " << qSetFieldWidth(5) << (quint16)frameId << qSetFieldWidth(0) << ": "
+                            << qSetFieldWidth(12) << translation.x() << translation.y()
+                            << translation.z() << qSetFieldWidth(0) << endl;
+                }
+                stream << endl << endl;
+            }
+
+            stream << "Bone Hierarchy:" << endl;
+            // Write out the bone hieararchy
+            stream.setFieldAlignment(QTextStream::AlignLeft);
+            for (int i = 0; i < model->skeleton()->bones().size(); ++i) {
+                const Troika::Bone &bone = model->skeleton()->bones()[i];
+                if (bone.parentId == -1) {
+                    writeDebugBoneHierarchy(stream, bone, model->skeleton()->bones());
+                }
+            }
+            stream.setFieldAlignment(QTextStream::AlignRight);
+
+        }
+    }
+
+    void writeDebugBoneHierarchy(QTextStream &stream, const Bone &bone, const QVector<Bone> &bones, int indent = 0) {
+
+        for (int i = 0; i < indent; ++i)
+            stream << "  ";
+
+        stream << qSetFieldWidth(4) << bone.id << qSetFieldWidth(0) << " " << bone.name << " (Flags: " << bone.flags
+                << ")" << endl;
+
+        for (int i = 0; i < bones.size(); ++i)
+            if (bones[i].parentId == bone.id)
+                writeDebugBoneHierarchy(stream, bones[i], bones, indent + 1);
     }
 
     bool writeModel(Troika::MeshModel *model, QDataStream &stream, ZipWriter *zip)

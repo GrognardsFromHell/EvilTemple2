@@ -58,9 +58,9 @@ namespace Troika
             readMaterials(stream);
             readFaces(stream);
 
-			// Some models (add meshes for instance) have no skeleton and are unanimated
-			QByteArray skaData = vfs->openFile(filename.replace(".skm", ".ska", Qt::CaseInsensitive));
-			skeleton.reset(new Skeleton(bones, skaData, filename));
+            // Some models (add meshes for instance) have no skeleton and are unanimated
+            QByteArray skaData = vfs->openFile(filename.replace(".skm", ".ska", Qt::CaseInsensitive));
+            skeleton.reset(new Skeleton(vertices.data(), vertices.size(), bones, skaData, filename));
 
             QList< QSharedPointer<FaceGroup> > faceGroups;
             for (quint32 i = 0; i < header.materialCount; ++i) {
@@ -109,8 +109,6 @@ namespace Troika
                 }
                 
                 bone.name = QString::fromLatin1(rawName);
-                if (bone.parentId != -1)
-                    bones[bone.parentId].childrenIds.append(i);
             }
         }
 

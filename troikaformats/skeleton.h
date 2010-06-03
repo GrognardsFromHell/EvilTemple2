@@ -12,6 +12,7 @@ namespace Troika
     class Skeleton;
     class SkeletonData;
     class MeshModel;
+    class Vertex;
 
     /**
       Models a single bone in a skeleton.
@@ -22,7 +23,6 @@ namespace Troika
         qint16 flags;
         QString name;
         qint16 parentId; // bone id of parent or -1
-        QList<qint16> childrenIds; // bone ids of children
         QMatrix4x4 fullWorldInverse;
         QMatrix4x4 relativeWorld;
 
@@ -66,7 +66,7 @@ namespace Troika
     class TROIKAFORMATS_EXPORT AnimationStream
     {
     public:
-        AnimationStream(const QByteArray &data, int dataStart, int boneCount, int frameCount);
+        AnimationStream(const QByteArray &data, int dataStart, int boneCount, int frameCount, const QHash<uint, uint> &remappedBones);
 
         const AnimationBoneState *getBoneState(quint16 boneId) const;
 
@@ -80,6 +80,8 @@ namespace Troika
 		}
 
     private:
+        QHash<uint,uint> _remappedBones;
+
         int _dataStart; // Offset into the stream where the first key frame starts
         int _boneCount; // The total number of bones in the skeleton (highest bone id + 1)
 
@@ -235,11 +237,14 @@ namespace Troika
           @param bones The bones from the SKM model file.
           @param data The data of the SKA animation/skeleton file.
           */
-        explicit Skeleton(const QVector<Bone> &bones, const QByteArray &data, const QString &filename);
+        explicit Skeleton(Vertex *vertices, int vertexCount, const QVector<Bone> &bones, const QByteArray &data,
+                          const QString &filename);
         ~Skeleton();
 
         const QVector<Bone> &bones() const;
         const QVector<Animation> &animations() const;
+
+        const QHash<uint,uint> &remappedBones() const;
 
         /**
           Finds the animation with the given name.
