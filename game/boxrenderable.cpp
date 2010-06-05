@@ -4,7 +4,7 @@
 #include "boxrenderable.h"
 #include "drawhelper.h"
 #include "scenenode.h"
-#include "materialcache.h"
+#include "materials.h"
 
 namespace EvilTemple {
 
@@ -65,23 +65,19 @@ struct BoxDrawStrategy {
     const Box3d mBox;
 };
 
-BoxRenderable::BoxRenderable()
+BoxRenderable::BoxRenderable(Materials *materials)
 {
+    mMaterial = materials->load(":/material/box_material.xml");
 }
 
 void BoxRenderable::render(RenderStates &renderStates)
 {
-    if (!mMaterial) {
-        mMaterial = loadMaterial(":/material/box_material.xml", renderStates);
-    }
-
     Box3d parentBounds = mParentNode->boundingBox().transformAffine(renderStates.worldMatrix());
     renderStates.setWorldMatrix(Matrix4::identity());
 
     BoxDrawStrategy drawer(parentBounds);
     DrawHelper<BoxDrawStrategy> boxDrawStrategy;
     boxDrawStrategy.draw(renderStates, mMaterial.data(), drawer, EmptyBufferSource());
-
 }
 
 const Box3d &BoxRenderable::boundingBox()

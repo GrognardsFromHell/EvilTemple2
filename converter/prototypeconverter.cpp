@@ -56,6 +56,20 @@ QVariantMap PrototypeConverter::convertPrototype(Prototype *prototype)
     writer.write("radius", prototype->radius);
     writer.write("height", prototype->renderHeight);
 
+    ItemProperties *itemProps = qobject_cast<ItemProperties*>(prototype->additionalProperties);
+
+    if (itemProps) {
+        writer.write("itemFlags", itemProps->flags);
+        writer.write("weight", itemProps->weight);
+        writer.write("worth", itemProps->worth);
+        writer.write("inventoryId", itemProps->inventoryIcon);
+        writer.write("inventoryGroundMesh", itemProps->inventoryGroundMesh);
+        writer.write("unidentifiedDescriptionId", itemProps->unidentifiedDescriptionId);
+        writer.write("chargesLeft", itemProps->chargesLeft);
+        writer.write("wearFlags", itemProps->wearFlags);
+        writer.write("wearMeshId", itemProps->wearMeshId);
+    }
+
     return result;
 }
 

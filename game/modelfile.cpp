@@ -10,18 +10,18 @@
 
 namespace EvilTemple {
 
-	enum ModelChunks {
-		Chunk_Textures = 1,
-		Chunk_Materials = 2,
-		Chunk_MaterialReferences = 3,
-		Chunk_Geometry = 4,
-		Chunk_Faces = 5,
-		Chunk_Bones = 6, // Skeletal data
-		Chunk_BoneAttachments = 7, // Assigns vertices to bones
-		Chunk_BoundingVolumes = 8, // Bounding volumes,
-		Chunk_Animations = 9, // Animations
-		Chunk_Metadata = 0xFFFF,  // Last chunk is always metadata
-	};
+    enum ModelChunks {
+        Chunk_Textures = 1,
+        Chunk_Materials = 2,
+        Chunk_MaterialReferences = 3,
+        Chunk_Geometry = 4,
+        Chunk_Faces = 5,
+        Chunk_Bones = 6, // Skeletal data
+        Chunk_BoneAttachments = 7, // Assigns vertices to bones
+        Chunk_BoundingVolumes = 8, // Bounding volumes,
+        Chunk_Animations = 9, // Animations
+        Chunk_Metadata = 0xFFFF,  // Last chunk is always metadata
+    };
 
     Model::Model()
 	: faceGroups(0), positions(0), normals(0), texCoords(0), vertices(0), vertexData(0), faceData(0)
@@ -49,7 +49,7 @@ namespace EvilTemple {
 	uint reserved;
 	uint size;
     };
-	
+
     class ModelTextureSource : public TextureSource {
     public:
         ModelTextureSource(const QVector<Md5Hash> &md5Hashes, const QVector<unsigned char*> &textures,
@@ -117,7 +117,7 @@ namespace EvilTemple {
             return false;
 	}
 
-    QVector<Md5Hash> hashes;
+        QVector<Md5Hash> hashes;
 	QVector<unsigned char*> textures;
 	QVector<int> texturesSize;
 
@@ -165,19 +165,24 @@ namespace EvilTemple {
                     ptr += size;
                 }
             } else if (chunkHeader.type == Chunk_Materials) {
-                unsigned int count = *reinterpret_cast<unsigned int*>(chunkData.data());
-                materialState.reset(new MaterialState[count]);
+                QDataStream stream(QByteArray::fromRawData(chunkData.data(), chunkHeader.size));
+                stream.setByteOrder(QDataStream::LittleEndian);
+                stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
 
-                char *ptr = chunkData.data() + 16;
+                uint materialCount, placeholderCount;
+
+                stream >> materialCount >> placeholderCount;
+                stream.skipRawData(sizeof(uint) + sizeof(uint));
+
+                materialState.reset(new MaterialState[materialCount]);
 
                 ModelTextureSource textureSource(hashes, textures, texturesSize);
 
-                for (int j = 0; j < count; ++j) {
-                    ptr += 16; // Skip the material md5 hash for now
-                    unsigned int size = *(unsigned int*)ptr;
-                    ptr += sizeof(unsigned int);
-                    QByteArray rawMaterialData = QByteArray::fromRawData(ptr, size);
-                    ptr += size;
+                for (int j = 0; j < materialCount; ++j) {
+                    stream.skipRawData(16); // Skip the md5 hash for now
+
+                    QByteArray rawMaterialData;
+                    stream >> rawMaterialData;
 
                     Material material;
 
@@ -194,30 +199,36 @@ namespace EvilTemple {
                     }
                 }
 
-			} else if (chunkHeader.type == Chunk_MaterialReferences) {
-				Q_ASSERT(materialState.isNull()); // Materials and MaterialReferences are exclusive
-				
-				QDataStream stream(QByteArray::fromRawData(chunkData.data(), chunkHeader.size));
-				stream.setByteOrder(QDataStream::LittleEndian);
-				stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
+                for (int j = 0; j < placeholderCount; ++j) {
+                    QByteArray placeholderName;
+                    stream >> placeholderName;
+                    mPlaceholders.append(QString::fromUtf8(placeholderName.constData(), placeholderName.size()));
+                }
 
-				QStringList materialNames;
-				stream >> materialNames;
-				
+            } else if (chunkHeader.type == Chunk_MaterialReferences) {
+                Q_ASSERT(materialState.isNull()); // Materials and MaterialReferences are exclusive
+
+                QDataStream stream(QByteArray::fromRawData(chunkData.data(), chunkHeader.size));
+                stream.setByteOrder(QDataStream::LittleEndian);
+                stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
+
+                QStringList materialNames;
+                stream >> materialNames;
+
                 materialState.reset(new MaterialState[materialNames.size()]);
-                				
+
                 for (int j = 0; j < materialNames.size(); ++j) {
 
-					QFile file(materialNames[j]);
+                    QFile file(materialNames[j]);
 
-					if (!file.open(QIODevice::ReadOnly)) {
-						qWarning("Unable to open material file %s.", qPrintable(materialNames[j]));
-						return false;
-					}
+                    if (!file.open(QIODevice::ReadOnly)) {
+                        qWarning("Unable to open material file %s.", qPrintable(materialNames[j]));
+                        return false;
+                    }
 
                     Material material;
 
-					if (!material.loadFromData(file.readAll())) {
+                    if (!material.loadFromData(file.readAll())) {
                         mError.append(QString("Unable to read material from model %1:\n%2").arg(filename)
                                       .arg(material.error()));
                         return false;
@@ -231,8 +242,8 @@ namespace EvilTemple {
                 }
             } else if (chunkHeader.type == Chunk_BoundingVolumes) {
                 QDataStream stream(QByteArray::fromRawData(chunkData.data(), chunkHeader.size));
-				stream.setByteOrder(QDataStream::LittleEndian);
-				stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
+                stream.setByteOrder(QDataStream::LittleEndian);
+                stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
 
                 stream >> mBoundingBox >> mRadius >> mRadiusSquared;
             } else if (chunkHeader.type == Chunk_Geometry) {
@@ -243,33 +254,33 @@ namespace EvilTemple {
                 loadFaceData();
             } else if (chunkHeader.type == Chunk_Bones) {
                 QDataStream stream(QByteArray::fromRawData(chunkData.data(), chunkHeader.size));
-				stream.setByteOrder(QDataStream::LittleEndian);
-				stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
-				
-				uint bonesCount;
-				stream >> bonesCount;
-				
-				mBones.resize(bonesCount);
-				
-				for (int j = 0; j < bonesCount; ++j) {
-					Bone &bone = mBones[j];
-					QByteArray boneName;
-					int parentId;
+                stream.setByteOrder(QDataStream::LittleEndian);
+                stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
 
-					stream >> boneName >> parentId >> bone.mFullWorldInverse 
-						>> bone.mRelativeWorld >> bone.mDefaultTransform;
+                uint bonesCount;
+                stream >> bonesCount;
 
-					Q_ASSERT(parentId >= -1 && parentId < mBones.size());
+                mBones.resize(bonesCount);
 
-					bone.setBoneId(j);
+                for (int j = 0; j < bonesCount; ++j) {
+                    Bone &bone = mBones[j];
+                    QByteArray boneName;
+                    int parentId;
 
-					bone.mName = QString::fromUtf8(boneName, boneName.size());
+                    stream >> boneName >> parentId >> bone.mFullWorldInverse
+                            >> bone.mRelativeWorld >> bone.mDefaultTransform;
 
-					if (parentId == -1)
-						continue;
+                    Q_ASSERT(parentId >= -1 && parentId < mBones.size());
 
-					bone.mParent = mBones.constData() + parentId;
-				}
+                    bone.setBoneId(j);
+
+                    bone.mName = QString::fromUtf8(boneName, boneName.size());
+
+                    if (parentId == -1)
+                        continue;
+
+                    bone.mParent = mBones.constData() + parentId;
+                }
 
             } else if (chunkHeader.type == Chunk_BoneAttachments) {
                 boneAttachmentData.reset(chunkData.take());
@@ -447,10 +458,12 @@ namespace EvilTemple {
             currentDataPointer += sizeof(FaceGroupHeader);
 
             faceGroup->elementCount = groupHeader->elementCount;
-            if (groupHeader->materialId == -1) {
+            if (groupHeader->materialId < 0) {
                 faceGroup->material = 0;
+                faceGroup->placeholderId = (- groupHeader->materialId) - 1;
             } else {
                 faceGroup->material = materialState.data() + groupHeader->materialId;
+                faceGroup->placeholderId = -1;
             }
 
             uint groupSize = groupHeader->elementCount * groupHeader->elementSize;
@@ -509,20 +522,20 @@ namespace EvilTemple {
     {
         QByteArray name;
         uint driveType;
-		uint animationBonesCount;
+        uint animationBonesCount;
         stream >> name >> animation.mFrames >> animation.mFrameRate >> animation.mDps
-			>> driveType >> animation.mLoopable >> animation.mEvents >> animationBonesCount;
+                >> driveType >> animation.mLoopable >> animation.mEvents >> animationBonesCount;
 
-		delete [] animation.mAnimationBones;
-		animation.mAnimationBonesMap.clear();
-		animation.mAnimationBonesMap.reserve(animationBonesCount);
-		animation.mAnimationBones = new AnimationBone[animationBonesCount];
+        delete [] animation.mAnimationBones;
+        animation.mAnimationBonesMap.clear();
+        animation.mAnimationBonesMap.reserve(animationBonesCount);
+        animation.mAnimationBones = new AnimationBone[animationBonesCount];
 
-		for (int i = 0; i < animationBonesCount; ++i) {
-			uint boneId;
-			stream >> boneId >> animation.mAnimationBones[i];
-			animation.mAnimationBonesMap.insert(boneId, animation.mAnimationBones + i);
-		}
+        for (int i = 0; i < animationBonesCount; ++i) {
+            uint boneId;
+            stream >> boneId >> animation.mAnimationBones[i];
+            animation.mAnimationBonesMap.insert(boneId, animation.mAnimationBones + i);
+        }
 
         Q_ASSERT(animation.mFrameRate >= 0);
         Q_ASSERT(driveType == Animation::Time || driveType == Animation::Rotation || driveType == Animation::Distance);

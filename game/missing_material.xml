@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<material xmlns="http://hartte.de/eviltemple/material.xsd">
+
+  <pass>
+    <shader>
+      <vertexShader>
+        <code>
+          <![CDATA[
+#version 120
+
+uniform mat4 wvpMatrix;
+
+attribute vec4 vertexPosition;
+
+void main() {
+    gl_Position = wvpMatrix * vertexPosition;
+}
+]]>
+        </code>
+      </vertexShader>
+
+      <fragmentShader>
+        <code>
+        <![CDATA[
+#version 120
+
+void main() {
+    gl_FragColor = vec4(1, 0, 1, 1);
+}
+]]>
+        </code>
+      </fragmentShader>
+
+      <attribute name="vertexPosition" buffer="positions" />
+      <uniform name="wvpMatrix" semantic="WorldViewProjection" />
+    </shader>
+  </pass>
+
+</material>

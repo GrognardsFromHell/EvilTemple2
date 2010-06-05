@@ -22,6 +22,8 @@ namespace EvilTemple {
 
     struct FaceGroup {
         MaterialState *material;
+        int placeholderId; // If this face group is connected to a placeholder 
+        // slot, this is the index pointing to it, otherwise it's -1
         uint elementCount;
         GLuint buffer;
 
@@ -232,9 +234,10 @@ In addition, we could just point to the full transform matrix instead, further s
     }
 
     /**
-  Contains the keyframe data for an animated bone.
-  */
-    class AnimationBone {
+        Contains the keyframe data for an animated bone.
+    */
+    class AnimationBone
+    {
         friend QDataStream &operator >>(QDataStream &stream, AnimationBone &bone);
     public:
 	AnimationBone()
@@ -263,7 +266,8 @@ In addition, we could just point to the full transform matrix instead, further s
     /**
     Models a single animation, which is modeled as a collection of animated bones.
 */
-    class Animation {
+    class Animation
+    {
         friend QDataStream &operator >>(QDataStream &stream, Animation &event);
     public:
 
@@ -359,7 +363,8 @@ In addition, we could just point to the full transform matrix instead, further s
     /**
 A bone for skeletal animation
 */
-    class Bone {
+    class Bone
+    {
         friend class Model;
     public:
 
@@ -480,7 +485,8 @@ A bone for skeletal animation
         mRelativeWorld = relativeWorld;
     }
 
-    class Model {
+    class Model
+    {
     public:
         Model();
         ~Model();
@@ -510,17 +516,21 @@ A bone for skeletal animation
         const QString &error() const;
 
         /**
-     * Returns the bones of the skeleton in this model. If it has no skeleton, the list is empty.
-     */
+         * Returns the bones of the skeleton in this model. If it has no skeleton, the list is empty.
+         */
         const QVector<Bone> &bones() const;
 
         /**
-      * Returns an animation by name. NULL if no such animation is found.
-      */
+         * Returns an animation by name. NULL if no such animation is found.
+         */
         const Animation *animation(const QString &name) const;
+
+        const QStringList &placeholders() const;
 
     private:
         typedef QHash<QString, const Animation*> AnimationMap;
+
+        typedef QScopedPointer<char, AlignedDeleter> AlignedPointer;
 
         AnimationMap mAnimationMap;
 
@@ -530,7 +540,7 @@ A bone for skeletal animation
 
         QScopedArrayPointer<MaterialState> materialState;
 
-        typedef QScopedPointer<char, AlignedDeleter> AlignedPointer;
+        QStringList mPlaceholders;
 
         AlignedPointer boneData;
         AlignedPointer boneAttachmentData;
@@ -547,6 +557,11 @@ A bone for skeletal animation
 
         QString mError;
     };
+
+    inline const QStringList &Model::placeholders() const
+    {
+        return mPlaceholders;
+    }
 
     inline float Model::radius() const
     {

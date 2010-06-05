@@ -77,7 +77,8 @@ namespace Troika {
 
         enum Type {
             UserDefined, // Through MDF files
-            DepthArt // Used by the depth geometry
+            DepthArt, // Used by the depth geometry
+            Placeholder
         };
 
         explicit Material(Type type, const QString &name);

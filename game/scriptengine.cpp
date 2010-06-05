@@ -7,6 +7,7 @@
 #include "scene.h"
 #include "scriptables.h"
 #include "clippinggeometry.h"
+#include "materials.h"
 
 namespace EvilTemple {
 
@@ -267,6 +268,7 @@ namespace EvilTemple {
         registerQObject<EvilTemple::BackgroundMap>(engine, "BackgroundMap*");
         registerQObject<EvilTemple::ClippingGeometry>(engine, "ClippingGeometry*");
         registerQObject<EvilTemple::Scene>(engine, "Scene*");
+        registerQObject<EvilTemple::Materials>(engine, "Materials*");
 
         // Add a function to read files
         QScriptValue readFileFn = engine->newFunction(readFile, 1);
@@ -281,6 +283,7 @@ namespace EvilTemple {
         ModelInstanceScriptable::registerWith(engine);
         LightScriptable::registerWith(engine);
         registerRenderableScriptable(engine);
+        MaterialStateScriptable::registerWith(engine);
     }
 
 }

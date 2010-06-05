@@ -20,6 +20,7 @@
 #include "scene.h"
 #include "boxrenderable.h"
 #include "profiler.h"
+#include "materials.h"
 
 #include <gamemath.h>
 using namespace GameMath;
@@ -47,7 +48,8 @@ namespace EvilTemple {
     public:
         GameViewData(GameView *view)
             : q(view), rootItem(0), modelLoaded(0), backgroundMap(renderStates),
-            clippingGeometry(renderStates), dragging(false), lightDebugger(renderStates) {
+            clippingGeometry(renderStates), dragging(false), lightDebugger(renderStates),
+            materials(renderStates), particleSystems(&materials) {
 
             sceneTimer.invalidate();
 
@@ -125,6 +127,8 @@ namespace EvilTemple {
         ModelInstance model;
         ModelInstance model2;
         bool modelLoaded;
+
+        Materials materials;
 
         bool dragging;
         QPoint lastPoint;
@@ -438,6 +442,11 @@ namespace EvilTemple {
     ClippingGeometry *GameView::clippingGeometry() const
     {
         return &d->clippingGeometry;
+    }
+
+    Materials *GameView::materials() const
+    {
+        return &d->materials;
     }
 
     SharedModel GameView::loadModel(const QString &filename)

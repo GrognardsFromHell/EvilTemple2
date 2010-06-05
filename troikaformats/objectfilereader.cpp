@@ -702,7 +702,7 @@ namespace Troika
             case SceneryFlags:
                 stream >> flags;
                 convertFlags(SceneryFlagNames, flags, object.sceneryFlags);
-                if (object.sceneryFlags == object.prototype->sceneryProperties->flags)
+                if (object.sceneryFlags.toSet() == qobject_cast<SceneryProperties*>(object.prototype->additionalProperties)->flags.toSet())
                     object.sceneryFlags.clear();
                 break;
             case Description:
@@ -717,7 +717,7 @@ namespace Troika
             case PortalFlags:
                 stream >> flags;
                 convertFlags(PortalFlagNames, flags, object.portalFlags);
-                if (object.portalFlags == object.prototype->portalProperties->flags)
+                if (object.portalFlags.toSet() == qobject_cast<PortalProperties*>(object.prototype->additionalProperties)->flags.toSet())
                     object.portalFlags.clear();
                 break;
             case SecretDoorDc:
@@ -725,12 +725,12 @@ namespace Troika
                 break;
             case PortalLockDc:
                 stream >> object.portalLockDc;
-                if (object.portalLockDc == object.prototype->portalProperties->lockDc)
+                if (object.portalLockDc == qobject_cast<PortalProperties*>(object.prototype->additionalProperties)->lockDc)
                     object.portalLockDc.clear();
                 break;
             case PortalKeyId:
                 stream >> object.portalKeyId;
-                if (object.portalKeyId == object.prototype->portalProperties->keyId)
+                if (object.portalKeyId == qobject_cast<PortalProperties*>(object.prototype->additionalProperties)->keyId)
                     object.portalKeyId.clear();
                 break;
             case Flags:

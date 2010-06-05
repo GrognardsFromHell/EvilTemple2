@@ -281,14 +281,18 @@ void ModelWriter::writeTextures(const QList<HashedData> &textures)
     finishChunk();
 }
 
-void ModelWriter::writeMaterials(const QList<HashedData> &materialScripts)
+void ModelWriter::writeMaterials(const QList<HashedData> &materialScripts, const QStringList &placeholders)
 {
     startChunk(Materials, true);
 
-    stream << (uint)materialScripts.size() << RESERVED << RESERVED << RESERVED;
+    stream << (uint)materialScripts.size() << (int)placeholders.size() << RESERVED << RESERVED;
 
     foreach (const HashedData &hashedData, materialScripts) {
         stream << hashedData;
+    }
+
+    foreach (const QString &placeholder, placeholders) {
+        stream << placeholder.toUtf8();
     }
 
     finishChunk();

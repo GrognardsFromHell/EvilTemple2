@@ -73,11 +73,20 @@ namespace Troika
         Integer parameter; // This additional parameter is only used by traps
     };
 
-    class TROIKAFORMATS_EXPORT ScriptProperties : public QObject
+    class TROIKAFORMATS_EXPORT AdditionalProperties : public QObject
     {
     Q_OBJECT
     public:
-        ScriptProperties(QObject *parent) : QObject(parent) {}
+        AdditionalProperties(QObject *parent) : QObject(parent) {}
+
+        virtual void parse(const QStringList &parts) = 0;
+    };
+
+    class TROIKAFORMATS_EXPORT ScriptProperties : public AdditionalProperties
+    {
+    Q_OBJECT
+    public:
+        ScriptProperties(QObject *parent) : AdditionalProperties(parent) {}
 
         void parse(const QStringList &parts);
 
@@ -445,23 +454,7 @@ namespace Troika
         Float radius;
         Float renderHeight;
 
-        PortalProperties *portalProperties;
-        ContainerProperties *containerProperties;
-        SceneryProperties *sceneryProperties;
-        ProjectileProperties *projectileProperties;
-        WeaponProperties *weaponProperties;
-        AmmoProperties *ammoProperties;
-        ArmorProperties *armorProperties;
-        MoneyProperties *moneyProperties;
-        FoodProperties *foodProperties;
-        ScrollProperties *scrollProperties;
-        KeyProperties *keyProperties;
-        WrittenProperties *writtenProperties;
-        BagProperties *bagProperties;
-        GenericProperties *genericProperties;
-        PlayerCharacterProperties *playerCharacterProperties;
-        NonPlayerCharacterProperties *nonPlayerCharacterProperties;
-        TrapProperties *trapProperties;
+        AdditionalProperties *additionalProperties;
 
         Q_DISABLE_COPY(Prototype)
     };

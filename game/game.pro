@@ -40,13 +40,13 @@ SOURCES += \
     entity.cpp \
     renderable.cpp \
     boxrenderable.cpp \
-    materialcache.cpp \
     texturesource.cpp \
     lighting.cpp \
     lighting_debug.cpp \
     profiler.cpp \
     profilerdialog.cpp \
-    scriptables.cpp
+    scriptables.cpp \
+    materials.cpp
 HEADERS += \
     mainwindow.h \
     game.h \
@@ -74,17 +74,18 @@ HEADERS += \
     entity.h \
     renderable.h \
     boxrenderable.h \
-    materialcache.h \
     lighting.h \
     lighting_debug.h \
     drawhelper.h \
     profiler.h \
     profilerdialog.h \
-    scriptables.h
+    scriptables.h \
+    materials.h
 OTHER_FILES += map_material.xml \
     clipping_material.xml \
     lighting.vs \
-    lighting.fs
+    lighting.fs \
+    missing_material.xml
 
 INCLUDEPATH += .
 

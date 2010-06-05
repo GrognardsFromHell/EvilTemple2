@@ -5,7 +5,7 @@
 #include "virtualfilesystem.h"
 #include "model.h"
 #include "material.h"
-#include "materials.h"
+#include "troika_materials.h"
 #include "skeleton.h"
 
 namespace Troika
@@ -152,7 +152,7 @@ namespace Troika
                 } else {
                     // TODO: Virtual materials that can change during play don't have an associated MDF
                     // E.g: "FACE" and others
-                    modelMaterials.append(QSharedPointer<Material>(NULL));
+                    modelMaterials.append(QSharedPointer<Material>(new Material(Material::Placeholder, materialName)));
                 }
             }
         }

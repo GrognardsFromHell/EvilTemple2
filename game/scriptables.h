@@ -29,6 +29,12 @@ namespace EvilTemple {
     private:
         SharedModel data() const;
     };
+
+    class MaterialStateScriptable : public QObject, protected QScriptable {
+    Q_OBJECT
+    public:
+        static void registerWith(QScriptEngine *engine);
+    };
     
     class ModelInstanceScriptable : public QObject, protected QScriptable {
     Q_OBJECT
@@ -41,7 +47,6 @@ namespace EvilTemple {
         const SharedModel &model() const;
         void setModel(const SharedModel &model);
 
-        void addMesh(const SharedModel &model);
 
         uint renderCategory() const;
         void setRenderCategory(uint category);       
@@ -49,6 +54,13 @@ namespace EvilTemple {
         const Box3d &boundingBox() const;
     public slots:
         void setClickHandler(const QScriptValue &handler);
+
+        bool overrideMaterial(const QString &name, const SharedMaterialState &state);
+        bool clearOverrideMaterial(const QString &name);
+        void clearOverrideMaterials();
+        
+        void addMesh(const SharedModel &model);
+
     private:
         ModelInstance *data() const;
     };

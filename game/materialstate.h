@@ -191,8 +191,8 @@ class MaterialState {
 public:
     int passCount;
     QScopedArrayPointer<MaterialPassState> passes;
-    bool createFrom(const Material &material, const RenderStates &renderState, TextureSource *textureSource);
-    bool createFromFile(const QString &filename, const RenderStates &renderState, TextureSource *textureSource);
+    bool createFrom(const Material &material, const RenderStates &renderState, TextureSource *textureSource = FileTextureSource::instance());
+    bool createFromFile(const QString &filename, const RenderStates &renderState, TextureSource *textureSource = FileTextureSource::instance());
     const QString &error() const;
 private:
     QString mError;

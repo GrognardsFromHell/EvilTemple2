@@ -20,9 +20,8 @@
 #include "texture.h"
 #include "material.h"
 #include "materialstate.h"
+#include "materials.h"
 #include "modelinstance.h"
-#include "materialstate.h"
-#include "materialcache.h"
 
 namespace EvilTemple {
 
@@ -388,6 +387,11 @@ namespace EvilTemple {
             mName = name;
 	}
 
+        void setMaterial(const SharedMaterialState &material)
+        {
+            mMaterial = material;
+        }
+
     private:
 
         SharedMaterialState mMaterial;
@@ -664,13 +668,6 @@ namespace EvilTemple {
 
     void Emitter::render(RenderStates &renderStates, const ModelInstance *modelInstance)
     {
-        if (!mMaterial) {
-            mMaterial = GlobalMaterialCache::instance().load(":/material/sprite_material.xml", renderStates);
-
-            if (!mMaterial)
-                return; // don't draw without material
-        }
-
         MaterialPassState &pass = mMaterial->passes[0];
 
 	int posAttrib = pass.program.attributeLocation("vertexPosition");
@@ -865,12 +862,6 @@ namespace EvilTemple {
 
 	bool loadFromXml(const QDomElement &emitterNode);
 
-	/**
-	 * Instantiates this template and creates an emitter.
-	 */
-	Emitter *instantiate() const;
-	
-    private:
 	bool readPosition(const QDomElement &element);
 	bool readParticles(const QDomElement &element);
 
@@ -950,15 +941,9 @@ namespace EvilTemple {
 	 */
 	bool loadFromXml(const QDomElement &element);
 
-	/**
-	 * Creates a particle system from this template.
-	 */
-	ParticleSystem *instantiate() const;
-
     private:
 	QList<EmitterTemplate> mEmitterTemplates;
 	QString mId;
-
     };
 
     const EmitterTemplate::Property EmitterTemplate::ZeroProperty(new ConstantParticleProperty<float>(0));
@@ -1236,44 +1221,17 @@ namespace EvilTemple {
 	return true;
     }
 
-    ParticleSystem *ParticleSystemTemplate::instantiate() const
-    {
-	QList<Emitter*> emitters;
-	emitters.reserve(mEmitterTemplates.size());
-
-	foreach (const EmitterTemplate &emitterTemplate, mEmitterTemplates) {
-            emitters.append(emitterTemplate.instantiate());
-	}
-
-	return new ParticleSystem(mId, emitters);
-    }
-
-    Emitter *EmitterTemplate::instantiate() const
-    {
-	Emitter *emitter = new Emitter(mParticleSpawnRate, mParticleLifespan);
-	emitter->setName(mName);
-        emitter->setEmitterSpace(mEmitterSpace);
-	emitter->setColor(mColorRed.data(), mColorGreen.data(), mColorBlue.data(), mColorAlpha.data());
-	emitter->setScale(mScale.data());
-	emitter->setLifetime(mLifespan);
-	emitter->setTexture(loadTexture(mParticleTexture));
-	emitter->setPosition(mPositionX.data(), mPositionY.data(), mPositionZ.data());
-	emitter->setRotation(mRotationYaw.data(), mRotationPitch.data(), mRotationRoll.data());
-	emitter->setAcceleration(mParticleAccelerationX.data(), mParticleAccelerationY.data(), mParticleAccelerationZ.data());
-	emitter->setParticleVelocity(mParticleVelocityX.data(), mParticleVelocityY.data(), mParticleVelocityZ.data(), mParticleVelocityType);
-	emitter->setParticlePosition(mParticlePositionX.data(), mParticlePositionY.data(), mParticlePositionZ.data(), mParticlePositionType);
-	emitter->setParticleType(mParticleType);
-	emitter->setBlendMode(mBlendMode);
-
-	return emitter;
-    }
-
     //////////////////////////////////////////////////////////////////////////
     // Active Particle Systems
     //////////////////////////////////////////////////////////////////////////
 
     class ParticleSystemsData {
     public:
+        ParticleSystemsData(Materials *_materials) : materials(_materials)
+        {
+            spriteMaterial = materials->load(":/material/sprite_material.xml");
+        }
+
         bool loadTemplates()
         {
             QElapsedTimer timer;
@@ -1315,16 +1273,66 @@ namespace EvilTemple {
             return true;
 	}
 
+        /**
+         * Instantiates this template and creates an emitter.
+         */
+        Emitter *instantiate(const EmitterTemplate &tpl) const;
+
+        /**
+         * Creates a particle system from this template.
+         */
+        ParticleSystem *instantiate(const ParticleSystemTemplate &tpl) const;
+
+        Materials *materials;
+
+        SharedMaterialState spriteMaterial;
+
         QHash<QString,ParticleSystemTemplate> templates;
         QString error;
     };
 
-    ParticleSystems::ParticleSystems() : d(new ParticleSystemsData())
+    ParticleSystems::ParticleSystems(Materials *materials) : d(new ParticleSystemsData(materials))
     {
     }
 
     ParticleSystems::~ParticleSystems()
     {
+    }
+
+    Emitter *ParticleSystemsData::instantiate(const EmitterTemplate &tpl) const
+    {
+        Emitter *emitter = new Emitter(tpl.mParticleSpawnRate, tpl.mParticleLifespan);
+        emitter->setName(tpl.mName);
+        emitter->setEmitterSpace(tpl.mEmitterSpace);
+        emitter->setColor(tpl.mColorRed.data(), tpl.mColorGreen.data(), tpl.mColorBlue.data(), tpl.mColorAlpha.data());
+        emitter->setScale(tpl.mScale.data());
+        emitter->setLifetime(tpl.mLifespan);
+        emitter->setTexture(loadTexture(tpl.mParticleTexture));
+        emitter->setPosition(tpl.mPositionX.data(), tpl.mPositionY.data(), tpl.mPositionZ.data());
+        emitter->setRotation(tpl.mRotationYaw.data(), tpl.mRotationPitch.data(), tpl.mRotationRoll.data());
+        emitter->setAcceleration(tpl.mParticleAccelerationX.data(), tpl.mParticleAccelerationY.data(),
+                                 tpl.mParticleAccelerationZ.data());
+        emitter->setParticleVelocity(tpl.mParticleVelocityX.data(), tpl.mParticleVelocityY.data(),
+                                     tpl.mParticleVelocityZ.data(), tpl.mParticleVelocityType);
+        emitter->setParticlePosition(tpl.mParticlePositionX.data(), tpl.mParticlePositionY.data(),
+                                     tpl.mParticlePositionZ.data(), tpl.mParticlePositionType);
+        emitter->setParticleType(tpl.mParticleType);
+        emitter->setBlendMode(tpl.mBlendMode);
+        emitter->setMaterial(spriteMaterial);
+
+        return emitter;
+    }
+
+    ParticleSystem *ParticleSystemsData::instantiate(const ParticleSystemTemplate &tpl) const
+    {
+        QList<Emitter*> emitters;
+        emitters.reserve(tpl.emitterTemplates().size());
+
+        foreach (const EmitterTemplate &emitterTemplate, tpl.emitterTemplates()) {
+            emitters.append(instantiate(emitterTemplate));
+        }
+
+        return new ParticleSystem(tpl.id(), emitters);
     }
 
     bool ParticleSystems::loadTemplates()
@@ -1339,7 +1347,7 @@ namespace EvilTemple {
 
     ParticleSystem *ParticleSystems::instantiate(const QString &name)
     {
-        return d->templates[name].instantiate();
+        return d->instantiate(d->templates[name]);
     }
 
 }

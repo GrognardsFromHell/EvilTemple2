@@ -13,7 +13,7 @@ public:
 
     void writeBones(const Troika::Skeleton *skeleton);
     void writeTextures(const QList<HashedData> &textures);
-    void writeMaterials(const QList<HashedData> &materialScripts);
+    void writeMaterials(const QList<HashedData> &materialScripts, const QStringList &placeholders);
 	void writeMaterialReferences(const QStringList &materialFiles);
     void writeChunk(uint chunk, bool required, const QByteArray &data);
     void writeVertices(const QVector<Troika::Vertex> &vertices);

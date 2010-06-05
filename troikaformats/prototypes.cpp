@@ -72,12 +72,7 @@ namespace Troika
     }
 
     Prototype::Prototype(int _id, QObject *parent) : QObject(parent), id(_id),
-    portalProperties(0), containerProperties(0), sceneryProperties(0),
-         projectileProperties(0), weaponProperties(0),
-         ammoProperties(0), armorProperties(0), moneyProperties(0), foodProperties(0),
-         scrollProperties(0), keyProperties(0), writtenProperties(0), bagProperties(0),
-         genericProperties(0), playerCharacterProperties(0),
-         nonPlayerCharacterProperties(0), trapProperties(0)
+    additionalProperties(0)
     {
         modelId = 0;
     }
@@ -289,74 +284,59 @@ namespace Troika
 
         switch (type) {
         case Portal:
-            portalProperties = new PortalProperties(this);
-            portalProperties->parse(parts);
+            additionalProperties = new PortalProperties(this);
             break;
         case Container:
-            containerProperties = new ContainerProperties(this);
-            containerProperties->parse(parts);
+            additionalProperties = new ContainerProperties(this);
             break;
         case Scenery:
-            sceneryProperties = new SceneryProperties(this);
-            sceneryProperties->parse(parts);
+            additionalProperties = new SceneryProperties(this);
             break;
         case Projectile:
-            projectileProperties = new ProjectileProperties(this);
-            projectileProperties->parse(parts);
+            additionalProperties = new ProjectileProperties(this);
             break;
         case Weapon:
-            weaponProperties = new WeaponProperties(this);
-            weaponProperties->parse(parts);
+            additionalProperties = new WeaponProperties(this);
             break;
         case Ammo:
-            ammoProperties = new AmmoProperties(this);
-            ammoProperties->parse(parts);
+            additionalProperties = new AmmoProperties(this);
             break;
         case Armor:
-            armorProperties = new ArmorProperties(this);
-            armorProperties->parse(parts);
+            additionalProperties = new ArmorProperties(this);
             break;
         case Money:
-            moneyProperties = new MoneyProperties(this);
-            moneyProperties->parse(parts);
+            additionalProperties = new MoneyProperties(this);
             break;
         case Food:
-            foodProperties = new FoodProperties(this);
-            foodProperties->parse(parts);
+            additionalProperties = new FoodProperties(this);
             break;
         case Scroll:
-            scrollProperties = new ScrollProperties(this);
-            scrollProperties->parse(parts);
+            additionalProperties = new ScrollProperties(this);
             break;
         case Key:
-            keyProperties = new KeyProperties(this);
-            keyProperties->parse(parts);
+            additionalProperties = new KeyProperties(this);
             break;
         case Written:
-            writtenProperties = new WrittenProperties(this);
-            writtenProperties->parse(parts);
+            additionalProperties = new WrittenProperties(this);
             break;
         case Bag:
-            bagProperties = new BagProperties(this);
-            bagProperties->parse(parts);
+            additionalProperties = new BagProperties(this);
             break;
         case Generic:
-            genericProperties = new GenericProperties(this);
-            genericProperties->parse(parts);
+            additionalProperties = new GenericProperties(this);
             break;
         case PlayerCharacter:
-            playerCharacterProperties = new PlayerCharacterProperties(this);
-            playerCharacterProperties->parse(parts);
+            additionalProperties = new PlayerCharacterProperties(this);
             break;
         case NonPlayerCharacter:
-            nonPlayerCharacterProperties = new NonPlayerCharacterProperties(this);
-            nonPlayerCharacterProperties->parse(parts);
+            additionalProperties = new NonPlayerCharacterProperties(this);
             break;
         case Trap:
-            trapProperties = new TrapProperties(this);
-            trapProperties->parse(parts);
+            additionalProperties = new TrapProperties(this);
             break;
         };
+
+        additionalProperties->parse(parts);
     }
 
     void PortalProperties::parse(const QStringList &parts)

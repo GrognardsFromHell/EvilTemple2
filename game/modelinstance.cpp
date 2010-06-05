@@ -20,6 +20,10 @@ namespace EvilTemple {
 
     ModelInstance::~ModelInstance()
     {
+        qDeleteAll(mTransformedNormalsAddMeshes);
+        qDeleteAll(mTransformedPositionsAddMeshes);
+        qDeleteAll(mNormalBufferAddMeshes);
+        qDeleteAll(mPositionBufferAddMeshes);
         delete [] mTransformedPositions;
         delete [] mTransformedNormals;
         delete [] mFullWorld;
@@ -38,6 +42,8 @@ namespace EvilTemple {
         mFullTransform = 0;
 
         mModel = model;
+        mReplacementMaterials.clear();
+        mReplacementMaterials.resize(mModel->placeholders().size());
 
         mCurrentAnimation = model->animation("item_idle");
 
@@ -46,6 +52,10 @@ namespace EvilTemple {
         }
 
         if (mCurrentAnimation) {
+            // This is for idle animations -> advance by a random number of frames, since
+            // not all models should "idle in sync"
+            mCurrentFrame = rand() % mCurrentAnimation->frames();
+
             mTransformedPositions = new Vector4[mModel->vertices];
             mTransformedNormals = new Vector4[mModel->vertices];
 
@@ -63,8 +73,30 @@ namespace EvilTemple {
     }
 
     void ModelInstance::addMesh(const SharedModel &model)
-    {
+    {      
         mAddMeshes.append(model);
+
+        if (mCurrentAnimation) {           
+            mTransformedNormalsAddMeshes.append(new Vector4[model->vertices]);
+            mTransformedPositionsAddMeshes.append(new Vector4[model->vertices]);
+
+            QGLBuffer *buffer = new QGLBuffer(QGLBuffer::VertexBuffer);
+            buffer->create();
+            buffer->bind();
+            buffer->allocate(model->positions, sizeof(Vector4) * model->vertices);
+            mPositionBufferAddMeshes.append(buffer);
+
+            buffer = new QGLBuffer(QGLBuffer::VertexBuffer);
+            buffer->create();
+            buffer->bind();
+            buffer->allocate(model->normals, sizeof(Vector4) * model->vertices);
+            mNormalBufferAddMeshes.append(buffer);
+            
+            Q_ASSERT(mTransformedPositionsAddMeshes.size() == mAddMeshes.size()); 
+            Q_ASSERT(mTransformedNormalsAddMeshes.size() == mAddMeshes.size()); 
+            Q_ASSERT(mPositionBufferAddMeshes.size() == mAddMeshes.size()); 
+            Q_ASSERT(mNormalBufferAddMeshes.size() == mAddMeshes.size()); 
+        }
     }
 
     Matrix4 ModelInstance::getBoneSpace(const QString &boneName) const
@@ -206,6 +238,47 @@ namespace EvilTemple {
         GLint mTexCoordBuffer;
     };
 
+    void ModelInstance::animateVertices(const SharedModel &model, Vector4 *transformedPositions, Vector4 *transformedNormals, QGLBuffer *positionBuffer, QGLBuffer *normalBuffer)
+    {
+        for (int i = 0; i < model->vertices; ++i) {
+            const BoneAttachment &attachment = model->attachments[i];
+
+            Q_ASSERT(attachment.count() > 0);
+
+            float weight = attachment.weights()[0];
+            uint boneId = attachment.bones()[0];
+            const Matrix4 &firstTransform = mFullTransform[boneId];
+
+            __m128 factor = _mm_set_ps(weight, - weight, weight, weight);
+
+            Vector4 result = _mm_mul_ps(factor, firstTransform * model->positions[i]);
+            Vector4 resultNormal = _mm_mul_ps(factor, firstTransform.mapNormal(model->normals[i]));
+
+            for (int k = 1; k < attachment.count(); ++k) {
+                weight = attachment.weights()[k];
+                boneId = attachment.bones()[k];
+                Q_ASSERT(boneId >= 0 && boneId <= mModel->bones().size());
+
+                const Matrix4 &fullTransform = mFullTransform[boneId];
+
+                // This flips the z coordinate, since the models are geared towards DirectX
+                factor = _mm_set_ps(weight, - weight, weight, weight);
+
+                result += _mm_mul_ps(factor, fullTransform * model->positions[i]);
+                resultNormal += _mm_mul_ps(factor, fullTransform.mapNormal(model->normals[i]));
+            }
+
+            transformedPositions[i] = result;
+            transformedNormals[i] = resultNormal;
+        }
+
+        glBindBuffer(GL_ARRAY_BUFFER, positionBuffer->bufferId());
+        glBufferData(GL_ARRAY_BUFFER, sizeof(Vector4) * model->vertices, transformedPositions, GL_STREAM_DRAW);
+
+        glBindBuffer(GL_ARRAY_BUFFER, normalBuffer->bufferId());
+        glBufferData(GL_ARRAY_BUFFER, sizeof(Vector4) * model->vertices, transformedNormals, GL_STREAM_DRAW);
+    }
+
     void ModelInstance::render(RenderStates &renderStates)
     {
         const Model *model = mModel.data();
@@ -245,43 +318,12 @@ namespace EvilTemple {
                 mFullTransform[i] = mFullWorld[i] * bone.fullWorldInverse();
             }
 
-            for (int i = 0; i < mModel->vertices; ++i) {
-                const BoneAttachment &attachment = mModel->attachments[i];
+            animateVertices(mModel, mTransformedPositions, mTransformedNormals, &mPositionBuffer, &mNormalBuffer);
 
-                Q_ASSERT(attachment.count() > 0);
-
-                float weight = attachment.weights()[0];
-                uint boneId = attachment.bones()[0];
-                const Matrix4 &firstTransform = mFullTransform[boneId];
-
-                __m128 factor = _mm_set_ps(weight, - weight, weight, weight);
-
-                Vector4 result = _mm_mul_ps(factor, firstTransform * mModel->positions[i]);
-                Vector4 resultNormal = _mm_mul_ps(factor, firstTransform.mapNormal(mModel->normals[i]));
-
-                for (int k = 1; k < attachment.count(); ++k) {
-                    weight = attachment.weights()[k];
-                    boneId = attachment.bones()[k];
-                    Q_ASSERT(boneId >= 0 && boneId <= mModel->bones().size());
-
-                    const Matrix4 &fullTransform = mFullTransform[boneId];
-
-                    // This flips the z coordinate, since the models are geared towards DirectX
-                    factor = _mm_set_ps(weight, - weight, weight, weight);
-
-                    result += _mm_mul_ps(factor, fullTransform * mModel->positions[i]);
-                    resultNormal += _mm_mul_ps(factor, fullTransform.mapNormal(mModel->normals[i]));
-                }
-
-                mTransformedPositions[i] = result;
-                mTransformedNormals[i] = resultNormal;
+            for (int i = 0; i < mAddMeshes.size(); ++i) {
+                animateVertices(mAddMeshes[i], mTransformedPositionsAddMeshes[i], mTransformedNormalsAddMeshes[i], mPositionBufferAddMeshes[i], mNormalBufferAddMeshes[i]);
             }
 
-            glBindBuffer(GL_ARRAY_BUFFER, mPositionBuffer.bufferId());
-            glBufferData(GL_ARRAY_BUFFER, sizeof(Vector4) * mModel->vertices, mTransformedPositions, GL_STREAM_DRAW);
-
-            glBindBuffer(GL_ARRAY_BUFFER, mNormalBuffer.bufferId());
-            glBufferData(GL_ARRAY_BUFFER, sizeof(Vector4) * mModel->vertices, mTransformedNormals, GL_STREAM_DRAW);
             mCurrentFrameChanged = false;
         }
 
@@ -292,14 +334,38 @@ namespace EvilTemple {
 
         for (int faceGroupId = 0; faceGroupId < model->faces; ++faceGroupId) {
             const FaceGroup &faceGroup = model->faceGroups[faceGroupId];
-            
+
+            MaterialState *material = faceGroup.material;
+
             // This needs special handling (material replacement)
-            if (!faceGroup.material)
-                continue;
-            
-            ModelDrawStrategy drawStrategy(faceGroup.buffer, faceGroup.elementCount);
-            
-            drawHelper.draw(renderStates, faceGroup.material, drawStrategy, bufferSource);
+            if (faceGroup.placeholderId >= 0) {
+                material = mReplacementMaterials[faceGroup.placeholderId].data();
+            }
+
+            if (material) {
+                ModelDrawStrategy drawStrategy(faceGroup.buffer, faceGroup.elementCount);
+                drawHelper.draw(renderStates, material, drawStrategy, bufferSource);            
+            }
+        }
+
+        // Render all addmeshes
+        for (int i = 0; i < mAddMeshes.size(); ++i) {
+            model = mAddMeshes[i].data();
+
+            ModelBufferSource bufferSource(mCurrentAnimation ? mPositionBufferAddMeshes[i]->bufferId() : model->positionBuffer,
+                mCurrentAnimation ? mNormalBufferAddMeshes[i]->bufferId() : model->normalBuffer,
+                model->texcoordBuffer);
+
+            for (int faceGroupId = 0; faceGroupId < model->faces; ++faceGroupId) {
+                const FaceGroup &faceGroup = model->faceGroups[faceGroupId];
+
+                MaterialState *material = faceGroup.material;
+                
+                if (material) {
+                    ModelDrawStrategy drawStrategy(faceGroup.buffer, faceGroup.elementCount);
+                    drawHelper.draw(renderStates, material, drawStrategy, bufferSource);            
+                }
+            }
         }
     }
 
@@ -542,6 +608,42 @@ namespace EvilTemple {
         glBindBuffer(GL_ARRAY_BUFFER, 0);
 
         return result;
+    }
+
+    bool ModelInstance::overrideMaterial(const QString &name, const SharedMaterialState &state)
+    {
+        if (!mModel)
+            return false;
+
+        int placeholderId = mModel->placeholders().indexOf(name);
+
+        if (placeholderId == -1)
+            return false;
+
+        mReplacementMaterials[placeholderId] = state;
+
+        return true;
+    }
+
+    bool ModelInstance::clearOverrideMaterial(const QString &name)
+    {
+        if (!mModel)
+            return false;
+
+        int placeholderId = mModel->placeholders().indexOf(name);
+
+        if (placeholderId == -1)
+            return false;
+
+        mReplacementMaterials[placeholderId].clear();
+
+        return true;
+    }
+
+    void ModelInstance::clearOverrideMaterials()
+    {
+        for (int i = 0; i < mReplacementMaterials.size(); ++i)
+            mReplacementMaterials[i].clear();
     }
 
 }

@@ -22,7 +22,7 @@ HEADERS += dagreader.h \
     prototypes.h \
     util.h \
     constants.h \
-    materials.h \
+    troika_materials.h \
     zonetemplate.h \
     zonebackgroundmap.h \
     zonetemplates.h \
@@ -40,7 +40,7 @@ SOURCES += dagreader.cpp \
     material.cpp \
     skeleton.cpp \
     prototypes.cpp \
-    materials.cpp \
+    troika_materials.cpp \
     zonebackgroundmap.cpp \
     zonetemplate.cpp \
     zonetemplates.cpp

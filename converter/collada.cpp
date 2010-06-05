@@ -7,7 +7,7 @@
 #include "messagefile.h"
 #include "troikaarchive.h"
 #include "prototypes.h"
-#include "materials.h"
+#include "troika_materials.h"
 #include "zonetemplate.h"
 #include "zonetemplatereader.h"
 #include "zonetemplates.h"

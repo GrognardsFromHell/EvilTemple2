@@ -13,6 +13,7 @@ class GameViewData;
 class BackgroundMap;
 class Scene;
 class ClippingGeometry;
+class Materials;
 
 class GameView : public QGraphicsView
 {
@@ -20,6 +21,7 @@ class GameView : public QGraphicsView
     Q_PROPERTY(BackgroundMap *backgroundMap READ backgroundMap)
     Q_PROPERTY(Scene *scene READ scene)
     Q_PROPERTY(ClippingGeometry *clippingGeometry READ clippingGeometry)
+    Q_PROPERTY(Materials *materials READ materials)
 public:
     explicit GameView(QWidget *parent = 0);
     ~GameView();
@@ -29,6 +31,7 @@ public:
     BackgroundMap *backgroundMap() const;
     Scene *scene() const;
     ClippingGeometry *clippingGeometry() const;
+    Materials *materials() const;
 
 signals:
 

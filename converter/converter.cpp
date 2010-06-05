@@ -16,7 +16,7 @@
 #include "messagefile.h"
 #include "troikaarchive.h"
 #include "prototypes.h"
-#include "materials.h"
+#include "troika_materials.h"
 #include "zonetemplate.h"
 #include "zonetemplatereader.h"
 #include "zonetemplates.h"
@@ -1040,7 +1040,48 @@ public:
 
             convertModel(&zip, meshFilename, model.data());
         }
+
+        convertMaterials(&zip);
     }       
+
+    void convertMaterials(ZipWriter *zip)
+    {
+        QHash<uint,QString> materials = MessageFile::parse(vfs->openFile("rules/materials.mes"));
+
+        QSet<QString> materialSet;
+
+        foreach (QString value, materials.values()) {
+            QStringList parts = value.split(':');
+            if (!parts.size() == 2)
+                continue;
+            materialSet.insert(parts[1]);
+        }
+
+        QSet<QString> writtenTextures;
+        QSet<QString> writtenMaterials;
+
+        foreach (QString mdfFilename, materialSet) {
+            MaterialConverter converter(vfs.data());
+            converter.convert(Troika::Material::create(vfs.data(), mdfFilename));
+
+            HashedData converted = converter.materialScripts().values().at(0);
+
+            foreach (const QString &textureFilename, converter.textures().keys()) {
+                if (writtenTextures.contains(textureFilename))
+                    continue;
+                writtenTextures.insert(textureFilename);
+                zip->addFile(textureFilename, converter.textures()[textureFilename].data, 9);
+            }
+
+            foreach (const QString &materialFilename, converter.materialScripts().keys()) {
+                if (writtenMaterials.contains(materialFilename))
+                    continue;
+                writtenMaterials.insert(materialFilename);
+                zip->addFile(materialFilename, converter.materialScripts()[materialFilename].data, 9);
+            }
+        }
+
+    }
 
     /**
       * Converts a single model, given its original filename.
@@ -1248,19 +1289,28 @@ public:
         QHash<QString,int> materialMapping;
         QHash<uint,QString> materialFileMapping;
         int i = 0;
+        int j = -1; // placeholders are negative
+        QStringList placeholders;
 
-        foreach (const QString &materialName, groupedMaterials.keys()) {
-            qDebug("Converting %s.", qPrintable(materialName));
-            converter.convert(groupedMaterials[materialName].data());
+        foreach (QString materialName, groupedMaterials.keys()) {
 
-            materialFileMapping[i] = getNewMaterialFilename(materialName);
-            materialMapping[materialName] = i++;
+            if (groupedMaterials[materialName]->type() == Material::Placeholder) {
+                placeholders.append(materialName);
+                materialMapping[materialName] = (j--);
+            } else {
+                materialFileMapping[i] = getNewMaterialFilename(materialName);
+                converter.convert(groupedMaterials[materialName].data());
+                materialMapping[materialName] = i++;
+            }
+
         }
 
         if (!external) {
             writer.writeTextures(converter.textureList());
-            writer.writeMaterials(converter.materialList());
+            writer.writeMaterials(converter.materialList(), placeholders);
         } else {
+            writer.writeMaterials(QList<HashedData>(), placeholders);
+
             QStringList materials;
             for (int j = 0; j < i; ++j) {
                 materials.append(materialFileMapping[j]);

@@ -9,9 +9,11 @@ using namespace GameMath;
 
 namespace EvilTemple {
 
+class Materials;
+
 class BoxRenderable : public Renderable {
 public:
-    BoxRenderable();
+    BoxRenderable(Materials *materials);
 
     void render(RenderStates &renderStates);
 

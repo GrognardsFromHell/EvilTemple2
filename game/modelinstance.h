@@ -52,7 +52,14 @@ public:
 
     const Matrix4 &worldTransform() const;
 
+    bool overrideMaterial(const QString &name, const SharedMaterialState &state);
+    bool clearOverrideMaterial(const QString &name);
+    void clearOverrideMaterials();
+
 private:
+
+    void animateVertices(const SharedModel &model, Vector4 *transformedPositions, Vector4 *transformedNormals, QGLBuffer *positionBuffer, QGLBuffer *normalBuffer);
+
     Matrix4 *mFullWorld;
     Matrix4 *mFullTransform;
 
@@ -67,10 +74,19 @@ private:
     Vector4 *mTransformedPositions;
     Vector4 *mTransformedNormals;
 
+    QList<Vector4*> mTransformedPositionsAddMeshes;
+    QList<Vector4*> mTransformedNormalsAddMeshes;
+
+    QList<QGLBuffer*> mPositionBufferAddMeshes;
+    QList<QGLBuffer*> mNormalBufferAddMeshes;
+
     QGLBuffer mPositionBuffer;
     QGLBuffer mNormalBuffer;
 
     QList<SharedModel> mAddMeshes;
+
+    // These relate to mModel->placeholders()
+    QVector<SharedMaterialState> mReplacementMaterials;
     
     Q_DISABLE_COPY(ModelInstance);
 };

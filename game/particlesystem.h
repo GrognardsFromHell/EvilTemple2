@@ -12,6 +12,7 @@ using namespace GameMath;
 
 namespace EvilTemple {
 
+    class Materials;
     class ParticleSystemData;
     class RenderStates;
     class ParticleSystemsData;
@@ -45,7 +46,7 @@ namespace EvilTemple {
     class ParticleSystems
     {
     public:
-        ParticleSystems();
+        ParticleSystems(Materials *materials);
         ~ParticleSystems();
 
         /**
@@ -59,6 +60,7 @@ namespace EvilTemple {
         const QString &error() const;
 
     private:
+
         QScopedPointer<ParticleSystemsData> d;
     };
 

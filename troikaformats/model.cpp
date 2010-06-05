@@ -1,7 +1,7 @@
 
 #include "model.h"
 #include "material.h"
-#include "materials.h"
+#include "troika_materials.h"
 #include "virtualfilesystem.h"
 
 namespace Troika {

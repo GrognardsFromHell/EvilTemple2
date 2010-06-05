@@ -13,12 +13,14 @@ using EvilTemple::SharedSceneNode;
 using EvilTemple::SharedRenderable;
 using EvilTemple::SharedModelInstance;
 using EvilTemple::SharedLight;
+using EvilTemple::SharedMaterialState;
 
 Q_DECLARE_METATYPE(SharedSceneNode)
 Q_DECLARE_METATYPE(SharedModel)
 Q_DECLARE_METATYPE(SharedRenderable)
 Q_DECLARE_METATYPE(SharedModelInstance)
 Q_DECLARE_METATYPE(SharedLight)
+Q_DECLARE_METATYPE(SharedMaterialState)
 
 Q_DECLARE_METATYPE(Vector4)
 Q_DECLARE_METATYPE(Quaternion)
@@ -127,6 +129,11 @@ void ModelScriptable::registerWith(QScriptEngine *engine)
     engine->setDefaultPrototype(metaId, prototype);
 }
 
+void MaterialStateScriptable::registerWith(QScriptEngine *engine)
+{
+    registerValueType<SharedMaterialState>(engine, "SharedMaterialState");
+}
+
 QScriptValue ModelInstanceScriptableCtor(QScriptContext *context, QScriptEngine *engine)
 {
     if (!context->isCalledAsConstructor())
@@ -196,6 +203,32 @@ void ModelInstanceScriptable::setRenderCategory(uint category)
     ModelInstance *modelInstance = data();
     if (modelInstance) {
         modelInstance->setRenderCategory((RenderQueue::Category)category);
+    }
+}
+
+bool ModelInstanceScriptable::overrideMaterial(const QString &name, const SharedMaterialState &state)
+{
+    ModelInstance *modelInstance = data();
+    if (modelInstance) {
+        modelInstance->overrideMaterial(name, state);
+    }
+    return false;
+}
+
+bool ModelInstanceScriptable::clearOverrideMaterial(const QString &name)
+{
+    ModelInstance *modelInstance = data();
+    if (modelInstance) {
+        return modelInstance->clearOverrideMaterial(name);
+    }
+    return false;
+}
+
+void ModelInstanceScriptable::clearOverrideMaterials()
+{
+    ModelInstance *modelInstance = data();
+    if (modelInstance) {
+        modelInstance->clearOverrideMaterials();
     }
 }
 
