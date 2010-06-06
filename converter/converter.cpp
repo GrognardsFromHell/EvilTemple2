@@ -52,6 +52,7 @@ struct MeshReference {
         MeshesMes = 0x1,
         StaticGeometry = 0x2, // from a map
         AddMesh = 0x4, // Added from addmesh.mes
+        Hair = 0x8, // Hair
         FORCE_DWORD = 0x7FFFFFFF, // force 32-bit size (whatever)
     };
 
@@ -989,15 +990,11 @@ public:
         QHash<quint32, QString> meshesIndex = Troika::MessageFile::parse(vfs->openFile("art/meshes/meshes.mes"));
 
         foreach (quint32 meshId, meshesIndex.keys()) {
-            QStringList meshes = meshesIndex[meshId].split(';');
+            QString meshFilename = QDir::toNativeSeparators("art/meshes/" + meshesIndex[meshId] + ".skm");
 
-            foreach (const QString &mesh, meshes) {
-                QString meshFilename = QDir::toNativeSeparators("art/meshes/" + mesh + ".skm");
-
-                MeshReference &reference = meshReferences[meshFilename.toLower()];
-                reference.meshId = meshId;
-                reference.source |= MeshReference::MeshesMes;
-            }
+            MeshReference &reference = meshReferences[meshFilename.toLower()];
+            reference.meshId = meshId;
+            reference.source |= MeshReference::MeshesMes;
         }
     }
 
@@ -1011,8 +1008,66 @@ public:
             if (filename.isEmpty())
                 continue;
 
-            MeshReference &reference = meshReferences[filename];
-            reference.source |= MeshReference::AddMesh;
+            QStringList filenames = filename.split(';');
+
+            foreach (const QString &splitFilename, filenames) {
+                MeshReference &reference = meshReferences[splitFilename];
+                reference.source |= MeshReference::AddMesh;
+            }
+        }
+    }
+
+    void addHairReferences()
+    {
+        char genders[2] = { 'f', 'm' };
+        const char *dir[2] = {"female", "male"};
+
+        for (int style = 0; style < 8; ++style)  {
+            for (int color = 0; color < 8; ++color) {
+                for (int genderId = 0; genderId < 2; ++genderId) {
+                    char gender = genders[genderId];
+
+                    QString filename = QString("art/meshes/hair/%3/s%1/dw_%4_s%1_c%2_small.skm").arg(style).arg(color)
+                                       .arg(dir[genderId]).arg(gender);
+                    meshReferences[filename].source |= MeshReference::Hair;
+
+                    filename = QString("art/meshes/hair/%3/s%1/ho_%4_s%1_c%2_small.skm").arg(style).arg(color)
+                               .arg(dir[genderId]).arg(gender);
+                    meshReferences[filename].source |= MeshReference::Hair;
+
+                    filename = QString("art/meshes/hair/%3/s%1/hu_%4_s%1_c%2_small.skm").arg(style).arg(color)
+                               .arg(dir[genderId]).arg(gender);
+                    meshReferences[filename].source |= MeshReference::Hair;
+
+                    if (style == 0 || style == 3 || (style == 4 && gender == 'f') || style == 6) {
+                        filename = QString("art/meshes/hair/%3/s%1/dw_%4_s%1_c%2_big.skm").arg(style).arg(color)
+                                   .arg(dir[genderId]).arg(gender);
+                        meshReferences[filename].source |= MeshReference::Hair;
+
+                        filename = QString("art/meshes/hair/%3/s%1/ho_%4_s%1_c%2_big.skm").arg(style).arg(color)
+                                   .arg(dir[genderId]).arg(gender);
+                        meshReferences[filename].source |= MeshReference::Hair;
+
+                        filename = QString("art/meshes/hair/%3/s%1/hu_%4_s%1_c%2_big.skm").arg(style).arg(color)
+                                   .arg(dir[genderId]).arg(gender);
+                        meshReferences[filename].source |= MeshReference::Hair;
+                    }
+
+                    if (style == 5) {
+                        filename = QString("art/meshes/hair/%3/s%1/dw_%4_s%1_c%2_none.skm").arg(style).arg(color)
+                                   .arg(dir[genderId]).arg(gender);
+                        meshReferences[filename].source |= MeshReference::Hair;
+
+                        filename = QString("art/meshes/hair/%3/s%1/ho_%4_s%1_c%2_none.skm").arg(style).arg(color)
+                                   .arg(dir[genderId]).arg(gender);
+                        meshReferences[filename].source |= MeshReference::Hair;
+
+                        filename = QString("art/meshes/hair/%3/s%1/hu_%4_s%1_c%2_none.skm").arg(style).arg(color)
+                                   .arg(dir[genderId]).arg(gender);
+                        meshReferences[filename].source |= MeshReference::Hair;
+                    }
+                }
+            }
         }
     }
 
@@ -1023,6 +1078,7 @@ public:
         // Convert all valid meshes in meshes.mes
         addMeshesMesReferences();
         addAddMeshesMesReferences();
+        addHairReferences();
 
         foreach (const QString &meshFilename, meshReferences.keys()) {
             if (exclusions.isExcluded(meshFilename)) {

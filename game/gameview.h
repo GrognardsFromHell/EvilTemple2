@@ -14,6 +14,7 @@ class BackgroundMap;
 class Scene;
 class ClippingGeometry;
 class Materials;
+class ParticleSystems;
 
 class GameView : public QGraphicsView
 {
@@ -22,6 +23,7 @@ class GameView : public QGraphicsView
     Q_PROPERTY(Scene *scene READ scene)
     Q_PROPERTY(ClippingGeometry *clippingGeometry READ clippingGeometry)
     Q_PROPERTY(Materials *materials READ materials)
+    Q_PROPERTY(ParticleSystems* particleSystems READ particleSystems)
 public:
     explicit GameView(QWidget *parent = 0);
     ~GameView();
@@ -32,6 +34,7 @@ public:
     Scene *scene() const;
     ClippingGeometry *clippingGeometry() const;
     Materials *materials() const;
+    ParticleSystems *particleSystems() const;
 
 signals:
 
@@ -44,8 +47,6 @@ public slots:
     QPoint screenCenter() const;
 
     int objectsDrawn() const;
-
-    void objectMousePressed();    
 
     SharedModel loadModel(const QString &filename);
 

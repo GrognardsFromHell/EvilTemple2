@@ -30,7 +30,8 @@ namespace EvilTemple {
     enum ParticleType {
 	Sprite,
 	Disc,
-	Model
+	Model,
+        Point
     };
 
     enum CoordinateType {
@@ -792,13 +793,13 @@ namespace EvilTemple {
 
 	QFile f(filename);
 	if (!f.open(QIODevice::ReadOnly)) {
-            qWarning("Unable to open test texture.");
+            qWarning("Unable to open texture: %s.", qPrintable(filename));
             return SharedTexture(0);
 	}
 
 	SharedTexture t(new Texture);
 	if (!t->loadTga(f.readAll())) {
-            qWarning("Unable to open texture 2.");
+            qWarning("Unable to read texture: %s.", qPrintable(filename));
             return SharedTexture(0);
 	}
 
@@ -1096,6 +1097,8 @@ namespace EvilTemple {
             mParticleType = Disc;
 	} else if (type == "model") {
             mParticleType = Model;
+    } else if (type == "point") {
+            mParticleType = Point;
 	} else {
             qWarning("Invalid particle type: %s.", qPrintable(type));
             return false;
@@ -1329,6 +1332,9 @@ namespace EvilTemple {
         emitters.reserve(tpl.emitterTemplates().size());
 
         foreach (const EmitterTemplate &emitterTemplate, tpl.emitterTemplates()) {
+            if (emitterTemplate.mParticleType == Model)
+                continue;
+
             emitters.append(instantiate(emitterTemplate));
         }
 
@@ -1345,9 +1351,9 @@ namespace EvilTemple {
         return d->error;
     }
 
-    ParticleSystem *ParticleSystems::instantiate(const QString &name)
+    SharedParticleSystem ParticleSystems::instantiate(const QString &name)
     {
-        return d->instantiate(d->templates[name]);
+        return SharedParticleSystem(d->instantiate(d->templates[name]));
     }
 
 }

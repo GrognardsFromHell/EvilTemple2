@@ -286,14 +286,14 @@ namespace Troika
 
             // Also check flags?
             if (light.type)
-                lights.append(light);
+                zoneTemplate->addLight(light);
 
             if ((flags & 0x10) != 0 || (flags & 0x40) != 0)
             {
                 particleSystem.light = light;
                 stream >> particleSystem.hash >> particleSystem.id;
                 if (particleSystem.hash)
-                    particleSystems.append(particleSystem);
+                    zoneTemplate->addParticleSystem(particleSystem);
             }
 
             if ((flags & 0x40) != 0)

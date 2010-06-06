@@ -8,6 +8,7 @@
 #include "scriptables.h"
 #include "clippinggeometry.h"
 #include "materials.h"
+#include "particlesystem.h"
 
 namespace EvilTemple {
 
@@ -68,9 +69,11 @@ namespace EvilTemple {
                                                           QDir::Name);
 
         foreach (QString scriptFileName, scriptFileNames) {
-            qDebug("Loading script file %s.", qPrintable(scriptFileName));
+            QString fullFilename = "data/scripts/" + scriptFileName;
 
-            QFile scriptFile(scriptDir.absoluteFilePath(scriptFileName));
+            QFile scriptFile(fullFilename);
+
+            qDebug("Loading script file %s (%d byte).", qPrintable(fullFilename), scriptFile.size());
 
             if (!scriptFile.open(QIODevice::ReadOnly|QIODevice::Text)) {
                 qWarning("Unable to read script file %s: %s", qPrintable(scriptFile.fileName()),
@@ -269,6 +272,7 @@ namespace EvilTemple {
         registerQObject<EvilTemple::ClippingGeometry>(engine, "ClippingGeometry*");
         registerQObject<EvilTemple::Scene>(engine, "Scene*");
         registerQObject<EvilTemple::Materials>(engine, "Materials*");
+        registerQObject<EvilTemple::ParticleSystems>(engine, "ParticleSystems*");
 
         // Add a function to read files
         QScriptValue readFileFn = engine->newFunction(readFile, 1);
@@ -284,6 +288,7 @@ namespace EvilTemple {
         LightScriptable::registerWith(engine);
         registerRenderableScriptable(engine);
         MaterialStateScriptable::registerWith(engine);
+        ParticleSystemScriptable::registerWith(engine);
     }
 
 }

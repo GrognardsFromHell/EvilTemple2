@@ -11,7 +11,7 @@ static tjhandle jpegHandle = 0;
 template <int T> bool checkBlack(unsigned char *pixels, int width, int height) {
     int totalPixels = width * height;
     uchar *current = pixels;
-    uchar *end = pixels + totalPixels;
+    uchar *end = pixels + totalPixels * T;
 
     while (current < end) {
         if (*(current++) > 3)

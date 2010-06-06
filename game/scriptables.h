@@ -35,6 +35,12 @@ namespace EvilTemple {
     public:
         static void registerWith(QScriptEngine *engine);
     };
+
+    class ParticleSystemScriptable : public QObject, protected QScriptable {
+    Q_OBJECT
+    public:
+        static void registerWith(QScriptEngine *engine);
+    };
     
     class ModelInstanceScriptable : public QObject, protected QScriptable {
     Q_OBJECT

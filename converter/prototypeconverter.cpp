@@ -70,6 +70,40 @@ QVariantMap PrototypeConverter::convertPrototype(Prototype *prototype)
         writer.write("wearMeshId", itemProps->wearMeshId);
     }
 
+    CritterProperties *critterProps = qobject_cast<CritterProperties*>(prototype->additionalProperties);
+
+    if (critterProps) {
+        writer.write("critterFlags", critterProps->flags);
+        writer.write("strength", critterProps->strength);
+        writer.write("dexterity", critterProps->dexterity);
+        writer.write("constitution", critterProps->constitution);
+        writer.write("intelligence", critterProps->intelligence);
+        writer.write("wisdom", critterProps->wisdom);
+        writer.write("charisma", critterProps->charisma);
+        writer.write("race", critterProps->race);
+        writer.write("gender", critterProps->gender);
+        writer.write("age", critterProps->age);
+        writer.write("alignment", critterProps->alignment);
+        writer.write("deity", critterProps->deity);
+        writer.write("alignmentChoice", critterProps->alignmentChoice);
+        // Should probably be an array
+        writer.write("domain1", critterProps->domain1);
+        writer.write("domain2", critterProps->domain2);
+        writer.write("portraitId", critterProps->portraitId);
+        writer.write("unknownDescriptionId", critterProps->unknownDescription);
+        writer.write("reach", critterProps->reach);
+        writer.write("hairColor", critterProps->hairColor);
+        writer.write("hairType", critterProps->hairType);
+
+        // TODO:
+        // QList<NaturalAttack> naturalAttacks; // at most 4 different ones
+        // QList<ClassLevel> classLevels;
+        // QList<SkillLevel> skills;
+        // QStringList feats;
+        // QString levelUpScheme; // Defines auto-leveling stuff (which feats to take, etc.)
+        // String strategy; // Which AI is used in auto fighting situations
+    }
+
     return result;
 }
 

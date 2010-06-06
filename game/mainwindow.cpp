@@ -25,6 +25,21 @@
 
 namespace EvilTemple {
 
+
+    void loadFont(const QString &filename)
+    {
+        int handle = QFontDatabase::addApplicationFont(filename);
+
+        if (handle == -1) {
+            qWarning("Unable to load font %s.", qPrintable(filename));
+            return;
+        }
+
+        QStringList fontFamilies = QFontDatabase::applicationFontFamilies(handle);
+
+        qDebug("Loaded font families: %s.", qPrintable(fontFamilies.join(", ")));
+    }
+
     class MainWindowData {
     public:
         MainWindowData(const Game &_game) : game(_game), gameView(0), consoleWidget(0), profilerDialog(0) {}
@@ -50,6 +65,14 @@ namespace EvilTemple {
         : QMainWindow(parent),
         d_ptr(new MainWindowData(game))
     {
+
+        loadFont(":/fonts/5inq_-_Handserif.ttf");
+        loadFont(":/fonts/ArtNoveauDecadente.ttf");
+        loadFont(":/fonts/Fontin-Bold.ttf");
+        loadFont(":/fonts/Fontin-Italic.ttf");
+        loadFont(":/fonts/Fontin-Regular.ttf");
+        loadFont(":/fonts/Fontin-SmallCaps.ttf");
+
         // Set up the OpenGL format for our view
         QGLFormat format(QGL::DoubleBuffer|QGL::DepthBuffer|QGL::DirectRendering);
         format.setDepthBufferSize(24);

@@ -76,8 +76,6 @@ namespace Troika
         QString mapDirectory;
         QVector<GeometryMeshFile> geometryMeshFiles;
         QStringList clippingMeshFiles;
-        QList<Light> lights;
-        QList<ParticleSystem> particleSystems;
         QHash<uint,QString> meshMapping;
     };
 

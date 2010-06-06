@@ -43,21 +43,25 @@ namespace EvilTemple {
         Q_DISABLE_COPY(ParticleSystem);
     };
 
-    class ParticleSystems
+    typedef QSharedPointer<ParticleSystem> SharedParticleSystem;
+
+    class ParticleSystems : public QObject
     {
+    Q_OBJECT
     public:
         ParticleSystems(Materials *materials);
         ~ParticleSystems();
 
+        bool loadTemplates();
+
+        const QString &error() const;
+
+    public slots:
         /**
             Creates a particle system and returns it. The caller is responsible for updating, calling
             and rendering the particle system.
         */
-        ParticleSystem *instantiate(const QString &name);
-
-        bool loadTemplates();
-
-        const QString &error() const;
+        SharedParticleSystem instantiate(const QString &name);
 
     private:
 
@@ -65,5 +69,7 @@ namespace EvilTemple {
     };
 
 }
+
+Q_DECLARE_METATYPE(EvilTemple::ParticleSystems*)
 
 #endif // PARTICLESYSTEM_H

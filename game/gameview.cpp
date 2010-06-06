@@ -47,7 +47,7 @@ namespace EvilTemple {
     {
     public:
         GameViewData(GameView *view)
-            : q(view), rootItem(0), modelLoaded(0), backgroundMap(renderStates),
+            : q(view), rootItem(0), backgroundMap(renderStates),
             clippingGeometry(renderStates), dragging(false), lightDebugger(renderStates),
             materials(renderStates), particleSystems(&materials) {
 
@@ -94,7 +94,38 @@ namespace EvilTemple {
             renderStates.setViewMatrix(baseViewMatrix * matrix);
         }
 
-        SharedRenderable pickObject(const QPoint &point) {
+        Vector4 worldPositionFromScreen(const QPoint &point) {
+            GLint viewport[4];
+            glGetIntegerv(GL_VIEWPORT, viewport);
+
+            float width = viewport[2];
+            float height = viewport[3];
+
+            // Construct a picking ray
+            Vector4 nearPlanePoint(2 * point.x() / width - 1,
+                                       2 * (height - point.y()) / height - 1,
+                                       0,
+                                       1);
+
+            Vector4 farPlanePoint = nearPlanePoint;
+            farPlanePoint.setZ(1);
+
+            Matrix4 matrix = renderStates.viewProjectionMatrix().inverted();
+
+            Vector4 pickingRayOrigin = matrix.mapPosition(nearPlanePoint);
+            Vector4 pickingRayDirection = (matrix.mapPosition(farPlanePoint) - pickingRayOrigin).normalized();
+
+            // Using the picking ray direction, project the picking ray's origin onto the x,z plane.
+
+            Q_ASSERT(pickingRayDirection.y() < 0); // The assumption is that the picking ray goes *into* the scene
+
+            float t = pickingRayOrigin.y() / pickingRayDirection.y();
+
+            return pickingRayOrigin - t * pickingRayDirection;
+        }
+
+        SharedRenderable pickObject(const QPoint &point)
+        {
             GLint viewport[4];
             glGetIntegerv(GL_VIEWPORT, viewport);
 
@@ -124,17 +155,13 @@ namespace EvilTemple {
         QDeclarativeItem* rootItem;
 
         RenderStates renderStates;
-        ModelInstance model;
-        ModelInstance model2;
-        bool modelLoaded;
 
         Materials materials;
 
         bool dragging;
         QPoint lastPoint;
+        bool mouseMovedDuringDrag;
         Matrix4 baseViewMatrix; // Without translations
-
-        typedef QPair<Vector4, QSharedPointer<Model> > GeometryMesh;
 
         QHash<QString, QWeakPointer<Model> > modelCache;
 
@@ -145,7 +172,6 @@ namespace EvilTemple {
         ClippingGeometry clippingGeometry;
 
         ParticleSystems particleSystems;
-        ParticleSystem *swordParticleSystem;
 
         QElapsedTimer sceneTimer;
         Scene scene;
@@ -193,14 +219,6 @@ namespace EvilTemple {
     {
     }
 
-    void GameView::objectMousePressed()
-    {
-        Renderable *renderable = qobject_cast<Renderable*>(sender());
-
-        SceneNode *parent = renderable->parentNode();
-        qDebug("Pressed mouse on object @ %f,%f,%f", parent->position().x(), parent->position().y(), parent->position().z());
-    }
-
     void GameView::drawBackground(QPainter *painter, const QRectF &rect)
     {
         Q_UNUSED(painter);
@@ -208,24 +226,12 @@ namespace EvilTemple {
 
         HANDLE_GL_ERROR
 
-        if (!d->modelLoaded) {
-            SharedModel model = loadModel("meshes/monsters/demon/demon.model");
-            SharedModel model2 = loadModel("meshes/monsters/demon/demon_balor_sword.model");
-            d->swordParticleSystem = d->particleSystems.instantiate("ef-Balor Sword");
-            d->swordParticleSystem->setModelInstance(&d->model2);
-            d->model.setModel(model);
-            d->model2.setModel(model2);
-            d->modelLoaded = true;
-        }               
-
-        glUseProgram(0);
-
         SAFE_GL(glEnable(GL_DEPTH_TEST));
         SAFE_GL(glEnable(GL_CULL_FACE));
         SAFE_GL(glEnable(GL_BLEND));
         SAFE_GL(glDisable(GL_STENCIL_TEST));
 
-        glClearColor(0.2f, 0.2f, 0.2f, 0.0f);
+        glClearColor(0, 0, 0, 0);
         glClearStencil(1);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
 
@@ -238,40 +244,9 @@ namespace EvilTemple {
             double elapsedSeconds = elapsedMs / 1000.0;
 
             Profiler::enter(Profiler::SceneElapseTime);
-            d->model.elapseTime(elapsedSeconds);
-            d->model2.elapseTime(elapsedSeconds);
             d->scene.elapseTime(elapsedSeconds);
             Profiler::leave();
         }
-
-        Matrix4 t;
-        t.setToIdentity();
-        t(0, 3) = 480 * 28.2842703f;
-        t(2, 3) = 480 * 28.2842703f;
-        d->renderStates.setWorldMatrix(t * Matrix4::rotation(Quaternion::fromAxisAndAngle(0, 1, 0, deg2rad(-120))));
-
-        //d->model.render(d->renderStates);
-
-        Matrix4 flipZ;
-        flipZ.setToIdentity();
-        flipZ(2,2) *= -1;
-
-        Matrix4 boneTransform = d->model.getBoneSpace("HandL_ref");
-        // Remove scaling
-        float scaleX = boneTransform.column(0).length();
-        float scaleY = boneTransform.column(1).length();
-        float scaleZ = boneTransform.column(2).length();
-        for (int i = 0; i < 4; ++i) {
-            boneTransform(i, 0) /= scaleX;
-            boneTransform(i, 1) /= scaleY;
-            boneTransform(i, 2) /= scaleZ;
-        }
-
-        d->renderStates.setWorldMatrix(d->renderStates.worldMatrix() * flipZ * boneTransform * flipZ);
-
-        d->model2.render(d->renderStates);
-
-        d->renderStates.setWorldMatrix(Matrix4::identity());
 
         Profiler::enter(Profiler::SceneRender);
         d->scene.render(d->renderStates);
@@ -355,6 +330,8 @@ namespace EvilTemple {
         QGraphicsView::mouseMoveEvent(evt);
       
         if (d->dragging) {
+            d->mouseMovedDuringDrag = true;
+
             int diffX = evt->pos().x() - d->lastPoint.x();
             int diffY = evt->pos().y() - d->lastPoint.y();
 
@@ -388,14 +365,8 @@ namespace EvilTemple {
         QGraphicsView::mousePressEvent(evt);
         
         if (!evt->isAccepted()) {
-            SharedRenderable renderable = d->pickObject(evt->pos());
-
-            if (renderable) {
-                renderable->mousePressEvent();
-            } else {
-                d->dragging = true;
-            }
-
+            d->dragging = true;
+            d->mouseMovedDuringDrag = false;
             evt->accept();
             d->lastPoint = evt->pos();
         }
@@ -404,6 +375,19 @@ namespace EvilTemple {
     void GameView::mouseReleaseEvent(QMouseEvent *evt)
     {
         d->dragging = false;
+        if (!d->mouseMovedDuringDrag) {
+            SharedRenderable renderable = d->pickObject(evt->pos());
+
+            if (renderable) {
+                renderable->mousePressEvent();
+            } else {
+                Vector4 worldPosition = d->worldPositionFromScreen(evt->pos());
+                qDebug("Clicked @ world position %f,%f,%f", worldPosition.x(), worldPosition.y(), worldPosition.z());
+                d->scene.addTextOverlay(worldPosition, QString("World @ %1,%2")
+                                        .arg(floor(worldPosition.x()))
+                                        .arg(floor(worldPosition.z())), QColor(255, 255, 255));
+            }
+        }
         QGraphicsView::mouseReleaseEvent(evt);        
     }
 
@@ -416,7 +400,7 @@ namespace EvilTemple {
 
         viewCenter *= 1/ viewCenter.w();
 
-        return QPoint(viewCenter.x(), viewCenter.y());
+        return QPoint(viewCenter.x(), viewCenter.z());
     }
 
     void GameView::centerOnWorld(float worldX, float worldY)
@@ -447,6 +431,11 @@ namespace EvilTemple {
     Materials *GameView::materials() const
     {
         return &d->materials;
+    }
+
+    ParticleSystems* GameView::particleSystems() const
+    {
+        return &d->particleSystems;
     }
 
     SharedModel GameView::loadModel(const QString &filename)

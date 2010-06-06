@@ -12,4 +12,12 @@
         <file>light_debug.tga</file>
         <file>box_material.xml</file>
     </qresource>
+    <qresource prefix="/fonts">
+        <file alias="5inq_-_Handserif.ttf">resources/fonts/5inq_-_Handserif.ttf</file>
+        <file alias="ArtNoveauDecadente.ttf">resources/fonts/ArtNoveauDecadente.ttf</file>
+        <file alias="Fontin-Bold.ttf">resources/fonts/Fontin-Bold.ttf</file>
+        <file alias="Fontin-Italic.ttf">resources/fonts/Fontin-Italic.ttf</file>
+        <file alias="Fontin-Regular.ttf">resources/fonts/Fontin-Regular.ttf</file>
+        <file alias="Fontin-SmallCaps.ttf">resources/fonts/Fontin-SmallCaps.ttf</file>
+    </qresource>
 </RCC>

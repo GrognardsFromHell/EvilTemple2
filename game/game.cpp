@@ -2,6 +2,7 @@
 #include <QCoreApplication>
 #include <QSettings>
 #include <QFileDialog>
+#include <QFontDatabase>
 
 #include "game.h"
 #include "mainwindow.h"

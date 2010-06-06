@@ -107,12 +107,17 @@ public:
             path = QDir::toNativeSeparators(filename);
         }
 
-		// Look for the file in the data directory.
-		engine.setFileName(absoluteDataPath + path);
-		if (engine.fileFlags(QAbstractFileEngine::ExistsFlag) & QAbstractFileEngine::ExistsFlag) {
-			qDebug("Using override for %s.", qPrintable(path));
-			return new QFSFileEngine(absoluteDataPath + path);
-		}
+        // We don't handle directories.
+        if (!path.endsWith('.')) {
+            // Look for the file in the data directory.
+            engine.setFileName(absoluteDataPath + path);
+            if (engine.fileFlags(QAbstractFileEngine::ExistsFlag) & QAbstractFileEngine::ExistsFlag) {
+                qDebug("Using override for %s.", qPrintable(path));
+                return new QFSFileEngine(absoluteDataPath + path);
+            }
+        } else {
+            return 0;
+        }
 
         ArchiveEntries::const_iterator it = archiveEntries.find(path.toLower());
 

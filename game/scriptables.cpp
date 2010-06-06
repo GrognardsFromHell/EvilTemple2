@@ -3,6 +3,7 @@
 
 #include "scriptables.h"
 #include "modelfile.h"
+#include "particlesystem.h"
 
 namespace EvilTemple {
     typedef QSharedPointer<ModelInstance> SharedModelInstance;
@@ -14,6 +15,7 @@ using EvilTemple::SharedRenderable;
 using EvilTemple::SharedModelInstance;
 using EvilTemple::SharedLight;
 using EvilTemple::SharedMaterialState;
+using EvilTemple::SharedParticleSystem;
 
 Q_DECLARE_METATYPE(SharedSceneNode)
 Q_DECLARE_METATYPE(SharedModel)
@@ -21,6 +23,7 @@ Q_DECLARE_METATYPE(SharedRenderable)
 Q_DECLARE_METATYPE(SharedModelInstance)
 Q_DECLARE_METATYPE(SharedLight)
 Q_DECLARE_METATYPE(SharedMaterialState)
+Q_DECLARE_METATYPE(SharedParticleSystem)
 
 Q_DECLARE_METATYPE(Vector4)
 Q_DECLARE_METATYPE(Quaternion)
@@ -77,8 +80,11 @@ void renderableFromScriptValue(const QScriptValue &object, SharedRenderable &out
         SharedModelInstance modelInstance = qvariant_cast<SharedModelInstance>(variant);
         out = modelInstance.objectCast<Renderable>();
     } else if (userType == qMetaTypeId<SharedLight>()) {
-            SharedLight modelInstance = qvariant_cast<SharedLight>(variant);
-            out = modelInstance.objectCast<Renderable>();
+        SharedLight modelInstance = qvariant_cast<SharedLight>(variant);
+        out = modelInstance.objectCast<Renderable>();
+    } else if (userType == qMetaTypeId<SharedParticleSystem>()) {
+        SharedParticleSystem particleSystemInstance = qvariant_cast<SharedParticleSystem>(variant);
+        out = particleSystemInstance.objectCast<Renderable>();
     } else {
         qWarning("Unable to convert to SharedRenderable.");
     }
@@ -132,6 +138,11 @@ void ModelScriptable::registerWith(QScriptEngine *engine)
 void MaterialStateScriptable::registerWith(QScriptEngine *engine)
 {
     registerValueType<SharedMaterialState>(engine, "SharedMaterialState");
+}
+
+void ParticleSystemScriptable::registerWith(QScriptEngine *engine)
+{
+    registerValueType<SharedParticleSystem>(engine, "SharedParticleSystem");
 }
 
 QScriptValue ModelInstanceScriptableCtor(QScriptContext *context, QScriptEngine *engine)

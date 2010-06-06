@@ -10,8 +10,6 @@ Rectangle {
     width: 800
     height: 600
 
-    FontLoader { source: "../fonts/5inq_-_Handserif.ttf" }
-
     // Immediately switch to shown state to trigger fade-in transition defined below
     Component.onCompleted: {
         console.log("Main Menu showing");
