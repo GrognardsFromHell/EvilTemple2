@@ -525,6 +525,11 @@ A bone for skeletal animation
          */
         const Animation *animation(const QString &name) const;
 
+        /**
+          Checks if the model supports the given animation.
+          */
+        bool hasAnimation(const QString &name) const;
+
         const QStringList &placeholders() const;
 
     private:
@@ -587,6 +592,11 @@ A bone for skeletal animation
         } else {
             return it.value();
         }
+    }
+
+    inline bool Model::hasAnimation(const QString &name) const
+    {
+        return mAnimationMap.contains(name);
     }
 
     inline const QString &Model::error() const

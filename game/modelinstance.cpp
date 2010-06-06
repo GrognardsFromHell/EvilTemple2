@@ -12,7 +12,7 @@ namespace EvilTemple {
         : mPositionBuffer(QGLBuffer::VertexBuffer), mNormalBuffer(QGLBuffer::VertexBuffer),
         mCurrentAnimation(NULL), mPartialFrameTime(0), mCurrentFrame(0),
         mTransformedPositions(NULL), mTransformedNormals(NULL), mFullTransform(NULL),
-        mFullWorld(NULL), mCurrentFrameChanged(true)
+        mFullWorld(NULL), mCurrentFrameChanged(true), mIdling(true), mLooping(false)
     {
         mPositionBuffer.setUsagePattern(QGLBuffer::StreamDraw);
         mNormalBuffer.setUsagePattern(QGLBuffer::StreamDraw);
@@ -52,6 +52,8 @@ namespace EvilTemple {
         }
 
         if (mCurrentAnimation) {
+            mIdleAnimation = mCurrentAnimation->name();
+
             // This is for idle animations -> advance by a random number of frames, since
             // not all models should "idle in sync"
             mCurrentFrame = rand() % mCurrentAnimation->frames();
@@ -481,6 +483,13 @@ namespace EvilTemple {
             mCurrentFrame++;
 
             if (mCurrentFrame >= mCurrentAnimation->frames()) {
+                // Decide whether it's time to loop or end the animation
+                if (!mIdling && !mLooping) {
+                    emit animationFinished(mCurrentAnimation->name(), false);
+                    playIdleAnimation();
+                    return;
+                }
+
                 mCurrentFrame = 0;
             }
             mCurrentFrameChanged = true;
@@ -644,6 +653,51 @@ namespace EvilTemple {
     {
         for (int i = 0; i < mReplacementMaterials.size(); ++i)
             mReplacementMaterials[i].clear();
+    }
+
+    void ModelInstance::setIdleAnimation(const QString &idleAnimation)
+    {
+        mIdleAnimation = idleAnimation;
+    }
+
+    const QString &ModelInstance::idleAnimation() const
+    {
+        return mIdleAnimation;
+    }
+
+    bool ModelInstance::playAnimation(const QString &name, bool loop)
+    {
+        if (!mModel)
+            return false;
+
+        const Animation *animation = mModel->animation(name);
+
+        if (!animation)
+            return false;
+
+        mLooping = loop && animation->isLoopable();
+
+        if (!mIdling && mCurrentAnimation) {
+            emit animationFinished(mCurrentAnimation->name(), true);
+        }
+
+        // Start playing the animation
+        mCurrentAnimation = animation;
+        mCurrentFrame = 0;
+        mCurrentFrameChanged = true;
+        mPartialFrameTime = 0;
+        mIdling = false;
+
+        return true;
+    }
+
+    void ModelInstance::playIdleAnimation()
+    {
+        mIdling = true;
+        mCurrentAnimation = mModel->animation(mIdleAnimation);
+        mCurrentFrame = 0;
+        mCurrentFrameChanged = true;
+        mPartialFrameTime = 0;
     }
 
 }

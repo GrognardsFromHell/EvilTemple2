@@ -25,6 +25,7 @@ MouseArea {
         font.pointSize: 42
         font.family: "Handserif"
         color: "white"
+        smooth: true
     }
 
     states: [
@@ -33,7 +34,9 @@ MouseArea {
 
             PropertyChanges {
                 target: buttonLabel
-                color: "#2121db"
+                color: "#0066a6"
+                font.bold: false
+                style: "Normal"
             }
         },
         State {

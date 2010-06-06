@@ -26,6 +26,10 @@ namespace EvilTemple {
         const Box3d &boundingBox() const;
         float radius() const;
         float radiusSquared() const;
+
+    public slots:
+        bool hasAnimation(const QString &name) const;
+
     private:
         SharedModel data() const;
     };
@@ -47,23 +51,32 @@ namespace EvilTemple {
     Q_PROPERTY(SharedModel model READ model WRITE setModel);
     Q_PROPERTY(const Box3d &boundingBox READ boundingBox);
     Q_PROPERTY(uint renderCategory READ renderCategory WRITE setRenderCategory);
+    Q_PROPERTY(bool idling READ isIdling)
+    Q_PROPERTY(QString idleAnimation READ idleAnimation WRITE setIdleAnimation)
     public:
         static void registerWith(QScriptEngine *engine);
 
         const SharedModel &model() const;
         void setModel(const SharedModel &model);
 
-
         uint renderCategory() const;
         void setRenderCategory(uint category);       
 
         const Box3d &boundingBox() const;
+
+        const QString &idleAnimation() const;
+        void setIdleAnimation(const QString &name);
+
+        bool isIdling() const;
+
     public slots:
         void setClickHandler(const QScriptValue &handler);
 
         bool overrideMaterial(const QString &name, const SharedMaterialState &state);
         bool clearOverrideMaterial(const QString &name);
         void clearOverrideMaterials();
+
+        bool playAnimation(const QString &name, bool looping);
         
         void addMesh(const SharedModel &model);
 

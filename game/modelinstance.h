@@ -30,7 +30,7 @@ class ModelInstance : public Renderable
 Q_OBJECT
 public:
     ModelInstance();
-	~ModelInstance();
+    ~ModelInstance();
 
     void setModel(const SharedModel &model);
 
@@ -56,15 +56,30 @@ public:
     bool clearOverrideMaterial(const QString &name);
     void clearOverrideMaterials();
 
+    void setIdleAnimation(const QString &idleAnimation);
+    const QString &idleAnimation() const;
+
+    bool isIdling() const; // No animation is playing
+
+    bool playAnimation(const QString &name, bool loop = false);
+
+signals:
+    void animationFinished(const QString &name, bool canceled);
+
 private:
 
     void animateVertices(const SharedModel &model, Vector4 *transformedPositions, Vector4 *transformedNormals, QGLBuffer *positionBuffer, QGLBuffer *normalBuffer);
+
+    void playIdleAnimation();
 
     Matrix4 *mFullWorld;
     Matrix4 *mFullTransform;
 
     SharedModel mModel;
 
+    QString mIdleAnimation;
+    bool mIdling; // mCurrentAnimation is the idle animation
+    bool mLooping; // Only relevant if not idling (idle is always looped)
     const Animation *mCurrentAnimation;
 
     float mPartialFrameTime;
@@ -94,6 +109,11 @@ private:
 inline const SharedModel &ModelInstance::model() const
 {
     return mModel;
+}
+
+inline bool ModelInstance::isIdling() const
+{
+    return mIdling;
 }
 
 }

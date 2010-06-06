@@ -113,6 +113,12 @@ float ModelScriptable::radius() const
     return model ? model->radius() : 0;
 }
 
+bool ModelScriptable::hasAnimation(const QString &name) const
+{
+    SharedModel model = data();
+    return model ? model->hasAnimation(name) : false;
+}
+
 float ModelScriptable::radiusSquared() const
 {
     SharedModel model = data();
@@ -215,6 +221,36 @@ void ModelInstanceScriptable::setRenderCategory(uint category)
     if (modelInstance) {
         modelInstance->setRenderCategory((RenderQueue::Category)category);
     }
+}
+
+const QString &ModelInstanceScriptable::idleAnimation() const
+{
+    ModelInstance *modelInstance = data();
+    return modelInstance ? modelInstance->idleAnimation() : QString::null;
+}
+
+void ModelInstanceScriptable::setIdleAnimation(const QString &name)
+{
+    ModelInstance *modelInstance = data();
+    if (modelInstance) {
+        modelInstance->setIdleAnimation(name);
+    }
+}
+
+bool ModelInstanceScriptable::playAnimation(const QString &name, bool looping)
+{
+    ModelInstance *modelInstance = data();
+    if (modelInstance) {
+        return modelInstance->playAnimation(name, looping);
+    } else {
+        return false;
+    }
+}
+
+bool ModelInstanceScriptable::isIdling() const
+{
+    ModelInstance *modelInstance = data();
+    return modelInstance ? modelInstance->isIdling() : false;
 }
 
 bool ModelInstanceScriptable::overrideMaterial(const QString &name, const SharedMaterialState &state)
