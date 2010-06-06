@@ -104,6 +104,29 @@ QVariantMap PrototypeConverter::convertPrototype(Prototype *prototype)
         // String strategy; // Which AI is used in auto fighting situations
     }
 
+    NonPlayerCharacterProperties *npcProps = qobject_cast<NonPlayerCharacterProperties*>
+                                             (prototype->additionalProperties);
+
+    if (npcProps) {
+        writer.write("npcFlags", npcProps->flags);
+        writer.write("aiData", npcProps->aiData);
+
+        QVariantList factions;
+        foreach (uint faction, npcProps->factions)
+            factions.append(faction);
+        writer.write("factions", factions);
+        writer.write("challengeRating", npcProps->challengeRating);
+        writer.write("reflexSave", npcProps->reflexSave);
+        writer.write("fortitudeSave", npcProps->fortitudeSave);
+        writer.write("willpowerSave", npcProps->willpowerSave);
+        writer.write("acBonus", npcProps->acBonus);
+        writer.write("hitDice", npcProps->hitDice);
+        writer.write("npcType", npcProps->type);
+        writer.write("npcSubtype", npcProps->subType);
+        writer.write("lootSharing", npcProps->lootShareAmount);
+        writer.write("addMeshId", npcProps->additionalMeshId);
+    }
+
     return result;
 }
 

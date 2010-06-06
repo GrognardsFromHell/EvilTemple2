@@ -10,14 +10,12 @@ Rectangle {
     width: 800
     height: 600
 
+    signal newGameClicked;
+
     // Immediately switch to shown state to trigger fade-in transition defined below
     Component.onCompleted: {
         console.log("Main Menu showing");
         state = 'shown'
-
-        //for (var f in lg.canceled) {
-        //    console.log("Member: " + f);
-        //}
     }
 
     Rectangle {
@@ -48,7 +46,7 @@ Rectangle {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: 'New Game'
                 onClicked: {
-                    rootRectangle.visible = false;
+                    newGameClicked();
                 }
             }
 
@@ -64,7 +62,6 @@ Rectangle {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: 'Exit Game'
             }
-
         }
     }
 

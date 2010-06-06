@@ -7,7 +7,8 @@ OTHER_FILES += interface/MainMenu.qml \
     interface/Startup.qml \
     interface/LoadGame.qml \
     copyQml.sh \
-    copyQml.bat
+    copyQml.bat \
+    interface/MobileInfo.qml
 
 copyQml.target = copyQml
 win32:copyQml.commands = copyQml.bat

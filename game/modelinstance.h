@@ -68,7 +68,8 @@ signals:
 
 private:
 
-    void animateVertices(const SharedModel &model, Vector4 *transformedPositions, Vector4 *transformedNormals, QGLBuffer *positionBuffer, QGLBuffer *normalBuffer);
+    void animateVertices(const SharedModel &model, Vector4 *transformedPositions, Vector4 *transformedNormals, QGLBuffer *positionBuffer, QGLBuffer *normalBuffer,
+                         QVector<uint> *boneMapping);
 
     void playIdleAnimation();
 
@@ -94,6 +95,10 @@ private:
 
     QList<QGLBuffer*> mPositionBufferAddMeshes;
     QList<QGLBuffer*> mNormalBufferAddMeshes;
+
+    // When an add-mesh is loaded, this maps the bone-ids from the addmesh to the bone ids in the
+    // skeleton used by mModel
+    QList< QVector<uint> > mAddMeshBoneMapping;
 
     QGLBuffer mPositionBuffer;
     QGLBuffer mNormalBuffer;

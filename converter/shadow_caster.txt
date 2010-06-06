@@ -1,3 +1,15 @@
 art/meshes/PCs
 art/meshes/Monsters
 art/meshes/npcs
+art/meshes/Hair
+art/meshes/Armor
+art/meshes/Bardic_Instruments
+art/meshes/cloaks
+art/meshes/helms
+art/meshes/robes
+art/meshes/shields
+art/meshes/wands
+art/meshes/weapons
+art/meshes/scenery/containers
+art/meshes/scenery/misc
+art/meshes/scenery/portals

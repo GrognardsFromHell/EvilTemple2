@@ -91,41 +91,13 @@ void main(void)
   <pass>
     <shader>
       <vertexShader>
-        <code>
-          <![CDATA[
-#version 120
-
-uniform mat4 viewProjectionMatrix;
-uniform mat4 worldMatrix;
-const vec4 invertedLightDirection = vec4(0.447, 0.89, 0, 0);
-
-attribute vec4 vertexPosition;
-
-void main() {
-  vec4 v = worldMatrix * vertexPosition;
-
-  float lambda = v.y / invertedLightDirection.y; // y must be non-zero
-  v.y = 0;
-  v.x -= invertedLightDirection.x * lambda;
-  v.z -= invertedLightDirection.z * lambda;
-
-  gl_Position = viewProjectionMatrix * v;
-}
-]]>
-        </code>
+        <include file=":/material/shadow.fs" />
+        <code></code>
       </vertexShader>
 
       <fragmentShader>
-        <code>
-          <![CDATA[
-#version 120
-
-void main(void)
-{
-   gl_FragColor = vec4(0, 0, 0, 0.5);
-}
-]]>
-        </code>
+        <include file=":/material/shadow.vs" />
+          <code></code>
       </fragmentShader>
 
       <attribute name="vertexPosition" buffer="positions" />

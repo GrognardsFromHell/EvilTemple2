@@ -81,11 +81,26 @@ HEADERS += \
     profilerdialog.h \
     scriptables.h \
     materials.h
-OTHER_FILES += map_material.xml \
-    clipping_material.xml \
-    lighting.vs \
-    lighting.fs \
-    missing_material.xml
+OTHER_FILES += \
+    resources/schema/materialfile.xsd \
+    resources/materials/map_material.xml \
+    resources/materials/box_material.xml \
+    resources/materials/light_material.xml \
+    resources/materials/sprite_material.xml \
+    resources/materials/clipping_material.xml \
+    resources/materials/lighting.vs \
+    resources/materials/lighting.fs \
+    resources/materials/missing_material.xml \
+    resources/materials/shadow.vs \
+    resources/materials/shadow.fs \
+    resources/materials/bounds_debug.tga \
+    resources/materials/light_debug.tga \
+    resources/fonts/5inq_-_Handserif.ttf \
+    resources/fonts/ArtNoveauDecadente.ttf \
+    resources/fonts/Fontin-Bold.ttf \
+    resources/fonts/Fontin-Italic.ttf \
+    resources/fonts/Fontin-Regular.ttf \
+    resources/fonts/Fontin-SmallCaps.ttf
 
 INCLUDEPATH += .
 

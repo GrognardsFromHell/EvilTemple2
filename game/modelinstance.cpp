@@ -1,3 +1,6 @@
+
+#include <QVector>
+
 #include "modelinstance.h"
 #include "util.h"
 #include "drawhelper.h"
@@ -93,11 +96,37 @@ namespace EvilTemple {
             buffer->bind();
             buffer->allocate(model->normals, sizeof(Vector4) * model->vertices);
             mNormalBufferAddMeshes.append(buffer);
+
+            /*
+              Create a bone mapping. This crappy hack is necessary, since the ordering of bones in addmeshes
+              generally can differ from the order in the current skeleton. Thus we create a mapping from the
+              bone ids in the addmesh to bone ids in the current mesh, so the vertices are bound to the
+              correct bones.
+
+              It might be possible to actually fix this problem by enforcing a unified order on bones (i.e. by name
+              ascending), although this *could* add additional problems for parent ids. Otherwise, the bones
+              of an addmesh could be reordered to the bones of the mesh using it, but the relation between meshes
+              and addmeshes is not known a-priori, making this difficult.
+             */
+            QVector<uint> boneMapping(model->bones().size());
+            for (int i = 0; i < boneMapping.size(); ++i) {
+                const Bone &origBone = model->bones()[i];
+
+                boneMapping[i] = i;
+
+                for (int j = 0; j < mModel->bones().size(); ++j) {
+                    if (mModel->bones()[j].name() == origBone.name()) {
+                        boneMapping[i] = j;
+                    }
+                }
+            }
+            mAddMeshBoneMapping.append(boneMapping);
             
             Q_ASSERT(mTransformedPositionsAddMeshes.size() == mAddMeshes.size()); 
             Q_ASSERT(mTransformedNormalsAddMeshes.size() == mAddMeshes.size()); 
             Q_ASSERT(mPositionBufferAddMeshes.size() == mAddMeshes.size()); 
-            Q_ASSERT(mNormalBufferAddMeshes.size() == mAddMeshes.size()); 
+            Q_ASSERT(mNormalBufferAddMeshes.size() == mAddMeshes.size());
+            Q_ASSERT(mAddMeshBoneMapping.size() == mAddMeshes.size());
         }
     }
 
@@ -240,7 +269,8 @@ namespace EvilTemple {
         GLint mTexCoordBuffer;
     };
 
-    void ModelInstance::animateVertices(const SharedModel &model, Vector4 *transformedPositions, Vector4 *transformedNormals, QGLBuffer *positionBuffer, QGLBuffer *normalBuffer)
+    void ModelInstance::animateVertices(const SharedModel &model, Vector4 *transformedPositions, Vector4 *transformedNormals, QGLBuffer *positionBuffer, QGLBuffer *normalBuffer,
+                                        QVector<uint> *boneMapping)
     {
         for (int i = 0; i < model->vertices; ++i) {
             const BoneAttachment &attachment = model->attachments[i];
@@ -249,6 +279,11 @@ namespace EvilTemple {
 
             float weight = attachment.weights()[0];
             uint boneId = attachment.bones()[0];
+            if (boneMapping) {
+                Q_ASSERT(boneId >= 0 && boneId < boneMapping->size());
+                boneId = boneMapping->at(boneId);
+            }
+            Q_ASSERT(boneId >= 0 && boneId < mModel->bones().size());
             const Matrix4 &firstTransform = mFullTransform[boneId];
 
             __m128 factor = _mm_set_ps(weight, - weight, weight, weight);
@@ -259,7 +294,11 @@ namespace EvilTemple {
             for (int k = 1; k < attachment.count(); ++k) {
                 weight = attachment.weights()[k];
                 boneId = attachment.bones()[k];
-                Q_ASSERT(boneId >= 0 && boneId <= mModel->bones().size());
+                if (boneMapping) {
+                    Q_ASSERT(boneId >= 0 && boneId < boneMapping->size());
+                    boneId = boneMapping->at(boneId);
+                }
+                Q_ASSERT(boneId >= 0 && boneId < mModel->bones().size());
 
                 const Matrix4 &fullTransform = mFullTransform[boneId];
 
@@ -320,10 +359,11 @@ namespace EvilTemple {
                 mFullTransform[i] = mFullWorld[i] * bone.fullWorldInverse();
             }
 
-            animateVertices(mModel, mTransformedPositions, mTransformedNormals, &mPositionBuffer, &mNormalBuffer);
+            animateVertices(mModel, mTransformedPositions, mTransformedNormals, &mPositionBuffer, &mNormalBuffer, NULL);
 
             for (int i = 0; i < mAddMeshes.size(); ++i) {
-                animateVertices(mAddMeshes[i], mTransformedPositionsAddMeshes[i], mTransformedNormalsAddMeshes[i], mPositionBufferAddMeshes[i], mNormalBufferAddMeshes[i]);
+                animateVertices(mAddMeshes[i], mTransformedPositionsAddMeshes[i], mTransformedNormalsAddMeshes[i], mPositionBufferAddMeshes[i], mNormalBufferAddMeshes[i],
+                                &mAddMeshBoneMapping[i]);
             }
 
             mCurrentFrameChanged = false;

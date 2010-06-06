@@ -40,7 +40,9 @@ signals:
 
 public slots:
 
-    void showView(const QString &url);
+    QObject *showView(const QString &url);
+
+    QObject *addGuiItem(const QString &url);
 
     void centerOnWorld(float worldX, float worldY);
 

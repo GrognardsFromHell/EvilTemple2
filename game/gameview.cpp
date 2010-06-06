@@ -288,7 +288,18 @@ namespace EvilTemple {
         glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
 
-    void GameView::showView(const QString &url)
+    QObject *GameView::showView(const QString &url)
+    {
+        QDeclarativeItem *widget = qobject_cast<QDeclarativeItem*>(addGuiItem(url));
+
+        d->rootItem = widget;
+        widget->setWidth(width());
+        widget->setHeight(height());
+
+        return widget;
+    }
+
+    QObject *GameView::addGuiItem(const QString &url)
     {
         // Create the console
         QDeclarativeComponent *component = new QDeclarativeComponent(&d->uiEngine, this);
@@ -297,7 +308,7 @@ namespace EvilTemple {
         QEventLoop eventLoop;
         while (!component->isReady()) {
             if (component->isError()) {
-                qFatal("Error creating console: %s.", qPrintable(component->errorString()));
+                qFatal("Error creating widget: %s.", qPrintable(component->errorString()));
                 break;
             }
             eventLoop.processEvents();
@@ -306,10 +317,8 @@ namespace EvilTemple {
         QDeclarativeItem *widget = qobject_cast<QDeclarativeItem*>(component->create());
 
         d->uiScene.addItem(widget);
-        d->rootItem = widget;
 
-        widget->setWidth(width());
-        widget->setHeight(height());
+        return widget;
     }
 
     QDeclarativeEngine *GameView::uiEngine()
@@ -374,8 +383,7 @@ namespace EvilTemple {
 
     void GameView::mouseReleaseEvent(QMouseEvent *evt)
     {
-        d->dragging = false;
-        if (!d->mouseMovedDuringDrag) {
+        if (d->dragging && !d->mouseMovedDuringDrag) {
             SharedRenderable renderable = d->pickObject(evt->pos());
 
             if (renderable) {
@@ -388,6 +396,7 @@ namespace EvilTemple {
                                         .arg(floor(worldPosition.z())), QColor(255, 255, 255));
             }
         }
+        d->dragging = false;
         QGraphicsView::mouseReleaseEvent(evt);        
     }
 
