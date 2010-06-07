@@ -103,9 +103,9 @@ namespace EvilTemple {
 
             // Construct a picking ray
             Vector4 nearPlanePoint(2 * point.x() / width - 1,
-                                       2 * (height - point.y()) / height - 1,
-                                       0,
-                                       1);
+                                   2 * (height - point.y()) / height - 1,
+                                   0,
+                                   1);
 
             Vector4 farPlanePoint = nearPlanePoint;
             farPlanePoint.setZ(1);
@@ -134,9 +134,9 @@ namespace EvilTemple {
 
             // Construct a picking ray
             Vector4 nearPlanePoint(2 * point.x() / width - 1,
-                                       2 * (height - point.y()) / height - 1,
-                                       0,
-                                       1);
+                                   2 * (height - point.y()) / height - 1,
+                                   0,
+                                   1);
 
             Vector4 farPlanePoint = nearPlanePoint;
             farPlanePoint.setZ(1);
@@ -179,7 +179,7 @@ namespace EvilTemple {
         void resize(int width, int height) {
             float halfWidth = width * 0.5f;
             float halfHeight = height * 0.5f;
-			glViewport(0, 0, width, height);
+            glViewport(0, 0, width, height);
 
             const float zoom = 1.25f;
 
@@ -243,6 +243,10 @@ namespace EvilTemple {
             qint64 elapsedMs = d->sceneTimer.restart();
             double elapsedSeconds = elapsedMs / 1000.0;
 
+            // A single frame may never advance time more than 1/10th of a second
+            if (elapsedSeconds > 0.1)
+                elapsedSeconds = 0.1;
+
             float texAnimTime = d->renderStates.textureAnimationTime() + elapsedSeconds;
             while (texAnimTime > 60)
                 texAnimTime -= 60;
@@ -263,9 +267,8 @@ namespace EvilTemple {
         SAFE_GL(glDisable(GL_TEXTURE_2D));
         SAFE_GL(glDisable(GL_LIGHTING));
 
-        glDisable(GL_DEPTH_TEST); HANDLE_GL_ERROR
-        glAlphaFunc(GL_ALWAYS, 0); HANDLE_GL_ERROR
-        glDisable(GL_BLEND); HANDLE_GL_ERROR
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_BLEND);
 
         glMatrixMode(GL_PROJECTION);
         glLoadMatrixf(d->renderStates.projectionMatrix().data());
@@ -283,12 +286,12 @@ namespace EvilTemple {
         glVertex3f(mScrollBoxMinX, mScrollBoxMaxY, -1);
         glEnd();
 
-        glClear(GL_DEPTH_BUFFER_BIT);HANDLE_GL_ERROR
+        glClear(GL_DEPTH_BUFFER_BIT);
 
-        glLoadIdentity();HANDLE_GL_ERROR
-        glMatrixMode(GL_PROJECTION);HANDLE_GL_ERROR
-        glLoadIdentity();HANDLE_GL_ERROR
-        glMatrixMode(GL_MODELVIEW);HANDLE_GL_ERROR
+        glLoadIdentity();
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        glMatrixMode(GL_MODELVIEW);
 
         glUseProgram(0);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -343,7 +346,7 @@ namespace EvilTemple {
     void GameView::mouseMoveEvent(QMouseEvent *evt)
     {
         QGraphicsView::mouseMoveEvent(evt);
-      
+
         if (d->dragging) {
             d->mouseMovedDuringDrag = true;
 

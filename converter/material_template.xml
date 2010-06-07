@@ -86,9 +86,9 @@ void main(void)
       </fragmentShader>
 
       <attribute name="vertexPosition" buffer="positions" />
-      {{LIGHTING_ON}}
+      {{NORMALS_ON}}
       <attribute name="vertexNormal" buffer="normals" />
-      {{/LIGHTING_ON}}
+      {{/NORMALS_ON}}
       <attribute name="vertexTexCoord" buffer="texCoords" components="2" />
       <uniform name="worldViewProjectionMatrix" semantic="WorldViewProjection" />
       {{LIGHTING_ON}}
