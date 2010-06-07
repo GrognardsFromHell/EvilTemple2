@@ -8,11 +8,16 @@ class ConverterData;
 
 class Converter : public QObject {
 Q_OBJECT
+friend class ConverterData;
 public:
     Converter(const QString &inputPath, const QString &outputPath);
     ~Converter();
 
-	void setExternal(bool ext);
+    void setExternal(bool ext);
+
+    void cancel();
+
+    bool isCancelled() const;
 
 public slots:
     bool convert();

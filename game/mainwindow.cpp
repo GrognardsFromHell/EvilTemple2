@@ -12,7 +12,6 @@
 
 #include "mainwindow.h"
 #include "game.h"
-#include "savegames.h"
 #include "gameview.h"
 #include "scriptengine.h"
 #include "profilerdialog.h"
@@ -134,7 +133,6 @@ namespace EvilTemple {
         currentMainWindow = this;
         qInstallMsgHandler(consoleMessageHandler);
 
-        // d_ptr->guiView->rootContext()->setContextProperty("savegames", new SaveGames("C:/", this));
     }
 
     MainWindow::~MainWindow()

@@ -24,6 +24,11 @@ class GameView : public QGraphicsView
     Q_PROPERTY(ClippingGeometry *clippingGeometry READ clippingGeometry)
     Q_PROPERTY(Materials *materials READ materials)
     Q_PROPERTY(ParticleSystems* particleSystems READ particleSystems)
+
+    Q_PROPERTY(int scrollBoxMinX READ scrollBoxMinX WRITE setScrollBoxMinX)
+    Q_PROPERTY(int scrollBoxMinY READ scrollBoxMinY WRITE setScrollBoxMinY)
+    Q_PROPERTY(int scrollBoxMaxX READ scrollBoxMaxX WRITE setScrollBoxMaxX)
+    Q_PROPERTY(int scrollBoxMaxY READ scrollBoxMaxY WRITE setScrollBoxMaxY)
 public:
     explicit GameView(QWidget *parent = 0);
     ~GameView();
@@ -35,6 +40,38 @@ public:
     ClippingGeometry *clippingGeometry() const;
     Materials *materials() const;
     ParticleSystems *particleSystems() const;
+
+    int scrollBoxMinX() const {
+        return mScrollBoxMinX;
+    }
+
+    int scrollBoxMinY() const {
+        return mScrollBoxMinY;
+    }
+
+    int scrollBoxMaxX() const {
+        return mScrollBoxMaxX;
+    }
+
+    int scrollBoxMaxY() const {
+        return mScrollBoxMaxY;
+    }
+
+    void setScrollBoxMinX(int value) {
+        mScrollBoxMinX = value;
+    }
+
+    void setScrollBoxMinY(int value) {
+        mScrollBoxMinY = value;
+    }
+
+    void setScrollBoxMaxX(int value) {
+        mScrollBoxMaxX = value;
+    }
+
+    void setScrollBoxMaxY(int value) {
+        mScrollBoxMaxY = value;
+    }
 
 signals:
 
@@ -61,6 +98,8 @@ protected:
     void drawBackground(QPainter *painter, const QRectF &rect);
 
 private:
+    int mScrollBoxMinX, mScrollBoxMaxX, mScrollBoxMinY, mScrollBoxMaxY;
+
     QScopedPointer<GameViewData> d;    
 
 };

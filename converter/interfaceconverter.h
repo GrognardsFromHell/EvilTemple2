@@ -16,6 +16,7 @@ public:
     ~InterfaceConverter();
 
     bool convert();
+
 private:
     QScopedPointer<InterfaceConverterData> d_ptr;
 };

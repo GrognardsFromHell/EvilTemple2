@@ -13,3 +13,13 @@ art/meshes/weapons
 art/meshes/scenery/containers
 art/meshes/scenery/misc
 art/meshes/scenery/portals
+
+# Special exclusions (Map change icons)
+-art/meshes/scenery/portals/ladder-up
+-art/meshes/scenery/portals/ladder-down
+-art/meshes/scenery/portals/enter-door
+-art/meshes/scenery/portals/stairs-up
+-art/meshes/scenery/portals/stairs-down
+
+# It's transparent -> no shadow
+-art/meshes/monsters/Gelatinous_cube

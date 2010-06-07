@@ -271,10 +271,10 @@ namespace EvilTemple {
         // Draw a line-stippled version of the bounding box
         glColor3f(1, 1, 1);
         glBegin(GL_LINE_LOOP);
-        glVertex3f(-8180, -8708, -1);
-        glVertex3f(8180, -8708, -1);
-        glVertex3f(8180, -18712, -1);
-        glVertex3f(-8180, -18712, -1);
+        glVertex3f(mScrollBoxMinX, mScrollBoxMinY, -1);
+        glVertex3f(mScrollBoxMaxX, mScrollBoxMinY, -1);
+        glVertex3f(mScrollBoxMaxX, mScrollBoxMaxY, -1);
+        glVertex3f(mScrollBoxMinX, mScrollBoxMaxY, -1);
         glEnd();
 
         glClear(GL_DEPTH_BUFFER_BIT);HANDLE_GL_ERROR

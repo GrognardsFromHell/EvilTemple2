@@ -1,13 +1,14 @@
 
 TEMPLATE = app
-CONFIG -= gui
-CONFIG += console
 
 TARGET = converter
 
 QT += xml opengl xmlpatterns script
+CONFIG += qaxcontainer
 
 TEMPLE_LIBS += troikaformats qt3d minizip jpeg qjson
+
+win32:RC_FILE = icon.rc
 
 SOURCES += converter.cpp \
     collada.cpp \
@@ -16,7 +17,10 @@ SOURCES += converter.cpp \
     modelwriter.cpp \
     exclusions.cpp \
     mapconverter.cpp \
-    prototypeconverter.cpp
+    prototypeconverter.cpp \
+    converterwizard.cpp \
+    choosedirectorypage.cpp \
+    conversionpage.cpp
 
 HEADERS += \
     util.h \
@@ -29,7 +33,10 @@ HEADERS += \
     mapconverter.h \
     basepathfinder.h \
     prototypeconverter.h \
-    stable.h
+    stable.h \
+    converterwizard.h \
+    choosedirectorypage.h \
+    conversionpage.h
 
 win32:SOURCES += basepathfinder_win32.cpp
 else:SOURCES += basepathfinder.cpp
@@ -46,6 +53,11 @@ OTHER_FILES += exclusions.txt \
     material_template.xml \
     shadow_caster.txt \
     particlefiles.txt \
-    scripts/converter.js
+    scripts/converter.js \
+    icon.rc
 
 PRECOMPILED_HEADER = stable.h
+
+FORMS += \
+    choosedirectorypage.ui \
+    conversionpage.ui

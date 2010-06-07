@@ -17,6 +17,7 @@ private:
     VirtualFileSystem *mVfs;
     QString mMaterialTemplate;
     QStringList shadowCasterList;
+    QStringList shadowCasterExclusions;
 
 public:
 	bool external;
@@ -40,15 +41,25 @@ public:
 
         while (!shadowCasterStream.atEnd()) {
             QString line = shadowCasterStream.readLine().trimmed();
-            if (line.isEmpty())
+            if (line.startsWith('#') || line.isEmpty())
                 continue;
-            shadowCasterList.append(QDir::toNativeSeparators(line.toLower()));
+            if (line.startsWith('-')) {
+                shadowCasterExclusions.append(QDir::toNativeSeparators(line.right(line.length() - 1).toLower()));
+            } else {
+                shadowCasterList.append(QDir::toNativeSeparators(line.toLower()));
+            }
         }
     }
 
     bool isShadowCaster(const QString &filename)
     {
         QString comparison = QDir::toNativeSeparators(filename.toLower());
+        foreach (const QString &exclusion, shadowCasterExclusions) {
+            if (comparison.startsWith(exclusion)) {
+                return false;
+            }
+        }
+
         foreach (const QString &shadowCaster, shadowCasterList) {
             if (comparison.startsWith(shadowCaster)) {
                 return true;

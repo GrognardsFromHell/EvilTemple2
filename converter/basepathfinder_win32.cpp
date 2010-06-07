@@ -17,7 +17,7 @@ namespace EvilTemple {
     static const wchar_t *RegistryKey = L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion"
                                 L"\\Uninstall\\{AD80F06B-0F21-4EEE-934D-BEF0D21E6383}";
 
-    static const wchar_t *RegistryValue = L"InstallPath";
+    static const wchar_t *RegistryValue = L"InstallLocation";
 
     static QDir defaultDir() {
         return QDir::current();

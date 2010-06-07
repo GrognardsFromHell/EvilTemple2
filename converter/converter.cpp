@@ -155,13 +155,22 @@ public:
 
     bool external;
 
+    volatile bool cancel;
+
     // Maps lower-case mesh filenames (normalized separators) to an information structure
     QHash<QString, MeshReference> meshReferences;
 
     Exclusions exclusions;
 
-    ConverterData(const QString &inputPath, const QString &outputPath) :
-            mInputPath(inputPath), mOutputPath(outputPath), external(false)
+    Converter *converter;
+
+    int sectionsDone;
+    static const int totalWorkSections = 100;
+    int lastProgressUpdate;
+
+    ConverterData(Converter *_converter, const QString &inputPath, const QString &outputPath) :
+            converter(_converter), mInputPath(inputPath), mOutputPath(outputPath), external(false), cancel(false),
+            sectionsDone(0), lastProgressUpdate(0)
     {
         // Force both paths to be in the system specific format and end with a separator.
         mInputPath = QDir::toNativeSeparators(mInputPath);
@@ -196,8 +205,13 @@ public:
         ZipWriter writer(mOutputPath + "maps.zip");
         MapConverter converter(vfs.data(), &writer);
 
+        int totalWork = zoneTemplates->mapIds().size();
+        int workDone = 0;
+
         // Convert all maps
         foreach (quint32 mapId, zoneTemplates->mapIds()) {
+            ++workDone;
+
             if (exclusions.isExcluded(QString("%1").arg(mapId)))
                 continue;
 
@@ -227,6 +241,8 @@ public:
             } else {
                 qWarning("Unable to load zone template for map id %d.", mapId);
             }
+
+            updateProgress(workDone, totalWork, 25, "Converting maps");
         }
 
         writer.close();
@@ -505,7 +521,6 @@ public:
 
         // File header
         clippingStream << totalFileCount << (uint)zoneTemplate->clippingGeometry().size();             
-
 
         /**
         These transformations come from the original game and are *constant*.
@@ -1080,9 +1095,13 @@ public:
         addAddMeshesMesReferences();
         addHairReferences();
 
+        int totalWork = meshReferences.size();
+        int workDone = 0;
+
         foreach (const QString &meshFilename, meshReferences.keys()) {
             if (exclusions.isExcluded(meshFilename)) {
                 qWarning("Skipping %s, since it's excluded.", qPrintable(meshFilename));
+                workDone++;
                 continue;
             }
 
@@ -1091,10 +1110,13 @@ public:
 
             if (!model) {
                 qWarning("Unable to open model %s.", qPrintable(meshFilename));
+                workDone++;
                 continue;
             }
 
             convertModel(&zip, meshFilename, model.data());
+
+            updateProgress(++workDone, totalWork, 60, "Converting models");
         }
 
         convertMaterials(&zip);
@@ -1118,6 +1140,7 @@ public:
 
         foreach (QString mdfFilename, materialSet) {
             MaterialConverter converter(vfs.data());
+            converter.setExternal(true);
             converter.convert(Troika::Material::create(vfs.data(), mdfFilename));
 
             HashedData converted = converter.materialScripts().values().at(0);
@@ -1455,6 +1478,18 @@ public:
         }
     }
 
+    void updateProgress(int innerSectionValue, int innerSectionTotal, int sectionWorth, const QString &section)
+    {
+        int currentProgress = 100 * (sectionsDone + (innerSectionValue / (float)innerSectionTotal) * sectionWorth);
+        int totalProgress = totalWorkSections * 100;
+
+        if (lastProgressUpdate == currentProgress) {
+            return;
+        }
+
+        emit converter->progressUpdate(currentProgress, totalProgress, section);
+    }
+
     bool convert()
     {
         if (!openInput()) {
@@ -1467,15 +1502,46 @@ public:
 
         mInternalDescription = MessageFile::parse(vfs->openFile("oemes/oname.mes"));
 
+        emit converter->progressUpdate(sectionsDone, totalWorkSections, "Converting scripts");
+
         convertScripts();
 
+        if (cancel)
+            return false;
+
+        emit converter->progressUpdate(sectionsDone, totalWorkSections, "Converting particle systems");
+
         convertParticleSystems();
+        sectionsDone += 5;
+
+        if (cancel)
+            return false;
+
+        emit converter->progressUpdate(sectionsDone, totalWorkSections, "Converting interface");
+
+        convertInterface();
+        sectionsDone += 10;
+
+        emit converter->progressUpdate(sectionsDone, totalWorkSections, "Converting maps");
 
         convertMaps();
+        sectionsDone += 25;
 
-        convertModels();               
+        if (cancel)
+            return false;
 
-        convertInterface();        
+        emit converter->progressUpdate(sectionsDone, totalWorkSections, "Converting models");
+
+        convertModels();
+        sectionsDone += 60;
+
+        if (cancel)
+            return false;
+
+        emit converter->progressUpdate(sectionsDone, totalWorkSections, "Finished");
+
+        if (cancel)
+            return false;
 
         return true;
     }
@@ -1483,7 +1549,7 @@ public:
 };
 
 Converter::Converter(const QString &inputPath, const QString &outputPath) :
-        d_ptr(new ConverterData(inputPath, outputPath))
+        d_ptr(new ConverterData(this, inputPath, outputPath))
 {
 }
 
@@ -1501,29 +1567,12 @@ void Converter::setExternal(bool ext)
     d_ptr->external = ext;
 }
 
-int main(int argc, char **argv) {
+void Converter::cancel()
+{
+    d_ptr->cancel = true;
+}
 
-    QCoreApplication app(argc, argv);
-
-    std::cout << "Conversion utility for Temple of Elemental Evil." << std::endl;
-
-    if (argc < 2) {
-        std::cout << "Usage: " << argv[0] << " " << "<install-dir>" << std::endl;
-        return -1;
-    }
-
-    Converter converter(QString::fromLocal8Bit(argv[1]), QString("data/"));
-
-    for (int i = 2; i < argc; ++i) {
-        if (!strcmp(argv[i], "-external")) {
-            converter.setExternal(true);
-        }
-    }
-
-    if (!converter.convert()) {
-        std::cout << "ERROR: Conversion failed." << std::endl;
-        return -1;
-    }
-
-    return 0;
+bool Converter::isCancelled() const
+{
+    return d_ptr->cancel;
 }

@@ -4,5 +4,9 @@
         <file>material_template.xml</file>
         <file>shadow_caster.txt</file>
         <file>particlefiles.txt</file>
+        <file>24-em-check.png</file>
+        <file>24-em-cross.png</file>
+        <file>application.ico</file>
+        <file>64x64.png</file>
     </qresource>
 </RCC>

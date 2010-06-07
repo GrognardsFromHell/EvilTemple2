@@ -204,9 +204,20 @@ namespace Troika
                 if (!rawMapLimits.contains(mapId)) {
                     qWarning("Map with id %d has no corresponding map limits entry.", mapId);
                     continue;
-                }
+                } else {
+                    QStringList parts = rawMapLimits[mapId].split(',');
+                    int maxX = parts[0].toInt();
+                    int maxY = parts[1].toInt();
+                    int minX = parts[2].toInt();
+                    int minY = parts[3].toInt();
 
-                qDebug("Limits for %d: %s", mapId, qPrintable(rawMapLimits[mapId]));
+                    QVector3D minBox(minX, minY, 0);
+                    QVector3D maxBox(maxX, maxY, 0);
+
+                    QBox3D scrollBox(minBox, maxBox);
+
+                    mapLimits[mapId] = scrollBox;
+                }
             }
         }
 
@@ -227,6 +238,7 @@ namespace Troika
             result->setUnfogged(mapListEntry.unfogged);
             result->setDirectory(mapListEntry.mapDirectory);
             result->setName(mapNames[id]);
+            result->setScrollBox(mapLimits[id]);
 
             ZoneTemplateReader reader(vfs, prototypes, result, mapListEntry.mapDirectory);
             reader.read();
