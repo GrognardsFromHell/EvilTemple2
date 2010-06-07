@@ -49,7 +49,7 @@ namespace EvilTemple {
         GameViewData(GameView *view)
             : q(view), rootItem(0), backgroundMap(renderStates),
             clippingGeometry(renderStates), dragging(false), lightDebugger(renderStates),
-            materials(renderStates), particleSystems(&materials) {
+            materials(renderStates), particleSystems(&materials) {                       
 
             sceneTimer.invalidate();
 
@@ -194,6 +194,9 @@ namespace EvilTemple {
     GameView::GameView(QWidget *parent) :
             QGraphicsView(parent), d(new GameViewData(this))
     {
+        QPixmap defaultCursor("art/interface/cursors/MainCursor.png");
+        setCursor(QCursor(defaultCursor, 2, 2));
+
         setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         setOptimizationFlags(QGraphicsView::DontSavePainterState);

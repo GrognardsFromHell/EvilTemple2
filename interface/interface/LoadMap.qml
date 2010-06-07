@@ -8,6 +8,8 @@ Item {
     signal mapSelected(string mapName);
     signal closeClicked;
 
+    property variant modelStuff;
+
     Rectangle {
         id: background
         opacity: 0.5
@@ -39,20 +41,24 @@ Item {
         anchors.right: parent.right
         anchors.rightMargin: 6
         delegate: MouseArea {
+            id: mouseArea
             anchors.left: parent.left
             anchors.right: parent.right
             height: childrenRect.height + 2
+            hoverEnabled: true
             Row {
                 Text {
                     text: name
                     width: 200
                     font.family: "Fontin"
                     font.pointSize: 12
+                    color: mouseArea.containsMouse ? '#ff0000':'#000000'
                 }
                 Text {
                     text: dir
                     font.family: "Fontin"
                     font.pointSize: 12
+                    color: mouseArea.containsMouse ? '#ff0000':'#000000'
                 }
             }
             onClicked: mapSelected(dir)
@@ -93,16 +99,9 @@ Item {
         mapModel.clear();
 
         for (var i = 0; i < maps.length; ++i) {
-            var map = maps[i];
-            mapModel.append({
-                name: map[0],
-                dir: map[1]
-            });
+            mapModel.append(maps[i]);
         }
-
     }
-
-
 
 
 }
