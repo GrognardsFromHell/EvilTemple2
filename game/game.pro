@@ -13,7 +13,7 @@ TARGET = game
 
 CONFIG += dll
 
-TEMPLE_LIBS += qt3d minizip model glew jpeg
+TEMPLE_LIBS += qt3d minizip glew jpeg
 include(../3rdparty/game-math/game-math.pri)
 
 DEFINES += GAME_LIBRARY GAMEMATH_MEMORY_OPERATORS
@@ -100,7 +100,9 @@ OTHER_FILES += \
     resources/fonts/Fontin-Bold.ttf \
     resources/fonts/Fontin-Italic.ttf \
     resources/fonts/Fontin-Regular.ttf \
-    resources/fonts/Fontin-SmallCaps.ttf
+    resources/fonts/Fontin-SmallCaps.ttf \
+    resources/materials/textureanim.fs \
+    resources/materials/spheremap.fs
 
 INCLUDEPATH += .
 

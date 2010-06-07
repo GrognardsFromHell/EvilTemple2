@@ -72,7 +72,7 @@ namespace Troika
 
             MeshModel *result(new MeshModel(faceGroups, vertices, skeleton.take()));
 
-            qWarning("Loaded %s in %d ms.", qPrintable(filename), timer.elapsed());
+            qDebug("Loaded %s in %d ms.", qPrintable(filename), timer.elapsed());
 
             return result;
         }

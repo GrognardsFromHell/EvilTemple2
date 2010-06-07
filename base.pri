@@ -78,15 +78,6 @@ contains(TEMPLE_LIBS,minizip) {
     }
 }
 
-contains(TEMPLE_LIBS,model) {
-    INCLUDEPATH += ../model
-    CONFIG(debug, debug|release) {
-        LIBS += -lmodel_d
-    } else {
-        LIBS += -lmodel
-    }
-}
-
 contains(TEMPLE_LIBS,audioengine) {
     INCLUDEPATH += ../audioengine
     CONFIG(debug, debug|release) {

@@ -27,6 +27,7 @@ namespace Troika {
             Drift, // Texture coordinate drifts linearily (Translation along one axis)
             Swirl, // Texture coordinates rotate
             Wavey, // Like drift but with a cosine/sine acceleration pattern
+            Environment // Uses the surface normal
         };
 
         enum BlendType
@@ -143,6 +144,14 @@ namespace Troika {
             return &textureStages[stage];
         }
 
+        float specularPower() const {
+            return mSpecularPower;
+        }
+
+        const QString &glossmap() const {
+            return mGlossmap;
+        }
+
     private:
         QString _name;
         Type mType;
@@ -157,6 +166,8 @@ namespace Troika {
         GLenum sourceBlendFactor;
         GLenum destBlendFactor;
         QColor color;
+        float mSpecularPower;
+        QString mGlossmap;
 
         TextureStageInfo textureStages[LegacyTextureStages];
     };

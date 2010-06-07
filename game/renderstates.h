@@ -28,11 +28,13 @@ public:
     void setWorldMatrix(const Matrix4 &worldMatrix);
     void setViewMatrix(const Matrix4 &viewMatrix);
     void setProjectionMatrix(const Matrix4 &projectionMatrix);
+    void setTextureAnimationTime(float t);
 
     // Aggregate matrices, these are calculated from the three base matrices
     const Matrix4 &worldViewMatrix() const;
     const Matrix4 &worldViewProjectionMatrix() const;
     const Matrix4 &viewProjectionMatrix() const;
+    float textureAnimationTime() const;
 
     /**
     Returns the active lights in the scene.
@@ -86,8 +88,21 @@ private:
     Matrix4 mWorldViewProjectionMatrix;
     QScopedPointer<UniformBinder> mWorldViewProjectionMatrixBinder;
 
+    float mTextureAnimationTime;
+    QScopedPointer<UniformBinder> mTextureAnimationTimeBinder;
+
     QList<const Light*> mActiveLights;
 };
+
+inline void RenderStates::setTextureAnimationTime(float t)
+{
+    mTextureAnimationTime = t;
+}
+
+inline float RenderStates::textureAnimationTime() const
+{
+    return mTextureAnimationTime;
+}
 
 inline const Box2d &RenderStates::screenViewport() const
 {

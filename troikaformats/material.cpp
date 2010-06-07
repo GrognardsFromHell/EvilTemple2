@@ -18,8 +18,8 @@ namespace Troika {
         sourceBlendFactor(GL_SRC_ALPHA),
         destBlendFactor(GL_ONE_MINUS_SRC_ALPHA),
         disableDepthWrite(false),
+        mSpecularPower(50),
         color(255, 255, 255, 255) {
-
     }
 
     Material::~Material() {
@@ -107,6 +107,17 @@ namespace Troika {
             } else {
                 qWarning("Unknown texture %s referenced in %s.", qPrintable(texture), qPrintable(name()));
             }
+
+            return true;
+
+        } else if (!command.compare("Glossmap", Qt::CaseInsensitive)) {
+
+            if (args.size() != 1) {
+                qWarning("Glossmap has invalid args: %s", qPrintable(args.join(" ")));
+                return false;
+            }
+
+            mGlossmap = args[0];
 
             return true;
 
@@ -216,6 +227,25 @@ namespace Troika {
                 return false;
             }
 
+        } else if (!command.compare("Specularpower", Qt::CaseInsensitive)) {
+            if (args.size() == 1)
+            {
+                bool ok;
+                mSpecularPower = args[0].toFloat(&ok);
+
+                if (!ok) {
+                    qWarning("Invalid specular power.");
+                    return false;
+                }
+
+                return true;
+            }
+            else
+            {
+                qWarning("Invalid arguments for texture command %s", qPrintable(command));
+                return false;
+            }
+
         } else if (!command.compare("SpeedU", Qt::CaseInsensitive)
             || !command.compare("SpeedV", Qt::CaseInsensitive)) {
 
@@ -267,12 +297,16 @@ namespace Troika {
 
                 QString type = args[1];
 
-                if (!type.compare("Drift", Qt::CaseInsensitive))
+                if (!type.compare("Mesh", Qt::CaseInsensitive))
+                    textureStages[stage].transformType = TextureStageInfo::None;
+                else if (!type.compare("Drift", Qt::CaseInsensitive))
                     textureStages[stage].transformType = TextureStageInfo::Drift;
                 else if (!type.compare("Swirl", Qt::CaseInsensitive))
                     textureStages[stage].transformType = TextureStageInfo::Swirl;
                 else if (!type.compare("Wavey", Qt::CaseInsensitive))
                     textureStages[stage].transformType = TextureStageInfo::Wavey;
+                else if (!type.compare("Environment", Qt::CaseInsensitive))
+                    textureStages[stage].transformType = TextureStageInfo::Environment;
                 else
                     return false;
 

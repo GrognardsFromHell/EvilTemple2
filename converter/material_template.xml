@@ -16,17 +16,25 @@ attribute vec2 vertexTexCoord;
 
 varying vec2 texCoord;
 
-{{LIGHTING_ON}}
+{{NORMALS_ON}}
 attribute vec4 vertexNormal;
-{{/LIGHTING_ON}}
+{{/NORMALS_ON}}
+
+{{SPHEREMAP_ON}}
+varying vec3 fragNormal;
+{{/SPHEREMAP_ON}}
 
 void main() {
-{{LIGHTING_ON}}        
+{{LIGHTING_ON}}
         lighting(vertexPosition, vertexNormal);
-{{/LIGHTING_ON}}     
+{{/LIGHTING_ON}}
 
         gl_Position = worldViewProjectionMatrix * vertexPosition;
         texCoord = vertexTexCoord; // Pass through texture coordinates
+
+        {{SPHEREMAP_ON}}
+        fragNormal = vertexNormal.xyz;
+        {{/SPHEREMAP_ON}}
 }
 ]]>
         </code>
@@ -36,21 +44,36 @@ void main() {
         {{LIGHTING_ON}}
         <include file=":/material/lighting.fs" />
         {{/LIGHTING_ON}}
+        {{TEXTUREANIM_ON}}
+        <include file=":/material/textureanim.fs" />
+        {{/TEXTUREANIM_ON}}
+        {{SPHEREMAP_ON}}
+        <include file=":/material/spheremap.fs" />
+        {{/SPHEREMAP_ON}}
+
         <code>
         <![CDATA[
 
 // Material properties
 const vec4 materialColor = vec4({{MATERIAL_DIFFUSE}});
-const int shininess = 50;
+const int shininess = {{SPECULAR_POWER}};
 
 varying vec2 texCoord;
+
+{{TEXTUREANIM_ON}}
+uniform float t = 0;
+{{/TEXTUREANIM_ON}}
+
+{{SPHEREMAP_ON}}
+varying vec3 fragNormal;
+{{/SPHEREMAP_ON}}
 
 {{SAMPLERS}}
 
 void main(void)
 {
 {{LIGHTING_ON}}
-  vec4 Idiff = lighting(shininess);
+  vec4 Idiff = {{LIGHTING_TERM}};
 {{/LIGHTING_ON}}
 
    {{PIXEL_TERM}}
@@ -72,6 +95,10 @@ void main(void)
       <uniform name="viewMatrix" semantic="View" />
       <uniform name="worldViewMatrix" semantic="WorldView" />
       {{/LIGHTING_ON}}
+      {{TEXTUREANIM_ON}}
+      <!-- Time is 0.0 to 1.0 (wraps) for each second -->
+      <uniform name="t" semantic="Time" />
+      {{/TEXTUREANIM_ON}}
       {{SAMPLER_UNIFORMS}}
     </shader>
 

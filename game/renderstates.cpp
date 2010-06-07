@@ -15,6 +15,7 @@ RenderStates::RenderStates()
     mWorldInverseMatrixBinder(new ReferenceBinder<Matrix4>(mWorldInverseMatrix)),
     mViewInverseMatrixBinder(new ReferenceBinder<Matrix4>(mViewInverseMatrix)),
     mWorldViewInverseMatrixBinder(new ReferenceBinder<Matrix4>(mWorldViewInverseMatrix)),
+    mTextureAnimationTimeBinder(new ReferenceBinder<float>(mTextureAnimationTime)),
     mScreenViewport(0, 0, 0, 0)
 {
     mWorldMatrix.setToIdentity();
@@ -24,6 +25,7 @@ RenderStates::RenderStates()
     mViewProjectionMatrix.setToIdentity();
     mWorldViewMatrix.setToIdentity();
     mWorldViewProjectionMatrix.setToIdentity();
+    mTextureAnimationTime = 0;
 }
 
 RenderStates::~RenderStates()
@@ -61,6 +63,8 @@ const UniformBinder *RenderStates::getStateBinder(const QString &semantic) const
        return mViewInverseMatrixBinder.data();
    } else if (semantic == "ViewProjection") {
        return mViewProjectionMatrixBinder.data();
+   } else if (semantic == "Time") {
+       return mTextureAnimationTimeBinder.data();
    } else {
        return NULL;
    }

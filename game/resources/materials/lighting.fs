@@ -38,3 +38,8 @@ vec4 lighting(float shininess)
 
 	return color;
 }
+
+vec4 lightingGlossmap(float shininess, sampler2D glossmapSampler, vec2 texCoords)
+{
+    return lighting(shininess);
+}

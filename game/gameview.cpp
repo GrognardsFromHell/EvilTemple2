@@ -183,7 +183,7 @@ namespace EvilTemple {
 
             const float zoom = 1.25f;
 
-            Matrix4 projectionMatrix = Matrix4::ortho(-halfWidth / zoom, halfWidth / zoom, -halfHeight / zoom, halfHeight / zoom, 1, 3628);
+            Matrix4 projectionMatrix = Matrix4::ortho(-halfWidth / zoom, halfWidth / zoom, -halfHeight / zoom, halfHeight / zoom, 1, 5000);
             renderStates.setProjectionMatrix(projectionMatrix);
         }
 
@@ -242,6 +242,12 @@ namespace EvilTemple {
         } else {
             qint64 elapsedMs = d->sceneTimer.restart();
             double elapsedSeconds = elapsedMs / 1000.0;
+
+            float texAnimTime = d->renderStates.textureAnimationTime() + elapsedSeconds;
+            while (texAnimTime > 60)
+                texAnimTime -= 60;
+
+            d->renderStates.setTextureAnimationTime(texAnimTime);
 
             Profiler::enter(Profiler::SceneElapseTime);
             d->scene.elapseTime(elapsedSeconds);

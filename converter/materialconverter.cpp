@@ -20,7 +20,7 @@ private:
     QStringList shadowCasterExclusions;
 
 public:
-	bool external;
+    bool external;
 
     MaterialConverterData(VirtualFileSystem *vfs) : mVfs(vfs) {
         QFile materialTemplateFile(":/material_template.xml");
@@ -72,6 +72,9 @@ public:
     {
         Q_ASSERT(!mMaterialTemplate.isNull());
 
+        bool textureAnimation = false;
+        bool sphereMap = false;
+        bool useNormals = false;
         QString materialFile = mMaterialTemplate;
 
         QString textureDefs = "";
@@ -90,26 +93,73 @@ public:
 
         pixelTerm.append("gl_FragColor = materialColor;\n");
 
+        int samplersUsed = 0;
+
         for (int i = 0; i < LegacyTextureStages; ++i) {
             const TextureStageInfo *textureStage = material->getTextureStage(i);
 
             if (textureStage->filename.isEmpty())
                 continue;
 
-            QString samplerName = QString("texSampler%1").arg(i);
+            QString samplerName = QString("texSampler%1").arg(samplersUsed);
 
-			int textureId = getTexture(textureStage->filename); // This forces the texture to be loaded -> ok
-			
+            int textureId = getTexture(textureStage->filename); // This forces the texture to be loaded -> ok
+
             samplers.append(QString("uniform sampler2D %1;\n").arg(samplerName));
-			if (external) {
-				textureDefs.append(QString("<textureSampler texture=\"%1\"/>\n").arg(getNewTextureFilename(textureStage->filename)));
-			} else {				
-				textureDefs.append(QString("<textureSampler texture=\"#%1\"/>\n").arg(textureId));
-			}
+            if (external) {
+                textureDefs.append(QString("<textureSampler texture=\"%1\"/>\n").arg(getNewTextureFilename(textureStage->filename)));
+            } else {
+                textureDefs.append(QString("<textureSampler texture=\"#%1\"/>\n").arg(textureId));
+            }
 
-            samplerUniforms.append(QString("<uniform name=\"%1\" semantic=\"Texture%2\" />").arg(samplerName).arg(i));
+            samplerUniforms.append(QString("<uniform name=\"%1\" semantic=\"Texture%2\" />").arg(samplerName).arg(samplersUsed));
 
-            pixelTerm.append(QString("texel = texture2D(%1, texCoord);\n").arg(samplerName));
+            ++samplersUsed;
+
+            /*
+             The texel on the texture of this texture stage may be retrieved from texture coordinates that
+             are transformed (animated) first.
+             */
+            switch (textureStage->transformType) {
+            case TextureStageInfo::None:
+                pixelTerm.append(QString("texel = texture2D(%1, texCoord);\n").arg(samplerName));
+                break;
+            case TextureStageInfo::Drift:
+                textureAnimation = true;
+                if (textureStage->speedu > 0 && textureStage->speedv > 0) {
+                    pixelTerm.append(QString("texel = texture2D(%1, textureDriftUV(texCoord, t, %2, %3));\n").arg(samplerName).arg(textureStage->speedu).arg(textureStage->speedv));
+                } else if (textureStage->speedu > 0) {
+                    pixelTerm.append(QString("texel = texture2D(%1, textureDriftU(texCoord, t, %2));\n").arg(samplerName).arg(textureStage->speedu));
+                } else {
+                    pixelTerm.append(QString("texel = texture2D(%1, textureDriftV(texCoord, t, %2));\n").arg(samplerName).arg(textureStage->speedv));
+                }
+                break;
+            case TextureStageInfo::Swirl:
+                /*
+                 Since swirl rotates, there is not much sense to use two different speed settings.
+                 */
+                textureAnimation = true;
+                Q_ASSERT(textureStage->speedu == textureStage->speedv);
+                pixelTerm.append(QString("texel = texture2D(%1, textureSwirl(texCoord, t, %2));\n").arg(samplerName).arg(textureStage->speedu));
+                break;
+            case TextureStageInfo::Wavey:
+                textureAnimation = true;
+                if (textureStage->speedu > 0 && textureStage->speedv > 0) {
+                    pixelTerm.append(QString("texel = texture2D(%1, textureWaveyUV(texCoord, t, %2, %3));\n").arg(samplerName).arg(textureStage->speedu).arg(textureStage->speedv));
+                } else if (textureStage->speedu > 0) {
+                    pixelTerm.append(QString("texel = texture2D(%1, textureWaveyU(texCoord, t, %2));\n").arg(samplerName).arg(textureStage->speedu));
+                } else {
+                    pixelTerm.append(QString("texel = texture2D(%1, textureWaveyV(texCoord, t, %2));\n").arg(samplerName).arg(textureStage->speedv));
+                }
+                break;
+            case TextureStageInfo::Environment:
+                sphereMap = true;
+                useNormals = true;
+                pixelTerm.append(QString("texel = texture2D(%1, textureSphereMap(texCoord, fragNormal));\n").arg(samplerName));
+                break;
+            default:
+                qFatal("Invalid setting for texture stage transform: %d.", textureStage->transformType);
+            }
 
             switch (textureStage->blendType) {
             case TextureStageInfo::Modulate:
@@ -136,9 +186,56 @@ public:
             lightingBlocks.setMinimal(true);
             materialFile.replace(lightingBlocks, "");
         } else {
+
+            if (material->glossmap().isNull()) {
+                materialFile.replace("{{LIGHTING_TERM}}", "lighting(shininess)");
+            } else {
+
+                int textureId = getTexture(material->glossmap()); // This forces the texture to be loaded -> ok
+
+                samplers.append("uniform sampler2D texSamplerGlossmap;\n");
+                if (external) {
+                    textureDefs.append(QString("<textureSampler texture=\"%1\"/>\n").arg(getNewTextureFilename(material->glossmap())));
+                } else {
+                    textureDefs.append(QString("<textureSampler texture=\"#%1\"/>\n").arg(textureId));
+                }
+
+                samplerUniforms.append(QString("<uniform name=\"texSamplerGlossmap\" semantic=\"Texture%2\" />").arg(samplersUsed++));
+
+                materialFile.replace("{{LIGHTING_TERM}}", "lightingGlossmap(shininess, texSamplerGlossmap, texCoord)");
+            }
+
+            useNormals = true;
             materialFile.replace("{{LIGHTING_ON}}", "");
             materialFile.replace("{{/LIGHTING_ON}}", "");
             pixelTerm.append("gl_FragColor = gl_FragColor * Idiff;\n");
+        }
+
+        if (!textureAnimation) {
+            QRegExp blocks("\\{\\{TEXTUREANIM_ON\\}\\}.+\\{\\{\\/TEXTUREANIM_ON\\}\\}");
+            blocks.setMinimal(true);
+            materialFile.replace(blocks, "");
+        } else {
+            materialFile.replace("{{TEXTUREANIM_ON}}", "");
+            materialFile.replace("{{/TEXTUREANIM_ON}}", "");
+        }
+
+        if (!useNormals) {
+            QRegExp blocks("\\{\\{NORMALS_ON\\}\\}.+\\{\\{\\/NORMALS_ON\\}\\}");
+            blocks.setMinimal(true);
+            materialFile.replace(blocks, "");
+        } else {
+            materialFile.replace("{{NORMALS_ON}}", "");
+            materialFile.replace("{{/NORMALS_ON}}", "");
+        }
+
+        if (!sphereMap) {
+            QRegExp blocks("\\{\\{SPHEREMAP_ON\\}\\}.+\\{\\{\\/SPHEREMAP_ON\\}\\}");
+            blocks.setMinimal(true);
+            materialFile.replace(blocks, "");
+        } else {
+            materialFile.replace("{{SPHEREMAP_ON}}", "");
+            materialFile.replace("{{/SPHEREMAP_ON}}", "");
         }
 
         QColor color = material->getColor();
@@ -151,6 +248,7 @@ public:
         materialFile.replace("{{BLEND}}", material->isAlphaBlendingDisabled() ? "false" : "true");
         materialFile.replace("{{DEPTH_WRITE}}", material->isDepthWriteDisabled() ? "false" : "true");
         materialFile.replace("{{DEPTH_TEST}}", material->isDepthTestDisabled() ? "false" : "true");
+        materialFile.replace("{{SPECULAR_POWER}}", QString("%1").arg(material->specularPower()));
 
         QString blendFactor;
         switch (material->getSourceBlendFactor()) {
@@ -197,7 +295,7 @@ public:
         } else {
             QByteArray texture = mVfs->openFile(filename);
             int textureId = textures.size();
-			textures.insert(key, texture);
+            textures.insert(key, texture);
 
             textureList.append(HashedData(texture));
 
@@ -245,7 +343,7 @@ const QMap<QString,HashedData> &MaterialConverter::materialScripts()
 
 void MaterialConverter::setExternal(bool external)
 {
-	d_ptr->external = external;
+    d_ptr->external = external;
 }
 
 QList<HashedData> MaterialConverter::textureList()
