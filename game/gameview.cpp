@@ -21,6 +21,7 @@
 #include "boxrenderable.h"
 #include "profiler.h"
 #include "materials.h"
+#include "translations.h"
 
 #include <gamemath.h>
 using namespace GameMath;
@@ -61,6 +62,10 @@ namespace EvilTemple {
 
             if (!particleSystems.loadTemplates()) {
                 qWarning("Unable to load particle system templates: %s.", qPrintable(particleSystems.error()));
+            }
+
+            if (!translations.load("translation.dat")) {
+                qFatal("Unable to load translations.");
             }
 
             // Old: -44
@@ -154,6 +159,8 @@ namespace EvilTemple {
         QGraphicsScene uiScene;
         QDeclarativeItem* rootItem;
 
+        QSize viewportSize;
+
         RenderStates renderStates;
 
         Materials materials;
@@ -173,6 +180,8 @@ namespace EvilTemple {
 
         ParticleSystems particleSystems;
 
+        Translations translations;
+
         QElapsedTimer sceneTimer;
         Scene scene;
 
@@ -180,6 +189,9 @@ namespace EvilTemple {
             float halfWidth = width * 0.5f;
             float halfHeight = height * 0.5f;
             glViewport(0, 0, width, height);
+
+            viewportSize.setWidth(width);
+            viewportSize.setHeight(height);
 
             const float zoom = 1.25f;
 
@@ -214,6 +226,9 @@ namespace EvilTemple {
         d->uiEngine.setBaseUrl(baseUrl);
 
         d->uiScene.setStickyFocus(true);
+
+        d->uiEngine.rootContext()->setContextProperty("gameView", this);
+        d->uiEngine.rootContext()->setContextProperty("translations", &d->translations);
 
         setMouseTracking(true);
     }
@@ -342,8 +357,13 @@ namespace EvilTemple {
     {
         QGraphicsView::resizeEvent(event);
 
+        if (event->size() == d->viewportSize)
+            return;
+
         // Update projection matrix
-        d->resize(event->size().width(), event->size().height());        
+        d->resize(event->size().width(), event->size().height());
+
+        emit viewportChanged();
     }
 
     void GameView::mouseMoveEvent(QMouseEvent *evt)
@@ -479,6 +499,16 @@ namespace EvilTemple {
         d->modelCache[filename] = model;
 
         return model;
+    }
+
+    const QSize &GameView::viewportSize() const
+    {
+        return d->viewportSize;
+    }
+
+    Translations *GameView::translations() const
+    {
+        return &d->translations;
     }
 
 }

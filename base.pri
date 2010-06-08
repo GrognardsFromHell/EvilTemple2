@@ -116,3 +116,6 @@ contains(TEMPLE_LIBS,openal) {
         LIBS += -lopenal -lalut
     }
 }
+
+OTHER_FILES += \
+    ../../MoneyDisplay.qml

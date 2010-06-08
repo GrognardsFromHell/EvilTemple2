@@ -24,4 +24,7 @@
         <file alias="Fontin-Regular.ttf">resources/fonts/Fontin-Regular.ttf</file>
         <file alias="Fontin-SmallCaps.ttf">resources/fonts/Fontin-SmallCaps.ttf</file>
     </qresource>
+    <qresource prefix="/images">
+        <file>application.ico</file>
+    </qresource>
 </RCC>

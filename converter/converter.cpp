@@ -210,6 +210,9 @@ public:
 
         // Convert all maps
         foreach (quint32 mapId, zoneTemplates->mapIds()) {
+            if (cancel)
+                return false;
+
             ++workDone;
 
             if (exclusions.isExcluded(QString("%1").arg(mapId)))
@@ -1099,6 +1102,9 @@ public:
         int workDone = 0;
 
         foreach (const QString &meshFilename, meshReferences.keys()) {
+            if (cancel)
+                return;
+
             if (exclusions.isExcluded(meshFilename)) {
                 qWarning("Skipping %s, since it's excluded.", qPrintable(meshFilename));
                 workDone++;
@@ -1460,6 +1466,35 @@ public:
         writer.close();
     }
 
+    void convertTranslations()
+    {
+        ZipWriter writer(mOutputPath + "translations.zip");
+
+        QByteArray result;
+        QDataStream stream(&result, QIODevice::WriteOnly);
+        stream.setByteOrder(QDataStream::LittleEndian);
+        stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
+
+        QStringList mesFiles = vfs->listAllFiles("*.mes");
+
+        foreach (const QString &mesFile, mesFiles) {
+            QString mesKey = QDir::toNativeSeparators(mesFile).replace(QDir::separator(), "/");
+            mesKey.replace(QRegExp("\\.mes$"), "").toLower();
+
+            if (!mesKey.startsWith("mes/")) {
+                continue;
+            }
+
+            QHash<uint,QString> entries = MessageFile::parse(vfs->openFile(mesFile));
+
+            foreach (uint key, entries.keys()) {
+                stream << QString("%1/%2").arg(mesKey).arg(key) << entries[key];
+            }
+        }
+
+        writer.addFile("translation.dat", result, 9);
+    }
+
     void convertPrototypes(ZipWriter *writer, QScriptEngine *engine)
     {
         PrototypeConverter converter(vfs.data());
@@ -1474,7 +1509,8 @@ public:
         postprocess.call(QScriptValue(), args);
 
         if (engine->hasUncaughtException()) {
-            qFatal("JS Error: %s", qPrintable(engine->uncaughtException().toString()));
+            qWarning("JS Error: %s", qPrintable(engine->uncaughtException().toString()));
+            return;
         }
     }
 
@@ -1505,6 +1541,11 @@ public:
         emit converter->progressUpdate(sectionsDone, totalWorkSections, "Converting scripts");
 
         convertScripts();
+
+        if (cancel)
+            return false;
+
+        convertTranslations();
 
         if (cancel)
             return false;

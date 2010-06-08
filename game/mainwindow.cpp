@@ -65,6 +65,8 @@ namespace EvilTemple {
         d_ptr(new MainWindowData(game))
     {
 
+        setWindowIcon(QIcon(":/images/application.ico"));
+
         loadFont(":/fonts/5inq_-_Handserif.ttf");
         loadFont(":/fonts/ArtNoveauDecadente.ttf");
         loadFont(":/fonts/Fontin-Bold.ttf");
@@ -95,6 +97,7 @@ namespace EvilTemple {
 
         QScriptEngine *engine = game.scriptEngine()->engine();
         engine->globalObject().setProperty("gameView", engine->newQObject(d_ptr->gameView));
+        engine->globalObject().setProperty("translations", engine->newQObject(d_ptr->gameView->translations()));
 
         // Ensure constant updates
         QTimer *animTimer = new QTimer(this);

@@ -1,22 +1,10 @@
 import Qt 4.7
 
-Item {
+MovableWindow {
     width: 400
     height: 480
-
-    Rectangle {
-        id: background
-        opacity: 0.5
-        anchors.fill: parent
-        color: "#b7b7b7"
-        radius: 4
-        clip: false
-        border.width: 4
-    }
-
-    property string title : 'Title';
-
-    signal closeClicked;
+    x: (gameView.viewportSize.width - width) / 2
+    y: (gameView.viewportSize.height - height) / 2
 
     ListModel {
         id: listModel
@@ -39,26 +27,32 @@ Item {
     }
 
     ListView {
-        id: listview
-        x: 4
-        y: 41
-        width: 392
-        height: 435
+        anchors.fill: parent
+        anchors.margins: 6
+        anchors.topMargin: 45
         model: listModel
         delegate: itemDelegate
         clip: true
     }
 
-    Text {
-        id: header
-        x: 4
-        y: 4
-        width: 358
-        height: 30
-        text: title
-        font.bold: true
-        font.pointSize: 20
-        font.family: "Handserif"
+    Image {
+        id: portrait
+        width: 64
+        height: 64
+        anchors.right: parent.left
+        anchors.top: parent.top
+        visible: false
+        smooth: true
+    }
+
+    function setPortrait(filename) {
+        if (filename == null) {
+            portrait.visible = false;
+            portrait.visible = false;
+        } else {
+            portrait.source = '../' + filename;
+            portrait.visible = true;
+        }
     }
 
     function setItems(items) {
@@ -71,20 +65,6 @@ Item {
                 value: item[1]
             });
         }
-    }
-
-    MouseArea {
-        x: 364
-        y: 4
-        width: 32
-        height: 30
-
-        Image {
-            anchors.fill: parent
-            source: "../art/interface/cursors/Sword_INVALID.png"
-        }
-
-        onClicked: closeClicked()
     }
 
 }

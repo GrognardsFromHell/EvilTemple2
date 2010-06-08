@@ -6,6 +6,7 @@
 
 #include "clippinggeometry.h"
 #include "modelfile.h"
+#include "translations.h"
 
 namespace EvilTemple {
 
@@ -29,6 +30,8 @@ class GameView : public QGraphicsView
     Q_PROPERTY(int scrollBoxMinY READ scrollBoxMinY WRITE setScrollBoxMinY)
     Q_PROPERTY(int scrollBoxMaxX READ scrollBoxMaxX WRITE setScrollBoxMaxX)
     Q_PROPERTY(int scrollBoxMaxY READ scrollBoxMaxY WRITE setScrollBoxMaxY)
+
+    Q_PROPERTY(QSize viewportSize READ viewportSize NOTIFY viewportChanged)
 public:
     explicit GameView(QWidget *parent = 0);
     ~GameView();
@@ -73,7 +76,13 @@ public:
         mScrollBoxMaxY = value;
     }
 
+    const QSize &viewportSize() const;
+
+    Translations *translations() const;
+
 signals:
+
+    void viewportChanged();
 
 public slots:
 

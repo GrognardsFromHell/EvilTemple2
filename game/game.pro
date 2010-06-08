@@ -46,7 +46,8 @@ SOURCES += \
     profiler.cpp \
     profilerdialog.cpp \
     scriptables.cpp \
-    materials.cpp
+    materials.cpp \
+    translations.cpp
 HEADERS += \
     mainwindow.h \
     game.h \
@@ -80,7 +81,8 @@ HEADERS += \
     profiler.h \
     profilerdialog.h \
     scriptables.h \
-    materials.h
+    materials.h \
+    translations.h
 OTHER_FILES += \
     resources/schema/materialfile.xsd \
     resources/materials/map_material.xml \

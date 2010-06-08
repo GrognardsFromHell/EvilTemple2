@@ -10,7 +10,9 @@ OTHER_FILES += interface/MainMenu.qml \
     copyQml.bat \
     interface/MobileInfo.qml \
     interface/LoadMap.qml \
-    interface/MovableWindow.qml
+    interface/MovableWindow.qml \
+    interface/Inventory.qml \
+    interface/MoneyDisplay.qml
 
 copyQml.target = copyQml
 win32:copyQml.commands = copyQml.bat

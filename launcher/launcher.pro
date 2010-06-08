@@ -17,5 +17,10 @@ CONFIG(debug, debug|release) {
 
 CONFIG += console
 
+win32:RC_FILE = icon.rc
 
 include(../base.pri)
+
+OTHER_FILES += \
+    icon.rc \
+    application.ico
