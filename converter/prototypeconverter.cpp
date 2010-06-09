@@ -56,6 +56,69 @@ QVariantMap PrototypeConverter::convertPrototype(Prototype *prototype)
     writer.write("radius", prototype->radius);
     writer.write("height", prototype->renderHeight);
 
+    ScriptProperties *scriptProps = qobject_cast<ScriptProperties*>(prototype->additionalProperties);
+
+    if (scriptProps) {
+        foreach (const ScriptAttachment &script, scriptProps->scripts) {
+            QVariantMap scriptMap;
+            scriptMap["script"] = script.scriptId;
+            if (script.parameter.isDefined())
+                scriptMap["param"] = script.parameter.value();
+
+            writer.write(script.event, scriptMap);
+        }
+    }
+
+    EntityProperties *entityProps = qobject_cast<EntityProperties*>(prototype->additionalProperties);
+
+    if (entityProps) {
+        QVariantList additionalProps;
+        foreach (const AdditionalProperty &property, entityProps->properties) {
+            QVariantMap additionalMap;
+            additionalMap["type"] = property.type;
+            if (!property.param1.isEmpty())
+                additionalMap["param1"] = property.param1;
+            if (!property.param2.isEmpty())
+                additionalMap["param2"] = property.param2;
+            additionalProps << additionalMap;
+        }
+        writer.write("properties", additionalProps);
+
+        QVariantList spells;
+        foreach (const KnownSpell &spell, entityProps->spells) {
+            QVariantMap spellMap;
+            spellMap["name"] = spell.name;
+            spellMap["level"] = spell.level;
+            spellMap["source"] = spell.source;
+            spells << spellMap;
+        }
+        writer.write("spells", spells);
+    }
+
+    PortalProperties *portalProps = qobject_cast<PortalProperties*>(prototype->additionalProperties);
+
+    if (portalProps) {
+        writer.write("portalFlags", portalProps->flags);
+        writer.write("lockDc", portalProps->lockDc);
+        writer.write("keyId", portalProps->keyId);
+        writer.write("notifyNpc", portalProps->notifyNpc);
+    }
+
+    ContainerProperties *containerProps = qobject_cast<ContainerProperties*>(prototype->additionalProperties);
+
+    if (containerProps) {
+        writer.write("locked", containerProps->locked);
+        writer.write("lockDc", containerProps->lockDc);
+        writer.write("keyId", containerProps->keyId);
+        writer.write("inventorySource", containerProps->inventorySource);
+    }
+
+    SceneryProperties *sceneryProps = qobject_cast<SceneryProperties*>(prototype->additionalProperties);
+
+    if (sceneryProps) {
+        writer.write("sceneryFlags", sceneryProps->flags);
+    }
+
     ItemProperties *itemProps = qobject_cast<ItemProperties*>(prototype->additionalProperties);
 
     if (itemProps) {
@@ -69,6 +132,66 @@ QVariantMap PrototypeConverter::convertPrototype(Prototype *prototype)
         writer.write("wearFlags", itemProps->wearFlags);
         writer.write("wearMeshId", itemProps->wearMeshId);
     }
+
+    WeaponProperties *weaponProps = qobject_cast<WeaponProperties*>(prototype->additionalProperties);
+
+    if (weaponProps) {
+        writer.write("weaponFlags", weaponProps->flags);
+        writer.write("range", weaponProps->range);
+        writer.write("ammoType", weaponProps->ammoType);
+        writer.write("missileAnimationId", weaponProps->missileAnimationId);
+        writer.write("criticalMultiplier", weaponProps->criticalHitMultiplier);
+        writer.write("damageType", weaponProps->damageType);
+        writer.write("damageDice", weaponProps->damageDice);
+        writer.write("weaponClass", weaponProps->weaponClass);
+        writer.write("threatRange", weaponProps->threatRange);
+    }
+
+    AmmoProperties *ammoProps = qobject_cast<AmmoProperties*>(prototype->additionalProperties);
+
+    if (ammoProps) {
+        writer.write("quantity", ammoProps->quantity);
+        writer.write("ammoType", ammoProps->type);
+    }
+
+    ArmorProperties *armorProps = qobject_cast<ArmorProperties*>(prototype->additionalProperties);
+
+    if (armorProps) {
+        writer.write("maxDexterityBonus", armorProps->maxDexterityBonus);
+        writer.write("arcaneSpellFailure", armorProps->arcaneSpellFailure);
+        writer.write("skillCheckPenalty", armorProps->skillCheckPenalty);
+        writer.write("armorType", armorProps->armorType);
+        writer.write("helmType", armorProps->helmetType);
+    }
+
+    MoneyProperties *moneyProps = qobject_cast<MoneyProperties*>(prototype->additionalProperties);
+
+    if (moneyProps) {
+        writer.write("quantity", moneyProps->quantity);
+        writer.write("moneyType", moneyProps->type);
+    }
+
+    KeyProperties *keyProps = qobject_cast<KeyProperties*>(prototype->additionalProperties);
+
+    if (keyProps) {
+        writer.write("keyId", keyProps->keyId);
+    }
+
+    WrittenProperties *writtenProps = qobject_cast<WrittenProperties*>(prototype->additionalProperties);
+
+    if (writtenProps) {
+        writer.write("subtype", writtenProps->subtype);
+        writer.write("startLine", writtenProps->startLine);
+    }
+
+    BagProperties *bagProperties = qobject_cast<BagProperties*>(prototype->additionalProperties);
+
+    if (bagProperties) {
+        writer.write("bagFlags", bagProperties->flags);
+        writer.write("bagSize", bagProperties->size);
+    }
+
+
 
     CritterProperties *critterProps = qobject_cast<CritterProperties*>(prototype->additionalProperties);
 
@@ -95,13 +218,45 @@ QVariantMap PrototypeConverter::convertPrototype(Prototype *prototype)
         writer.write("hairColor", critterProps->hairColor);
         writer.write("hairType", critterProps->hairType);
 
-        // TODO:
-        // QList<NaturalAttack> naturalAttacks; // at most 4 different ones
-        // QList<ClassLevel> classLevels;
-        // QList<SkillLevel> skills;
-        // QStringList feats;
-        // QString levelUpScheme; // Defines auto-leveling stuff (which feats to take, etc.)
-        // String strategy; // Which AI is used in auto fighting situations
+        QVariantList naturalAttacks;
+
+        foreach (const NaturalAttack &attack, critterProps->naturalAttacks) {
+            QVariantMap attackMap;
+            attackMap["count"] = attack.numberOfAttacks;
+            attackMap["type"] = attack.type;
+            attackMap["attackBonus"] = attack.attackBonus;
+            attackMap["damageDice"] = attack.damageDice;
+            naturalAttacks << attackMap;
+        }
+
+        writer.write("naturalAttacks", naturalAttacks);
+
+        QVariantList classLevels;
+
+        foreach (const ClassLevel &classLevel, critterProps->classLevels) {
+            QVariantMap classLevelMap;
+            classLevelMap["class"] = classLevel.name;
+            classLevelMap["count"] = classLevel.count;
+            classLevels << classLevelMap;
+        }
+
+        writer.write("classLevels", classLevels);
+
+        QVariantMap skillRanks;
+
+        foreach (const SkillLevel &skillLevel, critterProps->skills) {
+            if (skillRanks.contains(skillLevel.name))
+                skillRanks[skillLevel.name] = skillRanks[skillLevel.name].toInt() + skillLevel.count;
+            else
+                skillRanks[skillLevel.name] = skillLevel.count;
+        }
+
+        if (!skillRanks.isEmpty())
+            writer.write("skills", skillRanks);
+
+        writer.write("feats", critterProps->feats);
+        writer.write("levelUpScheme", critterProps->levelUpScheme);
+        writer.write("strategy", critterProps->strategy);
     }
 
     NonPlayerCharacterProperties *npcProps = qobject_cast<NonPlayerCharacterProperties*>

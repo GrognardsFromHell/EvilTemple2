@@ -6,7 +6,6 @@ CONFIG += ordered
 SUBDIRS += 3rdparty
 SUBDIRS += troikaformats
 SUBDIRS += converter
-SUBDIRS += interface
 SUBDIRS += audioengine
 SUBDIRS += audioenginetests
 SUBDIRS += binkplayer

@@ -293,43 +293,6 @@ namespace EvilTemple {
                 }
 
                 attachments = reinterpret_cast<BoneAttachment*>(boneAttachmentData.data() + 16);
-
-                // Transform all vertices according to the default pose matrix
-                for (int j = 0; j < vertices; ++j) {
-                    if (attachments[j].count() == 0) {
-                        qWarning("WARNING: Vertex without *any* attachments found. SUM(Weights) = 1.0 failed.");
-                        continue;
-                    }
-
-                    Vector4 result(0, 0, 0, 0);
-                    Vector4 resultNormal(0, 0, 0, 0);
-
-                    for (int k = 0; k < attachments[j].count(); ++k) {
-                        float weight = attachments[j].weights()[k];
-                        const Bone &bone = mBones[attachments[j].bones()[k]];
-
-                        Vector4 transformedPos = bone.defaultTransform() * positions[j];
-                        transformedPos *= 1 / transformedPos.w();
-
-                        result += weight * transformedPos;
-                        resultNormal += weight * (bone.defaultTransform() * normals[j]);
-                    }
-
-                    result.data()[2] *= -1;
-                    resultNormal.data()[2] *= -1;
-
-                    result.data()[3] =  1;
-
-                    //const_cast<Vector4&>(positions[j]) = result;
-                    //const_cast<Vector4&>(normals[j]) = resultNormal;
-                }
-
-                glBindBufferARB(GL_ARRAY_BUFFER_ARB, positionBuffer);
-                glBufferDataARB(GL_ARRAY_BUFFER_ARB, sizeof(Vector4) * vertices, positions, GL_STATIC_DRAW_ARB);
-
-                glBindBufferARB(GL_ARRAY_BUFFER_ARB, normalBuffer);
-                glBufferDataARB(GL_ARRAY_BUFFER_ARB, sizeof(Vector4) * vertices, normals, GL_STATIC_DRAW_ARB);
-
             } else if (chunkHeader.type == Chunk_Animations) {
                 QDataStream stream(QByteArray::fromRawData(chunkData.data(), chunkHeader.size));
                 stream.setByteOrder(QDataStream::LittleEndian);

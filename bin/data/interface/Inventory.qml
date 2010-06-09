@@ -19,6 +19,7 @@ MovableWindow {
                     font.family: 'Fontin'
                     font.pointSize: 12
                     font.weight: Font.Bold
+                    color: magical ? '#01356e' : '#ffffff'
                 }
                 Row {
                     spacing: 5
@@ -26,6 +27,7 @@ MovableWindow {
                         text: "<i>Quantity:</i> " + quantity
                         font.family: 'Fontin'
                         font.pointSize: 12
+                        visible: quantity > 1
                     }
                     Text {
                         text: "<i>Location:</i> " + location

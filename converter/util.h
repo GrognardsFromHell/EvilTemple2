@@ -112,6 +112,12 @@ public:
             mMap[name] = QVariant(value.value());
     }
 
+    void write(const QString &name, const QVariantList &list) {
+        if (list.isEmpty())
+            return;
+        mMap[name] = list;
+    }
+
     void write(const QString &name, const QStringList &flagList) {
         if (flagList.isEmpty())
             return;

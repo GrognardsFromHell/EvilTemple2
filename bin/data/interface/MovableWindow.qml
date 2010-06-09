@@ -20,10 +20,16 @@ MouseArea {
         id: background
         opacity: 0.5
         anchors.fill: parent
-        color: "#FFFFFF"
+        color: "#333333"
         radius: 4
-        clip: false
+        clip: true
         border.width: 4
+        Image {
+            anchors.margins: 4
+            anchors.fill: parent
+            source: 'CharScreen.jpg'
+            fillMode: 'Stretch'
+        }
     }
 
     Text {
@@ -33,7 +39,7 @@ MouseArea {
         width: 358
         height: 30
         text: title
-        anchors.right: mousearea1.left
+        anchors.right: closeButton.left
         anchors.rightMargin: 6
         anchors.left: parent.left
         anchors.leftMargin: 6
@@ -42,36 +48,30 @@ MouseArea {
         font.bold: true
         font.pointSize: 20
         font.family: "Handserif"
-    }
-
-    MouseArea {
-        id: mousearea1
-        anchors.right: parent.right
-        width: 32
-        height: 30
-        anchors.rightMargin: 6
-        anchors.top: parent.top
-        anchors.topMargin: 6
-
-        Image {
-            anchors.bottomMargin: 0
-            anchors.leftMargin: 0
-            anchors.fill: parent
-            anchors.rightMargin: 0
-            anchors.topMargin: 0
-            source: "../art/interface/cursors/Sword_INVALID.png"
-        }
-
-        onClicked: closeClicked()
+        color: '#FFFFFF'
     }
 
     Item {
         id: viewport
+        anchors.margins: 6
         anchors.top: header.bottom
         anchors.left: parent.left
-        anchors.margins: 6
         anchors.right: parent.right
         anchors.bottom: parent.bottom
+    }
+
+    Button {
+        id: closeButton
+        anchors.margins: 6
+        anchors.right: parent.right
+        anchors.top: parent.top
+        normalImage: 'interface/Close_Up.png'
+        hoverImage: 'interface/Close_Hover.png'
+        pressedImage: 'interface/Close_Pressed.png'
+        text: ''
+        onClicked: {
+            closeClicked();
+        }
     }
 
 }

@@ -717,6 +717,7 @@ namespace Troika
                 naturalAttack.type = parts[i+2];
                 naturalAttack.attackBonus = parts[i+3].toInt(&ok);
                 Q_ASSERT(ok);
+                naturalAttacks.append(naturalAttack);
             }
         }
 
@@ -731,6 +732,7 @@ namespace Troika
             ClassLevel level;
             level.name = parts[i];
             level.count = parts[i+1].toUInt(&ok);
+            classLevels.append(level);
 
             Q_ASSERT_X(ok && level.count >= 1, "CritterProperties::parse", qPrintable(parts[i+1]));
         }
@@ -743,6 +745,7 @@ namespace Troika
             SkillLevel level;
             level.name = parts[i];
             level.count = parts[i+1].toInt(&ok);
+            skills.append(level);
 
             Q_ASSERT_X(ok, "CritterProperties::parse", qPrintable(parts[i+1]));
         }

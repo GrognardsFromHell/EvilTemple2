@@ -1481,7 +1481,7 @@ public:
             QString mesKey = QDir::toNativeSeparators(mesFile).replace(QDir::separator(), "/");
             mesKey.replace(QRegExp("\\.mes$"), "").toLower();
 
-            if (!mesKey.startsWith("mes/")) {
+            if (!mesKey.startsWith("mes/") && !mesKey.startsWith("oemes/")) {
                 continue;
             }
 

@@ -12,7 +12,9 @@ OTHER_FILES += interface/MainMenu.qml \
     interface/LoadMap.qml \
     interface/MovableWindow.qml \
     interface/Inventory.qml \
-    interface/MoneyDisplay.qml
+    interface/MoneyDisplay.qml \
+    interface/Button.qml \
+    interface/ButtonBackdrop.png
 
 copyQml.target = copyQml
 win32:copyQml.commands = copyQml.bat

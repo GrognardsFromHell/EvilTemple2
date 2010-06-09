@@ -6,6 +6,11 @@ MovableWindow {
     x: (gameView.viewportSize.width - width) / 2
     y: (gameView.viewportSize.height - height) / 2
 
+    property bool hasInventory : false;
+
+    signal openInventory;
+    signal openCharSheet;
+
     ListModel {
         id: listModel
         ListElement {
@@ -23,11 +28,15 @@ MovableWindow {
            font.pointSize: 12
            font.family: "Fontin"
            wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+           color: '#FFFFFF'
         }
     }
 
     ListView {
-        anchors.fill: parent
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: buttonRow.top
         anchors.margins: 6
         anchors.topMargin: 45
         model: listModel
@@ -43,6 +52,42 @@ MovableWindow {
         anchors.top: parent.top
         visible: false
         smooth: true
+    }
+
+    Row {
+        id: buttonRow
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.margins: 6
+        spacing: 6
+
+        Image {
+            source: 'ButtonBackdrop.png'
+            width: inventoryButton.width + 8
+            height: inventoryButton.height + 8
+            Button {
+                id: inventoryButton
+                enabled: hasInventory
+                x: 4
+                y: 4
+                text: 'Inventory'
+                onClicked: openInventory()
+            }
+        }
+
+        Image {
+            source: 'ButtonBackdrop.png'
+            width: charSheetButton.width + 8
+            height: charSheetButton.height + 8
+            Button {
+                id: charSheetButton
+                x: 4
+                y: 4
+                text: 'Char Sheet'
+                onClicked: openCharSheet()
+            }
+        }
     }
 
     function setPortrait(filename) {

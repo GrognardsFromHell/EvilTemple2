@@ -1,4 +1,3 @@
-bin
 debug
 release
 *.vcxproj.filters
