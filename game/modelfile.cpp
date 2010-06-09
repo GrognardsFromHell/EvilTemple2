@@ -32,6 +32,12 @@ namespace EvilTemple {
 
     Model::~Model()
     {
+        if (positionBuffer)
+            glDeleteBuffers(1, &positionBuffer);
+        if (normalBuffer)
+            glDeleteBuffers(1, &normalBuffer);
+        if (texcoordBuffer)
+            glDeleteBuffers(1, &texcoordBuffer);
     }
 
     struct ModelHeader
@@ -267,8 +273,7 @@ namespace EvilTemple {
                     QByteArray boneName;
                     int parentId;
 
-                    stream >> boneName >> parentId >> bone.mFullWorldInverse
-                            >> bone.mRelativeWorld >> bone.mDefaultTransform;
+                    stream >> boneName >> parentId >> bone.mFullWorldInverse >> bone.mRelativeWorld;
 
                     Q_ASSERT(parentId >= -1 && parentId < mBones.size());
 
@@ -477,7 +482,7 @@ namespace EvilTemple {
     FaceGroup::~FaceGroup()
     {
 	if (buffer) {
-            //glDeleteBuffersARB(1, &buffer);
+            glDeleteBuffers(1, &buffer);
 	}
     }
 

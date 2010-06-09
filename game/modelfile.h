@@ -388,12 +388,6 @@ A bone for skeletal animation
         const Bone *parent() const;
 
         /**
-     * Returns a full transform matrix that will transform a vertex into this bone's space and back into
-     * object space with this bones default transformation applied.
-     */
-        const Matrix4 &defaultTransform() const;
-
-        /**
      * Transforms from object space into this bone's local space, assuming the default pose of the skeleton.
      */
         const Matrix4 &fullWorldInverse() const;
@@ -410,8 +404,6 @@ A bone for skeletal animation
 
         void setParent(const Bone *bone);
 
-        void setDefaultTransform(const Matrix4 &defaultTransform);
-
         void setFullWorldInverse(const Matrix4 &fullWorldInverse);
 
         void setRelativeWorld(const Matrix4 &relativeWorld);
@@ -420,7 +412,6 @@ A bone for skeletal animation
 	uint mBoneId;
         QString mName;
         const Bone *mParent; // Undeletable ref to parent
-        Matrix4 mDefaultTransform;
         Matrix4 mFullWorldInverse;
         Matrix4 mRelativeWorld;
     };
@@ -438,11 +429,6 @@ A bone for skeletal animation
     inline const Bone *Bone::parent() const
     {
         return mParent;
-    }
-
-    inline const Matrix4 &Bone::defaultTransform() const
-    {
-        return mDefaultTransform;
     }
 
     inline const Matrix4 &Bone::fullWorldInverse() const
@@ -468,11 +454,6 @@ A bone for skeletal animation
     inline void Bone::setParent(const Bone *bone)
     {
         mParent = bone;
-    }
-
-    inline void Bone::setDefaultTransform(const Matrix4 &defaultTransform)
-    {
-        mDefaultTransform = defaultTransform;
     }
 
     inline void Bone::setFullWorldInverse(const Matrix4 &fullWorldInverse)

@@ -1090,13 +1090,18 @@ public:
     }
 
     void convertModels()
-    {        
-        ZipWriter zip(mOutputPath + "meshes.zip");
-
+    {
         // Convert all valid meshes in meshes.mes
         addMeshesMesReferences();
         addAddMeshesMesReferences();
         addHairReferences();
+
+        convertReferencedMeshes();
+    }       
+
+    void convertReferencedMeshes()
+    {
+        ZipWriter zip(mOutputPath + "meshes.zip");
 
         int totalWork = meshReferences.size();
         int workDone = 0;
@@ -1126,7 +1131,7 @@ public:
         }
 
         convertMaterials(&zip);
-    }       
+    }
 
     void convertMaterials(ZipWriter *zip)
     {
@@ -1136,7 +1141,7 @@ public:
 
         foreach (QString value, materials.values()) {
             QStringList parts = value.split(':');
-            if (!parts.size() == 2)
+            if (parts.size() != 2)
                 continue;
             materialSet.insert(parts[1]);
         }

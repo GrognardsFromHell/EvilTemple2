@@ -88,8 +88,12 @@ contains(TEMPLE_LIBS,audioengine) {
 }
 
 contains(TEMPLE_LIBS,qjson) {
-    INCLUDEPATH += $${PWD}/3rdparty/qjson/src/
-    LIBS += -L$${PWD}/3rdparty/qjson/lib/ -lqjson
+    INCLUDEPATH += $${PWD}/3rdparty/qjson/src/    
+    CONFIG(debug, debug|release) {
+        LIBS += -lqjson_d
+    } else {
+        LIBS += -lqjson
+    }
 }
 
 # Add game libraries

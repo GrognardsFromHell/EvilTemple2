@@ -25,11 +25,12 @@ MouseArea {
         Text {
             id: label
             text: 'Button'
+            font.bold: true
+            smooth: true
             anchors.centerIn: parent
             color: '#FFFFFF'
             font.family: 'Handserif'
             font.pointSize: 14
-            font.bold: Font.Bold
         }
 
     }

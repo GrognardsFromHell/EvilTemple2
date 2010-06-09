@@ -86,13 +86,6 @@ void ModelWriter::writeBones(const Troika::Skeleton *skeleton)
             }
         }
 
-        // This is the full bone transform in case the bone is not animated
-        for (int col = 0; col < 4; ++col) {
-            for (int row = 0; row < 4; ++row) {
-                stream << (float)bone.defaultPoseWorld(row, col);
-            }
-        }
-
     }
 
     finishChunk();

@@ -95,6 +95,9 @@ namespace Troika
 
                 Bone &bone = bones[i];
 
+                bone.skmOnly = true;
+                bone.skaOnly = false;
+
                 bone.id = i;
                 stream >> bone.flags >> bone.parentId;
                 stream.readRawData(rawName, 48);

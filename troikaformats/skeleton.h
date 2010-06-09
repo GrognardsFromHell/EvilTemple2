@@ -25,8 +25,8 @@ namespace Troika
         qint16 parentId; // bone id of parent or -1
         QMatrix4x4 fullWorldInverse;
         QMatrix4x4 relativeWorld;
-
-        QMatrix4x4 defaultPoseWorld; // Full world matrix for default pose of bone * fullWorldInverse
+        bool skmOnly; // A bone that is only present in the SKM
+        bool skaOnly; // A bone that is only present in the SKA
     };
 
     struct AnimationEvent

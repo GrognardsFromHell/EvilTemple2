@@ -51,13 +51,6 @@ Rectangle {
             }
 
             MainMenuButton {
-                id: loadGameButton
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: 'Load Game'
-                onClicked: otherScreen.source = 'LoadGame.qml'
-            }
-
-            MainMenuButton {
                 id: exitButton
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: 'Exit Game'
