@@ -57,10 +57,6 @@ namespace EvilTemple {
         if (mCurrentAnimation) {
             mIdleAnimation = mCurrentAnimation->name();
 
-            // This is for idle animations -> advance by a random number of frames, since
-            // not all models should "idle in sync"
-            mCurrentFrame = rand() % mCurrentAnimation->frames();
-
             mTransformedPositions = new Vector4[mModel->vertices];
             mTransformedNormals = new Vector4[mModel->vertices];
 
@@ -74,6 +70,17 @@ namespace EvilTemple {
 
             mFullWorld = new Matrix4[mModel->bones().size()];
             mFullTransform = new Matrix4[mModel->bones().size()];
+
+            // Check for events on frame 0 and trigger them now
+            foreach (const AnimationEvent &event, mCurrentAnimation->events()) {
+                if (event.frame() == 0) {
+                    emit animationEvent(event.type(), event.content());
+                }
+            }
+
+            // This is for idle animations -> advance by a random number of frames, since
+            // not all models should "idle in sync"
+            elapseTime(rand() / (float)RAND_MAX);
         }
     }
 
@@ -130,21 +137,22 @@ namespace EvilTemple {
         }
     }
 
-    Matrix4 ModelInstance::getBoneSpace(const QString &boneName) const
+    Matrix4 ModelInstance::getBoneSpace(uint boneId)
     {
         if (!mModel)
             return Matrix4::identity();
 
-        // Search for the bone id
-        // TODO: We need a QHash that maps bone names to their id here
-        for (int i = 0; i < mModel->bones().size(); ++i) {
-            if (mModel->bones()[i].name() == boneName) {
-                return mFullWorld[i];
-            }
+        if (boneId >= mModel->bones().size()) {
+            qWarning("Unknown bone id: %s.", boneId);
+            return Matrix4::identity();
         }
 
-        qWarning("Unknown bone name: %s.", qPrintable(boneName));
-        return Matrix4::identity();
+        if (mCurrentFrameChanged) {
+            updateBones();
+            mCurrentFrameChanged = false;
+        }
+
+        return mFullWorld[boneId];
     }
 
     struct ModelDrawStrategy : public DrawStrategy {
@@ -320,6 +328,50 @@ namespace EvilTemple {
         glBufferData(GL_ARRAY_BUFFER, sizeof(Vector4) * model->vertices, transformedNormals, GL_STREAM_DRAW);
     }
 
+    void ModelInstance::updateBones()
+    {
+        if (!mCurrentAnimation)
+            return;
+
+        const QVector<Bone> &bones = mModel->bones();
+
+        // Create a bone state map for all bones
+        const Animation::BoneMap &animationBones = mCurrentAnimation->animationBones();
+
+        for (int i = 0; i < bones.size(); ++i) {
+            const Bone &bone = bones[i];
+
+            Matrix4 relativeWorld;
+
+            if (animationBones.contains(i)) {
+                const AnimationBone *animationBone = animationBones[i];
+
+                relativeWorld = animationBone->getTransform(mCurrentFrame, mCurrentAnimation->frames());
+            } else {
+                relativeWorld = bone.relativeWorld();
+            }
+
+            // Use relative world and fullWorld of parent to build this bone's full world
+            const Bone *parent = bone.parent();
+
+            if (parent) {
+                Q_ASSERT(parent->boneId() >= 0 && parent->boneId() < bone.boneId());
+                mFullWorld[i] = mFullWorld[parent->boneId()] * relativeWorld;
+            } else {
+                mFullWorld[i] = relativeWorld;
+            }
+
+            mFullTransform[i] = mFullWorld[i] * bone.fullWorldInverse();
+        }
+
+        animateVertices(mModel, mTransformedPositions, mTransformedNormals, &mPositionBuffer, &mNormalBuffer, NULL);
+
+        for (int i = 0; i < mAddMeshes.size(); ++i) {
+            animateVertices(mAddMeshes[i], mTransformedPositionsAddMeshes[i], mTransformedNormalsAddMeshes[i], mPositionBufferAddMeshes[i], mNormalBufferAddMeshes[i],
+                            &mAddMeshBoneMapping[i]);
+        }
+    }
+
     void ModelInstance::render(RenderStates &renderStates)
     {
         const Model *model = mModel.data();
@@ -327,45 +379,8 @@ namespace EvilTemple {
         if (!model)
             return;
 
-        if (mCurrentAnimation && mCurrentFrameChanged) {
-            const QVector<Bone> &bones = mModel->bones();
-
-            // Create a bone state map for all bones
-            const Animation::BoneMap &animationBones = mCurrentAnimation->animationBones();
-
-            for (int i = 0; i < bones.size(); ++i) {
-                const Bone &bone = bones[i];
-
-                Matrix4 relativeWorld;
-
-                if (animationBones.contains(i)) {
-                    const AnimationBone *animationBone = animationBones[i];
-
-                    relativeWorld = animationBone->getTransform(mCurrentFrame, mCurrentAnimation->frames());
-                } else {
-                    relativeWorld = bone.relativeWorld();
-                }
-
-                // Use relative world and fullWorld of parent to build this bone's full world
-                const Bone *parent = bone.parent();
-
-                if (parent) {
-                    Q_ASSERT(parent->boneId() >= 0 && parent->boneId() < bone.boneId());
-                    mFullWorld[i] = mFullWorld[parent->boneId()] * relativeWorld;
-                } else {
-                    mFullWorld[i] = relativeWorld;
-                }
-
-                mFullTransform[i] = mFullWorld[i] * bone.fullWorldInverse();
-            }
-
-            animateVertices(mModel, mTransformedPositions, mTransformedNormals, &mPositionBuffer, &mNormalBuffer, NULL);
-
-            for (int i = 0; i < mAddMeshes.size(); ++i) {
-                animateVertices(mAddMeshes[i], mTransformedPositionsAddMeshes[i], mTransformedNormalsAddMeshes[i], mPositionBufferAddMeshes[i], mNormalBufferAddMeshes[i],
-                                &mAddMeshBoneMapping[i]);
-            }
-
+        if (mCurrentFrameChanged) {
+            updateBones();
             mCurrentFrameChanged = false;
         }
 
@@ -519,8 +534,16 @@ namespace EvilTemple {
         if (mPartialFrameTime < timePerFrame)
             return;
 
+        const QVector<AnimationEvent> &events = mCurrentAnimation->events();
+
         while (mPartialFrameTime >= timePerFrame) {
             mCurrentFrame++;
+
+            for (size_t i = 0; i < events.size(); ++i) {
+                if (events[i].frame() == mCurrentFrame) {
+                    emit animationEvent(events[i].type(), events[i].content());
+                }
+            }
 
             if (mCurrentFrame >= mCurrentAnimation->frames()) {
                 // Decide whether it's time to loop or end the animation
@@ -531,6 +554,12 @@ namespace EvilTemple {
                 }
 
                 mCurrentFrame = 0;
+
+                for (size_t i = 0; i < events.size(); ++i) {
+                    if (events[i].frame() == mCurrentFrame) {
+                        emit animationEvent(events[i].type(), events[i].content());
+                    }
+                }
             }
             mCurrentFrameChanged = true;
             mPartialFrameTime -= timePerFrame;

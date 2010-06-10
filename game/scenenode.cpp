@@ -96,4 +96,17 @@ void SceneNode::attachObject(const SharedRenderable &sharedRenderable)
     mWorldBoundingBoxInvalid = true;
 }
 
+void SceneNode::detachObject(const Renderable *renderable)
+{
+    QList<SharedRenderable>::iterator it = mAttachedObjects.begin();
+    while (it != mAttachedObjects.end()) {
+        const SharedRenderable &attachedObject = *it;
+        if (attachedObject.data() == renderable) {
+            mAttachedObjects.erase(it);
+            return;
+        }
+        ++it;
+    }
+}
+
 };

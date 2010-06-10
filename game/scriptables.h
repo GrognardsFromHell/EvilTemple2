@@ -7,11 +7,14 @@
 #include "scene.h"
 #include "scenenode.h"
 #include "lighting.h"
+#include "particlesystem.h"
 
 #include <gamemath.h>
 using namespace GameMath;
 
 namespace EvilTemple {
+
+    typedef QSharedPointer<ModelInstance> SharedModelInstance;
 
     void registerRenderableScriptable(QScriptEngine *engine);
 
@@ -42,8 +45,15 @@ namespace EvilTemple {
 
     class ParticleSystemScriptable : public QObject, protected QScriptable {
     Q_OBJECT
+    Q_PROPERTY(SharedModelInstance modelInstance READ modelInstance WRITE setModelInstance)
     public:
         static void registerWith(QScriptEngine *engine);
+
+        SharedModelInstance modelInstance() const;
+        void setModelInstance(const SharedModelInstance &modelInstance);
+
+    private:
+        ParticleSystem *data() const;
     };
     
     class ModelInstanceScriptable : public QObject, protected QScriptable {
@@ -71,6 +81,7 @@ namespace EvilTemple {
 
     public slots:
         void setClickHandler(const QScriptValue &handler);
+        void setAnimationEventHandler(const QScriptValue &handler);
 
         bool overrideMaterial(const QString &name, const SharedMaterialState &state);
         bool clearOverrideMaterial(const QString &name);

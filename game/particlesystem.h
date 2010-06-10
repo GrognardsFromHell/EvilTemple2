@@ -25,11 +25,12 @@ namespace EvilTemple {
   */
     class ParticleSystem : public Renderable
     {
+    Q_OBJECT
     public:
         ParticleSystem(const QString &id, const QList<Emitter*> &emitters);
         ~ParticleSystem();
 
-        void setModelInstance(const ModelInstance *modelInstance);
+        void setModelInstance(ModelInstance *modelInstance);
 
         void elapseTime(float timeUnits);
         void elapseSeconds(float seconds);

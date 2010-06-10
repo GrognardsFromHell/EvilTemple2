@@ -74,7 +74,7 @@ In addition, we could just point to the full transform matrix instead, further s
             Script = 0,
             Action = 1,
             Type_ForceDWord = 0x7fffffff
-                          };
+        };
 
         /**
       * The number of the frame (starting at zero), on which this event occurs.
@@ -97,6 +97,11 @@ In addition, we could just point to the full transform matrix instead, further s
         Type mType;
         QString mContent;
     };
+
+    inline uint AnimationEvent::frame() const
+    {
+        return mFrame;
+    }
 
     inline const QString &AnimationEvent::content() const
     {
@@ -500,6 +505,11 @@ A bone for skeletal animation
          * Returns the bones of the skeleton in this model. If it has no skeleton, the list is empty.
          */
         const QVector<Bone> &bones() const;
+
+        /**
+          Finds a bone with the given name (case-insensitive). -1 for non existing bones.
+          */
+        int bone(const QString &name) const;
 
         /**
          * Returns an animation by name. NULL if no such animation is found.

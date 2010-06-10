@@ -63,6 +63,7 @@ public:
     const Matrix4 &fullTransform() const;
 
     void attachObject(const SharedRenderable &sharedRenderable);
+    void detachObject(const Renderable *renderable);
 
     const QList<SharedRenderable> &attachedObjects() const;
 

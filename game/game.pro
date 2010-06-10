@@ -104,7 +104,9 @@ OTHER_FILES += \
     resources/fonts/Fontin-Regular.ttf \
     resources/fonts/Fontin-SmallCaps.ttf \
     resources/materials/textureanim.fs \
-    resources/materials/spheremap.fs
+    resources/materials/spheremap.fs \
+    ../bin/data/scripts/startup.js \
+    ../bin/data/scripts/equipment.js \
 
 INCLUDEPATH += .
 

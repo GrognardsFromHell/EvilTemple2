@@ -149,6 +149,36 @@ void MaterialStateScriptable::registerWith(QScriptEngine *engine)
 void ParticleSystemScriptable::registerWith(QScriptEngine *engine)
 {
     registerValueType<SharedParticleSystem>(engine, "SharedParticleSystem");
+    int metaId = qMetaTypeId<SharedParticleSystem>();
+    QScriptValue prototype = engine->newQObject(new ParticleSystemScriptable, QScriptEngine::ScriptOwnership);
+    engine->setDefaultPrototype(metaId, prototype);
+}
+
+SharedModelInstance ParticleSystemScriptable::modelInstance() const
+{
+    return SharedModelInstance(0);
+}
+
+void ParticleSystemScriptable::setModelInstance(const SharedModelInstance &sharedModelInstance)
+{
+    ParticleSystem *particleSystem = data();
+    if (particleSystem) {
+        particleSystem->setModelInstance(sharedModelInstance.data());
+    }
+}
+
+ParticleSystem *ParticleSystemScriptable::data() const
+{
+    SharedRenderable renderable = qscriptvalue_cast<SharedRenderable>(thisObject());
+
+    ParticleSystem *data = renderable.objectCast<ParticleSystem>().data();
+
+    if (!data) {
+        context()->throwError("Particle system instance object not associated with a shared renderable.");
+        return NULL;
+    }
+
+    return data;
 }
 
 QScriptValue ModelInstanceScriptableCtor(QScriptContext *context, QScriptEngine *engine)
@@ -203,6 +233,14 @@ void ModelInstanceScriptable::setClickHandler(const QScriptValue &handler)
     ModelInstance *modelInstance = data();
     if (modelInstance) {
         qScriptConnect(modelInstance, SIGNAL(mousePressed()), QScriptValue(), handler);
+    }
+}
+
+void ModelInstanceScriptable::setAnimationEventHandler(const QScriptValue &handler)
+{
+    ModelInstance *modelInstance = data();
+    if (modelInstance) {
+        qScriptConnect(modelInstance, SIGNAL(animationEvent(int,QString)), QScriptValue(), handler);
     }
 }
 

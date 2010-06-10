@@ -534,4 +534,15 @@ namespace EvilTemple {
         return stream;
     }
 
+    int Model::bone(const QString &name) const
+    {
+        foreach (const Bone &bone, mBones) {
+            if (!bone.name().compare(name, Qt::CaseInsensitive)) {
+                return bone.boneId();
+            }
+        }
+
+        return -1;
+    }
+
 }

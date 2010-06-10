@@ -12,6 +12,7 @@
 #include <QtCore/QSharedPointer>
 #include <QtCore/QThread>
 #include <QtCore/QMutex>
+#include <QtCore/QPointer>
 
 #include <QtXml/QDomElement>
 
@@ -22,6 +23,7 @@
 #include "materialstate.h"
 #include "materials.h"
 #include "modelinstance.h"
+#include "scenenode.h"
 
 namespace EvilTemple {
 
@@ -47,7 +49,8 @@ namespace EvilTemple {
 
     enum SpaceType {
         Space_World,
-        Space_Bones,
+        Space_Bone,
+        Space_RandomBone
     };
 
     /**
@@ -303,7 +306,15 @@ namespace EvilTemple {
 
 	void updateParticle(Particle &particle, float elapsedTimeUnits);
 
-        void render(RenderStates &renderStates, const ModelInstance *modelInstance);
+        void render(RenderStates &renderStates);
+
+        /**
+          Dead = No more particles will spawn and no particles are still active.
+          */
+        bool isDead() const
+        {
+            return mElapsedTime > mLifetime && mParticles.isEmpty();
+        }
 
         void setLifetime(float lifetime)
         {
@@ -366,6 +377,11 @@ namespace EvilTemple {
             mBlendMode = blendMode;
 	}
 
+        void setModelInstance(ModelInstance *modelInstance)
+        {
+            mModelInstance = modelInstance;
+        }
+
 	void setTexture(const SharedTexture &texture)
 	{
             mTexture = texture;
@@ -383,6 +399,11 @@ namespace EvilTemple {
             mParticleType = type;
 	}
 
+        void setBoneName(const QString &boneName)
+        {
+            mBoneName = boneName;
+        }
+
 	void setName(const QString &name)
 	{
             mName = name;
@@ -394,6 +415,8 @@ namespace EvilTemple {
         }
 
     private:
+
+        QPointer<ModelInstance> mModelInstance;
 
         SharedMaterialState mMaterial;
 
@@ -418,6 +441,8 @@ namespace EvilTemple {
         QList<Particle> mParticles;
 
         SpaceType mEmitterSpace;
+
+        QString mBoneName; // For direct bone refs
 
 	QString mName;
 
@@ -525,6 +550,48 @@ namespace EvilTemple {
             positionOffset = polarToCartesian(positionOffset.x(), positionOffset.y(), positionOffset.z());
 	}
 	particle.position = Vector4((*mPositionX)(0), (*mPositionY)(0), (*mPositionZ)(0), 1) + positionOffset;
+
+        /*
+         In case the emitter space is "Bones", a bone is randomly selected to spawn the particle
+         */
+        if (!mModelInstance.isNull()) {
+            Matrix4 flipZ;
+            flipZ.setToIdentity();
+            flipZ(2,2) *= -1;
+
+            if (mEmitterSpace == Space_RandomBone) {
+                while (true) {
+                    // Choose a bone at random (?)
+                    const QVector<Bone> &bones = mModelInstance->model()->bones();
+                    Q_ASSERT(bones.size() > 2);
+                    const Bone &bone = bones[rand() % bones.size()];
+
+                    // Skip a certain set of "ref" bones
+                    if (bone.name() == "groundParticleRef" || bone.name() == "Chest_ref" || bone.name() == "HandR_ref"
+                        || bone.name() == "HandL_ref" || bone.name() == "Head_ref" || bone.name() == "FootR_ref"
+                        || bone.name() == "FootL_ref" || bone.name() == "Bip01 Footsteps"
+                        || bone.name() == "Bip01" || bone.name() == "origin"
+                        || bone.name() == "EarthElemental_reg" || bone.name() == "Casting_ref"
+                        || bone.name() == "Origin" || bone.name() == "Footstep" || bone.name() == "Pony")
+                        continue;
+
+                    Matrix4 boneSpace = flipZ * mModelInstance->getBoneSpace(bone.boneId()) * flipZ;
+                    Vector4 trans = boneSpace.column(3);
+                    trans.setW(0);
+                    particle.position += trans;
+                    break;
+                }
+            } else if (mEmitterSpace == Space_Bone) {
+                int boneId = mModelInstance->model()->bone(mBoneName);
+
+                if (boneId != -1) {
+                    Matrix4 boneSpace = flipZ * mModelInstance->getBoneSpace(boneId) * flipZ;
+                    Vector4 trans = boneSpace.column(3);
+                    trans.setW(0);
+                    particle.position += trans;
+                }
+            }
+        }
 
 	particle.startTime = mElapsedTime;
 	particle.expireTime = mElapsedTime + mParticleLifetime;
@@ -662,12 +729,10 @@ namespace EvilTemple {
             }
 	}
 
-	updateParticles(timeUnits);
-	// TODO: Transform particles
+        updateParticles(timeUnits);
     }
 
-
-    void Emitter::render(RenderStates &renderStates, const ModelInstance *modelInstance)
+    void Emitter::render(RenderStates &renderStates)
     {
         MaterialPassState &pass = mMaterial->passes[0];
 
@@ -696,23 +761,10 @@ namespace EvilTemple {
             break;
 	}
 
-	Matrix4 oldWorld = renderStates.worldMatrix();
-
-        Matrix4 emitterWorld = oldWorld;
-
-        // If we have "bones" as the space
-        if (modelInstance && mEmitterSpace == Space_Bones) {
-            Matrix4 flipZ;
-            flipZ.setToIdentity();
-            flipZ(2,2) *= -1;
-
-            // Choose a bone at random (?)
-
-            emitterWorld = emitterWorld * flipZ * modelInstance->getBoneSpace("firer_ref1") * flipZ;
-        }
+        Matrix4 oldWorld = renderStates.worldMatrix();
 	
 	foreach (const Particle &particle, mParticles) {
-            Vector4 origin = emitterWorld * particle.position;
+            Vector4 origin = oldWorld.mapPosition(particle.position);
             renderStates.setWorldMatrix(Matrix4::translation(origin.x(), origin.y(), origin.z()));
 
             // Bind uniforms
@@ -776,7 +828,6 @@ namespace EvilTemple {
 	
 	QString id;
         QList<Emitter*> emitters;
-        const ModelInstance *modelInstance;
         Box3d boundingBox;
     };
 
@@ -822,9 +873,11 @@ namespace EvilTemple {
     {
     }
 
-    void ParticleSystem::setModelInstance(const ModelInstance *modelInstance)
+    void ParticleSystem::setModelInstance(ModelInstance *modelInstance)
     {
-        d->modelInstance = modelInstance;
+        foreach (Emitter *emitter, d->emitters) {
+            emitter->setModelInstance(modelInstance);
+        }
     }
 
     void ParticleSystem::elapseTime(float seconds)
@@ -842,8 +895,15 @@ namespace EvilTemple {
     }
 
     void ParticleSystem::render(RenderStates &renderStates) {
+        bool allDead = true;
+
         foreach (Emitter *emitter, d->emitters) {
-            emitter->render(renderStates, d->modelInstance);
+            emitter->render(renderStates);
+            allDead &= emitter->isDead();
+        }
+
+        if (allDead && mParentNode) {
+            mParentNode->detachObject(this);
         }
     }
 
@@ -870,6 +930,7 @@ namespace EvilTemple {
 	float mLifespan;
 	ParticleBlendMode mBlendMode;
         SpaceType mEmitterSpace;
+        QString mBoneName; // For mEmitterSpace == Space_Bone
 	Property mScale;
 	float mDelay;
 
@@ -978,9 +1039,15 @@ namespace EvilTemple {
         QString space = element.attribute("space", "world").toLower();
 
         if (space == "bones") {
-            mEmitterSpace = Space_Bones;
+            mEmitterSpace = Space_RandomBone;
         } else if (space == "world") {
             mEmitterSpace = Space_World;
+        } else if (space == "node") {
+            mEmitterSpace = Space_Bone;
+            mBoneName = element.attribute("spaceNode");
+        } else if (space == "node ypr") {
+            mEmitterSpace = Space_Bone;
+            mBoneName = element.attribute("spaceNode");
         } else {
             // TODO: Implement them all
             mEmitterSpace = Space_World;
@@ -1269,7 +1336,7 @@ namespace EvilTemple {
                     continue;
                 }
 
-                templates.insert(tpl.id(), tpl);
+                templates.insert(tpl.id().toLower(), tpl);
             }
 
             qDebug("Loaded %d particle systems in %d ms.", templates.size(), timer.elapsed());
@@ -1322,6 +1389,7 @@ namespace EvilTemple {
         emitter->setParticleType(tpl.mParticleType);
         emitter->setBlendMode(tpl.mBlendMode);
         emitter->setMaterial(spriteMaterial);
+        emitter->setBoneName(tpl.mBoneName);
 
         return emitter;
     }
@@ -1353,7 +1421,14 @@ namespace EvilTemple {
 
     SharedParticleSystem ParticleSystems::instantiate(const QString &name)
     {
-        return SharedParticleSystem(d->instantiate(d->templates[name]));
+        QHash<QString,ParticleSystemTemplate>::const_iterator it = d->templates.find(name.toLower());
+
+        if (it == d->templates.end()) {
+            qWarning("Unknown particle systems: %s.", qPrintable(name));
+            return SharedParticleSystem(0);
+        } else {
+            return SharedParticleSystem(d->instantiate(it.value()));
+        }
     }
 
 }

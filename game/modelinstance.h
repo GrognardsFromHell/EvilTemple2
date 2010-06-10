@@ -42,7 +42,7 @@ public:
 
     const SharedModel &model() const;
 
-    Matrix4 getBoneSpace(const QString &boneName) const;
+    Matrix4 getBoneSpace(uint boneId);
 
     void addMesh(const SharedModel &model);
 
@@ -65,6 +65,7 @@ public:
 
 signals:
     void animationFinished(const QString &name, bool canceled);
+    void animationEvent(int type, const QString &content);
 
 private:
 
@@ -72,6 +73,7 @@ private:
                          QVector<uint> *boneMapping);
 
     void playIdleAnimation();
+    void updateBones();
 
     Matrix4 *mFullWorld;
     Matrix4 *mFullTransform;
