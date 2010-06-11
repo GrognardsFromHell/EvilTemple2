@@ -10,6 +10,10 @@
 #include "materials.h"
 #include "particlesystem.h"
 
+// Fix this, audio engine header name clash
+#include "audioengine.h"
+#include "scripting.h"
+
 namespace EvilTemple {
 
     class ScriptEngineData {
@@ -289,6 +293,9 @@ namespace EvilTemple {
         registerRenderableScriptable(engine);
         MaterialStateScriptable::registerWith(engine);
         ParticleSystemScriptable::registerWith(engine);
+
+        registerQObject<EvilTemple::AudioEngine>(engine, "AudioEngine*");
+        registerAudioEngine(engine);
     }
 
 }

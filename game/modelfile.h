@@ -516,6 +516,8 @@ A bone for skeletal animation
          */
         const Animation *animation(const QString &name) const;
 
+        QStringList animations() const;
+
         /**
           Checks if the model supports the given animation.
           */

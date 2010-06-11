@@ -129,6 +129,9 @@ bool Texture::load(QImage image)
                  pixel_type, constRef.bits());
     glBindTexture(GL_TEXTURE_2D, 0);
 
+    mWidth = image.width();
+    mHeight = image.height();
+
     return true;
 }
 
@@ -157,6 +160,9 @@ bool Texture::loadTga(const QByteArray &tgaImage)
     glTexImage2D(GL_TEXTURE_2D, 0, image.internalFormat(), image.width(), image.height(), 0, image.format(),
                  GL_UNSIGNED_BYTE, image.data());
     glBindTexture(GL_TEXTURE_2D, 0);
+
+    mWidth = image.width();
+    mHeight = image.height();
 
     return true;
 }
@@ -198,6 +204,9 @@ bool Texture::loadJpeg(const QByteArray &jpegImage)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, mWrapModeT);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, decompressedImage.data());
     glBindTexture(GL_TEXTURE_2D, 0);
+
+    mWidth = width;
+    mHeight = height;
 
     return true;
 

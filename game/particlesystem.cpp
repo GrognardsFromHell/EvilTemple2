@@ -25,9 +25,41 @@
 #include "modelinstance.h"
 #include "scenenode.h"
 
+#include <time.h>
+
 namespace EvilTemple {
 
+    class Emitter;
+    class Particle;
+
+    /**
+      Converts from spherical (polar) coordinates to cartesian coordinates.
+      Uses the following convention:
+
+      - theta is the angle in the x,z plane, measured from the z axis
+      - phi is the angle from the y axis
+      */
+    inline Vector4 polarToCartesian(float theta, float phi, float r)
+    {
+        // In the usual sense, theta is measured from the X axis, in our case from the Z axis
+        // No conversion yet.
+        float newX = std::sin(theta) * std::cos(phi);
+        float newZ = std::cos(theta) * std::cos(phi);
+        float newY = std::sin(phi);
+
+        return r * Vector4(newX, newY, newZ, 0);
+    }
+
+    inline void cartesianToPolar(const Vector4 &pos, float &theta, float &phi, float &r)
+    {
+        r = std::sqrt(pos.x() * pos.x() + pos.y() * pos.y() + pos.z() * pos.z());
+        theta = rad2deg(std::atan2(pos.x() / r, pos.z() / r));
+        phi = rad2deg(std::acos(pos.y() / r));
+    }
+
     const static float ParticlesTimeUnit = 1 / 30.0f; // All time-based values are in relation to this base value
+
+    const static uint ParticleLimit = 1000; // The maximum number of particles a single particle system may have
 
     enum ParticleType {
 	Sprite,
@@ -54,17 +86,21 @@ namespace EvilTemple {
     };
 
     /**
- * Models a property of an emitter or particle, which can assume one of the following roles:
- * - Fixed value
- * - Random value
- * - Animated value
- */
+     * Models a property of an emitter or particle, which can assume one of the following roles:
+     * - Fixed value
+     * - Random value
+     * - Animated value
+     */
     template<typename T> class ParticleProperty {
     public:
+        virtual ~ParticleProperty()
+        {
+        }
+
 	/**
 	 * Returns the value of the property, given the life-time of the particle expressed as a range of [0,1].
 	 */
-	virtual T operator()(float ratio) const = 0;
+        virtual T operator()(const Emitter *emitter, uint randomSeed, float ratio) const = 0;
 
 	/**
 	 * Indicates whether this property is animated and needs to be queried constantly. If not,
@@ -74,15 +110,15 @@ namespace EvilTemple {
     };
 
     /**
-  * Models a constant particle property without any animation.
-  */
+      * Models a constant particle property without any animation.
+      */
     template<typename T> class ConstantParticleProperty : public ParticleProperty<T> {
     public:
 	ConstantParticleProperty(T value) : mValue(value) 
 	{
 	}
 
-	T operator()(float ratio) const
+        T operator()(const Emitter *emitter, uint randomSeed, float ratio) const
 	{
             Q_UNUSED(ratio)
             return mValue;
@@ -98,12 +134,12 @@ namespace EvilTemple {
     };
 
     /**
- * This property will always return the radius of the object this particle system is attached to.
- * TODO: Implement this properly
- */
+     * This property will always return the radius of the object this particle system is attached to.
+     * TODO: Implement this properly
+     */
     template<typename T> class RadiusProperty : public ParticleProperty<T> {
     public:
-	T operator()(float ratio) const
+        T operator()(const Emitter *emitter, uint randomSeed, float ratio) const
 	{
             Q_UNUSED(ratio);
             return 20;
@@ -115,22 +151,29 @@ namespace EvilTemple {
 	}
     };
 
+    static uint nextRandomPropertyId = 0;
+
     /**
-  * Models a random particle property that will pick a random value when queried from a range (uniform distribution).
-  */
+      * Models a random particle property that will pick a random value when queried from a range (uniform distribution).
+      */
     template<typename T> class RandomParticleProperty : public ParticleProperty<T> {
     public:
+
 	/**
 	 * Constructs a random particle property with a minimum and maximum value (both inclusive).
 	 */
-	RandomParticleProperty(T minValue, T maxValue) : mMinValue(minValue), mSpan(maxValue - mMinValue)
+        RandomParticleProperty(T minValue, T maxValue)
+            : mMinValue(minValue), mSpan(maxValue - mMinValue), mPropertyId(nextRandomPropertyId++)
 	{
 	}
 
-	T operator()(float ratio) const
+        T operator()(const Emitter *emitter, uint randomSeed, float ratio) const
 	{
             Q_UNUSED(ratio)
-            return mMinValue + (rand() / (float)RAND_MAX) * mSpan;
+            // srand(randomSeed + mPropertyId);
+            float result = mMinValue + (rand() / (float)RAND_MAX) * mSpan;
+            //srand(time(NULL)); // TODO: This should probably be removed, and the PRNG polynom be used directly
+            return result;
 	}
 
 	bool isAnimated() const
@@ -166,11 +209,12 @@ namespace EvilTemple {
     private:
 	T mMinValue;
 	T mSpan;
+        uint mPropertyId;
     };
 
     /**
-  * Interpolates between evenly spaced key-frames.
-  */
+      * Interpolates between evenly spaced key-frames.
+      */
     template<typename T> class AnimatedParticleProperty : public ParticleProperty<T> {
     public:
         AnimatedParticleProperty(const QVector<T> &values)
@@ -178,7 +222,7 @@ namespace EvilTemple {
         {
         }
 
-        T operator()(float ratio) const {
+        T operator()(const Emitter *emitter, uint randomSeed, float ratio) const {
             if (mValues.size() == 1) {
                 return mValues[0];
             }
@@ -186,8 +230,8 @@ namespace EvilTemple {
             // Clamp to [0,1]
             ratio = qMin<float>(1, qMax<float>(0, ratio));
 
-            int index = floor(ratio * (mValues.size() - 1));
-            int nextIndex = ceil(ratio * (mValues.size() - 1));
+            int index = qMax<int>(0, floor(ratio * (mValues.size() - 1)));
+            int nextIndex = qMin<int>(mValues.size() - 1, ceil(ratio * (mValues.size() - 1)));
 
             Q_ASSERT(index < mValues.size());
 
@@ -233,11 +277,106 @@ namespace EvilTemple {
         QVector<T> mValues;
     };
 
+    /**
+      * Interpolates between evenly spaced key-frames. But may also contain random entries,
+      * which are computed on a per-particle base.
+      */
+    template<typename T> class AnimatedRandomParticleProperty : public ParticleProperty<T> {
+    public:
+        AnimatedRandomParticleProperty(const QVector< QPair<T,T> > &values)
+            : mStep(1.0f / (values.size() - 1)), mValues(values), mPropertyId(nextRandomPropertyId++)
+        {
+        }
+
+        inline T getValue(const Emitter *emitter, uint randomSeed, uint i) const {
+            QPair<T,T> result = mValues[i];
+
+            // If second element of pair is NAN, return the first
+            if (result.second != result.second)
+                return result.first;
+
+            // Otherwise we have a random element
+            //srand(randomSeed + mPropertyId * 1000 + i);
+            T value = result.first + (rand() / (float)RAND_MAX) * result.second;
+            //srand(time(NULL));
+            return value;
+        }
+
+        T operator()(const Emitter *emitter, uint randomSeed, float ratio) const {
+            if (mValues.size() == 1) {
+                return getValue(emitter, randomSeed, 0);
+            }
+
+            // Clamp to [0,1]
+            ratio = qMin<float>(1, qMax<float>(0, ratio));
+
+            int index = floor(ratio * (mValues.size() - 1));
+            int nextIndex = ceil(ratio * (mValues.size() - 1));
+
+            Q_ASSERT(index < mValues.size());
+
+            if (nextIndex >= mValues.size()) {
+                return getValue(emitter, randomSeed, index);
+            }
+
+            T first = getValue(emitter, randomSeed, index);
+            T second = getValue(emitter, randomSeed, nextIndex);
+
+            float i = (ratio - index * mStep) / mStep;
+
+            return first + (second - first) * i;
+        }
+
+        bool isAnimated() const
+        {
+            return true;
+        }
+
+        static AnimatedRandomParticleProperty<float> *fromString(const QString &string)
+        {
+            QStringList parts = string.split(',', QString::SkipEmptyParts);
+            QVector< QPair<float,float> > values;
+            values.reserve(parts.size());
+
+            foreach (const QString &part, parts) {
+                bool ok;
+                QPair<float,float> value;
+
+                // Random entries in the animated list are denoted by a pair whose second entry is not NaN
+                if (part.contains('?')) {
+                    QStringList subParts = part.split('?');
+                    Q_ASSERT(subParts.size() == 2);
+
+                    value.first = subParts[0].trimmed().toFloat(&ok);
+                    value.second = subParts[1].trimmed().toFloat(&ok) - value.first;
+                } else {
+                    value.first = part.trimmed().toFloat(&ok);
+                    value.second = std::numeric_limits<float>::quiet_NaN();
+                }
+
+                if (!ok) {
+                    qWarning("Animated value list contains invalid value: %s.", qPrintable(part));
+                } else {
+                    values.append(value);
+                }
+            }
+
+            return new AnimatedRandomParticleProperty<float>(values);
+        }
+
+    private:
+        float mStep;
+        QVector< QPair<T,T> > mValues;
+        uint mPropertyId;
+    };
+
     inline ParticleProperty<float> *propertyFromString(const QString &string)
     {
 	ParticleProperty<float> *result = NULL;
 
-	if (string.contains('?')) {
+        if (string.contains('?') && string.contains(',')) {
+            result = AnimatedRandomParticleProperty<float>::fromString(string);
+        } else if (string.contains('?')) {
             result = RandomParticleProperty<float>::fromString(string);
 	} else if (string.contains(',')) {
             result = AnimatedParticleProperty<float>::fromString(string);
@@ -266,11 +405,12 @@ namespace EvilTemple {
     class Particle {
     public:
 	Particle() : rotationYaw(0), rotationPitch(0), rotationRoll(0),
-        colorRed(255), colorGreen(255), colorBlue(255), colorAlpha(255),
-        scale(100),
-        accelerationX(0), accelerationY(0), accelerationZ(0),
-        velocityX(0), velocityY(0), velocityZ(0)
+            colorRed(255), colorGreen(255), colorBlue(255), colorAlpha(255),
+            scale(100),
+            accelerationX(0), accelerationY(0), accelerationZ(0),
+            velocityX(0), velocityY(0), velocityZ(0)
 	{
+            randomSeed = rand();
 	}
 
         Vector4 position;
@@ -281,6 +421,7 @@ namespace EvilTemple {
 	float scale;
         float expireTime;
         float startTime;
+        uint randomSeed; // Used for per-particle randomness
     };
 
     class Emitter {
@@ -300,7 +441,7 @@ namespace EvilTemple {
         /**
       Spawns a single particle
       */
-        void spawnParticle();
+        void spawnParticle(float atTime);
 
 	void updateParticles(float elapsedTimeUnits);
 
@@ -420,8 +561,6 @@ namespace EvilTemple {
 
         SharedMaterialState mMaterial;
 
-	Vector4 polarToCartesian(float x, float y, float z);
-
 	Property mScale;
 
 	Property mColorAlpha, mColorRed, mColorGreen, mColorBlue;
@@ -463,20 +602,6 @@ namespace EvilTemple {
 	Q_DISABLE_COPY(Emitter);
     };
 
-    inline Vector4 Emitter::polarToCartesian(float phi, float theta, float r)
-    {
-	/*
-		The formula is taken from http://en.wikipedia.org/wiki/Spherical_coordinate_system
-		With coordinates swapped according to the ToEE system.
-		In addition, we're using inclination from the reference plane, so cos(theta) needs to be subtracted from 1.
-	*/
-	float newZ = r * (1 - std::sin(deg2rad(theta))) * std::cos(deg2rad(phi));
-	float newX = r * (1 - std::sin(deg2rad(theta))) * std::sin(deg2rad(phi));
-	float newY = r * (1 - std::cos(deg2rad(theta)));
-
-	return Vector4(newX, newY, newZ, 0);
-    }
-
     void Emitter::updateParticles(float elapsedTimeunits)
     {
 	for (int i = 0; i < mParticles.size(); ++i) {
@@ -484,72 +609,79 @@ namespace EvilTemple {
 	}
     }
 
-    void Emitter::spawnParticle()
+    void Emitter::spawnParticle(float atTime)
     {
 	Particle particle;
 
 	if (mRotationYaw) {
-            particle.rotationYaw = (*mRotationYaw)(0);
+            particle.rotationYaw = (*mRotationYaw)(this, particle.randomSeed, 0);
 	}
 	if (mRotationPitch) {
-            particle.rotationPitch = (*mRotationPitch)(0);
+            particle.rotationPitch = (*mRotationPitch)(this, particle.randomSeed,0);
 	}
 	if (mRotationRoll) {
-            particle.rotationRoll = (*mRotationRoll)(0);
+            particle.rotationRoll = (*mRotationRoll)(this, particle.randomSeed,0);
 	}
 
 	if (mAccelerationX) {
-            particle.accelerationX = (*mAccelerationX)(0);
+            particle.accelerationX = (*mAccelerationX)(this, particle.randomSeed,0);
 	}
 	if (mAccelerationY) {
-            particle.accelerationY = (*mAccelerationY)(0);
+            particle.accelerationY = (*mAccelerationY)(this, particle.randomSeed,0);
 	}
 	if (mAccelerationZ) {
-            particle.accelerationZ = (*mAccelerationZ)(0);
+            particle.accelerationZ = (*mAccelerationZ)(this, particle.randomSeed,0);
 	}
 
 	if (mParticleVelocityX) {
-            particle.velocityX = (*mParticleVelocityX)(0);
+            particle.velocityX = (*mParticleVelocityX)(this, particle.randomSeed,0);
+            if (mParticleVelocityType == Polar)
+                particle.velocityX = deg2rad(particle.velocityX);
 	}
 	if (mParticleVelocityY) {
-            particle.velocityY = (*mParticleVelocityY)(0);
+            particle.velocityY = (*mParticleVelocityY)(this, particle.randomSeed,0);
+            if (mParticleVelocityType == Polar)
+                particle.velocityY = deg2rad(particle.velocityY);
 	}
 	if (mParticleVelocityZ) {
-            particle.velocityZ = (*mParticleVelocityZ)(0);
+            particle.velocityZ = (*mParticleVelocityZ)(this, particle.randomSeed,0);
 	}
 
 	if (mScale) {
-            particle.scale = (*mScale)(0);
+            particle.scale = (*mScale)(this, particle.randomSeed,0);
 	}
 
 	if (mColorRed) {
-            particle.colorRed = (*mColorRed)(0);
+            particle.colorRed = (*mColorRed)(this, particle.randomSeed, 0);
 	}
 	if (mColorGreen) {
-            particle.colorGreen = (*mColorGreen)(0);
+            particle.colorGreen = (*mColorGreen)(this, particle.randomSeed, 0);
 	}
 	if (mColorBlue) {
-            particle.colorBlue = (*mColorBlue)(0);
+            particle.colorBlue = (*mColorBlue)(this, particle.randomSeed, 0);
 	}
 	if (mColorAlpha) {
-            particle.colorAlpha = (*mColorAlpha)(0);
+            particle.colorAlpha = (*mColorAlpha)(this, particle.randomSeed, 0);
 	}
 
 	Vector4 positionOffset(0, 0, 0, 0);
 	if (mParticlePositionX) {
-            positionOffset.setX((*mParticlePositionX)(0));
+            positionOffset.setX((*mParticlePositionX)(this, particle.randomSeed,0));
 	}
 	if (mParticlePositionY) {
-            positionOffset.setY((*mParticlePositionY)(0));
+            positionOffset.setY((*mParticlePositionY)(this, particle.randomSeed,0));
 	}
 	if (mParticlePositionZ) {
-            positionOffset.setZ((*mParticlePositionZ)(0));
+            positionOffset.setZ((*mParticlePositionZ)(this, particle.randomSeed,0));
 	}
 	// Convert to cartesian if necessary
 	if (mParticlePositionType == Polar) {
             positionOffset = polarToCartesian(positionOffset.x(), positionOffset.y(), positionOffset.z());
 	}
-	particle.position = Vector4((*mPositionX)(0), (*mPositionY)(0), (*mPositionZ)(0), 1) + positionOffset;
+        particle.position = Vector4((*mPositionX)(this, particle.randomSeed, 0),
+                                    (*mPositionY)(this, particle.randomSeed, 0),
+                                    (*mPositionZ)(this, particle.randomSeed, 0),
+                                    1) + positionOffset;
 
         /*
          In case the emitter space is "Bones", a bone is randomly selected to spawn the particle
@@ -563,8 +695,8 @@ namespace EvilTemple {
                 while (true) {
                     // Choose a bone at random (?)
                     const QVector<Bone> &bones = mModelInstance->model()->bones();
-                    Q_ASSERT(bones.size() > 2);
-                    const Bone &bone = bones[rand() % bones.size()];
+                    Q_ASSERT(bones.size() > 1);
+                    const Bone &bone = bones[1 + (rand() % (bones.size() - 1))];
 
                     // Skip a certain set of "ref" bones
                     if (bone.name() == "groundParticleRef" || bone.name() == "Chest_ref" || bone.name() == "HandR_ref"
@@ -593,74 +725,91 @@ namespace EvilTemple {
             }
         }
 
-	particle.startTime = mElapsedTime;
-	particle.expireTime = mElapsedTime + mParticleLifetime;
+        particle.startTime = atTime;
+        particle.expireTime = atTime + mParticleLifetime;
 	mParticles.append(particle);
     }
 
     void Emitter::updateParticle(Particle &particle, float elapsedTimeUnits)
     {
-	float particleElapsed = mElapsedTime - particle.startTime;
+        // How many time units have elapsed since the particle was created
+        float particleElapsed = mElapsedTime - particle.startTime;
+        // The number of time units the particle will live after its creation
 	float particleLifetime = particle.expireTime - particle.startTime;
-
+        // A factor between 0 and 1 that indicates how much of the particles lifetime has elapsed
 	float lifecycle = particleElapsed / particleLifetime;
 
+        float scalingFactor = elapsedTimeUnits * ParticlesTimeUnit;
+
 	if (mRotationYaw && mRotationYaw->isAnimated()) {
-            particle.rotationYaw = (*mRotationYaw)(lifecycle);
+            particle.rotationYaw = (*mRotationYaw)(this, particle.randomSeed, lifecycle);
 	}
 	if (mRotationPitch && mRotationPitch->isAnimated()) {
-            particle.rotationPitch = (*mRotationPitch)(lifecycle);
+            particle.rotationPitch = (*mRotationPitch)(this, particle.randomSeed, lifecycle);
 	}
 	if (mRotationRoll && mRotationRoll->isAnimated()) {
-            particle.rotationRoll = (*mRotationRoll)(lifecycle);
+            particle.rotationRoll = (*mRotationRoll)(this, particle.randomSeed, lifecycle);
 	}
 
 	if (mScale && mScale->isAnimated()) {
-            particle.scale = (*mScale)(lifecycle);
+            particle.scale = (*mScale)(this, particle.randomSeed, lifecycle);
 	}
 
 	if (mColorRed && mColorRed->isAnimated()) {
-            particle.colorRed = (*mColorRed)(lifecycle);
+            particle.colorRed = (*mColorRed)(this, particle.randomSeed, lifecycle);
 	}
 	if (mColorGreen && mColorGreen->isAnimated()) {
-            particle.colorGreen = (*mColorGreen)(lifecycle);
+            particle.colorGreen = (*mColorGreen)(this, particle.randomSeed, lifecycle);
 	}
 	if (mColorBlue && mColorBlue->isAnimated()) {
-            particle.colorBlue = (*mColorBlue)(lifecycle);
+            particle.colorBlue = (*mColorBlue)(this, particle.randomSeed, lifecycle);
 	}
 	if (mColorAlpha && mColorAlpha->isAnimated()) {
-            particle.colorAlpha = (*mColorAlpha)(lifecycle);
+            particle.colorAlpha = (*mColorAlpha)(this, particle.randomSeed, lifecycle);
 	}
 
 	if (mAccelerationX && mAccelerationX->isAnimated()) {
-            particle.accelerationX = (*mAccelerationX)(lifecycle);
+            particle.accelerationX = (*mAccelerationX)(this, particle.randomSeed, lifecycle);
 	}
 	if (mAccelerationY && mAccelerationY->isAnimated()) {
-            particle.accelerationY = (*mAccelerationY)(lifecycle);
+            particle.accelerationY = (*mAccelerationY)(this, particle.randomSeed, lifecycle);
 	}
 	if (mAccelerationZ && mAccelerationZ->isAnimated()) {
-            particle.accelerationZ = (*mAccelerationZ)(lifecycle);
+            particle.accelerationZ = (*mAccelerationZ)(this, particle.randomSeed, lifecycle);
 	}
 
 	// Increase velocity according to acceleration or animate it using keyframes	
-	if (mParticleVelocityX && mParticleVelocityX->isAnimated()) {
-            particle.velocityX = (*mParticleVelocityX)(lifecycle);
+        if (mParticleVelocityX && mParticleVelocityX->isAnimated()) {
+            particle.velocityX = (*mParticleVelocityX)(this, particle.randomSeed, lifecycle);
+            if (mParticleVelocityType == Polar)
+                particle.velocityX = deg2rad((*mParticleVelocityX)(this, particle.randomSeed, lifecycle));
+            else
+                particle.velocityX = (*mParticleVelocityX)(this, particle.randomSeed, lifecycle);
 	} else {
-            particle.velocityX += elapsedTimeUnits * particle.accelerationX * ParticlesTimeUnit;
+            if (mParticleVelocityType == Polar)
+               particle.velocityX += deg2rad(particle.accelerationX) * scalingFactor;
+            else
+               particle.velocityX += particle.accelerationX * scalingFactor;
 	}
 	if (mParticleVelocityY && mParticleVelocityY->isAnimated()) {
-            particle.velocityY = (*mParticleVelocityY)(lifecycle);
+            if (mParticleVelocityType == Polar)
+                particle.velocityY = deg2rad((*mParticleVelocityY)(this, particle.randomSeed, lifecycle));
+            else
+                particle.velocityY = (*mParticleVelocityY)(this, particle.randomSeed, lifecycle);
 	} else {
-            particle.velocityY += elapsedTimeUnits * particle.accelerationY * ParticlesTimeUnit;
+             if (mParticleVelocityType == Polar)
+                particle.velocityY += deg2rad(particle.accelerationY) * scalingFactor;
+             else
+                 particle.velocityY += particle.accelerationY * scalingFactor;
 	}
 	if (mParticleVelocityZ && mParticleVelocityZ->isAnimated()) {
-            particle.velocityZ = (*mParticleVelocityZ)(lifecycle);
+            particle.velocityZ = (*mParticleVelocityZ)(this, particle.randomSeed, lifecycle);
 	} else {
-            particle.velocityZ += elapsedTimeUnits * particle.accelerationZ * ParticlesTimeUnit;
+            particle.velocityZ += particle.accelerationZ * scalingFactor;
 	}
 
 	if (mParticleVelocityType == Polar) {
-            float r = particle.position.length();
+            float r = (particle.position - Vector4(0, 0, 0, 1)).length();
             if (r != 0) {
                 Vector4 rotAxis;
                 if (particle.position.x() != 0 || particle.position.z() == 0) {
@@ -671,57 +820,86 @@ namespace EvilTemple {
                     rotAxis = Vector4(1, 0, 0, 0);
                 }
 
-                Quaternion rot1 = Quaternion::fromAxisAndAngle(rotAxis.x(), rotAxis.y(), rotAxis.z(), deg2rad(particle.velocityY));
-                Quaternion rot2 = Quaternion::fromAxisAndAngle(0, 1, 0, deg2rad(particle.velocityX));
+                Quaternion rot1 = Quaternion::fromAxisAndAngle(rotAxis.x(), rotAxis.y(), rotAxis.z(), particle.velocityY * scalingFactor);
+                Quaternion rot2 = Quaternion::fromAxisAndAngle(0, 1, 0, particle.velocityX * scalingFactor);
                 particle.position = Matrix4::rotation(rot2) * Matrix4::rotation(rot1) * particle.position;
 
                 // Extrude the position outwards
                 Vector4 direction = particle.position;
                 direction.setW(0);
-                particle.position += (particle.velocityZ / direction.length()) * direction;
+                particle.position += ((particle.velocityZ * scalingFactor) / direction.length()) * direction;
             }
 	} else {
-            particle.position += Vector4(particle.velocityX, particle.velocityY, particle.velocityZ, 0)
-                                 * elapsedTimeUnits * ParticlesTimeUnit;
+            particle.position += scalingFactor * Vector4(particle.velocityX, particle.velocityY, particle.velocityZ, 0);
 	}
 
-	// An animated position overrides any velocity calculations
-	if (mParticlePositionX && mParticlePositionX->isAnimated()) {
-            particle.position.setX(particle.position.x() + (*mParticlePositionX)(lifecycle));
-	}
-	if (mParticlePositionY && mParticlePositionY->isAnimated()) {
-            particle.position.setY(particle.position.y() + (*mParticlePositionY)(lifecycle));
-	}
-	if (mParticlePositionZ && mParticlePositionZ->isAnimated()) {
-            particle.position.setZ(particle.position.z() + (*mParticlePositionZ)(lifecycle));
-	}
+        // An animated position overrides any velocity calculations
+        if (mParticlePositionType == Cartesian) {
+            // This is very simple for cartesian coordinates
+            if (mParticlePositionX && mParticlePositionX->isAnimated()) {
+                particle.position.setX((*mParticlePositionX)(this, particle.randomSeed, lifecycle));
+            }
+            if (mParticlePositionY && mParticlePositionY->isAnimated()) {
+                particle.position.setY((*mParticlePositionY)(this, particle.randomSeed, lifecycle));
+            }
+            if (mParticlePositionZ && mParticlePositionZ->isAnimated()) {
+                particle.position.setZ((*mParticlePositionZ)(this, particle.randomSeed, lifecycle));
+            }
+        } else if (mParticlePositionType == Polar) {
+            // Convert current coordinate from cartesian back to polar
+            /*float r, theta, phi;
+            cartesianToPolar(particle.position, theta, phi, r);
 
+            // Get the difference between this lifecycle and the previous one
+            particleElapsed = (mElapsedTime - elapsedTimeUnits) - particle.startTime;
+
+            float prevLifecycle = qMax<float>(0, particleElapsed / particleLifetime);
+
+            if (mParticlePositionX && mParticlePositionX->isAnimated()) {
+                //theta += (*mParticlePositionX)(lifecycle) - (*mParticlePositionX)(prevLifecycle);
+            }
+            if (mParticlePositionY && mParticlePositionY->isAnimated()) {
+                phi = deg2rad((*mParticlePositionY)(lifecycle));
+            }
+            if (mParticlePositionZ && mParticlePositionZ->isAnimated()) {
+                r = deg2rad((*mParticlePositionZ)(lifecycle));
+            }
+
+            particle.position = polarToCartesian(deg2rad(theta), deg2rad(phi), r);*/
+        }
     }
 
     void Emitter::elapseTime(float timeUnits) {
 	Q_ASSERT(mSpawnRate > 0);
 
-	mElapsedTime += timeUnits;
+        mElapsedTime += timeUnits;
 
 	// Check for expired particles
 	QList<Particle>::iterator it = mParticles.begin();
 	while (it != mParticles.end()) {
-            if (it->expireTime < mElapsedTime)
+            if (mElapsedTime >= it->expireTime)
                 it = mParticles.erase(it);
             else
                 ++it;
 	}
+
+        // Special case: If this emitter depends on a bone that doesn't exist,
+        // don't do anything.
+        if (mEmitterSpace == Space_Bone) {
+            if (!mModelInstance || !mModelInstance->model() || mModelInstance->model()->bone(mBoneName) == -1)
+                return;
+        }
 	
 	// Spawn new particles
 	if (!mExpired) {
-            float remainingSpawnTime = timeUnits;
-            remainingSpawnTime += mPartialSpawnedParticles;
+            float remainingSpawnTime = mPartialSpawnedParticles + timeUnits;
 
             while (remainingSpawnTime > mSpawnRate) {
-                spawnParticle();
+                spawnParticle(mElapsedTime - remainingSpawnTime + mSpawnRate);
                 remainingSpawnTime -= mSpawnRate;
             }
 
+            // A slight hack that prevents spawn-spikes
             mPartialSpawnedParticles = remainingSpawnTime;
 
             if (mElapsedTime > mLifetime) {
@@ -734,6 +912,8 @@ namespace EvilTemple {
 
     void Emitter::render(RenderStates &renderStates)
     {
+        if (mName == "TorchSmoke")
+            _CrtDbgBreak();
         MaterialPassState &pass = mMaterial->passes[0];
 
 	int posAttrib = pass.program.attributeLocation("vertexPosition");
@@ -753,11 +933,11 @@ namespace EvilTemple {
             glBlendFunc(GL_SRC_ALPHA, GL_ONE);
             break;
 	case Blend_Blend:
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE);
             break;
 	case Blend_Subtract:
-            glBlendColor(-1, -1, -1, -1);
-            glBlendFunc(GL_CONSTANT_COLOR, GL_ONE);
+            glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ZERO, GL_ONE);
+            glBlendEquation(GL_FUNC_REVERSE_SUBTRACT);
             break;
 	}
 
@@ -778,7 +958,7 @@ namespace EvilTemple {
 			particle.colorAlpha / 255.0f);
             glUniform1f(rotationLoc, particle.rotationYaw);
 
-            float d = particle.scale;
+            float d = particle.scale / 100.0 * 128;
             glBegin(GL_QUADS);
             switch (mParticleType) {
             case Sprite:
@@ -809,7 +989,8 @@ namespace EvilTemple {
 
 	glDepthMask(GL_TRUE);
 	glDisable(GL_BLEND);
-	glBlendFunc(GL_ONE, GL_ZERO);
+        glBlendEquation(GL_FUNC_ADD);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	pass.program.unbind();
     }
@@ -887,11 +1068,6 @@ namespace EvilTemple {
 	foreach (Emitter *emitter, d->emitters) {
             emitter->elapseTime(timeUnits);
 	}
-    }
-
-    void ParticleSystem::elapseSeconds(float seconds)
-    {
-        elapseTime(seconds / ParticlesTimeUnit);
     }
 
     void ParticleSystem::render(RenderStates &renderStates) {
@@ -1164,7 +1340,7 @@ namespace EvilTemple {
             mParticleType = Disc;
 	} else if (type == "model") {
             mParticleType = Model;
-    } else if (type == "point") {
+        } else if (type == "point") {
             mParticleType = Point;
 	} else {
             qWarning("Invalid particle type: %s.", qPrintable(type));
@@ -1321,7 +1497,7 @@ namespace EvilTemple {
             QString errorMsg;
             if (!document.setContent(&templatesFile, false, &errorMsg, &errorLine)) {
                 error.append(QString("XML error while loading particle system template file: %1 on line %2.")
-                         .arg(errorMsg).arg(errorLine));
+                             .arg(errorMsg).arg(errorLine));
                 return false;
             }
 

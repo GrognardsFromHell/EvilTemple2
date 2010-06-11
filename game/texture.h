@@ -47,6 +47,10 @@ public:
       Releases resources held by this texture.
       */
     void release();
+
+    uint width() const;
+    uint height() const;
+
 private:
     GLuint mHandle;
     bool mValid;
@@ -54,7 +58,19 @@ private:
     GLenum mMagFilter;
     GLenum mWrapModeS;
     GLenum mWrapModeT;
+    uint mWidth;
+    uint mHeight;
 };
+
+inline uint Texture::width() const
+{
+    return mWidth;
+}
+
+inline uint Texture::height() const
+{
+    return mHeight;
+}
 
 inline void Texture::setMinFilter(GLenum minFilter)
 {

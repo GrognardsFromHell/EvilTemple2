@@ -3,13 +3,11 @@ import Qt 4.7
 MovableWindow {
     width: 400
     height: 480
-    x: (gameView.viewportSize.width - width) / 2
-    y: (gameView.viewportSize.height - height) / 2
 
     property bool hasInventory : false;
 
     signal openInventory;
-    signal openCharSheet;
+    signal openAnimations;
 
     ListModel {
         id: listModel
@@ -78,14 +76,14 @@ MovableWindow {
 
         Image {
             source: 'ButtonBackdrop.png'
-            width: charSheetButton.width + 8
-            height: charSheetButton.height + 8
+            width: animationsButton.width + 8
+            height: animationsButton.height + 8
             Button {
-                id: charSheetButton
+                id: animationsButton
                 x: 4
                 y: 4
-                text: 'Char Sheet'
-                onClicked: openCharSheet()
+                text: 'Animations'
+                onClicked: openAnimations()
             }
         }
     }

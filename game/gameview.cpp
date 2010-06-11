@@ -22,6 +22,7 @@
 #include "profiler.h"
 #include "materials.h"
 #include "translations.h"
+#include "audioengine.h"
 
 #include <gamemath.h>
 using namespace GameMath;
@@ -66,6 +67,10 @@ namespace EvilTemple {
 
             if (!translations.load("translation.dat")) {
                 qFatal("Unable to load translations.");
+            }
+
+            if (!audioEngine.open()) {
+                qWarning("Unable to initialize audio engine.");
             }
 
             // Old: -44
@@ -182,6 +187,8 @@ namespace EvilTemple {
 
         Translations translations;
 
+        AudioEngine audioEngine;
+
         QElapsedTimer sceneTimer;
         Scene scene;
 
@@ -193,7 +200,7 @@ namespace EvilTemple {
             viewportSize.setWidth(width);
             viewportSize.setHeight(height);
 
-            const float zoom = 1.25f;
+            const float zoom = 2;
 
             Matrix4 projectionMatrix = Matrix4::ortho(-halfWidth / zoom, halfWidth / zoom, -halfHeight / zoom, halfHeight / zoom, 1, 5000);
             renderStates.setProjectionMatrix(projectionMatrix);
@@ -509,6 +516,11 @@ namespace EvilTemple {
     Translations *GameView::translations() const
     {
         return &d->translations;
+    }
+
+    AudioEngine *GameView::audioEngine() const
+    {
+        return &d->audioEngine;
     }
 
 }

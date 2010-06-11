@@ -6,6 +6,11 @@ var startupMap = 'maps/Map-9-Nulb-Exterior/map.js';
 
 var maps = [
     { name: 'Temple Level 1', dir: 'Map12-temple-dungeon-level-1' },
+    { name: "Temple Level 1 (Room)", dir: 'Map12-temple-dungeon-level-1-room-131' },
+    { name: "Temple Level 2", dir: "Map13-dungeon-level-02" },
+    { name: "Temple Level 3 (Lower)", dir: "Map14-dungeon-level-03_lower" },
+    { name: "Temple Level 3 (Upper)", dir: "Map14-dungeon-level-03_upper" },
+    { name: "Temple Level 4", dir: "Map15-dungeon-level-04" },
     { name: 'Hommlet', dir: 'Map-2-Hommlet-Exterior' },
     { name: 'Moathouse Interior', dir: 'Map-7-Moathouse_Interior' },
     { name: 'Nulb', dir: 'Map-9-Nulb-Exterior' },
@@ -95,8 +100,8 @@ var BaseObject = {
                 mobileInfoDialog.deleteLater();
             });
             
-            mobileInfoDialog.openCharSheet.connect(function() {				           
-                openCharacterSheet(obj);
+            mobileInfoDialog.openAnimations.connect(function() {
+                openAnimations(modelInstance);
             });
             
             mobileInfoDialog.hasInventory = (obj.content !== undefined && obj.content.length > 0);            
@@ -226,6 +231,7 @@ var MapChanger = {
 };
 
 var prototypes;
+var sounds;
 
 function startup() {
     print("Showing main menu.");
@@ -251,6 +257,7 @@ function startup() {
     loadEquipment();
     loadPortraits();
     loadInventoryIcons();
+    sounds = eval('(' + readFile('sound/sounds.js') + ')');
 
     // Assign the prototype of each loaded prototype
     for (var i in prototypes) {
@@ -272,17 +279,41 @@ function rotationFromDegrees(degrees) {
     return new Quaternion(0, sinRot, 0, cosRot);
 }
 
+var animEventGameFacade = {
+    particles: function(partSysId, proxyObject) {
+        var modelInstance = proxyObject.modelInstance;
+        var sceneNode = proxyObject.sceneNode;
+        var particleSystem = gameView.particleSystems.instantiate(partSysId);
+        particleSystem.modelInstance = modelInstance;
+        sceneNode.attachObject(particleSystem);
+    },
+    sound_local_obj: function(soundId, sceneNode) {
+        var filename = sounds[soundId];
+        if (filename === undefined) {
+            print ("Unknown sound id: " + soundId);
+            return;
+        }
+
+        print("Playing sound " + filename)
+        gameView.audioEngine.playSoundOnce(filename, SoundCategory_Effect);
+    }
+};
+
 function handleAnimationEvent(sceneNode, modelInstance, obj, type, content)
 {
-    var anim_obj = null; // Unused
-    var game = {
-        particles: function(partSysId, unused) {
-            var particleSystem = gameView.particleSystems.instantiate(partSysId);
-            particleSystem.modelInstance = modelInstance;
-            sceneNode.attachObject(particleSystem);
-        }
+    var game = animEventGameFacade;
+
+    var anim_obj = {
+        sceneNode: sceneNode,
+        modelInstance: modelInstance,
+        obj: obj
     };
 
+    /*
+        Python one-liners are in general valid javascript, so we directly evaluate them here.
+        Eval has access to all local variables in this scope, so we can define game + anim_obj,
+        which are the most often used by the animation events.
+    */
     eval(content);
 }
 

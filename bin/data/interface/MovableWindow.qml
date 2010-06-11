@@ -4,6 +4,8 @@ MouseArea {
     id: window
     width: 640
     height: 480
+    x: (gameView.viewportSize.width - width) / 2
+    y: (gameView.viewportSize.height - height) / 2
 
     drag.target: window
     drag.axis: Drag.XandYAxis

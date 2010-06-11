@@ -135,4 +135,6 @@ private:
 
 }
 
+Q_DECLARE_METATYPE(EvilTemple::AudioEngine*)
+
 #endif // AUDIOENGINE_H

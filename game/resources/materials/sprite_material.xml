@@ -44,8 +44,12 @@ void main() {
   
   vec2 newTexCoord = mTexRotate * (texCoord - pivot) + pivot;
 
-    vec4 texel = texture2D(texSampler, newTexCoord);
-    gl_FragColor = materialColor * texel;
+    vec4 texel = materialColor * texture2D(texSampler, newTexCoord);
+
+    if (texel.a <= 0.01)
+        discard;
+
+    gl_FragColor = texel;
 }
 ]]>
         </code>

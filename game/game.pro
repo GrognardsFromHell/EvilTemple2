@@ -13,7 +13,7 @@ TARGET = game
 
 CONFIG += dll
 
-TEMPLE_LIBS += qt3d minizip glew jpeg
+TEMPLE_LIBS += qt3d minizip glew jpeg audioengine
 include(../3rdparty/game-math/game-math.pri)
 
 DEFINES += GAME_LIBRARY GAMEMATH_MEMORY_OPERATORS
@@ -107,6 +107,7 @@ OTHER_FILES += \
     resources/materials/spheremap.fs \
     ../bin/data/scripts/startup.js \
     ../bin/data/scripts/equipment.js \
+    ../bin/data/scripts/animations.js
 
 INCLUDEPATH += .
 

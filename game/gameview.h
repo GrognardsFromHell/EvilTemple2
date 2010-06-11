@@ -16,6 +16,7 @@ class Scene;
 class ClippingGeometry;
 class Materials;
 class ParticleSystems;
+class AudioEngine;
 
 class GameView : public QGraphicsView
 {
@@ -25,6 +26,7 @@ class GameView : public QGraphicsView
     Q_PROPERTY(ClippingGeometry *clippingGeometry READ clippingGeometry)
     Q_PROPERTY(Materials *materials READ materials)
     Q_PROPERTY(ParticleSystems* particleSystems READ particleSystems)
+    Q_PROPERTY(AudioEngine* audioEngine READ audioEngine)
 
     Q_PROPERTY(int scrollBoxMinX READ scrollBoxMinX WRITE setScrollBoxMinX)
     Q_PROPERTY(int scrollBoxMinY READ scrollBoxMinY WRITE setScrollBoxMinY)
@@ -43,6 +45,7 @@ public:
     ClippingGeometry *clippingGeometry() const;
     Materials *materials() const;
     ParticleSystems *particleSystems() const;
+    AudioEngine *audioEngine() const;
 
     int scrollBoxMinX() const {
         return mScrollBoxMinX;

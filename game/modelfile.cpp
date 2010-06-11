@@ -545,4 +545,9 @@ namespace EvilTemple {
         return -1;
     }
 
+    QStringList Model::animations() const
+    {
+        return QStringList(mAnimationMap.keys());
+    }
+
 }

@@ -32,8 +32,7 @@ namespace EvilTemple {
 
         void setModelInstance(ModelInstance *modelInstance);
 
-        void elapseTime(float timeUnits);
-        void elapseSeconds(float seconds);
+        void elapseTime(float seconds);
 
         void render(RenderStates &renderStates);
 

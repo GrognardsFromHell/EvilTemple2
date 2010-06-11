@@ -785,6 +785,46 @@ public:
         return value.trimmed().isEmpty() || value.trimmed() == "0";
     }
 
+    void convertSounds()
+    {
+        ZipWriter writer(mOutputPath + "sounds.zip");
+
+        QSet<QString> soundFiles;
+        QVariantMap soundMapping;
+
+        QStringList soundIndexFiles = QStringList() << "sound/snd_critter.mes"
+                                                    << "sound/snd_interface.mes"
+                                                    << "sound/snd_misc.mes"
+                                                    << "sound/snd_item.mes"
+                                                    << "sound/snd_spells.mes";
+
+        foreach (const QString &soundIndexFile, soundIndexFiles) {
+            QHash<uint, QString> soundIndex = MessageFile::parse(vfs->openFile(soundIndexFile));
+
+            foreach (uint key, soundIndex.keys()) {
+                QString filename = QDir::toNativeSeparators("sound/" + soundIndex[key].toLower());
+
+                // Some entries are empty, others are directory names
+                if (!filename.toLower().endsWith(".wav"))
+                    continue;
+
+                soundMapping.insert(QString("%1").arg(key), QVariant(filename));
+                soundFiles.insert(filename);
+            }
+        }
+
+        qDebug("Copying %d sound files.", soundFiles.size());
+
+        // Copy all sound files into the zip file
+        foreach (const QString &filename, soundFiles) {
+            writer.addFile(filename, vfs->openFile(filename), 9);
+        }
+
+        // Create a mapping
+        Serializer serializer;
+        writer.addFile("sound/sounds.js", serializer.serialize(soundMapping), 9);
+    }
+
     void convertParticleSystemEmitter(QDomDocument &document, QDomElement &particleSystem,
                                       const QList<QByteArray> &sections)
     {
@@ -1558,10 +1598,19 @@ public:
         emit converter->progressUpdate(sectionsDone, totalWorkSections, "Converting particle systems");
 
         convertParticleSystems();
-        sectionsDone += 5;
+        sectionsDone += 1;
 
         if (cancel)
             return false;
+
+        emit converter->progressUpdate(sectionsDone, totalWorkSections, "Converting sounds");
+
+        convertSounds();
+
+        if (cancel)
+            return false;
+
+        sectionsDone += 4;
 
         emit converter->progressUpdate(sectionsDone, totalWorkSections, "Converting interface");
 

@@ -119,6 +119,23 @@ bool ModelScriptable::hasAnimation(const QString &name) const
     return model ? model->hasAnimation(name) : false;
 }
 
+QScriptValue ModelScriptable::animations() const
+{
+    SharedModel model = data();
+
+    if (model) {
+        QStringList animations = model->animations();
+        QScriptValue result = engine()->newArray(animations.size());
+        int i = 0;
+        foreach (const QString &anim, animations) {
+            result.setProperty(i++, QScriptValue(anim));
+        }
+        return result;
+    } else {
+        return engine()->undefinedValue();
+    }
+}
+
 float ModelScriptable::radiusSquared() const
 {
     SharedModel model = data();

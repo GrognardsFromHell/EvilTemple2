@@ -23,6 +23,7 @@ namespace EvilTemple {
     Q_PROPERTY(const Box3d &boundingBox READ boundingBox);
     Q_PROPERTY(float radius READ radius);
     Q_PROPERTY(float radiusSquared READ radiusSquared)
+    Q_PROPERTY(QScriptValue animations READ animations)
     public:
         static void registerWith(QScriptEngine *engine);
 
@@ -30,8 +31,10 @@ namespace EvilTemple {
         float radius() const;
         float radiusSquared() const;
 
+        QScriptValue animations() const;
+
     public slots:
-        bool hasAnimation(const QString &name) const;
+        bool hasAnimation(const QString &name) const;        
 
     private:
         SharedModel data() const;
