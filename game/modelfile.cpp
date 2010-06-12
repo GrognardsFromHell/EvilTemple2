@@ -440,6 +440,10 @@ namespace EvilTemple {
             glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, faceGroup->buffer);
             glBufferDataARB(GL_ELEMENT_ARRAY_BUFFER_ARB, groupSize, currentDataPointer, GL_STATIC_DRAW_ARB);
 
+            // Also keep a copy in system memory for normal recalculation (maybe base this on a flag?)
+            faceGroup->indices = new ushort[faceGroup->elementCount];
+            memcpy(faceGroup->indices, currentDataPointer, sizeof(ushort) * faceGroup->elementCount);
+
             currentDataPointer += groupSize;
 	}
 
@@ -475,7 +479,7 @@ namespace EvilTemple {
 	glEnable(GL_LIGHTING);
     }
 
-    FaceGroup::FaceGroup() : buffer(0), material(0), elementCount(0)
+    FaceGroup::FaceGroup() : buffer(0), material(0), elementCount(0), indices(0)
     {
     }
 
@@ -484,6 +488,7 @@ namespace EvilTemple {
 	if (buffer) {
             glDeleteBuffers(1, &buffer);
 	}
+        delete [] indices;
     }
 
     QDataStream &operator >>(QDataStream &stream, Animation &animation)

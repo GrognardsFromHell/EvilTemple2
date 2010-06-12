@@ -23,7 +23,7 @@
 #include "zonebackgroundmap.h"
 #include "skmreader.h"
 #include "model.h"
-#include "material.h"
+#include "troika_material.h"
 #include "exclusions.h"
 #include "mapconverter.h"
 #include "prototypeconverter.h"

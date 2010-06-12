@@ -50,11 +50,11 @@ namespace EvilTemple {
         return r * Vector4(newX, newY, newZ, 0);
     }
 
-    inline void cartesianToPolar(const Vector4 &pos, float &theta, float &phi, float &r)
+    inline void cartesianToPolar(const Vector4 &pos, double &theta, double &phi, double &r)
     {
         r = std::sqrt(pos.x() * pos.x() + pos.y() * pos.y() + pos.z() * pos.z());
-        theta = rad2deg(std::atan2(pos.x() / r, pos.z() / r));
-        phi = rad2deg(std::acos(pos.y() / r));
+        theta = std::atan2(pos.x() / r, pos.z() / r);
+        phi = std::asin(pos.y() / r);
     }
 
     const static float ParticlesTimeUnit = 1 / 30.0f; // All time-based values are in relation to this base value
@@ -847,7 +847,7 @@ namespace EvilTemple {
             }
         } else if (mParticlePositionType == Polar) {
             // Convert current coordinate from cartesian back to polar
-            /*float r, theta, phi;
+            double r, theta, phi;
             cartesianToPolar(particle.position, theta, phi, r);
 
             // Get the difference between this lifecycle and the previous one
@@ -856,16 +856,16 @@ namespace EvilTemple {
             float prevLifecycle = qMax<float>(0, particleElapsed / particleLifetime);
 
             if (mParticlePositionX && mParticlePositionX->isAnimated()) {
-                //theta += (*mParticlePositionX)(lifecycle) - (*mParticlePositionX)(prevLifecycle);
+                theta += deg2rad((*mParticlePositionX)(this, particle.randomSeed, lifecycle) - (*mParticlePositionX)(this, particle.randomSeed, prevLifecycle));
             }
             if (mParticlePositionY && mParticlePositionY->isAnimated()) {
-                phi = deg2rad((*mParticlePositionY)(lifecycle));
+                phi += deg2rad((*mParticlePositionY)(this, particle.randomSeed, lifecycle) - (*mParticlePositionY)(this, particle.randomSeed, prevLifecycle));
             }
             if (mParticlePositionZ && mParticlePositionZ->isAnimated()) {
-                r = deg2rad((*mParticlePositionZ)(lifecycle));
+                r += (*mParticlePositionZ)(this, particle.randomSeed, lifecycle) - (*mParticlePositionZ)(this, particle.randomSeed, prevLifecycle);
             }
 
-            particle.position = polarToCartesian(deg2rad(theta), deg2rad(phi), r);*/
+            particle.position = polarToCartesian(theta, phi, r);
         }
     }
 
@@ -1218,7 +1218,7 @@ namespace EvilTemple {
             mEmitterSpace = Space_RandomBone;
         } else if (space == "world") {
             mEmitterSpace = Space_World;
-        } else if (space == "node") {
+        } else if (space == "node pos") {
             mEmitterSpace = Space_Bone;
             mBoneName = element.attribute("spaceNode");
         } else if (space == "node ypr") {

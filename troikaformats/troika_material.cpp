@@ -1,7 +1,7 @@
 
 #include <GL/glew.h>
 
-#include "material.h"
+#include "troika_material.h"
 #include "virtualfilesystem.h"
 #include "constants.h"
 #include "util.h"

@@ -5,7 +5,7 @@ using namespace GameMath;
 
 #include "modelwriter.h"
 
-#include "material.h"
+#include "troika_material.h"
 using namespace Troika;
 
 static const uint MAGIC = 0x4C444F4D; // MODL

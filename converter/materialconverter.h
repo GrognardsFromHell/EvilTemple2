@@ -5,7 +5,7 @@
 #include <QList>
 #include <QByteArray>
 
-#include "material.h"
+#include "troika_material.h"
 
 namespace Troika {
     class VirtualFileSystem;

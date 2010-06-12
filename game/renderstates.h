@@ -82,6 +82,9 @@ private:
     Matrix4 mWorldViewInverseMatrix;
     QScopedPointer<UniformBinder> mWorldViewInverseMatrixBinder;
 
+    Matrix4 mWorldViewInverseTransposeMatrix;
+    QScopedPointer<UniformBinder> mWorldViewInverseTransposeMatrixBinder;
+
     Matrix4 mViewProjectionMatrix;
     QScopedPointer<UniformBinder> mViewProjectionMatrixBinder;
 
@@ -134,6 +137,7 @@ inline void RenderStates::setWorldMatrix(const Matrix4 &worldMatrix)
     mWorldMatrix = worldMatrix;
     mWorldInverseMatrix = worldMatrix.inverted(); // Should probably be deferred
     mWorldViewInverseMatrix = mWorldInverseMatrix * mViewInverseMatrix;  // Should probably be deferred
+    mWorldViewInverseTransposeMatrix = mWorldViewInverseMatrix.transposed();
     mWorldViewMatrix = mViewMatrix * worldMatrix;
     mWorldViewProjectionMatrix = mProjectionMatrix * mWorldViewMatrix;
 }
@@ -141,9 +145,10 @@ inline void RenderStates::setWorldMatrix(const Matrix4 &worldMatrix)
 inline void RenderStates::setViewMatrix(const Matrix4 &viewMatrix)
 {
     mViewMatrix = viewMatrix;
-    mViewInverseMatrix = viewMatrix.inverted();  // Should probably be deferred
-    mWorldViewInverseMatrix = mWorldInverseMatrix * mViewInverseMatrix;  // Should probably be deferred
+    mViewInverseMatrix = viewMatrix.inverted();  // Should probably be deferred    
     mWorldViewMatrix = viewMatrix * mWorldMatrix;
+    mWorldViewInverseMatrix = mWorldViewMatrix.inverted();  // Should probably be deferred
+    mWorldViewInverseTransposeMatrix = mWorldViewInverseMatrix.transposed();
     mViewProjectionMatrix = mProjectionMatrix * mViewMatrix;
     mWorldViewProjectionMatrix = mProjectionMatrix * mWorldViewMatrix;
     updateScreenViewport();

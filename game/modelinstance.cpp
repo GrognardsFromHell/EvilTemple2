@@ -370,6 +370,43 @@ namespace EvilTemple {
             animateVertices(mAddMeshes[i], mTransformedPositionsAddMeshes[i], mTransformedNormalsAddMeshes[i], mPositionBufferAddMeshes[i], mNormalBufferAddMeshes[i],
                             &mAddMeshBoneMapping[i]);
         }
+
+        const Model *model = mModel.data();
+
+        // This is extremely costly. Accurately recomputing the normals for each vertex
+        /*for (int i = 0; i < model->vertices; ++i) {
+            QVector<Vector4> influences;
+            Vector4 thisPos = mTransformedPositions[i];
+
+            // Find all faces that use this vertex
+            for (int j = 0; j < model->faces; ++j) {
+                const FaceGroup &faceGroup = model->faceGroups[j];
+
+                for (int k = 0; k < faceGroup.elementCount; k += 3) {
+                    int index1 = faceGroup.indices[k];
+                    int index2 = faceGroup.indices[k+1];
+                    int index3 = faceGroup.indices[k+2];
+
+                    if (index1 == i) {
+                        influences.append((mTransformedPositions[index2] - thisPos).cross(mTransformedPositions[index3] - thisPos).normalized());
+                    } else if (index2 == i) {
+                        influences.append((mTransformedPositions[index3] - thisPos).cross(mTransformedPositions[index1] - thisPos).normalized());
+                    } else if (index3 == i) {
+                        influences.append((mTransformedPositions[index1] - thisPos).cross(mTransformedPositions[index2] - thisPos).normalized());
+                    }
+                }
+            }
+
+            if (influences.isEmpty())
+                continue;
+
+            float weight = 1 / (float)influences.size();
+            Vector4 result = weight * influences[0];
+            for (int j = 1; j < influences.size(); ++j) {
+                result += weight * influences[j];
+            }
+            mTransformedNormals[i] = result;
+        }*/
     }
 
     void ModelInstance::render(RenderStates &renderStates)

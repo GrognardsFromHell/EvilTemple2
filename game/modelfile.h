@@ -26,6 +26,7 @@ namespace EvilTemple {
         // slot, this is the index pointing to it, otherwise it's -1
         uint elementCount;
         GLuint buffer;
+        ushort *indices;
 
         FaceGroup();
         ~FaceGroup();

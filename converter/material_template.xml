@@ -5,11 +5,19 @@
     <shader>
       <vertexShader version="120">
         {{LIGHTING_ON}}
-        <include file=":/material/lighting.vs" />
+        <include file=":/material/lighting.vert" />
         {{/LIGHTING_ON}}
+        {{SPHEREMAP_ON}}
+        <include file=":/material/spheremap.vert" />
+        {{/SPHEREMAP_ON}}
         <code>
           <![CDATA[
+uniform mat4 worldViewMatrix;
 uniform mat4 worldViewProjectionMatrix;
+uniform mat4 worldViewInverseTransposeMatrix;
+uniform mat4 worldInverseMatrix;
+uniform mat4 worldViewInverseMatrix;
+uniform mat4 viewMatrix;
 
 attribute vec4 vertexPosition;
 attribute vec2 vertexTexCoord;
@@ -20,21 +28,17 @@ varying vec2 texCoord;
 attribute vec4 vertexNormal;
 {{/NORMALS_ON}}
 
-{{SPHEREMAP_ON}}
-varying vec3 fragNormal;
-{{/SPHEREMAP_ON}}
-
 void main() {
 {{LIGHTING_ON}}
-        lighting(vertexPosition, vertexNormal);
+        lighting(vertexPosition, vertexNormal, worldViewMatrix, viewMatrix);
 {{/LIGHTING_ON}}
+
+        {{SPHEREMAP_ON}}
+        sphereMapping(vertexPosition, vertexNormal, worldViewMatrix, worldViewInverseTransposeMatrix);
+        {{/SPHEREMAP_ON}}
 
         gl_Position = worldViewProjectionMatrix * vertexPosition;
         texCoord = vertexTexCoord; // Pass through texture coordinates
-
-        {{SPHEREMAP_ON}}
-        fragNormal = vertexNormal.xyz;
-        {{/SPHEREMAP_ON}}
 }
 ]]>
         </code>
@@ -42,13 +46,13 @@ void main() {
 
       <fragmentShader version="120">
         {{LIGHTING_ON}}
-        <include file=":/material/lighting.fs" />
+        <include file=":/material/lighting.frag" />
         {{/LIGHTING_ON}}
         {{TEXTUREANIM_ON}}
-        <include file=":/material/textureanim.fs" />
+        <include file=":/material/textureanim.frag" />
         {{/TEXTUREANIM_ON}}
         {{SPHEREMAP_ON}}
-        <include file=":/material/spheremap.fs" />
+        <include file=":/material/spheremap.frag" />
         {{/SPHEREMAP_ON}}
 
         <code>
@@ -64,18 +68,10 @@ varying vec2 texCoord;
 uniform float t = 0;
 {{/TEXTUREANIM_ON}}
 
-{{SPHEREMAP_ON}}
-varying vec3 fragNormal;
-{{/SPHEREMAP_ON}}
-
 {{SAMPLERS}}
 
 void main(void)
 {
-{{LIGHTING_ON}}
-  vec4 Idiff = {{LIGHTING_TERM}};
-{{/LIGHTING_ON}}
-
    {{PIXEL_TERM}}
 
     if (gl_FragColor.a == 0)
@@ -95,6 +91,10 @@ void main(void)
       <uniform name="viewMatrix" semantic="View" />
       <uniform name="worldViewMatrix" semantic="WorldView" />
       {{/LIGHTING_ON}}
+      {{SPHEREMAP_ON}}
+      <uniform name="worldViewMatrix" semantic="WorldView" />
+      <uniform name="worldViewInverseTransposeMatrix" semantic="WorldViewInverseTranspose" />
+      {{/SPHEREMAP_ON}}
       {{TEXTUREANIM_ON}}
       <!-- Time is 0.0 to 1.0 (wraps) for each second -->
       <uniform name="t" semantic="Time" />
@@ -118,12 +118,12 @@ void main(void)
   <pass>
     <shader>
       <vertexShader>
-        <include file=":/material/shadow.fs" />
+        <include file=":/material/shadow.frag" />
         <code></code>
       </vertexShader>
 
       <fragmentShader>
-        <include file=":/material/shadow.vs" />
+        <include file=":/material/shadow.vert" />
           <code></code>
       </fragmentShader>
 

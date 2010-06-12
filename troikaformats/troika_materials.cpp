@@ -8,7 +8,7 @@
 #include <QtOpenGL>
 
 #include "troika_materials.h"
-#include "material.h"
+#include "troika_material.h"
 #include "virtualfilesystem.h"
 #include "util.h"
 

@@ -90,8 +90,6 @@ OTHER_FILES += \
     resources/materials/light_material.xml \
     resources/materials/sprite_material.xml \
     resources/materials/clipping_material.xml \
-    resources/materials/lighting.vs \
-    resources/materials/lighting.fs \
     resources/materials/missing_material.xml \
     resources/materials/shadow.vs \
     resources/materials/shadow.fs \
@@ -103,11 +101,14 @@ OTHER_FILES += \
     resources/fonts/Fontin-Italic.ttf \
     resources/fonts/Fontin-Regular.ttf \
     resources/fonts/Fontin-SmallCaps.ttf \
-    resources/materials/textureanim.fs \
-    resources/materials/spheremap.fs \
     ../bin/data/scripts/startup.js \
     ../bin/data/scripts/equipment.js \
-    ../bin/data/scripts/animations.js
+    ../bin/data/scripts/animations.js \
+    resources/materials/spheremap.vert \
+    resources/materials/spheremap.frag \
+    resources/materials/lighting.frag \
+    resources/materials/lighting.vert \
+    resources/materials/textureanim.frag
 
 INCLUDEPATH += .
 

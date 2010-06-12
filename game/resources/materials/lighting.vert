@@ -5,17 +5,12 @@ const int Light_Point = 2;
 uniform int lightSourceType;
 uniform vec4 lightSourcePosition;
 
-uniform mat4 worldInverseMatrix;
-uniform mat4 worldViewMatrix;
-uniform mat4 worldViewInverseMatrix;
-uniform mat4 viewMatrix;
-
 varying vec3 normal;
 varying vec3 lightVector;
 varying vec3 halfVector;
 varying float lightDistance;
 
-void lighting(vec4 vertexPosition, vec4 vertexNormal)
+void lighting(vec4 vertexPosition, vec4 vertexNormal, mat4 worldViewMatrix, mat4 viewMatrix)
 {
 	normal = normalize(vec3(worldViewMatrix * vertexNormal));
 

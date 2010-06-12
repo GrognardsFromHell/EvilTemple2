@@ -4,7 +4,7 @@
 #include "skmreader.h"
 #include "virtualfilesystem.h"
 #include "model.h"
-#include "material.h"
+#include "troika_material.h"
 #include "troika_materials.h"
 #include "skeleton.h"
 

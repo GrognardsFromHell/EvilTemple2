@@ -3,7 +3,7 @@
 #include <QCryptographicHash>
 
 #include "virtualfilesystem.h"
-#include "material.h"
+#include "troika_material.h"
 
 
 #include "util.h"
@@ -91,8 +91,6 @@ public:
             materialFile.replace(lightingBlocks, "");
         }
 
-        pixelTerm.append("gl_FragColor = materialColor;\n");
-
         int samplersUsed = 0;
 
         for (int i = 0; i < LegacyTextureStages; ++i) {
@@ -155,7 +153,7 @@ public:
             case TextureStageInfo::Environment:
                 sphereMap = true;
                 useNormals = true;
-                pixelTerm.append(QString("texel = texture2D(%1, textureSphereMap(texCoord, fragNormal));\n").arg(samplerName));
+                pixelTerm.append(QString("texel = texture2D(%1, sphereMapping());\n").arg(samplerName));
                 break;
             default:
                 qFatal("Invalid setting for texture stage transform: %d.", textureStage->transformType);
@@ -185,12 +183,15 @@ public:
             QRegExp lightingBlocks("\\{\\{LIGHTING_ON\\}\\}.+\\{\\{\\/LIGHTING_ON\\}\\}");
             lightingBlocks.setMinimal(true);
             materialFile.replace(lightingBlocks, "");
+
+            // Use a constant material color if no lighting is enabled
+            pixelTerm.prepend("gl_FragColor = materialColor;\n");
         } else {
 
             if (material->glossmap().isNull()) {
-                materialFile.replace("{{LIGHTING_TERM}}", "lighting(shininess)");
+                // Use a constant material color if no lighting is enabled
+                pixelTerm.prepend("gl_FragColor = lighting(shininess, materialColor);\n");
             } else {
-
                 int textureId = getTexture(material->glossmap()); // This forces the texture to be loaded -> ok
 
                 samplers.append("uniform sampler2D texSamplerGlossmap;\n");
@@ -202,13 +203,12 @@ public:
 
                 samplerUniforms.append(QString("<uniform name=\"texSamplerGlossmap\" semantic=\"Texture%2\" />").arg(samplersUsed++));
 
-                materialFile.replace("{{LIGHTING_TERM}}", "lightingGlossmap(shininess, texSamplerGlossmap, texCoord)");
+                pixelTerm.prepend("gl_FragColor = lightingGlossmap(shininess, materialColor, texSamplerGlossmap, texCoord);\n");
             }
 
             useNormals = true;
             materialFile.replace("{{LIGHTING_ON}}", "");
             materialFile.replace("{{/LIGHTING_ON}}", "");
-            pixelTerm.append("gl_FragColor = gl_FragColor * Idiff;\n");
         }
 
         if (!textureAnimation) {
