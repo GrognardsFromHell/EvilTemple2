@@ -34,6 +34,7 @@ namespace Troika
 
         QList<ParticleSystem> particleSystems;
         QList<Light> lights;
+        QList<TileSector> tileSectors;
 
         QVector3D startPosition;
         quint32 movie; // Movie to play when entering
@@ -267,4 +268,15 @@ namespace Troika
     {
         d_ptr->mobiles.append(gameObject);
     }
+
+    void ZoneTemplate::addTileSector(const TileSector &tileSector)
+    {
+        d_ptr->tileSectors.append(tileSector);
+    }
+
+    const QList<TileSector> &ZoneTemplate::tileSectors() const
+    {
+        return d_ptr->tileSectors;
+    }
+
 }

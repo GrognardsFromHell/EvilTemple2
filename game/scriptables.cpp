@@ -7,6 +7,7 @@
 
 namespace EvilTemple {
     typedef QSharedPointer<ModelInstance> SharedModelInstance;
+    typedef QSharedPointer<LineRenderable> SharedLineRenderable;
 }
 
 using EvilTemple::SharedModel;
@@ -16,6 +17,7 @@ using EvilTemple::SharedModelInstance;
 using EvilTemple::SharedLight;
 using EvilTemple::SharedMaterialState;
 using EvilTemple::SharedParticleSystem;
+using EvilTemple::SharedLineRenderable;
 
 Q_DECLARE_METATYPE(SharedSceneNode)
 Q_DECLARE_METATYPE(SharedModel)
@@ -24,6 +26,7 @@ Q_DECLARE_METATYPE(SharedModelInstance)
 Q_DECLARE_METATYPE(SharedLight)
 Q_DECLARE_METATYPE(SharedMaterialState)
 Q_DECLARE_METATYPE(SharedParticleSystem)
+Q_DECLARE_METATYPE(SharedLineRenderable)
 
 Q_DECLARE_METATYPE(Vector4)
 Q_DECLARE_METATYPE(Quaternion)
@@ -85,6 +88,9 @@ void renderableFromScriptValue(const QScriptValue &object, SharedRenderable &out
     } else if (userType == qMetaTypeId<SharedParticleSystem>()) {
         SharedParticleSystem particleSystemInstance = qvariant_cast<SharedParticleSystem>(variant);
         out = particleSystemInstance.objectCast<Renderable>();
+    } else if (userType == qMetaTypeId<SharedLineRenderable>()) {
+        SharedLineRenderable lineRenderable = qvariant_cast<SharedLineRenderable>(variant);
+        out = lineRenderable.objectCast<Renderable>();
     } else {
         qWarning("Unable to convert to SharedRenderable.");
     }
@@ -192,6 +198,48 @@ ParticleSystem *ParticleSystemScriptable::data() const
 
     if (!data) {
         context()->throwError("Particle system instance object not associated with a shared renderable.");
+        return NULL;
+    }
+
+    return data;
+}
+
+QScriptValue LineRenderableScriptableCtor(QScriptContext *context, QScriptEngine *engine)
+{
+    if (!context->isCalledAsConstructor())
+        return context->throwError(QScriptContext::SyntaxError, "please use the 'new' operator");
+    SharedLineRenderable node(new LineRenderable);
+    QScriptValue result = engine->newVariant(context->thisObject(), qVariantFromValue(node));
+    result.setPrototype(engine->defaultPrototype(qMetaTypeId<SharedLineRenderable>()));
+    return result;
+}
+
+void LineRenderableScriptable::registerWith(QScriptEngine *engine)
+{
+    registerValueType<SharedLineRenderable>(engine, "SharedLineRenderable");
+    int metaId = qMetaTypeId<SharedLineRenderable>();
+    QScriptValue prototype = engine->newQObject(new LineRenderableScriptable, QScriptEngine::ScriptOwnership);
+    engine->setDefaultPrototype(metaId, prototype);
+
+    QScriptValue ctor = engine->newFunction(LineRenderableScriptableCtor);
+    engine->globalObject().setProperty("LineRenderable", ctor);
+}
+
+void LineRenderableScriptable::addLine(const Vector4 &start, const Vector4 &end)
+{
+    LineRenderable *renderable = data();
+    if (renderable)
+        renderable->addLine(start, end);
+}
+
+LineRenderable *LineRenderableScriptable::data() const
+{
+    SharedRenderable renderable = qscriptvalue_cast<SharedRenderable>(thisObject());
+
+    LineRenderable *data = renderable.objectCast<LineRenderable>().data();
+
+    if (!data) {
+        context()->throwError("LineRenderable system instance object not associated with a shared renderable.");
         return NULL;
     }
 

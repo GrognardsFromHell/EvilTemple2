@@ -20,7 +20,8 @@ SOURCES += converter.cpp \
     prototypeconverter.cpp \
     converterwizard.cpp \
     choosedirectorypage.cpp \
-    conversionpage.cpp
+    conversionpage.cpp \
+    pathnodeconverter.cpp
 
 HEADERS += \
     util.h \
@@ -36,7 +37,8 @@ HEADERS += \
     stable.h \
     converterwizard.h \
     choosedirectorypage.h \
-    conversionpage.h
+    conversionpage.h \
+    pathnodeconverter.h
 
 win32:SOURCES += basepathfinder_win32.cpp
 else:SOURCES += basepathfinder.cpp

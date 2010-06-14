@@ -364,6 +364,8 @@ function loadMap(filename) {
 
     gameView.clippingGeometry.load(mapObj.clippingGeometry, scene);
 
+    gameView.sectorMap.load(filename.replace('map.js', '') + 'sectors.dat');
+
     print("Creating " + mapObj.staticObjects.length + " static objects.");
 
     for (var i = 0; i < mapObj.staticObjects.length; ++i) {
@@ -414,6 +416,36 @@ function loadMap(filename) {
 
         scene.addNode(sceneNode);
     }
+
+/*    print("Creating debug objects for waypoints.");
+    for (var waypointId in mapObj.waypoints) {
+        var waypoint = mapObj.waypoints[waypointId];
+
+        var sceneNode = new SceneNode();
+        sceneNode.interactive = false;
+        sceneNode.position = new Vector4(waypoint.x, 0, waypoint.y, 1);
+
+        var testModel = gameView.loadModel('meshes/items/Ale_stien.model');
+
+        var modelInstance = new ModelInstance();
+        modelInstance.model = testModel;
+        sceneNode.attachObject(modelInstance);
+
+        var origin = new Vector4(0,0,0,1);
+
+        // Connect with targets
+        for (var i = 0; i < waypoint.goals.length; ++i) {
+            var goal = mapObj.waypoints[waypoint.goals[i]];
+            var diffX = goal.x - waypoint.x;
+            var diffY = goal.y - waypoint.y;
+
+            var line = new LineRenderable();
+            line.addLine(origin, new Vector4(diffX, 0, diffY, 1));
+            sceneNode.attachObject(line);
+        }
+
+        scene.addNode(sceneNode);
+    }*/
 
     gameView.centerOnWorld(mapObj.startPosition[0], mapObj.startPosition[2])
 }

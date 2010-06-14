@@ -192,9 +192,7 @@ namespace Troika
         QStringList sectorFiles = vfs->listFiles(mapDirectory, "*.sec");
 
         foreach (QString sector, sectorFiles)
-        {
             readSector(sector);
-        }
 
         return true;
     }
@@ -252,7 +250,26 @@ namespace Troika
         stream.setByteOrder(QDataStream::LittleEndian);
         stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
 
-        return readSectorLights(stream) && readSectorTiles(stream) && readSectorObjects(stream);
+        QRegExp regexp("(\\d+)\\.sec");
+        regexp.setCaseSensitivity(Qt::CaseInsensitive);
+
+        if (regexp.indexIn(filename) == -1) {
+            qWarning("Sector filename has invalid format: %s", qPrintable(filename));
+            return false;
+        }
+
+        bool ok;
+        uint sectorId = regexp.cap(1).toInt(&ok);
+
+        if (!ok) {
+            qWarning("Sector filename has invalid format: %s", qPrintable(filename));
+            return false;
+        }
+
+        uint sectorY = sectorId & 0xFF;
+        uint sectorX = (sectorId >> 26) & 0x3F;
+
+        return readSectorLights(stream) && readSectorTiles(sectorX, sectorY, stream) && readSectorObjects(stream);
     }
 
     bool ZoneTemplateReader::readSectorLights(QDataStream &stream)
@@ -318,19 +335,23 @@ namespace Troika
         return true;
     }
 
-    bool ZoneTemplateReader::readSectorTiles(QDataStream &stream)
+    bool ZoneTemplateReader::readSectorTiles(uint x, uint y, QDataStream &stream)
     {
-        SectorTile tiles[SectorSidelength][SectorSidelength];
+        TileSector sector;
+        sector.x = x;
+        sector.y = y;
 
         for (int y = 0; y < SectorSidelength; ++y)
         {
             for (int x = 0; x < SectorSidelength; ++x)
             {
-                SectorTile &tile = tiles[x][y];
+                SectorTile &tile = sector.tiles[x][y];
                 stream >> tile.footstepsSound >> tile.unknown1[0] >> tile.unknown1[1] >> tile.unknown1[2]
                         >> tile.bitfield >> tile.unknown2;
             }
         }
+
+        zoneTemplate->addTileSector(sector);
 
         return true;
     }

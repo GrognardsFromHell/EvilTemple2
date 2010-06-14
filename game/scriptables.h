@@ -8,6 +8,7 @@
 #include "scenenode.h"
 #include "lighting.h"
 #include "particlesystem.h"
+#include "renderable.h"
 
 #include <gamemath.h>
 using namespace GameMath;
@@ -57,6 +58,18 @@ namespace EvilTemple {
 
     private:
         ParticleSystem *data() const;
+    };
+
+    class LineRenderableScriptable : public QObject, protected QScriptable {
+    Q_OBJECT
+    public:
+        static void registerWith(QScriptEngine *engine);
+
+    public slots:
+        void addLine(const Vector4 &start, const Vector4 &end);
+
+    private:
+        LineRenderable *data() const;
     };
     
     class ModelInstanceScriptable : public QObject, protected QScriptable {

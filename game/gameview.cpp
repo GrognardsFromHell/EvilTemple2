@@ -23,6 +23,7 @@
 #include "materials.h"
 #include "translations.h"
 #include "audioengine.h"
+#include "sectormap.h"
 
 #include <gamemath.h>
 using namespace GameMath;
@@ -51,7 +52,7 @@ namespace EvilTemple {
         GameViewData(GameView *view)
             : q(view), rootItem(0), backgroundMap(renderStates),
             clippingGeometry(renderStates), dragging(false), lightDebugger(renderStates),
-            materials(renderStates), particleSystems(&materials) {                       
+            materials(renderStates), particleSystems(&materials), sectorMap(&scene) {
 
             sceneTimer.invalidate();
 
@@ -189,6 +190,8 @@ namespace EvilTemple {
 
         AudioEngine audioEngine;
 
+        SectorMap sectorMap;
+
         QElapsedTimer sceneTimer;
         Scene scene;
 
@@ -200,7 +203,7 @@ namespace EvilTemple {
             viewportSize.setWidth(width);
             viewportSize.setHeight(height);
 
-            const float zoom = 2;
+            const float zoom = 1;
 
             Matrix4 projectionMatrix = Matrix4::ortho(-halfWidth / zoom, halfWidth / zoom, -halfHeight / zoom, halfHeight / zoom, 1, 5000);
             renderStates.setProjectionMatrix(projectionMatrix);
@@ -521,6 +524,11 @@ namespace EvilTemple {
     AudioEngine *GameView::audioEngine() const
     {
         return &d->audioEngine;
+    }
+
+    SectorMap *GameView::sectorMap() const
+    {
+        return &d->sectorMap;
     }
 
 }

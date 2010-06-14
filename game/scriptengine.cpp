@@ -9,6 +9,7 @@
 #include "clippinggeometry.h"
 #include "materials.h"
 #include "particlesystem.h"
+#include "sectormap.h"
 
 // Fix this, audio engine header name clash
 #include "audioengine.h"
@@ -277,6 +278,7 @@ namespace EvilTemple {
         registerQObject<EvilTemple::Scene>(engine, "Scene*");
         registerQObject<EvilTemple::Materials>(engine, "Materials*");
         registerQObject<EvilTemple::ParticleSystems>(engine, "ParticleSystems*");
+        registerQObject<EvilTemple::SectorMap>(engine, "SectorMap*");
 
         // Add a function to read files
         QScriptValue readFileFn = engine->newFunction(readFile, 1);
@@ -293,6 +295,7 @@ namespace EvilTemple {
         registerRenderableScriptable(engine);
         MaterialStateScriptable::registerWith(engine);
         ParticleSystemScriptable::registerWith(engine);
+        LineRenderableScriptable::registerWith(engine);
 
         registerQObject<EvilTemple::AudioEngine>(engine, "AudioEngine*");
         registerAudioEngine(engine);

@@ -18,6 +18,11 @@ class QBox3D;
 
 namespace Troika
 {
+    /**
+      The side length of a square sector in tiles.
+      */
+    const static int SectorSidelength = 64;
+
     class ZoneTemplateData;
     class ZoneBackgroundMap;
 	
@@ -66,6 +71,21 @@ namespace Troika
         quint32 id;
     };
 
+    struct SectorTile
+    {
+        quint8 footstepsSound;
+        quint8 unknown1[3];
+        quint32 bitfield;
+        quint64 unknown2;
+    };
+
+    class TileSector {
+    public:
+        uint x;
+        uint y;
+        SectorTile tiles[SectorSidelength][SectorSidelength];
+    };
+
     class TROIKAFORMATS_EXPORT ZoneTemplate : public QObject
     {        
         Q_OBJECT
@@ -78,6 +98,8 @@ namespace Troika
         ZoneBackgroundMap *nightBackground() const;
         const QList<GeometryObject*> &staticGeometry() const;
         const QList<GeometryObject*> &clippingGeometry() const;
+
+        const QList<TileSector> &tileSectors() const;
 
         const QString &directory() const;
 
@@ -107,7 +129,6 @@ namespace Troika
         const QList<GameObject*> &staticObjects() const;
         const QList<GameObject*> &mobiles() const;
 
-    public:
         /**
           Sets the background to use during the day. If no day/night exchange is used
           for this zone, this background is also used during the night.
@@ -152,6 +173,8 @@ namespace Troika
 
         void addStaticObject(GameObject *gameObject);
         void addMobile(GameObject *gameObject);
+
+        void addTileSector(const TileSector &tileSector);
 
     private:
         QScopedPointer<ZoneTemplateData> d_ptr;

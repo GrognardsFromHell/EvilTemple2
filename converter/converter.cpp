@@ -27,6 +27,7 @@
 #include "exclusions.h"
 #include "mapconverter.h"
 #include "prototypeconverter.h"
+#include "pathnodeconverter.h"
 
 #include "util.h"
 #include "converter.h"
@@ -241,6 +242,8 @@ public:
                 convertStaticObjects(zoneTemplate.data(), &writer);
 
                 convertClippingMeshes(zoneTemplate.data(), &writer);
+
+                convertSectors(zoneTemplate.data(), &writer);
             } else {
                 qWarning("Unable to load zone template for map id %d.", mapId);
             }
@@ -251,6 +254,43 @@ public:
         writer.close();
 
         return true;
+    }
+
+    void convertSectors(const ZoneTemplate *zoneTemplate, ZipWriter *writer)
+    {
+        QByteArray result;
+        QDataStream stream(&result, QIODevice::WriteOnly);
+        stream.setByteOrder(QDataStream::LittleEndian);
+        stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
+
+        stream << (uint)zoneTemplate->tileSectors().size();
+
+        foreach (const TileSector &sector, zoneTemplate->tileSectors()) {
+            stream << sector.x << sector.y;
+
+            for (int y = 0; y < SectorSidelength; ++y) {
+                for (int x = 0; x < SectorSidelength; ++x) {
+                    stream << sector.tiles[x][y].footstepsSound
+                            << sector.tiles[x][y].bitfield;
+                }
+            }
+        }
+
+        writer->addFile(zoneTemplate->directory() + "sectors.dat", result, 9);
+    }
+
+    QVariantMap convertPathNodes(const QString &directory)
+    {
+        PathNodeConverter converter;
+
+        QString filename = directory + "pathnode.pnd";
+
+        if (!converter.load(vfs->openFile(filename))) {
+            qWarning("Unable to load pathnode data %s: %s.", qPrintable(filename), qPrintable(converter.error()));
+            return QVariantMap();
+        }
+
+        return converter.convert();
     }
 
     QVariantList vectorToList(QVector3D vector) {
@@ -350,6 +390,8 @@ public:
         QVariantMap mapObject;
 
         mapObject["name"] = zoneTemplate->name();
+
+        mapObject["waypoints"] = convertPathNodes(zoneTemplate->directory());
 
         mapObject["scrollBox"] = QVariantList() << zoneTemplate->scrollBox().minimum().x()
                                  << zoneTemplate->scrollBox().minimum().y()
@@ -1621,6 +1663,8 @@ public:
 
         convertMaps();
         sectionsDone += 25;
+
+        return true;
 
         if (cancel)
             return false;

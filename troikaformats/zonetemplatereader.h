@@ -20,23 +20,10 @@ namespace Troika
     class Models;
     class Prototypes;
 
-    /**
-      The side length of a square sector in tiles.
-      */
-    const int SectorSidelength = 64;
-
     struct GeometryMeshFile
     {
         QString modelFilename;
         QString animationFilename;
-    };
-
-    struct SectorTile
-    {
-        quint8 footstepsSound;
-        quint8 unknown1[3];
-        quint32 bitfield;
-        quint64 unknown2;
     };
 
     class TROIKAFORMATS_EXPORT ZoneTemplateReader
@@ -62,7 +49,7 @@ namespace Troika
         bool readSectors(); // Loads *.sec
         bool readSector(const QString &filename);
         bool readSectorLights(QDataStream &stream);
-        bool readSectorTiles(QDataStream &stream);
+        bool readSectorTiles(uint x, uint y, QDataStream &stream);
         bool readSectorObjects(QDataStream &stream);
         bool readMobiles(); // Loads *.mob
         GameObject *readMobile(const QString &filename);

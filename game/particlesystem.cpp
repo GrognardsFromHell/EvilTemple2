@@ -912,8 +912,6 @@ namespace EvilTemple {
 
     void Emitter::render(RenderStates &renderStates)
     {
-        if (mName == "TorchSmoke")
-            _CrtDbgBreak();
         MaterialPassState &pass = mMaterial->passes[0];
 
 	int posAttrib = pass.program.attributeLocation("vertexPosition");

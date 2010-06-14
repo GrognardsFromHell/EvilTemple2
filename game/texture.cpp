@@ -184,7 +184,8 @@ bool Texture::loadJpeg(const QByteArray &jpegImage)
 
     QByteArray decompressedImage(width * height * 3, Qt::Uninitialized);
 
-    if (tjDecompress(turboJpeg, (uchar*)jpegImage.data(), jpegImage.size(), (uchar*)decompressedImage.data(), width, width * 3, height, 3, TJ_BOTTOMUP))
+    if (tjDecompress(turboJpeg, (uchar*)jpegImage.data(), jpegImage.size(), (uchar*)decompressedImage.data(),
+                     width, width * 3, height, 3, TJ_BOTTOMUP))
     {
         return false;
     }

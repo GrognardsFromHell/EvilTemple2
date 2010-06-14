@@ -107,8 +107,28 @@ inline void Renderable::setRenderCategory(RenderQueue::Category category)
     mRenderCategory = category;
 }
 
-
 typedef QSharedPointer<Renderable> SharedRenderable;
+
+/**
+  A renderable that will draw a list of lines (in model space).
+  The main use of this renderable is to show debugging information.
+  */
+class LineRenderable : public Renderable
+{
+Q_OBJECT
+public:
+    void render(RenderStates &renderStates);
+
+    const Box3d &boundingBox();
+
+    void addLine(const Vector4 &start, const Vector4 &end);
+
+private:
+    typedef QPair<Vector4,Vector4> Line;
+
+    QVector<Line> mLines;
+    Box3d mBoundingBox;
+};
 
 };
 

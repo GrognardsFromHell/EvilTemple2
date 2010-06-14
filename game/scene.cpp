@@ -6,6 +6,8 @@
 #include "renderqueue.h"
 #include "scene.h"
 #include "lighting.h"
+#include "renderable.h"
+#include "scenenode.h"
 
 #include <gamemath.h>
 using namespace GameMath;
@@ -245,6 +247,13 @@ SharedRenderable Scene::pickRenderable(const Ray3d &ray) const
 
 void Scene::clear()
 {
+    // Disconnect signals for everything
+    foreach (const SharedSceneNode &node, d->sceneNodes) {
+        foreach (const SharedRenderable &renderable, node->attachedObjects()) {
+            renderable->disconnect();
+        }
+    }
+
     d->sceneNodes.clear();
 }
 
