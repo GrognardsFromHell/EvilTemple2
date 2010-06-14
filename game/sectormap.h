@@ -22,10 +22,8 @@ public:
     const Box3d &boundingBox();
 
     void setTexture(const SharedTexture &texture);
-    void addPolygon(const QRect &polygon);
 private:
     SharedTexture mTexture;
-    QList<QRect> mPolygons;
     Box3d mBoundingBox;
 };
 
