@@ -1,5 +1,6 @@
 
 #include <QScriptEngine>
+#include <QScriptValueIterator>
 
 #include "scriptables.h"
 #include "modelfile.h"
@@ -29,6 +30,7 @@ Q_DECLARE_METATYPE(SharedParticleSystem)
 Q_DECLARE_METATYPE(SharedLineRenderable)
 
 Q_DECLARE_METATYPE(Vector4)
+Q_DECLARE_METATYPE(QVector<Vector4>)
 Q_DECLARE_METATYPE(Quaternion)
 Q_DECLARE_METATYPE(Box3d)
 
@@ -57,6 +59,38 @@ void registerValueType(QScriptEngine *engine, const char *name)
 {
     qRegisterMetaType<T>(name);
     qScriptRegisterMetaType<T>(engine, valueToScriptValue<T>, valueFromScriptValue<T>);
+}
+
+template<typename T>
+QScriptValue vectorToScriptValue(QScriptEngine *engine, QVector<T> const &in)
+{
+    QScriptValue result = engine->newArray(in.size());
+
+    for (size_t i = 0; i < in.size(); ++i) {
+        result.setProperty(i, engine->newVariant(qVariantFromValue(in[i])));
+    }
+
+    return result;
+}
+
+template<typename T>
+void vectorFromScriptValue(const QScriptValue &object, QVector<T> &out)
+{
+    out.clear();
+
+    QScriptValueIterator it(object);
+
+    while (it.hasNext()) {
+        it.next();
+        out.append(qvariant_cast<T>(it.value().toVariant()));
+    }
+}
+
+template<typename T>
+void registerVectorType(QScriptEngine *engine, const char *name)
+{
+    qRegisterMetaType< QVector<T> >(name);
+    qScriptRegisterMetaType< QVector<T> >(engine, vectorToScriptValue<T>, vectorFromScriptValue<T>);
 }
 
 QScriptValue renderableToScriptValue(QScriptEngine *engine, SharedRenderable const &in)
@@ -762,6 +796,8 @@ static QScriptValue Vector4ScriptableCtor(QScriptContext *context, QScriptEngine
 
 void Vector4Scriptable::registerWith(QScriptEngine *engine)
 {
+    registerVectorType<Vector4>(engine, "QVector<Vector4>");
+
     int metaId = qRegisterMetaType<Vector4>();
     QScriptValue prototype = engine->newQObject(new Vector4Scriptable, QScriptEngine::ScriptOwnership);
     engine->setDefaultPrototype(metaId, prototype);

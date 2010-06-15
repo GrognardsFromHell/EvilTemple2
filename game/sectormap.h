@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QPolygon>
+#include <QScopedPointer>
 
 #include "renderable.h"
 #include "texture.h"
@@ -10,6 +11,7 @@
 namespace EvilTemple {
 
 class Scene;
+class SectorMapData;
 
 class Sector : public Renderable
 {
@@ -37,12 +39,15 @@ class SectorMap : public QObject
 Q_OBJECT
 public:
     SectorMap(Scene *scene);
+    ~SectorMap();
 
 public slots:
     bool load(const QString &filename) const;
 
+    QVector<Vector4> findPath(const Vector4 &start, const Vector4 &end);
+
 private:
-    Scene *mScene;    
+    QScopedPointer<SectorMapData> d;
 };
 
 }

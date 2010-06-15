@@ -432,10 +432,7 @@ namespace EvilTemple {
                 renderable->mousePressEvent();
             } else {
                 Vector4 worldPosition = d->worldPositionFromScreen(evt->pos());
-                qDebug("Clicked @ world position %f,%f,%f", worldPosition.x(), worldPosition.y(), worldPosition.z());
-                d->scene.addTextOverlay(worldPosition, QString("World @ %1,%2")
-                                        .arg(floor(worldPosition.x()))
-                                        .arg(floor(worldPosition.z())), QColor(255, 255, 255));
+                emit worldClicked(worldPosition);
             }
         }
         d->dragging = false;

@@ -29,7 +29,7 @@ public slots:
 
     void clear();
 
-    void addTextOverlay(const Vector4 &position, const QString &text, const QColor &color, float lifetime = 2.5f);
+    void addTextOverlay(const Vector4 &position, const QString &text, const Vector4 &color, float lifetime = 2.5f);
 
     /**
     Returns the number of objects drawn by the last call to render.

@@ -270,6 +270,36 @@ function startup() {
         else
             prototypes[i].__proto__ = BaseObject;
     }
+
+    // Accept clicks from the game view
+    setupWorldClickHandler();
+}
+
+function setupWorldClickHandler() {
+    var firstClick = undefined;
+
+    gameView.worldClicked.connect(function(worldPosition) {
+        if (firstClick === undefined) {
+            gameView.scene.addTextOverlay(worldPosition, "1st @ " + Math.floor(worldPosition.x) + ","
+                                                                + Math.floor(worldPosition.z),
+                                                               new Vector4(0.9, 0.9, 0.9, 0.9));
+            firstClick = worldPosition;
+        } else {
+            gameView.scene.addTextOverlay(worldPosition, "2nd @ " + Math.floor(worldPosition.x) + ","
+                                                                + Math.floor(worldPosition.z),
+                                                               new Vector4(0.9, 0.9, 0.9, 0.9));
+
+            var path = gameView.sectorMap.findPath(firstClick, worldPosition);
+
+            print("Found path of length: " + path.length);
+
+            for (var i = 0; i < path.length; ++i) {
+                gameView.scene.addTextOverlay(path[i], 'X', new Vector4(1, 0, 0, 1), 1);
+            }
+
+            firstClick = undefined;
+        }
+    });
 }
 
 function rotationFromDegrees(degrees) {

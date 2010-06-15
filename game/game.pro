@@ -18,6 +18,13 @@ include(../3rdparty/game-math/game-math.pri)
 
 DEFINES += GAME_LIBRARY GAMEMATH_MEMORY_OPERATORS
 
+INCLUDEPATH += ../3rdparty/recastnavigation-read-only/Detour/Include/
+
+SOURCES += ../3rdparty/recastnavigation-read-only/Detour/Source/DetourCommon.cpp \
+    ../3rdparty/recastnavigation-read-only/Detour/Source/DetourNavMesh.cpp \
+    ../3rdparty/recastnavigation-read-only/Detour/Source/DetourNavMeshBuilder.cpp \
+    ../3rdparty/recastnavigation-read-only/Detour/Source/DetourNode.cpp
+
 SOURCES += \
     mainwindow.cpp \
     game.cpp \

@@ -90,6 +90,8 @@ signals:
 
     void viewportChanged();
 
+    void worldClicked(const Vector4 &position);
+
 public slots:
 
     QObject *showView(const QString &url);

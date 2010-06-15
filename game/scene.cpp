@@ -274,8 +274,10 @@ inline QRect roundToPowerOfTwo(const QRect &rect)
     return QRect(0, 0, roundToPowerOfTwo(rect.width()), roundToPowerOfTwo(rect.height()));
 }
 
-void Scene::addTextOverlay(const Vector4 &position, const QString &text, const QColor &color, float lifetime)
+void Scene::addTextOverlay(const Vector4 &position, const QString &text, const Vector4 &colorVec, float lifetime)
 {
+    QColor color(colorVec.x() * 255, colorVec.y() * 255, colorVec.z() * 255, colorVec.w() * 255);
+
     TextOverlay *textOverlay = new TextOverlay;
     d->activeOverlays.append(textOverlay);
 
@@ -311,9 +313,9 @@ void Scene::addTextOverlay(const Vector4 &position, const QString &text, const Q
     d->textPainter.drawPath(path);
     d->textPainter.end();
 
-    qDebug("Showing %s @ %f,%f,%f (%d,%d)", qPrintable(text),
+    /*qDebug("Showing %s @ %f,%f,%f (%d,%d)", qPrintable(text),
            position.x(), position.y(), position.z(),
-           boundingRect.width(), boundingRect.height());
+           boundingRect.width(), boundingRect.height());*/
 }
 
 };
