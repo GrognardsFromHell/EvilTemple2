@@ -87,7 +87,7 @@ enum TileFlags
   */
 inline static float area(const QPolygon &polygon)
 {
-    uint result = 0;
+    int result = 0;
 
     // TODO: Optimize so this doesn't access all points twice.
     int x, y, nx, ny;
@@ -338,7 +338,7 @@ bool SectorMap::load(const Vector4 &startPosition, const QString &filename) cons
 
     QList<TileSector*> sectors;
 
-    for (int i = 0; i < count; ++i) {
+    for (uint i = 0; i < count; ++i) {
 
         TileSector *tileSector = new TileSector;
         memset(tileSector->visited, 0, sizeof(tileSector->visited));
@@ -562,7 +562,7 @@ bool SectorMap::load(const Vector4 &startPosition, const QString &filename) cons
                 // Try expanding the rectangle by one in every direction
                 while (right < 192) {
                     bool expanded = true;
-                    for (int y = rect.top(); y < bottom; ++y) {
+                    for (uint y = rect.top(); y < bottom; ++y) {
                         if (sector->used[right][y] || !sector->walkable[right][y] || sector->flyable[right][y]) {
                             expanded = false;
                             break;
@@ -571,7 +571,7 @@ bool SectorMap::load(const Vector4 &startPosition, const QString &filename) cons
 
                     if (expanded) {
                         // Mark as used
-                        for (int y = rect.top(); y < bottom; ++y) {
+                        for (uint y = rect.top(); y < bottom; ++y) {
                             sector->used[right][y] = true;
                         }
                         rect.setWidth(rect.width() + 1);
@@ -583,7 +583,7 @@ bool SectorMap::load(const Vector4 &startPosition, const QString &filename) cons
 
                 while (bottom < 192) {
                     bool expanded = true;
-                    for (int x = rect.left(); x < right; ++x) {
+                    for (uint x = rect.left(); x < right; ++x) {
                         if (sector->used[x][bottom] || !sector->walkable[x][bottom] || sector->flyable[x][bottom]) {
                             expanded = false;
                             break;
@@ -592,7 +592,7 @@ bool SectorMap::load(const Vector4 &startPosition, const QString &filename) cons
 
                     if (expanded) {
                         // Mark as used
-                        for (int x = rect.left(); x < right; ++x) {
+                        for (uint x = rect.left(); x < right; ++x) {
                             sector->used[x][bottom] = true;
                         }
                         rect.setHeight(rect.height() + 1);
@@ -608,11 +608,16 @@ bool SectorMap::load(const Vector4 &startPosition, const QString &filename) cons
             sectorPolygons.append(rect);
         }
 
+        bool madeChanges = true;
+        int iteration = 0;
+
         // Second-pass tries to unify more sector polygons
-        for (int iteration = 0; iteration < 1; ++iteration) {
+        for (iteration = 0; (iteration < 1000) && madeChanges; ++iteration) {
+            madeChanges = false;
+
             for (int i = 0; i < sectorPolygons.size(); ++i) {
                for (int j = 0; j < sectorPolygons.size(); ++j) {
-                   if(i == j)
+                    if(i == j)
                        continue;
 
                     const QRect &a = sectorPolygons[i];
@@ -662,15 +667,21 @@ bool SectorMap::load(const Vector4 &startPosition, const QString &filename) cons
                         continue;
                     }
 
-                    if (resultingPrimitives == 1)
-                        continue; // TODO: Handle this case
-
-                    // All naive merges should've been done before.
-                    Q_ASSERT(resultingPrimitives > 1);
-
                     uint maxArea = qMax(areaA, areaB);
 
-                    if (resultingPrimitives == 2) {
+                    if (resultingPrimitives == 1) {
+                        leftA = qMin(leftA, leftB);
+                        rightA = qMax(rightA, rightB);
+                        topA = qMin(topA, topB);
+                        bottomA = qMax(bottomA, bottomB);
+
+                        sectorPolygons[i].setCoords(leftA, topA, rightA - 1, bottomA - 1);
+                        if (j < i)
+                            i--; // Also adjust i for the removed element if it's after j
+                        sectorPolygons.removeAt(j--);
+
+                        madeChanges = true;
+                    } else if (resultingPrimitives == 2) {
                         if (edge == Shared_North || edge == Shared_South) {
                             if (rightB < rightA || leftB > leftA)
                                 continue;
@@ -726,14 +737,129 @@ bool SectorMap::load(const Vector4 &startPosition, const QString &filename) cons
                         if (newAreaA > maxArea || newAreaB > maxArea) {
                             sectorPolygons[i].setCoords(leftA, topA, rightA - 1, bottomA - 1);
                             sectorPolygons[j].setCoords(leftB, topB, rightB - 1, bottomB - 1);
+                            madeChanges = true;
                         }
                     } else if (resultingPrimitives == 3) {
-                        // In case our side is wholly contained in the other rectangles side,
-                        // skip and continue
+                        // The edges of the additional rectangle
+                        uint leftC = 0, topC = 0, rightC = 0, bottomC = 0;
+
+                        // West/North-edge intersection are treated by the other rectangle
+                        if (edge == Shared_East) {
+                            if (bottomB < bottomA && topB < topA) {
+                                // Define new rectangle
+                                leftC = leftB;
+                                topC = topB;
+                                rightC = rightB;
+                                bottomC = topA;
+
+                                // Modify B
+                                topB = topA;
+                                leftB = leftA;
+
+                                // Modify A
+                                topA = bottomB;
+                            } else if (bottomB > bottomA && topB > topA) {
+                                // Define new rectangle
+                                leftC = leftB;
+                                rightC = rightB;
+                                bottomC = bottomB;
+                                topC = bottomA;
+
+                                // Modify B
+                                leftB = leftA;
+                                bottomB = bottomA;
+
+                                // Modify A
+                                bottomA = topB;
+                            } else if (bottomB < bottomA && topB > topA) {
+                                // Define new rectangle
+                                leftC = leftA;
+                                rightC = rightA;
+                                bottomC = bottomA;
+                                topC = bottomB;
+
+                                // Modify B
+                                leftB = leftA;
+
+                                // Modify A
+                                bottomA = topB;
+                            } else if (bottomB > bottomA && topB < topA) {
+                                // Define new rectangle
+                                leftC = leftB;
+                                rightC = rightB;
+                                bottomC = bottomB;
+                                topC = bottomA;
+
+                                // Modify B
+                                bottomB = topA;
+
+                                // Modify A
+                                rightA = rightB;
+                            }
+                        } else if (edge == Shared_South) {
+                            bool rightIn = rightB < rightA; // Right edge of B inside of A's slab
+                            bool leftIn = leftB > leftA; // Left edge of B inside of A's slab
+
+                            if (leftIn && !rightIn) {
+                                leftC = rightA;
+                                rightC = rightB;
+                                topC = topB;
+                                bottomC = bottomB;
+
+                                rightB = rightA;
+                                topB = topA;
+
+                                rightA = leftB;
+                            } else if (!leftIn && rightIn) {
+                                leftC = rightB;
+                                rightC = rightA;
+                                topC = topA;
+                                bottomC = bottomA;
+
+                                rightA = rightB;
+                                bottomA = bottomB;
+
+                                rightB = leftA;
+                            } else if (leftIn && rightIn) {
+                                leftC = rightB;
+                                topC = topA;
+                                rightC = rightA;
+                                bottomC = bottomA;
+
+                                rightA = leftB;
+                                topB = topA;
+                            } else if (!leftIn && !rightIn) {
+                                leftC = rightA;
+                                topC = topB;
+                                rightC = rightB;
+                                bottomC = bottomB;
+
+                                bottomA = bottomB;
+                                rightB = leftA;
+                            }
+                        }
+
+                        uint newAreaA = (rightA - leftA) * (bottomA - topA);
+                        uint newAreaB = (rightB - leftB) * (bottomB - topB);
+                        uint areaC = (rightC - leftC) * (bottomC - topC);
+                        Q_ASSERT(newAreaA + newAreaB + areaC == areaA + areaB);
+
+                        // Heuristic: Only merge, if it improves the area of the greater of the two rectangles
+                        if (newAreaA > maxArea || newAreaB > maxArea || areaC > maxArea) {
+                            sectorPolygons[i].setCoords(leftA, topA, rightA - 1, bottomA - 1);
+                            sectorPolygons[j].setCoords(leftB, topB, rightB - 1, bottomB - 1);
+
+                            QRect newRect;
+                            newRect.setCoords(leftC, topC, rightC - 1, bottomC - 1);
+                            sectorPolygons.append(newRect);
+                            madeChanges = true;
+                        }
                     }
                 }
             }
         }
+
+        qDebug("Stopped iterating after %d iterations.", iteration);
 
         foreach (QRect rect, sectorPolygons) {
             rect.setTopLeft(rect.topLeft() + sector->origin);
@@ -832,6 +958,7 @@ bool SectorMap::load(const Vector4 &startPosition, const QString &filename) cons
     }
 
     qDeleteAll(sectors);
+    return true;
 }
 
 
@@ -855,6 +982,7 @@ void Sector::render(RenderStates &renderStates)
     glLoadMatrixf(renderStates.projectionMatrix().data());
     glMatrixMode(GL_MODELVIEW);
     glLoadMatrixf(renderStates.worldViewMatrix().data());
+/*
 
     float d = 191 / 255.f;
     float w = (255 - 191) / 255.f;
@@ -870,7 +998,7 @@ void Sector::render(RenderStates &renderStates)
         glTexCoord2f(0, w);
         glVertex3f(0, 0, diagonal.z());
         glEnd();
-    }
+    }*/
 
     glBindTexture(GL_TEXTURE_2D, 0);
     glDisable(GL_TEXTURE_2D);
