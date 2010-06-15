@@ -15,16 +15,13 @@ inline static uint qHash(const QPoint &key) {
 namespace EvilTemple {
 
 static const float PixelPerWorldTile = 28.2842703f;
-static const uint TilesPerSector = 192;
 
 struct Tile {
     uint flags;
     uchar footsteps;
 };
 
-class TileSector
-{
-public:
+struct TileSector {
     TileSector();
 
     TileSector *west; // x
@@ -34,29 +31,23 @@ public:
 
     QPoint origin;
 
-    void resetVisited();
+    bool used[192][192];
+    bool visited[192][192];
+    bool walkable[192][192];
+    bool flyable[192][192];
 
-    bool dirty;
+    bool anyReachable;
 
-    /*
-     The following is used for pathfinding purposes, it replaces
-     the closed set and enables constant time lookup in it.
-     */
-    bool visited[TilesPerSector][TilesPerSector];
-    bool walkable[TilesPerSector][TilesPerSector];
-    bool flyable[TilesPerSector][TilesPerSector];
+    /**
+      Due to the akward tile-defs used by toee, this is necessary
+      */
+    bool reachable[192][192];
 };
 
 inline TileSector::TileSector()
-    : west(NULL), east(NULL), north(NULL), south(NULL)
+    : anyReachable(false)
 {
-    resetVisited();
-}
-
-inline void TileSector::resetVisited()
-{
-    dirty = false;
-    memset(visited, 0, sizeof(visited));
+    memset(reachable, 0, sizeof(reachable));
 }
 
 enum TileFlags
@@ -91,84 +82,111 @@ enum TileFlags
     TILE_FLYOVER_COVER = 1 << 27
 };
 
+/**
+  Calculates the area contained in the given, simple polygon.
+  */
+inline static float area(const QPolygon &polygon)
+{
+    uint result = 0;
+
+    // TODO: Optimize so this doesn't access all points twice.
+    int x, y, nx, ny;
+    for (int i = 0; i < polygon.size() - 1; ++i) {
+        polygon.point(i, &x, &y);
+        polygon.point(i, &nx, &ny);
+        result += x * ny + nx * y;
+    }
+
+    // Loop back to the start
+    if (polygon.size() > 1) {
+        polygon.point(0, &x, &y);
+        result += x * ny + nx * y;
+    }
+
+    if (result < 0)
+        result = - result;
+
+    return result * 0.5f;
+}
+
+inline static void pushNeighbours(QList<QPoint> &queue, TileSector *sector, QPoint tile)
+{
+    uint x = tile.x();
+    uint y = tile.y();
+
+    // West
+    if (x > 0 && !sector->visited[x - 1][y]) {
+        queue.append(QPoint(x - 1, y));
+        sector->visited[x - 1][y] = true;
+    }
+
+    // North
+    if (y > 0 && !sector->visited[x][y - 1]) {
+        queue.append(QPoint(x, y - 1));
+        sector->visited[x][y - 1] = true;
+    }
+
+    // East
+    if (x < 191 && !sector->visited[x + 1][y]) {
+        queue.append(QPoint(x + 1, y));
+        sector->visited[x + 1][y] = true;
+    }
+
+    // South
+    if (y < 191 && !sector->visited[x][y + 1]) {
+        queue.append(QPoint(x, y + 1));
+        sector->visited[x][y + 1] = true;
+    }
+}
+
+enum SharedEdge {
+    Shared_None = 0,
+    Shared_North,
+    Shared_East,
+    Shared_South,
+    Shared_West
+};
+
+/**
+  Gets the side on which two axis aligned rectangles touch, assuming they're non-intersecting.
+  */
+inline static SharedEdge getSharedEdge(uint leftA, uint topA, uint rightA, uint bottomA,
+                                           uint leftB, uint topB, uint rightB, uint bottomB)
+{
+    if (leftA == rightB) {
+        if (topB <= bottomA && bottomB >= topA) {
+            return Shared_West;
+        } else {
+            return Shared_None;
+        }
+    } else if (leftB == rightA) {
+        if (topA <= bottomB && bottomA >= topB) {
+            return Shared_East;
+        } else {
+            return Shared_None;
+        }
+    } else if (topB == bottomA) {
+        if (leftA <= rightB && rightA >= leftB) {
+            return Shared_South;
+        } else {
+            return Shared_None;
+        }
+    } else if (topA == bottomB) {
+        if (leftB <= rightA && rightB >= leftA) {
+            return Shared_North;
+        } else {
+            return Shared_None;
+        }
+    } else {
+        return Shared_None;
+    }
+}
+
 class SectorMapData
 {
 public:
     Scene *scene;
-    int sectorCount;
-    QScopedArrayPointer<TileSector> sectors;
-    QHash<QPoint, TileSector*> sectorMap;
-    QHash<QPoint, bool> offSectorVisited;
-
-    void addSectorToMap(TileSector *sector);
-    TileSector *getSector(uint x, uint y);
-
-    void setVisited(const QPoint &p);
-    bool isVisited(const QPoint &p);
-    bool isWalkable(const QPoint &p);
-
-    void resetVisited();
 };
-
-void SectorMapData::addSectorToMap(TileSector *sector)
-{
-    QPoint sectorId(sector->origin.x() / TilesPerSector, sector->origin.y() / TilesPerSector);
-    Q_ASSERT(!sectorMap.contains(sectorId));
-    sectorMap[sectorId] = sector;
-}
-
-TileSector *SectorMapData::getSector(uint x, uint y)
-{
-    QPoint sectorId(x / TilesPerSector, y / TilesPerSector);
-
-    QHash<QPoint,TileSector*>::iterator it = sectorMap.find(sectorId);
-
-    if (it == sectorMap.end()) {
-        return NULL;
-    }
-
-    return it.value();
-}
-
-void SectorMapData::resetVisited()
-{
-    offSectorVisited.clear();
-
-    for (int i = 0; i < sectorCount; ++i) {
-        sectors[i].resetVisited();
-    }
-}
-
-inline void SectorMapData::setVisited(const QPoint &p)
-{
-    TileSector *sector = getSector(p.x(), p.y());
-    if (sector) {
-        sector->dirty = true;
-        sector->visited[p.x() % 192][p.y() % 192] = true;
-    } else {
-        offSectorVisited[p] = true;
-    }
-}
-
-inline bool SectorMapData::isWalkable(const QPoint &p)
-{
-    TileSector *sector = getSector(p.x(), p.y());
-    if (sector) {
-        return sector->walkable[p.x() % 192][p.y() % 192];
-    } else {
-        return false;
-    }
-}
-
-inline bool SectorMapData::isVisited(const QPoint &p)
-{
-    TileSector *sector = getSector(p.x(), p.y());
-    if (sector) {
-        return sector->visited[p.x() % 192][p.y() % 192];
-    } else {
-        return offSectorVisited[p];
-    }
-}
 
 SectorMap::SectorMap(Scene *scene) : d(new SectorMapData)
 {
@@ -179,7 +197,126 @@ SectorMap::~SectorMap()
 {
 }
 
-bool SectorMap::load(const QString &filename) const
+inline QPoint vectorToPoint(const Vector4 &vector)
+{
+    static const float factor = 1 / (PixelPerWorldTile / 3.0f);
+    return QPoint(vector.x() * factor, vector.z() * factor);
+}
+
+static TileSector *findSector(const QList<TileSector*> &sectors, const QPoint &pos)
+{
+    foreach (TileSector *sector, sectors) {
+        QPoint d = pos - sector->origin;
+        if (d.x() < 192 && d.y() < 192)
+            return sector;
+    }
+
+    return NULL;
+}
+
+struct ReachabilityWorkItem {
+    TileSector *sector;
+    QPoint pos;
+};
+
+static void findReachableTiles(const Vector4 &startPosition, const QList<TileSector*> &sectors)
+{
+    // Find the sector corresponding to start Position
+    QPoint pos = vectorToPoint(startPosition);
+
+    TileSector *sector = findSector(sectors, pos);
+    ReachabilityWorkItem wi;
+    wi.sector = sector;
+    wi.pos = pos - sector->origin;
+
+    QList<ReachabilityWorkItem> queue;
+    queue << wi;
+
+    while (!queue.isEmpty()) {
+        ReachabilityWorkItem item = queue.takeFirst();
+
+        sector = item.sector;
+        uint x = item.pos.x();
+        uint y = item.pos.y();
+
+        if (!sector->walkable[x][y] || sector->flyable[x][y])
+            continue;
+
+        sector->anyReachable = true;
+        sector->reachable[x][y] = true;
+
+        ReachabilityWorkItem newWi;
+
+        // Find neighbours + add
+        if (x == 0 && sector->west) {
+            if (!sector->west->visited[191][y]) {
+                sector->west->visited[191][y] = true;
+                newWi.sector = sector->west;
+                newWi.pos = QPoint(191, y);
+                queue.append(newWi);
+            }
+        } else if (x == 191 && sector->east) {
+            if (!sector->east->visited[0][y]) {
+                sector->east->visited[0][y] = true;
+                newWi.sector = sector->east;
+                newWi.pos = QPoint(0, y);
+                queue.append(newWi);
+            }
+        }
+
+        if (x < 191) {
+            if (!sector->visited[x+1][y]) {
+                sector->visited[x+1][y] = true;
+                newWi.sector = sector;
+                newWi.pos = QPoint(x + 1, y);
+                queue.append(newWi);
+            }
+        }
+        if (x > 0) {
+            if (!sector->visited[x-1][y]) {
+                sector->visited[x-1][y] = true;
+                newWi.sector = sector;
+                newWi.pos = QPoint(x - 1, y);
+                queue.append(newWi);
+            }
+        }
+
+        if (y == 0 && sector->north) {
+            if (!sector->north->visited[x][191]) {
+                sector->north->visited[x][191] = true;
+                newWi.sector = sector->north;
+                newWi.pos = QPoint(x, 191);
+                queue.append(newWi);
+            }
+        } else if (y == 191 && sector->south) {
+            if (!sector->south->visited[x][0]) {
+                sector->south->visited[x][0] = true;
+                newWi.sector = sector->south;
+                newWi.pos = QPoint(x, 0);
+                queue.append(newWi);
+            }
+        }
+
+        if (y < 191) {
+            if (!sector->visited[x][y+1]) {
+                sector->visited[x][y+1] = true;
+                newWi.sector = sector;
+                newWi.pos = QPoint(x, y + 1);
+                queue.append(newWi);
+            }
+        }
+        if (y > 0) {
+            if (!sector->visited[x][y-1]) {
+                sector->visited[x][y-1] = true;
+                newWi.sector = sector;
+                newWi.pos = QPoint(x, y - 1);
+                queue.append(newWi);
+            }
+        }
+    }
+}
+
+bool SectorMap::load(const Vector4 &startPosition, const QString &filename) const
 {
     QFile file(filename);
 
@@ -199,11 +336,14 @@ bool SectorMap::load(const QString &filename) const
 
     uint secX, secY;
 
-    d->sectors.reset(new TileSector[count]);
-    d->sectorCount = count;
+    QList<TileSector*> sectors;
 
     for (int i = 0; i < count; ++i) {
-        TileSector *tileSector = d->sectors.data() + i;
+
+        TileSector *tileSector = new TileSector;
+        memset(tileSector->visited, 0, sizeof(tileSector->visited));
+        memset(tileSector->used, 0, sizeof(tileSector->used));
+        sectors.append(tileSector);
 
         stream >> secY >> secX;
 
@@ -215,9 +355,9 @@ bool SectorMap::load(const QString &filename) const
         uchar footstepSound;
         uint bitfield;
 
-/*        image.setPixel(0, 0, qRgba(255, 255, 255, 255));
+        /*image.setPixel(0, 0, qRgba(255, 255, 255, 255));
         image.setPixel(0, 191, qRgba(255, 0, 0, 255));
-        image.setPixel(191, 0, qRgba(0, 255, 0, 255)); */
+        image.setPixel(191, 0, qRgba(0, 255, 0, 255));*/
 
         for (int y = 0; y < 64; ++y) {
             for (int x = 0; x < 64; ++x) {
@@ -346,8 +486,6 @@ bool SectorMap::load(const QString &filename) const
             }
         }
 
-        d->addSectorToMap(tileSector);
-
         SharedTexture texture(new Texture);
         texture->load(image);
 
@@ -361,11 +499,13 @@ bool SectorMap::load(const QString &filename) const
     }
 
     // Link sectors to neighbours
-    for (int i = 0; i < d->sectorCount; ++i) {
-        TileSector *sector = d->sectors.data() + i;
-        for (int j = 0; j < d->sectorCount; ++j) {
-            TileSector *other = d->sectors.data() + j;
+    foreach (TileSector *sector, sectors) {
+        sector->west = 0;
+        sector->north = 0;
+        sector->south = 0;
+        sector->east = 0;
 
+        foreach (TileSector *other, sectors) {
             if (other->origin.x() == sector->origin.x() - 192 && other->origin.y() == sector->origin.y())
                 sector->west = other;
             else if (other->origin.x() == sector->origin.x() + 192 && other->origin.y() == sector->origin.y())
@@ -377,7 +517,321 @@ bool SectorMap::load(const QString &filename) const
         }
     }
 
-    return true;
+    findReachableTiles(startPosition, sectors);
+
+    QList<QRect> polygons;
+    // There can be a *lot* of rectangles, but we estimate that we can remove 80% through merging
+    polygons.reserve(192 * 192 * sectors.size() * 0.2);
+
+    foreach (TileSector *sector, sectors) {
+
+        if (!sector->anyReachable) {
+            qDebug("Skipping sector %d,%d because it's not reachable from the start position.",
+                   sector->origin.x(), sector->origin.y());
+        }
+
+        qDebug("Processing sector %d,%d", sector->origin.x(), sector->origin.y());
+
+        QList<QRect> sectorPolygons;
+        QRect rect;
+
+        forever {
+            // Try to find an unprocessed tile
+            for (int x = 0; x < 192; ++x) {
+                for (int y = 0; y < 192; ++y) {
+                    if (sector->reachable[x][y]
+                        && sector->walkable[x][y]
+                        && !sector->used[x][y]
+                        && !sector->flyable[x][y]) {
+                        rect = QRect(x, y, 1, 1);
+                        sector->used[x][y] = true;
+                        goto foundTile;
+                    }
+                }
+            }
+
+            break; // Found no more tiles
+
+            foundTile:
+
+            forever {
+
+                uint right = rect.x() + rect.width();
+                uint bottom = rect.y() + rect.height();
+
+                // Try expanding the rectangle by one in every direction
+                while (right < 192) {
+                    bool expanded = true;
+                    for (int y = rect.top(); y < bottom; ++y) {
+                        if (sector->used[right][y] || !sector->walkable[right][y] || sector->flyable[right][y]) {
+                            expanded = false;
+                            break;
+                        }
+                    }
+
+                    if (expanded) {
+                        // Mark as used
+                        for (int y = rect.top(); y < bottom; ++y) {
+                            sector->used[right][y] = true;
+                        }
+                        rect.setWidth(rect.width() + 1);
+                        right++;
+                    } else {
+                        break;
+                    }
+                }
+
+                while (bottom < 192) {
+                    bool expanded = true;
+                    for (int x = rect.left(); x < right; ++x) {
+                        if (sector->used[x][bottom] || !sector->walkable[x][bottom] || sector->flyable[x][bottom]) {
+                            expanded = false;
+                            break;
+                        }
+                    }
+
+                    if (expanded) {
+                        // Mark as used
+                        for (int x = rect.left(); x < right; ++x) {
+                            sector->used[x][bottom] = true;
+                        }
+                        rect.setHeight(rect.height() + 1);
+                        bottom++;
+                    } else {
+                        break;
+                    }
+                }
+
+                break; // No further expansion was possible
+            }
+
+            sectorPolygons.append(rect);
+        }
+
+        // Second-pass tries to unify more sector polygons
+        for (int iteration = 0; iteration < 1; ++iteration) {
+            for (int i = 0; i < sectorPolygons.size(); ++i) {
+               for (int j = 0; j < sectorPolygons.size(); ++j) {
+                   if(i == j)
+                       continue;
+
+                    const QRect &a = sectorPolygons[i];
+                    uint leftA = a.x();
+                    uint topA = a.y();
+                    uint rightA = leftA + a.width();
+                    uint bottomA = topA + a.height();
+
+                    uint areaA = (rightA - leftA) * (bottomA - topA);
+
+                    const QRect &b = sectorPolygons[j];
+                    uint leftB = b.x();
+                    uint topB = b.y();
+                    uint rightB = leftB + b.width();
+                    uint bottomB = topB + b.height();
+
+                    uint areaB = (rightB - leftB) * (bottomB - topB);
+
+                    // Only consider merging, if the two polygons share an edge
+                    SharedEdge edge = getSharedEdge(leftA, topA, rightA, bottomA,
+                                                    leftB, topB, rightB, bottomB);
+
+                    uint t0, t1;
+
+                    uint resultingPrimitives = 1;
+
+                    switch (edge) {
+                    case Shared_West:
+                    case Shared_East:
+                        t0 = qMax<uint>(topA, topB);
+                        t1 = qMin<uint>(bottomA, bottomB);
+                        if (topA != topB)
+                            resultingPrimitives++;
+                        if (bottomA != bottomB)
+                            resultingPrimitives++;
+                        break;
+                    case Shared_North:
+                    case Shared_South:
+                        t0 = qMax<uint>(leftA, leftB);
+                        t1 = qMin<uint>(rightA, rightB);
+                        if (leftA != leftB)
+                            resultingPrimitives++;
+                        if (rightA != rightB)
+                            resultingPrimitives++;
+                        break;
+                    default:
+                        continue;
+                    }
+
+                    if (resultingPrimitives == 1)
+                        continue; // TODO: Handle this case
+
+                    // All naive merges should've been done before.
+                    Q_ASSERT(resultingPrimitives > 1);
+
+                    uint maxArea = qMax(areaA, areaB);
+
+                    if (resultingPrimitives == 2) {
+                        if (edge == Shared_North || edge == Shared_South) {
+                            if (rightB < rightA || leftB > leftA)
+                                continue;
+                        } else if (edge == Shared_West || edge == Shared_East) {
+                            if (bottomB < bottomA || topB > topA)
+                                continue;
+                        }
+
+                        switch (edge) {
+                        case Shared_West:
+                            leftA = leftB;
+                            if (topB == topA)
+                                topB = bottomA;
+                            else if (bottomA == bottomB)
+                                bottomB = topA;
+                            else
+                                qFatal("FAIL");
+                            break;
+                        case Shared_East:
+                            rightA = rightB;
+                            if (topB == topA)
+                                topB = bottomA;
+                            else if (bottomB == bottomA)
+                                bottomB = topA;
+                            else
+                                qFatal("FAIL");
+                            break;
+                        case Shared_North:
+                            topA = topB;
+                            if (leftB == leftA)
+                                leftB = rightA;
+                            else if (rightB == rightA)
+                                rightB = leftA;
+                            else
+                                qFatal("FAIL");
+                            break;
+                        case Shared_South:
+                            bottomA = bottomB;
+                            if (leftB == leftA)
+                                leftB = rightA;
+                            else if (rightB == rightA)
+                                rightB = leftA;
+                            else
+                                qFatal("FAIL");
+                            break;
+                        }
+
+                        uint newAreaA = (rightA - leftA) * (bottomA - topA);
+                        uint newAreaB = (rightB - leftB) * (bottomB - topB);
+                        Q_ASSERT(newAreaA + newAreaB == areaA + areaB);
+
+                        // Heuristic: Only merge, if it improves the area of the greater of the two rectangles
+                        if (newAreaA > maxArea || newAreaB > maxArea) {
+                            sectorPolygons[i].setCoords(leftA, topA, rightA - 1, bottomA - 1);
+                            sectorPolygons[j].setCoords(leftB, topB, rightB - 1, bottomB - 1);
+                        }
+                    } else if (resultingPrimitives == 3) {
+                        // In case our side is wholly contained in the other rectangles side,
+                        // skip and continue
+                    }
+                }
+            }
+        }
+
+        foreach (QRect rect, sectorPolygons) {
+            rect.setTopLeft(rect.topLeft() + sector->origin);
+            rect.setBottomRight(rect.bottomRight() + sector->origin);
+            polygons.append(rect);
+        }
+    }
+
+    if (!polygons.isEmpty()) {
+        qDebug("Adding %d polygons.", polygons.size());
+        Sector *sec = new Sector;
+
+        uint i = 0;
+        QHash<QPoint, uint> verts;
+        QStringList vertices;
+        QStringList faces;
+
+        static const float scale = 0.1f;
+
+        foreach (const QRect &polygon, polygons) {
+            sec->addPolygon(polygon);
+
+            QPoint topLeft = polygon.topLeft();
+            uint topLeftIndex;
+            QPoint topRight = polygon.topRight();
+            topRight.setX(topRight.x() + 1);
+            uint topRightIndex;
+            QPoint bottomLeft = polygon.bottomLeft();
+            bottomLeft.setY(bottomLeft.y() + 1);
+            uint bottomLeftIndex;
+            QPoint bottomRight = polygon.bottomRight();
+            bottomRight.setY(bottomRight.y() + 1);
+            bottomRight.setX(bottomRight.x() + 1);
+            uint bottomRightIndex;
+
+            if (verts.contains(topLeft))
+                topLeftIndex = verts[topLeft];
+            else {
+                verts[topLeft] = ++i;
+                topLeftIndex = i;
+                float x = topLeft.x();
+                float y = topLeft.y();
+                vertices.append(QString("v %1 0 %2").arg(x * scale).arg(y * scale));
+            }
+
+            if (verts.contains(bottomLeft))
+                bottomLeftIndex = verts[bottomLeft];
+            else {
+                verts[bottomLeft] = ++i;
+                bottomLeftIndex = i;
+                float x = bottomLeft.x();
+                float y = bottomLeft.y();
+                vertices.append(QString("v %1 0 %2").arg(x * scale).arg(y * scale));
+            }
+
+            if (verts.contains(bottomRight))
+                bottomRightIndex = verts[bottomRight];
+            else {
+                verts[bottomRight] = ++i;
+                bottomRightIndex = i;
+                float x = bottomRight.x();
+                float y = bottomRight.y();
+                vertices.append(QString("v %1 0 %2").arg(x * scale).arg(y * scale));
+            }
+
+            if (verts.contains(topRight))
+                topRightIndex = verts[topRight];
+            else {
+                verts[topRight] = ++i;
+                topRightIndex = i;
+                float x = topRight.x();
+                float y = topRight.y();
+                vertices.append(QString("v %1 0 %2").arg(x * scale).arg(y * scale));
+            }
+
+            faces.append(QString("f %1 %2 %3 %4").arg(topRightIndex).arg(topLeftIndex).arg(bottomLeftIndex).arg(bottomRightIndex));
+        }
+
+        QFile test("test.obj");
+        test.open(QIODevice::WriteOnly|QIODevice::Text);
+        QTextStream s(&test);
+
+        foreach (QString v, vertices) {
+            s << v << endl;
+        }
+        foreach (QString f, faces) {
+            s << f << endl;
+        }
+        s.flush();
+
+        SceneNode *sceneNode = new SceneNode();
+        sceneNode->setPosition(Vector4(0,0,0,1));
+        sceneNode->attachObject(SharedRenderable(sec));
+
+        d->scene->addNode(SharedSceneNode(sceneNode));
+    }
+
+    qDeleteAll(sectors);
 }
 
 
@@ -393,7 +847,8 @@ void Sector::render(RenderStates &renderStates)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     glEnable(GL_TEXTURE_2D);
-    mTexture->bind();
+    if (mTexture)
+        mTexture->bind();
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
     glMatrixMode(GL_PROJECTION);
@@ -403,17 +858,19 @@ void Sector::render(RenderStates &renderStates)
 
     float d = 191 / 255.f;
     float w = (255 - 191) / 255.f;
-
-    glBegin(GL_QUADS);
-    glTexCoord2f(0, 1);
-    glVertex3f(0, 0, 0);
-    glTexCoord2f(d, 1);
-    glVertex3f(diagonal.x(), 0, 0);
-    glTexCoord2f(d, w);
-    glVertex3f(diagonal.x(), 0, diagonal.z());
-    glTexCoord2f(0, w);
-    glVertex3f(0, 0, diagonal.z());
-    glEnd();
+    if (mTexture)
+    {
+        glBegin(GL_QUADS);
+        glTexCoord2f(0, 1);
+        glVertex3f(0, 0, 0);
+        glTexCoord2f(d, 1);
+        glVertex3f(diagonal.x(), 0, 0);
+        glTexCoord2f(d, w);
+        glVertex3f(diagonal.x(), 0, diagonal.z());
+        glTexCoord2f(0, w);
+        glVertex3f(0, 0, diagonal.z());
+        glEnd();
+    }
 
     glBindTexture(GL_TEXTURE_2D, 0);
     glDisable(GL_TEXTURE_2D);
@@ -425,6 +882,31 @@ void Sector::render(RenderStates &renderStates)
     glVertex3f(diagonal.x(), 0, diagonal.z());
     glVertex3f(0, 0, diagonal.z());
     glEnd();
+
+    srand(1234656812);
+
+    glDisable(GL_TEXTURE_2D);
+    glBegin(GL_QUADS);
+    foreach (const QRect &polygon, mPolygons) {
+        float r = 0.5f + 0.5f * (rand() / (float)RAND_MAX);
+        float g = 0.5f + 0.5f * (rand() / (float)RAND_MAX);
+        float b = 0.5f + 0.5f * (rand() / (float)RAND_MAX);
+        glColor4f(r, g, b, 0.5);
+
+        float x = polygon.x() / 3.0f * PixelPerWorldTile;
+        float y = polygon.y() / 3.0f * PixelPerWorldTile;
+        float w = polygon.width() / 3.0f * PixelPerWorldTile;
+        float h = polygon.height() / 3.0f * PixelPerWorldTile;
+
+        glVertex3f(x, 0, y);
+        glVertex3f(x, 0, y + h);
+        glVertex3f(x + w, 0, y + h);
+        glVertex3f(x + w, 0, y);
+    }
+    glEnd();
+
+    glEnable(GL_CULL_FACE);
+    glEnable(GL_DEPTH_TEST);
 }
 
 Sector::Sector()
@@ -437,139 +919,22 @@ const Box3d &Sector::boundingBox()
     return mBoundingBox;
 }
 
-inline uint heuristic_estimate_of_distance(const QPoint &start, const QPoint &end)
+void Sector::addPolygon(const QRect &polygon)
 {
-    QPoint dist = (end - start);
-    return dist.x() * dist.x() + dist.y() * dist.y();
+    float f = 1 / 3.0f * PixelPerWorldTile;
+    Vector4 topLeft(polygon.x(), 0, polygon.y(), 1);
+    mBoundingBox.merge(f * topLeft);
+    Vector4 bottomRight  = topLeft + Vector4(polygon.width(), 0, polygon.height(), 0);
+    mBoundingBox.merge(f * bottomRight);
+
+    mPolygons.append(polygon);
 }
 
-const QPoint directions[8] = {
-    QPoint(-1, 0), // West
-    QPoint(1, 0), // East
-    QPoint(0, -1), // North
-    QPoint(0, 1), // South
-    QPoint(-1, -1), // Northwest
-    QPoint(-1, 1), // Southwest
-    QPoint(1, 1), // Southeast
-    QPoint(1, -1) // Northeast
-};
-
-const uint directionDistance[8] = {
-    1, 1, 1, 1,
-    2, 2, 2, 2
-};
-
-struct OpenWorkItem {
-    QPoint p;
-    uint f_score;
-};
-
-inline bool operator ==(const OpenWorkItem &a, const OpenWorkItem &b) {
-    return a.p == b.p;
-}
-
-QVector<Vector4> SectorMap::findPath(const Vector4 &start3d, const Vector4 &end3d)
+QVector<Vector4> SectorMap::findPath(const Vector4 &start, const Vector4 &end)
 {
-    d->resetVisited();
-
-    QPoint start(start3d.x() / (PixelPerWorldTile / 3.0f), start3d.z() / (PixelPerWorldTile / 3.0f));
-    QPoint end(end3d.x() / (PixelPerWorldTile / 3.0f), end3d.z() / (PixelPerWorldTile / 3.0f));
-
-    QList<OpenWorkItem> openSet;
-    OpenWorkItem startItem;
-    startItem.p = start;
-    startItem.f_score = heuristic_estimate_of_distance(start, end);
-    openSet << startItem;
-
-    QHash<QPoint, uint> g_score, h_score;
-    QHash<QPoint, QPoint> cameFrom;
-    g_score[start] = 0;
-    h_score[start] = heuristic_estimate_of_distance(start, end);
-
-    bool success = false;
-
-    while (!openSet.isEmpty()) {
-        OpenWorkItem owi = openSet.takeFirst();
-        QPoint x = owi.p;
-
-        if (x == end) {
-            success = true;
-            break;
-        }
-
-        d->setVisited(x);
-
-        // Add all neighbour nodes (no diagonals) (shoudl be unrolled)
-        for (int i = 0; i < 8; ++i) {
-            QPoint y = x + directions[i];
-
-            if (!d->isWalkable(y))
-                continue;
-
-            if (d->isVisited(y))
-                continue;
-
-            uint tentative_g_score = g_score[x] + directionDistance[i]; // dist_between(x,y)
-
-            bool tentativeIsBetter = false;
-            uint goalDistance = heuristic_estimate_of_distance(y, end);
-            uint y_f_score = tentative_g_score + goalDistance;
-
-            OpenWorkItem wi;
-            wi.p = y;
-            wi.f_score = y_f_score;
-
-            // This is expensive, somehow possible to optimize?
-            int index = openSet.indexOf(wi);
-
-            if (index == -1) {
-                // Do insertion sort
-                bool inserted = false;
-                for (int j = 0; j < openSet.size(); ++j) {
-                    uint fscore = openSet[j].f_score;
-                    if (fscore >= y_f_score) {
-                        openSet.insert(j, wi);
-                        inserted = true;
-                        break;
-                    }
-                }
-                if (!inserted)
-                    openSet.append(wi);
-                tentativeIsBetter = true;
-            } else if (tentative_g_score < g_score[y]) {
-                tentativeIsBetter = true;
-                openSet[index].f_score = y_f_score;
-            }
-
-            if (tentativeIsBetter) {
-                cameFrom[y] = x;
-                g_score[y] = tentative_g_score;                
-                h_score[y] = goalDistance;
-            }
-        }
-    }
-
-    if (success) {
-        Q_ASSERT(cameFrom.contains(end));
-
-        QVector<Vector4> result;
-
-        // Reconstructing the result set
-
-        QPoint current = end;
-
-        do {
-            result.append(Vector4(current.x() * PixelPerWorldTile / 3, 0, current.y() * PixelPerWorldTile / 3, 1));
-            current = cameFrom[current];
-        } while (!current.isNull());
-
-        result << start3d << end3d;
-
-        return result;
-    } else {
-        return QVector<Vector4>();
-    }
-
+    QVector<Vector4> result;
+    result << start << end;
+    return result;
 }
 
 }

@@ -2,8 +2,8 @@
 #define SECTORMAP_H
 
 #include <QObject>
-#include <QPolygon>
 #include <QScopedPointer>
+#include <QPolygon>
 
 #include "renderable.h"
 #include "texture.h"
@@ -11,6 +11,7 @@
 namespace EvilTemple {
 
 class Scene;
+
 class SectorMapData;
 
 class Sector : public Renderable
@@ -24,8 +25,10 @@ public:
     const Box3d &boundingBox();
 
     void setTexture(const SharedTexture &texture);
+    void addPolygon(const QRect &polygon);
 private:
     SharedTexture mTexture;
+    QList<QRect> mPolygons;
     Box3d mBoundingBox;
 };
 
@@ -42,7 +45,7 @@ public:
     ~SectorMap();
 
 public slots:
-    bool load(const QString &filename) const;
+    bool load(const Vector4 &startPosition, const QString &filename) const;
 
     QVector<Vector4> findPath(const Vector4 &start, const Vector4 &end);
 

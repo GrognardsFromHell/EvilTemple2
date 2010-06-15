@@ -12,10 +12,10 @@ varying float lightDistance;
 
 void lighting(vec4 vertexPosition, vec4 vertexNormal, mat4 worldViewMatrix, mat4 viewMatrix)
 {
-	normal = normalize(vec3(worldViewMatrix * vertexNormal));
+        normal = normalize(vec3(worldViewMatrix * normalize(vertexNormal)));
 
 	if (lightSourceType == Light_Directional) {
-		lightVector = normalize(- vec3(viewMatrix * lightSourcePosition));
+                lightVector = normalize(- vec3(viewMatrix * normalize(lightSourcePosition)));
 		lightDistance = 0;
 	} else {
 		lightVector = vec3(viewMatrix * lightSourcePosition) - vec3(worldViewMatrix * vertexPosition);
