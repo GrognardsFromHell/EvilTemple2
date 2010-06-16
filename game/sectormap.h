@@ -10,6 +10,8 @@
 
 namespace EvilTemple {
 
+struct NavMeshRect;
+
 class Scene;
 
 class SectorMapData;
@@ -25,12 +27,18 @@ public:
     const Box3d &boundingBox();
 
     void setTexture(const SharedTexture &texture);
-    void addPolygon(const QRect &polygon);
+    void addNavMeshRect(const NavMeshRect *polygon);
+    void clearNavMeshRects();
 private:
     SharedTexture mTexture;
-    QList<QRect> mPolygons;
+    QVector<const NavMeshRect*> mNavMeshRects;
     Box3d mBoundingBox;
 };
+
+inline void Sector::clearNavMeshRects()
+{
+    mNavMeshRects.clear();
+}
 
 inline void Sector::setTexture(const SharedTexture &texture)
 {
