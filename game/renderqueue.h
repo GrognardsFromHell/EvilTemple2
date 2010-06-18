@@ -17,6 +17,7 @@ public:
         Default = 0,
         ClippingGeometry,
         Lights,
+        DebugOverlay,
         Count
     };
 

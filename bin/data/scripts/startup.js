@@ -279,23 +279,47 @@ function setupWorldClickHandler() {
     var firstClick = undefined;
 
     gameView.worldClicked.connect(function(worldPosition) {
+        var color;
+
         if (firstClick === undefined) {
             gameView.scene.addTextOverlay(worldPosition, "1st @ " + Math.floor(worldPosition.x) + ","
                                                                 + Math.floor(worldPosition.z),
                                                                new Vector4(0.9, 0.9, 0.9, 0.9));
             firstClick = worldPosition;
         } else {
+            var inLos = gameView.sectorMap.hasLineOfSight(firstClick, worldPosition);
+            if (inLos) {
+                color = new Vector4(0.2, 0.9, 0.2, 0.9);
+            } else {
+                color = new Vector4(0.9, 0.2, 0.2, 0.9);
+            }
+
             gameView.scene.addTextOverlay(worldPosition, "2nd @ " + Math.floor(worldPosition.x) + ","
                                                                 + Math.floor(worldPosition.z),
-                                                               new Vector4(0.9, 0.9, 0.9, 0.9));
+                                                               color);
 
             var path = gameView.sectorMap.findPath(firstClick, worldPosition);
 
             print("Found path of length: " + path.length);
 
+            var sceneNode = new SceneNode();
+
             for (var i = 0; i < path.length; ++i) {
+                if (i + 1 < path.length) {
+                    var line = new LineRenderable();
+                    line.addLine(path[i], path[i+1]);
+                    sceneNode.attachObject(line);
+                }
+
                 gameView.scene.addTextOverlay(path[i], 'X', new Vector4(1, 0, 0, 1), 1);
             }
+
+            gameView.scene.addNode(sceneNode);
+
+            gameView.addVisualTimer(5000, function() {
+                print("Removing scene node.");
+                gameView.scene.removeNode(sceneNode);
+            });
 
             firstClick = undefined;
         }

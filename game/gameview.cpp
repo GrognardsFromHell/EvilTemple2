@@ -45,6 +45,48 @@ namespace EvilTemple {
             qWarning("OpenGL error @ %s:%d: %s", file, line, qPrintable(error));
         }
     }
+
+    class VisualTimer {
+    public:
+
+        /**
+          Constructs a new visual timer, that starts now, which calls the given callback
+          after elapseAfter miliseconds.
+          */
+        VisualTimer(const QScriptValue &value, uint elapseAfter);
+
+        /**
+          Returns true if this timer elapsed given a reference time.
+          */
+        bool isElapsed(qint64 msecsSinceReference) const;
+
+        /**
+          Call the callback stored in this visual timer.
+          */
+        void call();
+
+    private:
+        QScriptValue mCallback;
+        qint64 mElapseAfter;
+    };
+
+    inline VisualTimer::VisualTimer(const QScriptValue &callback, uint elapseAfter)
+        : mCallback(callback)
+    {
+        QElapsedTimer timer;
+        timer.start();
+        mElapseAfter = timer.msecsSinceReference() + elapseAfter;
+    }
+
+    inline bool VisualTimer::isElapsed(qint64 msecsSinceReference) const
+    {
+        return msecsSinceReference >= mElapseAfter;
+    }
+
+    inline void VisualTimer::call()
+    {
+        mCallback.call();
+    }
     
     class GameViewData
     {
@@ -176,6 +218,9 @@ namespace EvilTemple {
         bool mouseMovedDuringDrag;
         Matrix4 baseViewMatrix; // Without translations
 
+        typedef QList<VisualTimer> VisualTimers;
+        VisualTimers visualTimers;
+
         QHash<QString, QWeakPointer<Model> > modelCache;
 
         LightDebugRenderer lightDebugger;
@@ -209,9 +254,29 @@ namespace EvilTemple {
             renderStates.setProjectionMatrix(projectionMatrix);
         }
 
+        void pollVisualTimers();
+
     private:
         GameView *q;
     };
+
+    void GameViewData::pollVisualTimers()
+    {
+        QElapsedTimer timer;
+        timer.start();
+        qint64 reference = timer.msecsSinceReference();
+
+        VisualTimers::iterator it = visualTimers.begin();
+        while (it != visualTimers.end()) {
+            if (it->isElapsed(reference)) {
+                qDebug("Timer has elapsed.");
+                it->call();
+                it = visualTimers.erase(it);
+            } else {
+                it++;
+            }
+        }
+    }
 
     GameView::GameView(QWidget *parent) :
             QGraphicsView(parent), d(new GameViewData(this))
@@ -253,6 +318,9 @@ namespace EvilTemple {
         Q_UNUSED(rect);
 
         HANDLE_GL_ERROR
+
+        // Evaluate visual script timers
+        d->pollVisualTimers();
 
         SAFE_GL(glEnable(GL_DEPTH_TEST));
         SAFE_GL(glEnable(GL_CULL_FACE));
@@ -526,6 +594,12 @@ namespace EvilTemple {
     SectorMap *GameView::sectorMap() const
     {
         return &d->sectorMap;
+    }
+
+    void GameView::addVisualTimer(uint elapseAfter, const QScriptValue &callback)
+    {
+        qDebug("Adding visual timer that'll elapse after %d ms.", elapseAfter);
+        d->visualTimers.append(VisualTimer(callback, elapseAfter));
     }
 
 }

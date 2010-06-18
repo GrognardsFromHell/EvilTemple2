@@ -62,6 +62,13 @@ Scene::~Scene()
 void Scene::addNode(const SharedSceneNode &node)
 {
     d->sceneNodes.append(node);
+    node->setScene(this);
+}
+
+void Scene::removeNode(const SharedSceneNode &node)
+{
+    d->sceneNodes.removeAll(node);
+    node->setScene(NULL);
 }
 
 void Scene::elapseTime(float elapsedSeconds)
@@ -98,7 +105,8 @@ void Scene::render(RenderStates &renderStates)
     const RenderQueue::Category renderOrder[RenderQueue::Count] = { 
         RenderQueue::ClippingGeometry,
         RenderQueue::Default,
-        RenderQueue::Lights
+        RenderQueue::Lights,
+        RenderQueue::DebugOverlay
     };
 
     // Find all light sources that are visible.

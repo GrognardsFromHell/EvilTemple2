@@ -27,6 +27,8 @@ public:
 public slots:
     void addNode(const SharedSceneNode &node);
 
+    void removeNode(const SharedSceneNode &node);
+
     void clear();
 
     void addTextOverlay(const Vector4 &position, const QString &text, const Vector4 &color, float lifetime = 2.5f);

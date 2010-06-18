@@ -106,6 +106,8 @@ public slots:
 
     SharedModel loadModel(const QString &filename);
 
+    void addVisualTimer(uint elapseAfter, const QScriptValue &callback);
+
 protected:
     void resizeEvent(QResizeEvent *event);
     void mouseMoveEvent(QMouseEvent *event);

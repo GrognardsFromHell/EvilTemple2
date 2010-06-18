@@ -7,12 +7,144 @@
 #include <QTextStream>
 #include <QImage>
 #include <QDataStream>
+#include <QElapsedTimer>
 
 inline static uint qHash(const QPoint &key) {
     return ((key.x() & 0xFFFF) << 16) | key.y() & 0xFFFF;
 }
 
 namespace EvilTemple {
+
+
+inline bool westeast_intersect(int y, int left, int right, const QPoint &from, const QPoint &to)
+{
+    // Parallel to the axis -> reject
+    if (from.y() == to.y())
+        return false;
+
+    if (left > qMax(from.x(), to.x()))
+        return false;
+
+    if (right < qMin(from.x(), to.x()))
+        return false;
+
+    int ydiff = y - from.y();
+    float xascent = (to.x() - from.x()) / (float)(to.y() - from.y());
+
+    float ix = from.x() + xascent * ydiff;
+
+    return ix >= left && ix <= right;
+}
+
+inline bool northsouth_intersect(int x, int top, int bottom, const QPoint &from, const QPoint &to)
+{
+    // Parallel to the axis -> reject
+    if (from.x() == to.x())
+        return false;
+
+    if (top > qMax(from.y(), to.y()))
+        return false;
+
+    if (bottom < qMin(from.y(), to.y()))
+        return false;
+
+    int xdiff = x - from.x();
+    float yascent = (to.y() - from.y()) / (float)(to.x() - from.x());
+
+    float iy = from.y() + yascent * xdiff;
+
+    return iy >= top && iy <= bottom;
+}
+
+#define SAME_SIGNS( a, b )	\
+    (((long) ((unsigned long) a ^ (unsigned long) b)) >= 0 )
+
+
+#define	DONT_INTERSECT    0
+#define	DO_INTERSECT      1
+#define COLLINEAR         2
+
+            int lines_intersect( float x1, float y1,   /* First line segment */
+                                 float x2, float y2,
+
+                                 float x3, float y3,   /* Second line segment */
+                                 float x4, float y4,
+
+                                 int *x,
+                                 int *y         /* Output value:
+                                * point of intersection */
+                                 )
+    {
+        float a1, a2, b1, b2, c1, c2; /* Coefficients of line eqns. */
+        float r1, r2, r3, r4;         /* 'Sign' values */
+        float denom, offset, num;     /* Intermediate values */
+
+        /* Compute a1, b1, c1, where line joining points 1 and 2
+     * is "a1 x  +  b1 y  +  c1  =  0".
+     */
+
+        a1 = y2 - y1;
+        b1 = x1 - x2;
+        c1 = x2 * y1 - x1 * y2;
+
+        /* Compute r3 and r4.
+     */
+
+
+        r3 = a1 * x3 + b1 * y3 + c1;
+        r4 = a1 * x4 + b1 * y4 + c1;
+
+        /* Check signs of r3 and r4.  If both point 3 and point 4 lie on
+     * same side of line 1, the line segments do not intersect.
+     */
+
+        if ( r3 != 0 &&
+             r4 != 0 &&
+             SAME_SIGNS( r3, r4 ))
+            return ( DONT_INTERSECT );
+
+        /* Compute a2, b2, c2 */
+
+        a2 = y4 - y3;
+        b2 = x3 - x4;
+        c2 = x4 * y3 - x3 * y4;
+
+        /* Compute r1 and r2 */
+
+        r1 = a2 * x1 + b2 * y1 + c2;
+        r2 = a2 * x2 + b2 * y2 + c2;
+
+        /* Check signs of r1 and r2.  If both point 1 and point 2 lie
+     * on same side of second line segment, the line segments do
+     * not intersect.
+     */
+
+        if ( r1 != 0 &&
+             r2 != 0 &&
+             SAME_SIGNS( r1, r2 ))
+            return ( DONT_INTERSECT );
+
+        /* Line segments intersect: compute intersection point.
+     */
+
+        denom = a1 * b2 - a2 * b1;
+        if ( denom == 0 )
+            return ( COLLINEAR );
+        offset = denom < 0 ? - denom / 2 : denom / 2;
+
+        /* The denom/2 is to get rounding instead of truncating.  It
+     * is added or subtracted to the numerator, depending upon the
+     * sign of the numerator.
+     */
+
+        num = b1 * c2 - b2 * c1;
+        *x = ( num < 0 ? num - offset : num + offset ) / denom;
+
+        num = a2 * c1 - a1 * c2;
+        *y = ( num < 0 ? num - offset : num + offset ) / denom;
+
+        return ( DO_INTERSECT );
+    } /* lines_intersect */
 
     static const float PixelPerWorldTile = 28.2842703f;
 
@@ -21,7 +153,9 @@ namespace EvilTemple {
         uchar footsteps;
     };
 
-    struct NavMeshRect {
+    struct NavMeshPortal;
+
+    class NavMeshRect {
     public:
         // Global coordinates
         uint left;
@@ -32,29 +166,25 @@ namespace EvilTemple {
         uint centerX;
         uint centerY;
 
-        QVector<NavMeshRect*> neighbours;
-
-        // A* state data, not thread-safe (Based on Game Programming Gems 1)
-        bool inClosedSet;
-        bool inOpenSet;
-        NavMeshRect *parent;
-        uint costFromStart;
-        uint costToGoal;
-        uint totalCost;
-
-        // Debugging flags
-        bool partOfPath;
+        QVector<const NavMeshPortal*> portals;
     };
 
-    inline void resetAStarState(NavMeshRect *rect)
-    {
-        rect->partOfPath = false;
-        rect->inClosedSet = false;
-        rect->inOpenSet = false;
-        rect->parent = NULL;
-        rect->costFromStart = 0;
-        rect->costToGoal = 0;
-    }
+    enum PortalAxis {
+        NorthSouth,
+        WestEast
+    };
+
+    struct NavMeshPortal {
+        NavMeshRect *sideA;
+        NavMeshRect *sideB;
+
+        PortalAxis axis; // The axis on which this portal lies
+        uint start, end; // The start and end of the portal on the given axis
+
+        // Position of the middle of this portal
+        float x;
+        float y;
+    };
 
     struct TileSector {
         TileSector();
@@ -189,25 +319,25 @@ namespace EvilTemple {
                                            uint leftB, uint topB, uint rightB, uint bottomB)
     {
         if (leftA == rightB) {
-            if (topB <= bottomA && bottomB >= topA) {
+            if (topB < bottomA && bottomB > topA) {
                 return Shared_West;
             } else {
                 return Shared_None;
             }
         } else if (leftB == rightA) {
-            if (topA <= bottomB && bottomA >= topB) {
+            if (topA < bottomB && bottomA > topB) {
                 return Shared_East;
             } else {
                 return Shared_None;
             }
         } else if (topB == bottomA) {
-            if (leftA <= rightB && rightA >= leftB) {
+            if (leftA < rightB && rightA > leftB) {
                 return Shared_South;
             } else {
                 return Shared_None;
             }
         } else if (topA == bottomB) {
-            if (leftB <= rightA && rightB >= leftA) {
+            if (leftB < rightA && rightB > leftA) {
                 return Shared_North;
             } else {
                 return Shared_None;
@@ -223,9 +353,10 @@ namespace EvilTemple {
         Scene *scene;
         QWeakPointer<Sector> sector;
 
-        QVector<NavMeshRect> rectangles;
+        QVector<NavMeshRect*> rectangles;
+        QVector<NavMeshPortal*> portals;
 
-        NavMeshRect *findRect(const Vector4 &position);
+        const NavMeshRect *findRect(const Vector4 &position) const;
         void clearExistingSector();
     };
 
@@ -248,13 +379,13 @@ namespace EvilTemple {
         }
     }
 
-    NavMeshRect *SectorMapData::findRect(const Vector4 &position)
+    const NavMeshRect *SectorMapData::findRect(const Vector4 &position) const
     {
         int x = position.x() / (PixelPerWorldTile / 3);
         int y = position.z() / (PixelPerWorldTile / 3);
 
         for (int i = 0; i < rectangles.size(); ++i) {
-            NavMeshRect *rect = rectangles.data() + i;
+            NavMeshRect *rect = rectangles[i];
 
             if (x >= rect->left && x <= rect->right && y >= rect->top && y <= rect->bottom) {
                 return rect;
@@ -568,7 +699,7 @@ namespace EvilTemple {
             d->scene->addNode(node);
         }
 
-        // Link sectors to neighbours
+        // Link sectors to neighbouring sectors
         foreach (TileSector *sector, sectors) {
             sector->west = 0;
             sector->north = 0;
@@ -949,12 +1080,15 @@ namespace EvilTemple {
 
             static const float scale = 0.1f;
 
-            d->rectangles.resize(polygons.size());
+            qDeleteAll(d->rectangles);
+            d->rectangles.clear();
+            d->rectangles.reserve(polygons.size());
 
             for (int j = 0; j < polygons.size(); ++j) {
                 const QRect &polygon = polygons[j];
 
-                NavMeshRect *rect = d->rectangles.data() + j;
+                NavMeshRect *rect = new NavMeshRect;
+                d->rectangles.append(rect);
                 rect->left = polygon.left();
                 rect->right = polygon.right() + 1;
                 rect->top = polygon.top();
@@ -1021,25 +1155,6 @@ namespace EvilTemple {
                 faces.append(QString("f %1 %2 %3 %4").arg(topRightIndex).arg(topLeftIndex).arg(bottomLeftIndex).arg(bottomRightIndex));
             }
 
-
-            // The rather involved process of finding neighbouring rectangles
-            for (int i = 0; i < d->rectangles.size(); ++i) {
-                NavMeshRect *rect = d->rectangles.data() + i;
-
-                for (int j = 0; j < d->rectangles.size(); ++j) {
-                    if (i == j)
-                        continue;
-
-                    NavMeshRect *other = d->rectangles.data() + j;
-
-                    SharedEdge edge = getSharedEdge(rect->left, rect->top, rect->right, rect->bottom,
-                                                    other->left, other->top, other->right, other->bottom);
-                    if (edge != Shared_None) {
-                        rect->neighbours.append(other);
-                    }
-                }
-            }
-
             QFile test("test.obj");
             test.open(QIODevice::WriteOnly|QIODevice::Text);
             QTextStream s(&test);
@@ -1051,6 +1166,135 @@ namespace EvilTemple {
                 s << f << endl;
             }
             s.flush();
+
+            // The rather involved process of finding neighbouring rectangles
+            qDeleteAll(d->portals);
+            d->portals.clear();
+
+            for (int i = 0; i < d->rectangles.size(); ++i) {
+                NavMeshRect *rect = d->rectangles.at(i);
+
+                for (int j = 0; j < d->rectangles.size(); ++j) {
+                    if (i == j)
+                        continue;
+
+                    NavMeshRect *other = d->rectangles.at(j);
+
+                    SharedEdge edge = getSharedEdge(rect->left, rect->top, rect->right, rect->bottom,
+                                                    other->left, other->top, other->right, other->bottom);
+
+                    if (edge == Shared_None)
+                        continue;
+
+                    bool portalExists = false;
+
+                    for (int k = 0; k < other->portals.size(); ++k) {
+                        const NavMeshPortal *otherPortal = other->portals.at(k);
+                        if (otherPortal->sideA == rect || otherPortal->sideB == rect) {
+                            portalExists = true;
+                            break;
+                        }
+                    }
+
+                    if (portalExists)
+                        continue;
+
+                    NavMeshPortal *portal = new NavMeshPortal;
+                    d->portals.append(portal);
+                    portal->sideA = rect;
+                    portal->sideB = other;
+
+                    switch (edge) {
+                    case Shared_North:
+                        portal->start = qMax(rect->left, other->left);
+                        portal->end = qMin(rect->right, other->right);
+                        portal->x = 0.5f * (portal->start + portal->end);
+                        portal->y = rect->top;                        
+                        portal->axis = WestEast;
+                        break;
+                    case Shared_South:
+                        portal->start = qMax(rect->left, other->left);
+                        portal->end = qMin(rect->right, other->right);
+                        portal->x = 0.5f * (portal->start + portal->end);
+                        portal->y = rect->bottom;
+                        portal->axis = WestEast;
+                        break;
+                    case Shared_East:
+                        portal->start = qMax(rect->top, other->top);
+                        portal->end = qMin(rect->bottom, other->bottom);
+                        portal->x = rect->right;
+                        portal->y = 0.5f * (portal->start + portal->end);
+                        portal->axis = NorthSouth;
+                        break;
+                    case Shared_West:                        
+                        portal->start = qMax(rect->top, other->top);
+                        portal->end = qMin(rect->bottom, other->bottom);
+                        portal->x = rect->left;
+                        portal->y = 0.5f * (portal->start + portal->end);
+                        portal->axis = NorthSouth;
+                        break;
+                    default:
+                        qFatal("This should not be reached.");
+                    }
+
+                    // Add portal to both.
+                    rect->portals.append(portal);
+                    other->portals.append(portal);
+                }
+            }
+
+            // Check some invariants for all portals
+            foreach (const NavMeshPortal *portal, d->portals) {
+                if (portal->sideA == portal->sideB) {
+                    qFatal("Looping portal detected.");
+                }
+                if (portal->axis == NorthSouth) {
+                    if (portal->x - floor(portal->x) != 0) {
+                        qFatal("Portal on x north-south axis with non-integral X component.");
+                    }
+                } else if (portal->axis == WestEast) {
+                    if (portal->y - floor(portal->y) != 0) {
+                        qFatal("Portal on x north-south axis with non-integral X component.");
+                    }
+                } else {
+                    qFatal("Portal with invalid axis.");
+                }
+
+                const NavMeshRect *sideA = portal->sideA;
+                const NavMeshRect *sideB = portal->sideB;
+
+                // Check that the two linked rectangles even share the expected edge
+                if (portal->axis == NorthSouth) {
+                    if (sideA->left == sideB->right || sideA->right == sideB->left) {
+                        if (sideA->top >= sideB->bottom || sideA->bottom <= sideB->top) {
+                            qFatal("Two linked rectangles aren't touching!");
+                        }
+                    } else {
+                        qFatal("North-South axis portal links two rectangles that don't touch.");
+                    }
+                } else if (portal->axis == WestEast) {
+                    if (sideA->top == sideB->bottom || sideA->bottom == sideB->top) {
+                        if (sideA->left >= sideB->right || sideA->right <= sideB->left) {
+                            qFatal("Two linked rectangles aren't touching!");
+                        }
+                    } else {
+                        qFatal("West-East axis portal links two rectangles that don't touch.");
+                    }
+                }
+
+                // Assert that both sideA and sideB are in the list of rectangles
+                bool foundA = false, foundB = false;
+                foreach (const NavMeshRect *rect, d->rectangles) {
+                    if (rect == sideA)
+                        foundA = true;
+                    if (rect == sideB)
+                        foundB = true;
+                }
+
+                if (!foundA || !foundB) {
+                    qFatal("Found portal with disconnected sides.");
+                }
+            }                      
 
             QSharedPointer<Sector> renderable(sec);
 
@@ -1125,10 +1369,7 @@ namespace EvilTemple {
             float r = 0.5f + 0.5f * (rand() / (float)RAND_MAX);
             float g = 0.5f + 0.5f * (rand() / (float)RAND_MAX);
             float b = 0.5f + 0.5f * (rand() / (float)RAND_MAX);
-            if (rect->partOfPath)
-                glColor4f(r, g, b, 0.7);
-            else
-                glColor4f(r, g, b, 0.5);
+            glColor4f(r, g, b, 0.5);
 
             float left = rect->left / 3.0f * PixelPerWorldTile;
             float top = rect->top / 3.0f * PixelPerWorldTile;
@@ -1150,14 +1391,9 @@ namespace EvilTemple {
             float top = rect->top / 3.0f * PixelPerWorldTile;
             float right = rect->right / 3.0f * PixelPerWorldTile;
             float bottom = rect->bottom / 3.0f * PixelPerWorldTile;
+            glColor3f(0, 0.8f, 0);
 
-            if (!rect->partOfPath) {
-                glColor3f(0.8f, 0, 0);
-            } else {
-                glColor3f(0, 0.8f, 0);
-            }
-
-            if (rect->inClosedSet || rect->partOfPath) {
+            /*if (rect->inClosedSet || rect->partOfPath) {
                 glVertex3f(left, 0, top);
                 glVertex3f(right, 0, top);
                 glVertex3f(right, 0, top);
@@ -1173,6 +1409,22 @@ namespace EvilTemple {
                 glVertex3f(right, 0, bottom);
                 glVertex3f(left, 0, bottom);
                 glVertex3f(right, 0, top);
+            }*/
+        }
+        glEnd();
+
+        glPointSize(2);
+        glBegin(GL_POINTS);
+        foreach (const NavMeshRect *rect, mNavMeshRects) {
+            glColor3f(0.1, 0.1f, 0.8f);
+
+            foreach (const NavMeshPortal *portal, rect->portals) {
+                if (portal->sideA != rect)
+                    continue; // Only draw one side, some mesh is going to own the other side
+
+                float x = portal->x / 3.0f * PixelPerWorldTile;
+                float y = portal->y / 3.0f * PixelPerWorldTile;
+                glVertex3f(x, 0, y);
             }
         }
         glEnd();
@@ -1184,6 +1436,7 @@ namespace EvilTemple {
     Sector::Sector()
     {
         mBoundingBox = sectorBox;
+        mRenderCategory = RenderQueue::DebugOverlay;
     }
 
     const Box3d &Sector::boundingBox()
@@ -1207,108 +1460,292 @@ namespace EvilTemple {
         return Vector4(x * (PixelPerWorldTile / 3), 0, y * (PixelPerWorldTile / 3), 1);
     }
 
-    inline uint getDistanceHeuristic(NavMeshRect *mesh1, NavMeshRect *mesh2) {
-        int diffx = (int)mesh2->centerX - (int)mesh1->centerX;
-        int diffy = (int)mesh2->centerY - (int)mesh1->centerY;
-        return diffx * diffx + diffy * diffy;
+    inline uint getDistanceHeuristic(const NavMeshPortal *portal, const QPoint &point) {
+        float diffx = portal->x - point.x();
+        float diffy = portal->y - point.y();
+        return sqrt(diffx * diffx + diffy * diffy);
     }
 
-    inline uint getTraversalCost(NavMeshRect *mesh1, NavMeshRect *mesh2) {
-        return getDistanceHeuristic(mesh1, mesh2);
+    inline uint getTraversalCost(const NavMeshPortal *portalA, const NavMeshPortal *portalB) {
+        float diffx = portalA->x - portalB->x;
+        float diffy = portalA->y - portalB->y;
+        return sqrt(diffx * diffx + diffy * diffy);
     }
 
-    QVector<Vector4> SectorMap::findPath(const Vector4 &start, const Vector4 &end)
+    /**
+      Node markings used by AStar
+      */
+    struct AStarNode {
+        const NavMeshPortal *portal;
+        AStarNode *parent;
+        /*
+         Means that the portal we're coming from is in sideA of portal. Used to avoid adding unnecessary nodes
+         to the open set. For starting portals, this is true if the starting node is in the rect denoted by sideA.
+         */
+        bool comingFromSideA;
+
+        bool inClosedSet;
+        bool inOpenSet;
+        uint costFromStart;
+        uint costToGoal;
+        uint totalCost;
+
+        // Debugging flags
+        bool partOfPath;
+    };
+
+    inline uint getDistanceHeuristic(const AStarNode *node, const QPoint &point) {
+
+        int x, y;
+
+        if (node->comingFromSideA) {
+            x = node->portal->sideB->centerX;
+            y = node->portal->sideB->centerY;
+        } else {
+            x = node->portal->sideA->centerX;
+            y = node->portal->sideA->centerY;
+        }
+
+        float diffx = x - point.x();
+        float diffy = y - point.y();
+        return sqrt(diffx * diffx + diffy * diffy);
+    }
+
+    bool compareAStarNodes(const AStarNode *a, const AStarNode *b)
     {
+        return a->totalCost < b->totalCost;
+    }
+
+    bool checkLos(const NavMeshRect *losStartRect, const QPoint &losStart, const QPoint &losEnd)
+    {
+        const NavMeshRect *currentRect = losStartRect;
+        const NavMeshRect *gotInFrom = NULL;
+
+        QVector<const NavMeshRect*> visited;
+
+        // Check with each of the current rects portals, whether the line intersects
+        forever {
+            // If the end point lies in the current rectangle, we succeeded
+            if (losEnd.x() >= currentRect->left && losEnd.x() <= currentRect->right
+                && losEnd.y() >= currentRect->top && losEnd.y() <= currentRect->bottom)
+            {
+                // TODO: Take dynamic LOS into account?
+                return true;
+            }
+
+            bool foundPortal = false;
+
+            foreach (const NavMeshPortal *portal, currentRect->portals) {
+                if (visited.contains(portal->sideA) || visited.contains(portal->sideB))
+                    continue; // Prevent going back
+
+                // There are only two axes here, so an if-else will suffice
+                if (portal->axis == NorthSouth) {
+                    if (!northsouth_intersect(portal->x, portal->start, portal->end, losStart, losEnd))
+                        continue;
+                } else {
+                    if (!westeast_intersect(portal->y, portal->start, portal->end, losStart, losEnd))
+                        continue;
+                }
+
+                // Take this portal
+                gotInFrom = currentRect;
+                visited << currentRect;
+                if (portal->sideA == currentRect)
+                    currentRect = portal->sideB;
+                else
+                    currentRect = portal->sideA;
+                foundPortal = true;
+                break;
+            }
+
+            if (!foundPortal)
+                return false;            
+        }
+    }
+
+    QVector<Vector4> SectorMap::findPath(const Vector4 &start, const Vector4 &end) const
+    {
+        QElapsedTimer timer;
+        timer.start();
+
         // Find first and last navmesh tiles
-        NavMeshRect *startRect = d->findRect(start);
-        NavMeshRect *endRect = d->findRect(end);
+        const NavMeshRect *startRect = d->findRect(start);
+        const NavMeshRect *endRect = d->findRect(end);
         QVector<Vector4> result;
 
         if (!startRect || !endRect) {
+            qDebug("Either end or startpoint is not walkable. Time taken: %d ms", (int)timer.elapsed());
+
             return result;
         }
 
-        // Reset all rectangles (this is slow, and should be replaced)
-        for (int i = 0; i < d->rectangles.size(); ++i)
-            resetAStarState(d->rectangles.data() + i);
+        /*
+         Special case: In the same rect, use a direct path.
+         */
+        if (startRect == endRect) {
+            QVector<Vector4> result;
+            result << start << end;
+            return result;
+        }
 
-        startRect->inOpenSet = true;
-        startRect->costFromStart = 0;
-        startRect->costToGoal = getDistanceHeuristic(startRect, endRect);
-        startRect->totalCost = startRect->costToGoal;
-        startRect->parent = NULL;
+        QPoint startPos(start.x() / (PixelPerWorldTile / 3), start.z() / (PixelPerWorldTile / 3));
+        QPoint endPos(end.x() / (PixelPerWorldTile / 3), end.z() / (PixelPerWorldTile / 3));
 
-        QList<NavMeshRect*> openSet;
-        openSet << startRect;
+        QList<AStarNode*> openSet;
+        QHash<const NavMeshPortal*, AStarNode*> portalState;
+
+        // Add all the portals accessible from the start position with correct cost
+        for (int i = 0; i < startRect->portals.size(); ++i) {
+            const NavMeshPortal *portal = startRect->portals[i];
+
+            AStarNode *node = new AStarNode;
+            node->portal = portal;
+            node->parent = NULL;
+            node->inOpenSet = true;
+            node->inClosedSet = false;
+            node->comingFromSideA = portal->sideA == startRect;
+            node->costFromStart = getDistanceHeuristic(portal, startPos);
+            node->costToGoal = getDistanceHeuristic(node, endPos);
+            node->totalCost = node->costFromStart + node->costToGoal;
+
+            // Map portal to node
+            portalState[portal] = node;
+
+            openSet.append(node);
+        }
+
+        qSort(openSet.begin(), openSet.end(), compareAStarNodes);
 
         int touchedNodes = 0;
-        bool success = false;
+        AStarNode *lastNode = NULL;
 
         while (!openSet.isEmpty()) {
-            NavMeshRect *rect = openSet.takeFirst();
+            AStarNode *node = openSet.takeFirst();
+            node->inOpenSet = false;
 
             touchedNodes++;
 
-            if (rect == endRect) {
-                success = true;
+            if (node->portal->sideA == endRect || node->portal->sideB == endRect) {
+                lastNode = node;
                 break; // Reached end successfully.
             }
 
-            uint currentCost = rect->costFromStart;
+            uint currentCost = node->costFromStart;
 
-            for (int i = 0; i < rect->neighbours.size(); ++i) {
-                NavMeshRect *neighbour = rect->neighbours[i];
+            const NavMeshRect *traverseInto = node->comingFromSideA ? node->portal->sideB : node->portal->sideA;
 
-                uint neighbourCost = currentCost + getTraversalCost(rect, neighbour);
+            bool openSetChanged = false;
 
-                if ((neighbour->inClosedSet || neighbour->inOpenSet)
-                    && neighbour->costFromStart <= neighbourCost)
-                    continue;
+            for (int i = 0; i < traverseInto->portals.size(); ++i) {
+                const NavMeshPortal *portal = traverseInto->portals[i];
 
-                neighbour->costFromStart = neighbourCost;
-                neighbour->costToGoal = getDistanceHeuristic(neighbour, endRect);
-                neighbour->totalCost = neighbour->costFromStart + neighbour->costToGoal;
-                neighbour->parent = rect;
+                if (portal == node->portal)
+                    continue; // don't add the portal we're coming from
 
-                if (neighbour->inClosedSet)
-                    neighbour->inClosedSet = false;
+                uint neighbourCost = currentCost + getTraversalCost(node->portal, portal);
 
-                if (neighbour->inOpenSet) {
-                    openSet.removeOne(neighbour);
+                // TODO: Try finding an AStar node for the portal
+                QHash<const NavMeshPortal*,AStarNode*>::iterator it = portalState.find(portal);
+
+                AStarNode *otherNode;
+
+                if (it != portalState.end()) {
+                    otherNode = it.value();
+
+                    if ((otherNode->inClosedSet || otherNode->inOpenSet)
+                        && otherNode->costFromStart <= neighbourCost)
+                        continue; // Skip, we have already a better path to this node
+                } else {
+                    otherNode = new AStarNode;
+                    portalState[portal] = otherNode;                    
                 }
-                neighbour->inOpenSet = true;
 
-                bool inserted = false;
+                otherNode->comingFromSideA = portal->sideA == traverseInto;
+                otherNode->portal = portal;
+                otherNode->parent = node;
+                otherNode->costFromStart = neighbourCost;
+                otherNode->costToGoal = getDistanceHeuristic(otherNode, endPos);
+                otherNode->totalCost = otherNode->costFromStart + otherNode->costToGoal;
+                otherNode->inOpenSet = true;
+                otherNode->inClosedSet = false;
 
-                // Do an insertion sort for neighbour
-                for (int j = 0; j < openSet.size(); ++j) {
-                    if (openSet[j]->totalCost >= neighbour->totalCost) {
-                        openSet.insert(j, neighbour);
-                        inserted = true;
+                openSet.append(otherNode);
+                openSetChanged = true;
+            }
+
+            if (openSetChanged)
+                qSort(openSet.begin(), openSet.end(), compareAStarNodes);
+
+            node->inClosedSet = true;
+        }
+
+        if (lastNode) {
+            QVector<QPoint> intermediatePath;
+            QVector<const NavMeshRect*> intermediateRects;
+
+            intermediatePath << endPos;
+            intermediateRects << endRect;
+
+            AStarNode *node = lastNode;
+            while (node) {
+                const NavMeshPortal *portal = node->portal;
+                intermediatePath.prepend(QPoint(portal->x, portal->y));
+                if (node->comingFromSideA)
+                    intermediateRects.prepend(portal->sideB);
+                else
+                    intermediateRects.prepend(portal->sideA);
+                node = node->parent;
+            }
+
+            intermediatePath.prepend(startPos);
+            intermediateRects.prepend(startRect);
+
+            qDebug() << "A* finished after" << timer.restart() << "ms.";
+
+            // Try compressing the path through LOS checks
+            for (int i = 0; i < intermediatePath.size() - 1; ++i) {
+                QPoint losStart = intermediatePath[i];
+                const NavMeshRect *losStartRect = intermediateRects[i];
+
+                for (int j = intermediatePath.size() - 1; j > i + 1; --j) {
+                    QPoint losEnd = intermediatePath[j];
+
+                    if (checkLos(losStartRect, losStart, losEnd)) {
+                        // Remove all nodes between losStart and losEnd from the intermediate path
+                        intermediatePath.remove(i + 1, j - (i + 1));
+                        intermediateRects.remove(i + 1, j - (i + 1));
                         break;
                     }
                 }
-
-                if (!inserted) {
-                    openSet.append(neighbour);
-                }
             }
 
-            rect->inClosedSet = true;
-        }
-
-        qDebug("Touched nodes: %d.", touchedNodes);
-
-        if (success) {
-            NavMeshRect *rect = endRect;
-            while (rect) {
-                result.prepend(vectorFromPoint(rect->centerX, rect->centerY));
-                rect->partOfPath = true;
-                rect = rect->parent;
+            for (int i = 0; i < intermediatePath.size(); ++i) {
+                result.append(vectorFromPoint(intermediatePath[i].x(), intermediatePath[i].y()));
             }
         }
+
+        qDeleteAll(portalState.values()); // Should use object pooling instead
+
+        qint64 elapsed = timer.elapsed();
+
+        qDebug() << "Pathfinding done in" << elapsed << "ms. Nodes visited:"
+                << touchedNodes << "Success:" << (!result.isEmpty() ? "yes" : "no");
 
         return result;
+    }
+
+    bool SectorMap::hasLineOfSight(const Vector4 &from, const Vector4 &to) const
+    {
+        const NavMeshRect *startRect = d->findRect(from);
+
+        if (!startRect || !d->findRect(to))
+            return false;
+
+        QPoint fromPoint = vectorToPoint(from);
+        QPoint toPoint = vectorToPoint(to);
+
+        return checkLos(startRect, fromPoint, toPoint);
     }
 
 }
