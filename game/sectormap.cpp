@@ -1466,9 +1466,9 @@ inline bool northsouth_intersect(int x, int top, int bottom, const QPoint &from,
         return sqrt(diffx * diffx + diffy * diffy);
     }
 
-    inline uint getTraversalCost(const NavMeshPortal *portalA, const NavMeshPortal *portalB) {
-        float diffx = portalA->x - portalB->x;
-        float diffy = portalA->y - portalB->y;
+    inline uint getTraversalCost(const NavMeshPortal *from, const NavMeshPortal *to) {
+        float diffx = to->x - from->x;
+        float diffy = to->y - from->y;
         return sqrt(diffx * diffx + diffy * diffy);
     }
 
@@ -1476,35 +1476,22 @@ inline bool northsouth_intersect(int x, int top, int bottom, const QPoint &from,
       Node markings used by AStar
       */
     struct AStarNode {
-        const NavMeshPortal *portal;
+        const NavMeshRect *rect;
         AStarNode *parent;
-        /*
-         Means that the portal we're coming from is in sideA of portal. Used to avoid adding unnecessary nodes
-         to the open set. For starting portals, this is true if the starting node is in the rect denoted by sideA.
-         */
-        bool comingFromSideA;
+        const NavMeshPortal *comingFrom;
 
-        bool inClosedSet;
-        bool inOpenSet;
         uint costFromStart;
         uint costToGoal;
         uint totalCost;
 
-        // Debugging flags
-        bool partOfPath;
+        bool inClosedSet;
+        bool inOpenSet;
     };
 
     inline uint getDistanceHeuristic(const AStarNode *node, const QPoint &point) {
 
-        int x, y;
-
-        if (node->comingFromSideA) {
-            x = node->portal->sideB->centerX;
-            y = node->portal->sideB->centerY;
-        } else {
-            x = node->portal->sideA->centerX;
-            y = node->portal->sideA->centerY;
-        }
+        int x = node->rect->centerX;
+        int y = node->rect->centerY;
 
         float diffx = x - point.x();
         float diffy = y - point.y();
@@ -1589,33 +1576,32 @@ inline bool northsouth_intersect(int x, int top, int bottom, const QPoint &from,
             return result;
         }
 
-        QPoint startPos(start.x() / (PixelPerWorldTile / 3), start.z() / (PixelPerWorldTile / 3));
-        QPoint endPos(end.x() / (PixelPerWorldTile / 3), end.z() / (PixelPerWorldTile / 3));
+        QPoint startPos = vectorToPoint(start);
+        QPoint endPos = vectorToPoint(end);
 
         QList<AStarNode*> openSet;
-        QHash<const NavMeshPortal*, AStarNode*> portalState;
+        QHash<const NavMeshRect*, AStarNode*> rectState;
+
+        NavMeshPortal fauxStartPortal;
+        fauxStartPortal.x = startPos.x();
+        fauxStartPortal.y = startPos.y();
+        fauxStartPortal.sideA = NULL;
+        fauxStartPortal.sideB = NULL;
 
         // Add all the portals accessible from the start position with correct cost
-        for (int i = 0; i < startRect->portals.size(); ++i) {
-            const NavMeshPortal *portal = startRect->portals[i];
+        AStarNode *startNode = new AStarNode;
+        startNode->rect = startRect;
+        startNode->comingFrom = &fauxStartPortal;
+        startNode->parent = NULL;
+        startNode->inOpenSet = true;
+        startNode->inClosedSet = false;
+        startNode->costFromStart = 0;
+        startNode->costToGoal = getDistanceHeuristic(startNode, endPos);
+        startNode->totalCost = startNode->costToGoal;
 
-            AStarNode *node = new AStarNode;
-            node->portal = portal;
-            node->parent = NULL;
-            node->inOpenSet = true;
-            node->inClosedSet = false;
-            node->comingFromSideA = portal->sideA == startRect;
-            node->costFromStart = getDistanceHeuristic(portal, startPos);
-            node->costToGoal = getDistanceHeuristic(node, endPos);
-            node->totalCost = node->costFromStart + node->costToGoal;
-
-            // Map portal to node
-            portalState[portal] = node;
-
-            openSet.append(node);
-        }
-
-        qSort(openSet.begin(), openSet.end(), compareAStarNodes);
+        // Map portal to node
+        rectState[startRect] = startNode;
+        openSet.append(startNode);
 
         int touchedNodes = 0;
         AStarNode *lastNode = NULL;
@@ -1626,31 +1612,30 @@ inline bool northsouth_intersect(int x, int top, int bottom, const QPoint &from,
 
             touchedNodes++;
 
-            if (node->portal->sideA == endRect || node->portal->sideB == endRect) {
+            if (node->rect == endRect) {
                 lastNode = node;
                 break; // Reached end successfully.
             }
 
             uint currentCost = node->costFromStart;
 
-            const NavMeshRect *traverseInto = node->comingFromSideA ? node->portal->sideB : node->portal->sideA;
-
             bool openSetChanged = false;
 
-            for (int i = 0; i < traverseInto->portals.size(); ++i) {
-                const NavMeshPortal *portal = traverseInto->portals[i];
+            for (int i = 0; i < node->rect->portals.size(); ++i) {
+                const NavMeshPortal *portal = node->rect->portals[i];
 
-                if (portal == node->portal)
-                    continue; // don't add the portal we're coming from
+                if (portal == node->comingFrom)
+                    continue;
 
-                uint neighbourCost = currentCost + getTraversalCost(node->portal, portal);
+                const NavMeshRect *neighbourRect = (portal->sideA == node->rect) ? portal->sideB : portal->sideA;
 
-                // TODO: Try finding an AStar node for the portal
-                QHash<const NavMeshPortal*,AStarNode*>::iterator it = portalState.find(portal);
+                uint neighbourCost = currentCost + getTraversalCost(node->comingFrom, portal);
+
+                QHash<const NavMeshRect*,AStarNode*>::iterator it = rectState.find(neighbourRect);
 
                 AStarNode *otherNode;
 
-                if (it != portalState.end()) {
+                if (it != rectState.end()) {
                     otherNode = it.value();
 
                     if ((otherNode->inClosedSet || otherNode->inOpenSet)
@@ -1658,11 +1643,11 @@ inline bool northsouth_intersect(int x, int top, int bottom, const QPoint &from,
                         continue; // Skip, we have already a better path to this node
                 } else {
                     otherNode = new AStarNode;
-                    portalState[portal] = otherNode;                    
+                    rectState[neighbourRect] = otherNode;
                 }
 
-                otherNode->comingFromSideA = portal->sideA == traverseInto;
-                otherNode->portal = portal;
+                otherNode->comingFrom = portal;
+                otherNode->rect = neighbourRect;
                 otherNode->parent = node;
                 otherNode->costFromStart = neighbourCost;
                 otherNode->costToGoal = getDistanceHeuristic(otherNode, endPos);
@@ -1688,14 +1673,11 @@ inline bool northsouth_intersect(int x, int top, int bottom, const QPoint &from,
             intermediateRects << endRect;
 
             AStarNode *node = lastNode;
-            while (node) {
-                const NavMeshPortal *portal = node->portal;
+            while (node && node->rect != startRect) {
+                const NavMeshPortal *portal = node->comingFrom;
                 intermediatePath.prepend(QPoint(portal->x, portal->y));
-                if (node->comingFromSideA)
-                    intermediateRects.prepend(portal->sideB);
-                else
-                    intermediateRects.prepend(portal->sideA);
                 node = node->parent;
+                intermediateRects.prepend(node->rect);
             }
 
             intermediatePath.prepend(startPos);
@@ -1725,7 +1707,7 @@ inline bool northsouth_intersect(int x, int top, int bottom, const QPoint &from,
             }
         }
 
-        qDeleteAll(portalState.values()); // Should use object pooling instead
+        qDeleteAll(rectState.values()); // Should use object pooling instead
 
         qint64 elapsed = timer.elapsed();
 
