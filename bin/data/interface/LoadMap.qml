@@ -29,13 +29,13 @@ MovableWindow {
                     width: 200
                     font.family: "Fontin"
                     font.pointSize: 12
-                    color: mouseArea.containsMouse ? '#01356e':'#ffffff'
+                    color: mouseArea.containsMouse ? '#00a9f8':'#ffffff'
                 }
                 Text {
                     text: dir
                     font.family: "Fontin"
                     font.pointSize: 12
-                    color: mouseArea.containsMouse ? '#01356e':'#ffffff'
+                    color: mouseArea.containsMouse ? '#00a9f8':'#ffffff'
                 }
             }
             onClicked: mapSelected(dir)

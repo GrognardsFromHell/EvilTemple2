@@ -16,7 +16,7 @@ inline static uint qHash(const QPoint &key) {
 namespace EvilTemple {
 
 
-inline bool westeast_intersect(int y, int left, int right, const QPoint &from, const QPoint &to)
+inline bool westeast_intersect(int y, int left, int right, const QPoint &from, const QPoint &to, Vector4 &intersection)
 {
     // Parallel to the axis -> reject
     if (from.y() == to.y())
@@ -33,10 +33,13 @@ inline bool westeast_intersect(int y, int left, int right, const QPoint &from, c
 
     float ix = from.x() + xascent * ydiff;
 
+    intersection.setY(y);
+    intersection.setX(ix);
+
     return ix >= left && ix <= right;
 }
 
-inline bool northsouth_intersect(int x, int top, int bottom, const QPoint &from, const QPoint &to)
+inline bool northsouth_intersect(int x, int top, int bottom, const QPoint &from, const QPoint &to, Vector4 &intersection)
 {
     // Parallel to the axis -> reject
     if (from.x() == to.x())
@@ -52,6 +55,9 @@ inline bool northsouth_intersect(int x, int top, int bottom, const QPoint &from,
     float yascent = (to.y() - from.y()) / (float)(to.x() - from.x());
 
     float iy = from.y() + yascent * xdiff;
+
+    intersection.setX(x);
+    intersection.setY(iy);
 
     return iy >= top && iy <= bottom;
 }
@@ -1506,9 +1512,13 @@ inline bool northsouth_intersect(int x, int top, int bottom, const QPoint &from,
     bool checkLos(const NavMeshRect *losStartRect, const QPoint &losStart, const QPoint &losEnd)
     {
         const NavMeshRect *currentRect = losStartRect;
-        const NavMeshRect *gotInFrom = NULL;
 
-        QVector<const NavMeshRect*> visited;
+        Vector4 start(losStart.x(), losStart.y(), 0, 1);
+        Vector4 end(losEnd.x(), losEnd.y(), 0, 1);
+
+        float distance = (end - start).lengthSquared();
+
+        Vector4 intersection(0, 0, 0, 1);
 
         // Check with each of the current rects portals, whether the line intersects
         forever {
@@ -1523,21 +1533,22 @@ inline bool northsouth_intersect(int x, int top, int bottom, const QPoint &from,
             bool foundPortal = false;
 
             foreach (const NavMeshPortal *portal, currentRect->portals) {
-                if (visited.contains(portal->sideA) || visited.contains(portal->sideB))
-                    continue; // Prevent going back
-
                 // There are only two axes here, so an if-else will suffice
                 if (portal->axis == NorthSouth) {
-                    if (!northsouth_intersect(portal->x, portal->start, portal->end, losStart, losEnd))
+                    if (!northsouth_intersect(portal->x, portal->start, portal->end, losStart, losEnd, intersection))
                         continue;
                 } else {
-                    if (!westeast_intersect(portal->y, portal->start, portal->end, losStart, losEnd))
+                    if (!westeast_intersect(portal->y, portal->start, portal->end, losStart, losEnd, intersection))
                         continue;
                 }
 
+                // If taking this portal increases our current distance from the target, skip it
+                float portalDistance = (end - intersection).lengthSquared();
+                if (portalDistance >= distance)
+                    continue;
+                distance = portalDistance;
+
                 // Take this portal
-                gotInFrom = currentRect;
-                visited << currentRect;
                 if (portal->sideA == currentRect)
                     currentRect = portal->sideB;
                 else
