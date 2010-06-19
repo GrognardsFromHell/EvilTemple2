@@ -9,6 +9,8 @@
 #include <QDataStream>
 #include <QElapsedTimer>
 
+#include <vector>
+
 inline static uint qHash(const QPoint &key) {
     return ((key.x() & 0xFFFF) << 16) | key.y() & 0xFFFF;
 }
@@ -16,7 +18,7 @@ inline static uint qHash(const QPoint &key) {
 namespace EvilTemple {
 
 
-inline bool westeast_intersect(int y, int left, int right, const QPoint &from, const QPoint &to, Vector4 &intersection)
+inline static bool westeast_intersect(int y, int left, int right, const QPoint &from, const QPoint &to, Vector4 &intersection)
 {
     // Parallel to the axis -> reject
     if (from.y() == to.y())
@@ -39,7 +41,7 @@ inline bool westeast_intersect(int y, int left, int right, const QPoint &from, c
     return ix >= left && ix <= right;
 }
 
-inline bool northsouth_intersect(int x, int top, int bottom, const QPoint &from, const QPoint &to, Vector4 &intersection)
+inline static bool northsouth_intersect(int x, int top, int bottom, const QPoint &from, const QPoint &to, Vector4 &intersection)
 {
     // Parallel to the axis -> reject
     if (from.x() == to.x())
@@ -1321,6 +1323,36 @@ inline bool northsouth_intersect(int x, int top, int bottom, const QPoint &from,
     static const Vector4 diagonal(64 * PixelPerWorldTile, 0, 64 * PixelPerWorldTile, 1);
     static const Box3d sectorBox(Vector4(0,0,0,1), diagonal);
 
+    Sector::Sector()
+        : mVertexBuffer(QGLBuffer::VertexBuffer),
+          mColorBuffer(QGLBuffer::VertexBuffer),
+          mIndexBuffer(QGLBuffer::IndexBuffer),
+          mPortalVertexBuffer(QGLBuffer::VertexBuffer),
+          mPortalPoints(0),
+          mBuffersInvalid(true)
+    {
+        mBoundingBox = sectorBox;
+        mRenderCategory = RenderQueue::DebugOverlay;
+    }
+
+    const Box3d &Sector::boundingBox()
+    {
+        return mBoundingBox;
+    }
+
+    void Sector::addNavMeshRect(const NavMeshRect *rect)
+    {
+        float f = 1 / 3.0f * PixelPerWorldTile;
+        Vector4 topLeft(rect->left, 0, rect->top, 1);
+        mBoundingBox.merge(f * topLeft);
+        Vector4 bottomRight  = Vector4(rect->right, 0, rect->bottom, 1);
+        mBoundingBox.merge(f * bottomRight);
+
+        mBuffersInvalid = true;
+
+        mNavMeshRects.append(rect);
+    }
+
     void Sector::render(RenderStates &renderStates)
     {
         glDisable(GL_DEPTH_TEST);
@@ -1367,115 +1399,128 @@ inline bool northsouth_intersect(int x, int top, int bottom, const QPoint &from,
         glVertex3f(0, 0, diagonal.z());
         glEnd();
 
-        srand(1234656812);
+        if (mBuffersInvalid) {
+            buildBuffers();
+            mBuffersInvalid = false;
+        }
 
         glDisable(GL_TEXTURE_2D);
-        glBegin(GL_QUADS);
+
+        mVertexBuffer.bind();
+        glEnableClientState(GL_VERTEX_ARRAY);
+        glVertexPointer(3, GL_FLOAT, 0, 0);
+        mColorBuffer.bind();
+        glEnableClientState(GL_COLOR_ARRAY);
+        glColorPointer(4, GL_UNSIGNED_BYTE, 0, 0);
+        mIndexBuffer.bind();
+        glDrawElements(GL_QUADS, 4 * mNavMeshRects.size(), GL_UNSIGNED_INT, 0);
+        mIndexBuffer.release();
+
+        glDisableClientState(GL_COLOR_ARRAY);
+
+        mPortalVertexBuffer.bind();
+        glEnableClientState(GL_VERTEX_ARRAY);
+        glVertexPointer(3, GL_FLOAT, 0, 0);
+        glPointSize(2);
+        glColor3f(0.1, 0.1f, 0.8f);
+        glDrawArrays(GL_POINTS, 0, mPortalPoints);
+
+        glEnable(GL_CULL_FACE);
+        glEnable(GL_DEPTH_TEST);
+    }
+
+    void Sector::buildBuffers()
+    {
+        if (!mIndexBuffer.isCreated())
+            mIndexBuffer.create();
+        if (!mVertexBuffer.isCreated())
+            mVertexBuffer.create();
+        if (!mColorBuffer.isCreated())
+            mColorBuffer.create();
+        if (!mPortalVertexBuffer.isCreated())
+            mPortalVertexBuffer.create();
+
+        srand(1234656812);
+
+        QByteArray data;
+        QDataStream stream(&data, QIODevice::WriteOnly);
+#if Q_BYTE_ORDER == Q_BIG_ENDIAN
+        stream.setByteOrder(QDataStream::BigEndian);
+#else
+        stream.setByteOrder(QDataStream::LittleEndian);
+#endif
+        stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
+
         foreach (const NavMeshRect *rect, mNavMeshRects) {
+            float left = rect->left / 3.0f * PixelPerWorldTile;
+            float top = rect->top / 3.0f * PixelPerWorldTile;
+            float right = rect->right / 3.0f * PixelPerWorldTile;
+            float bottom = rect->bottom / 3.0f * PixelPerWorldTile;
+
+            const float zero = 0;
+
+            stream << left << zero << top
+                    << left << zero << bottom
+                    << right << zero << bottom
+                    << right << zero << top;
+        }
+
+        mVertexBuffer.bind();
+        mVertexBuffer.allocate(data.constData(), data.size());
+        mVertexBuffer.release();
+
+        stream.device()->seek(0);
+        data.clear();
+
+        for (int i = 0; i < mNavMeshRects.size(); ++i) {
             float r = 0.5f + 0.5f * (rand() / (float)RAND_MAX);
             float g = 0.5f + 0.5f * (rand() / (float)RAND_MAX);
             float b = 0.5f + 0.5f * (rand() / (float)RAND_MAX);
-            glColor4f(r, g, b, 0.5);
 
-            float left = rect->left / 3.0f * PixelPerWorldTile;
-            float top = rect->top / 3.0f * PixelPerWorldTile;
-            float right = rect->right / 3.0f * PixelPerWorldTile;
-            float bottom = rect->bottom / 3.0f * PixelPerWorldTile;
+            uint color = qRgba(r * 255, g * 255, b * 255, 127);
 
-            glVertex3f(left, 0, top);
-            glVertex3f(left, 0, bottom);
-            glVertex3f(right, 0, bottom);
-            glVertex3f(right, 0, top);
+            stream << color << color << color << color;
         }
-        glEnd();
 
-        // Go over all nodes again and draw a cross over all nodes that have been traversed
-        glLineWidth(2);
-        glBegin(GL_LINES);
-        foreach (const NavMeshRect *rect, mNavMeshRects) {
-            float left = rect->left / 3.0f * PixelPerWorldTile;
-            float top = rect->top / 3.0f * PixelPerWorldTile;
-            float right = rect->right / 3.0f * PixelPerWorldTile;
-            float bottom = rect->bottom / 3.0f * PixelPerWorldTile;
-            glColor3f(0, 0.8f, 0);
+        mColorBuffer.bind();
+        mColorBuffer.allocate(data.constData(), data.size());
+        mColorBuffer.release();
 
-            /*if (rect->inClosedSet || rect->partOfPath) {
-                glVertex3f(left, 0, top);
-                glVertex3f(right, 0, top);
-                glVertex3f(right, 0, top);
-                glVertex3f(right, 0, bottom);
-                glVertex3f(right, 0, bottom);
-                glVertex3f(left, 0, bottom);
-                glVertex3f(left, 0, bottom);
-                glVertex3f(left, 0, top);
-            }
+        stream.device()->seek(0);
+        data.clear();
 
-            if (rect->inClosedSet && !rect->partOfPath) {
-                glVertex3f(left, 0, top);
-                glVertex3f(right, 0, bottom);
-                glVertex3f(left, 0, bottom);
-                glVertex3f(right, 0, top);
-            }*/
+        for (int i = 0; i < mNavMeshRects.size() * 4; i += 4) {
+            stream << i << (i + 1) << (i + 2) << (i + 3);
         }
-        glEnd();
 
-        glPointSize(2);
-        glBegin(GL_POINTS);
+        mIndexBuffer.bind();
+        mIndexBuffer.allocate(data.constData(), data.size());
+        mIndexBuffer.release();
+
+        stream.device()->seek(0);
+        data.clear();
+
+        mPortalPoints = 0;
         foreach (const NavMeshRect *rect, mNavMeshRects) {
-            glColor3f(0.1, 0.1f, 0.8f);
-
             foreach (const NavMeshPortal *portal, rect->portals) {
                 if (portal->sideA != rect)
                     continue; // Only draw one side, some mesh is going to own the other side
 
                 float x = portal->x / 3.0f * PixelPerWorldTile;
                 float y = portal->y / 3.0f * PixelPerWorldTile;
-                glVertex3f(x, 0, y);
+                stream << x << (float)0 << y;
+                mPortalPoints++;
             }
         }
-        glEnd();
 
-        glEnable(GL_CULL_FACE);
-        glEnable(GL_DEPTH_TEST);
-    }
-
-    Sector::Sector()
-    {
-        mBoundingBox = sectorBox;
-        mRenderCategory = RenderQueue::DebugOverlay;
-    }
-
-    const Box3d &Sector::boundingBox()
-    {
-        return mBoundingBox;
-    }
-
-    void Sector::addNavMeshRect(const NavMeshRect *rect)
-    {
-        float f = 1 / 3.0f * PixelPerWorldTile;
-        Vector4 topLeft(rect->left, 0, rect->top, 1);
-        mBoundingBox.merge(f * topLeft);
-        Vector4 bottomRight  = Vector4(rect->right, 0, rect->bottom, 1);
-        mBoundingBox.merge(f * bottomRight);
-
-        mNavMeshRects.append(rect);
+        mPortalVertexBuffer.bind();
+        mPortalVertexBuffer.allocate(data.constData(), data.size());
+        mPortalVertexBuffer.release();
     }
 
     inline Vector4 vectorFromPoint(uint x, uint y)
     {
         return Vector4(x * (PixelPerWorldTile / 3), 0, y * (PixelPerWorldTile / 3), 1);
-    }
-
-    inline uint getDistanceHeuristic(const NavMeshPortal *portal, const QPoint &point) {
-        float diffx = portal->x - point.x();
-        float diffy = portal->y - point.y();
-        return sqrt(diffx * diffx + diffy * diffy);
-    }
-
-    inline uint getTraversalCost(const NavMeshPortal *from, const NavMeshPortal *to) {
-        float diffx = to->x - from->x;
-        float diffy = to->y - from->y;
-        return sqrt(diffx * diffx + diffy * diffy);
     }
 
     /**
@@ -1495,18 +1540,20 @@ inline bool northsouth_intersect(int x, int top, int bottom, const QPoint &from,
     };
 
     inline uint getDistanceHeuristic(const AStarNode *node, const QPoint &point) {
+        float diffx = node->comingFrom->x - point.x();
+        float diffy = node->comingFrom->y - point.y();
+        return qAbs(diffx) + qAbs(diffy);
+    }
 
-        int x = node->rect->centerX;
-        int y = node->rect->centerY;
-
-        float diffx = x - point.x();
-        float diffy = y - point.y();
+    inline uint getTraversalCost(const NavMeshPortal *from, const NavMeshPortal *to) {
+        float diffx = to->x - from->x;
+        float diffy = to->y - from->y;
         return sqrt(diffx * diffx + diffy * diffy);
     }
 
     bool compareAStarNodes(const AStarNode *a, const AStarNode *b)
     {
-        return a->totalCost < b->totalCost;
+        return a->totalCost >= b->totalCost;
     }
 
     bool checkLos(const NavMeshRect *losStartRect, const QPoint &losStart, const QPoint &losEnd)
@@ -1590,7 +1637,7 @@ inline bool northsouth_intersect(int x, int top, int bottom, const QPoint &from,
         QPoint startPos = vectorToPoint(start);
         QPoint endPos = vectorToPoint(end);
 
-        QList<AStarNode*> openSet;
+        std::vector<AStarNode*> openSet;
         QHash<const NavMeshRect*, AStarNode*> rectState;
 
         NavMeshPortal fauxStartPortal;
@@ -1612,13 +1659,16 @@ inline bool northsouth_intersect(int x, int top, int bottom, const QPoint &from,
 
         // Map portal to node
         rectState[startRect] = startNode;
-        openSet.append(startNode);
+        openSet.push_back(startNode);
+        std::make_heap(openSet.begin(), openSet.end(), compareAStarNodes);
 
         int touchedNodes = 0;
         AStarNode *lastNode = NULL;
 
-        while (!openSet.isEmpty()) {
-            AStarNode *node = openSet.takeFirst();
+        while (openSet.size() > 0) {
+            std::pop_heap(openSet.begin(), openSet.end(), compareAStarNodes);
+            AStarNode *node = openSet[openSet.size() - 1];
+            openSet.pop_back();
             node->inOpenSet = false;
 
             touchedNodes++;
@@ -1666,12 +1716,9 @@ inline bool northsouth_intersect(int x, int top, int bottom, const QPoint &from,
                 otherNode->inOpenSet = true;
                 otherNode->inClosedSet = false;
 
-                openSet.append(otherNode);
-                openSetChanged = true;
+                openSet.push_back(otherNode);
+                std::push_heap(openSet.begin(), openSet.end(), compareAStarNodes);
             }
-
-            if (openSetChanged)
-                qSort(openSet.begin(), openSet.end(), compareAStarNodes);
 
             node->inClosedSet = true;
         }
@@ -1687,8 +1734,8 @@ inline bool northsouth_intersect(int x, int top, int bottom, const QPoint &from,
             while (node && node->rect != startRect) {
                 const NavMeshPortal *portal = node->comingFrom;
                 intermediatePath.prepend(QPoint(portal->x, portal->y));
-                node = node->parent;
                 intermediateRects.prepend(node->rect);
+                node = node->parent;                
             }
 
             intermediatePath.prepend(startPos);
@@ -1712,6 +1759,8 @@ inline bool northsouth_intersect(int x, int top, int bottom, const QPoint &from,
                     }
                 }
             }
+
+            qDebug() << "Path straightening finished after" << timer.restart() << "ms.";
 
             for (int i = 0; i < intermediatePath.size(); ++i) {
                 result.append(vectorFromPoint(intermediatePath[i].x(), intermediatePath[i].y()));

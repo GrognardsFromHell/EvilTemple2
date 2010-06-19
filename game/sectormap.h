@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QScopedPointer>
 #include <QPolygon>
+#include <QGLBuffer>
 
 #include "renderable.h"
 #include "texture.h"
@@ -30,8 +31,16 @@ public:
     void addNavMeshRect(const NavMeshRect *polygon);
     void clearNavMeshRects();
 private:
+    void buildBuffers();
+
+    bool mBuffersInvalid;
     SharedTexture mTexture;
     QVector<const NavMeshRect*> mNavMeshRects;
+    QGLBuffer mVertexBuffer;
+    QGLBuffer mColorBuffer;
+    QGLBuffer mIndexBuffer;
+    QGLBuffer mPortalVertexBuffer;
+    uint mPortalPoints;
     Box3d mBoundingBox;
 };
 
