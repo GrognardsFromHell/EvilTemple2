@@ -18,12 +18,7 @@ include(../3rdparty/game-math/game-math.pri)
 
 DEFINES += GAME_LIBRARY GAMEMATH_MEMORY_OPERATORS
 
-INCLUDEPATH += ../3rdparty/recastnavigation-read-only/Detour/Include/
-
-SOURCES += ../3rdparty/recastnavigation-read-only/Detour/Source/DetourCommon.cpp \
-    ../3rdparty/recastnavigation-read-only/Detour/Source/DetourNavMesh.cpp \
-    ../3rdparty/recastnavigation-read-only/Detour/Source/DetourNavMeshBuilder.cpp \
-    ../3rdparty/recastnavigation-read-only/Detour/Source/DetourNode.cpp
+INCLUDEPATH += ../3rdparty/boost_1_43_0
 
 SOURCES += \
     mainwindow.cpp \
@@ -55,7 +50,9 @@ SOURCES += \
     scriptables.cpp \
     materials.cpp \
     translations.cpp \
-    sectormap.cpp
+    sectormap.cpp \
+    navigationmeshbuilder.cpp \
+    navigationmesh.cpp
 HEADERS += \
     mainwindow.h \
     game.h \
@@ -91,7 +88,9 @@ HEADERS += \
     scriptables.h \
     materials.h \
     translations.h \
-    sectormap.h
+    sectormap.h \
+    navigationmeshbuilder.h \
+    navigationmesh.h
 OTHER_FILES += \
     resources/schema/materialfile.xsd \
     resources/materials/map_material.xml \

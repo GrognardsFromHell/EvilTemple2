@@ -418,7 +418,7 @@ function loadMap(filename) {
 
     gameView.clippingGeometry.load(mapObj.clippingGeometry, scene);
 
-    gameView.sectorMap.load(new Vector4(mapObj.startPosition[0], 0, mapObj.startPosition[2], 1),
+    gameView.sectorMap.load([new Vector4(mapObj.startPosition[0], 0, mapObj.startPosition[2], 1)],
                             filename.replace('map.js', '') + 'sectors.dat');
 
     print("Creating " + mapObj.staticObjects.length + " static objects.");

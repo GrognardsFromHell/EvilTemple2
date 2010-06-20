@@ -8,13 +8,11 @@
 
 #include "renderable.h"
 #include "texture.h"
+#include "navigationmesh.h"
 
 namespace EvilTemple {
 
-struct NavMeshRect;
-
 class Scene;
-
 class SectorMapData;
 
 class Sector : public Renderable
@@ -27,32 +25,20 @@ public:
 
     const Box3d &boundingBox();
 
-    void setTexture(const SharedTexture &texture);
-    void addNavMeshRect(const NavMeshRect *polygon);
-    void clearNavMeshRects();
+    void setNavigationMesh(const SharedNavigationMesh &navigationMesh);
 private:
     void buildBuffers();
 
+    SharedNavigationMesh mNavigationMesh;
+
     bool mBuffersInvalid;
-    SharedTexture mTexture;
-    QVector<const NavMeshRect*> mNavMeshRects;
     QGLBuffer mVertexBuffer;
     QGLBuffer mColorBuffer;
     QGLBuffer mIndexBuffer;
     QGLBuffer mPortalVertexBuffer;
-    uint mPortalPoints;
+
     Box3d mBoundingBox;
 };
-
-inline void Sector::clearNavMeshRects()
-{
-    mNavMeshRects.clear();
-}
-
-inline void Sector::setTexture(const SharedTexture &texture)
-{
-    mTexture = texture;
-}
 
 class SectorMap : public QObject
 {
@@ -62,7 +48,7 @@ public:
     ~SectorMap();
 
 public slots:
-    bool load(const Vector4 &startPosition, const QString &filename) const;
+    bool load(const QVector<Vector4> &startPositions, const QString &filename) const;
 
     QVector<Vector4> findPath(const Vector4 &start, const Vector4 &end) const;
 
