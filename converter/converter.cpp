@@ -28,6 +28,7 @@
 #include "mapconverter.h"
 #include "prototypeconverter.h"
 #include "pathnodeconverter.h"
+#include "navigationmeshbuilder.h"
 
 #include "util.h"
 #include "converter.h"
@@ -181,7 +182,7 @@ public:
         mOutputPath = QDir::toNativeSeparators(mOutputPath);
         if (!mOutputPath.endsWith(QDir::separator()))
             mOutputPath.append(QDir::separator());
-        
+
         exclusions.load();
     }
 
@@ -244,6 +245,14 @@ public:
                 convertClippingMeshes(zoneTemplate.data(), &writer);
 
                 convertSectors(zoneTemplate.data(), &writer);
+
+                QVector<Vector4> startPositions;
+                startPositions.append(Vector4(zoneTemplate->startPosition().x(),
+                                              zoneTemplate->startPosition().y(),
+                                              zoneTemplate->startPosition().z(),
+                                              1));
+                QByteArray navmeshes = NavigationMeshBuilder::build(zoneTemplate.data(), startPositions);
+                writer.addFile(zoneTemplate->directory() + "regions.dat", navmeshes, 9);
             } else {
                 qWarning("Unable to load zone template for map id %d.", mapId);
             }
@@ -529,9 +538,9 @@ public:
                 scalingPerFile.append(QList<Vector4>());
             }
         }
-        
+
         /**
-        For each geometry file we will collect all the scales in which it is used. 
+        For each geometry file we will collect all the scales in which it is used.
         This is important since ToEE uses non-uniform scaling here (it scales in 2d space),
         and we want to remove that scaling entirely. Instead, we will create a copy of the geometry
         for each scaling level used.
@@ -565,7 +574,7 @@ public:
         }
 
         // File header
-        clippingStream << totalFileCount << (uint)zoneTemplate->clippingGeometry().size();             
+        clippingStream << totalFileCount << (uint)zoneTemplate->clippingGeometry().size();
 
         /**
         These transformations come from the original game and are *constant*.
@@ -593,11 +602,11 @@ public:
               */
             foreach (Vector4 scale, scalingPerFile[i]) {
                 QVector<Vector4> scaledVertices(model->vertices().size());
-                
+
                 // Switch z/y
                 Matrix4 scaleMatrix2d = Matrix4::scaling(scale.x(), scale.z(), scale.y());
                 Matrix4 scaleMatrix = baseViewInverse * scaleMatrix2d * baseView;
-                
+
                 for (int j = 0; j < scaledVertices.size(); ++j) {
                     const Troika::Vertex &vertex = model->vertices()[j];
                     scaledVertices[j] = scaleMatrix.mapPosition(Vector4(vertex.positionX, vertex.positionY, vertex.positionZ, 1));
@@ -648,7 +657,7 @@ public:
                 fileIndex += scalingPerFile[i].size();
 
             bool found = false;
-            
+
             Vector4 scale(object->scale().x(), object->scale().y(), object->scale().z(), 1);
             for (int i = 0; i < scalingPerFile[fileNameIndex].size(); ++i) {
                 Vector4 existingScale = scalingPerFile[fileNameIndex][i];
@@ -1179,7 +1188,7 @@ public:
         addHairReferences();
 
         convertReferencedMeshes();
-    }       
+    }
 
     void convertReferencedMeshes()
     {

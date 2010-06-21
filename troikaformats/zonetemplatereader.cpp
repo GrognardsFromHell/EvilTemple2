@@ -114,7 +114,7 @@ namespace Troika
     }
 
     bool ZoneTemplateReader::readGeometryMeshFiles()
-    {        
+    {
         QByteArray data = vfs->openFile(mapDirectory + "gmesh.gmf");
 
         if (data.isNull())
@@ -180,7 +180,7 @@ namespace Troika
             // Create the geometry mesh object and add it to the zone template.
             GeometryObject *meshObject = new GeometryObject(QVector3D(x, y, z),
                                                             rotation,
-                                                            geometryMeshFiles[fileIndex].modelFilename);            
+                                                            geometryMeshFiles[fileIndex].modelFilename);
             zoneTemplate->addStaticGeometry(meshObject);
         }
 
@@ -266,8 +266,8 @@ namespace Troika
             return false;
         }
 
-        uint sectorY = sectorId & 0xFF;
-        uint sectorX = (sectorId >> 26) & 0x3F;
+        uint sectorY = (sectorId >> 26) & 0x3F;
+        uint sectorX = sectorId & 0xFF;
 
         return readSectorLights(stream) && readSectorTiles(sectorX, sectorY, stream) && readSectorObjects(stream);
     }

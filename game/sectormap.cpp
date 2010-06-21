@@ -4,7 +4,6 @@
 #include "scene.h"
 
 #include "navigationmesh.h"
-#include "navigationmeshbuilder.h"
 
 #include <QFile>
 #include <QTextStream>
@@ -84,7 +83,7 @@ namespace EvilTemple {
             buildBuffers();
             mBuffersInvalid = false;
         }
-/*
+
         mVertexBuffer.bind();
         glEnableClientState(GL_VERTEX_ARRAY);
         glVertexPointer(3, GL_FLOAT, 0, 0);
@@ -104,8 +103,8 @@ namespace EvilTemple {
         glColor3f(0.1, 0.1f, 0.8f);
         glDrawArrays(GL_POINTS, 0, mNavigationMesh->portals().size());
         glDisableClientState(GL_VERTEX_ARRAY);
-*/
 
+        /*
         glBegin(GL_QUADS);
         foreach (const TaggedRegion &region, mLayer) {
             QString type = region.tag.toString();
@@ -137,7 +136,7 @@ namespace EvilTemple {
             glVertex3f(region.bottomRight.x(), 0, region.bottomRight.z());
             glVertex3f(region.bottomRight.x(), 0, region.topLeft.z());
         }
-        glEnd();
+        glEnd();*/
 
         glEnable(GL_CULL_FACE);
         glEnable(GL_DEPTH_TEST);
@@ -165,11 +164,11 @@ namespace EvilTemple {
 #endif
         stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
 
-        foreach (const NavMeshRect *rect, mNavigationMesh->rectangles()) {
-            float left = rect->left;
-            float top = rect->top;
-            float right = rect->right;
-            float bottom = rect->bottom;
+        foreach (const NavMeshRect &rect, mNavigationMesh->rectangles()) {
+            float left = rect.left;
+            float top = rect.top;
+            float right = rect.right;
+            float bottom = rect.bottom;
 
             const float zero = 0;
 
@@ -214,8 +213,8 @@ namespace EvilTemple {
         stream.device()->seek(0);
         data.clear();
 
-        foreach (const NavMeshPortal *portal, mNavigationMesh->portals()) {
-            stream << portal->center.x() << (float)0 << portal->center.z();
+        foreach (const NavMeshPortal &portal, mNavigationMesh->portals()) {
+            stream << portal.center.x() << (float)0 << portal.center.z();
         }
 
         mPortalVertexBuffer.bind();
@@ -246,34 +245,52 @@ namespace EvilTemple {
             return false;
     }
 
-    bool SectorMap::load(const QVector<Vector4> &startPositions, const QString &filename) const
+    bool SectorMap::load(const QString &filename) const
     {
-        NavigationMeshBuilder builder;
+        QFile file(filename);
 
-        if (!builder.build(filename, startPositions)) {
-            qWarning("Unable to open %s.", qPrintable(filename));
+        if (!file.open(QIODevice::ReadOnly))
             return false;
+
+        d->regionLayers.clear();
+        d->mesh.clear();
+
+        QDataStream stream(&file);
+        stream.setByteOrder(QDataStream::LittleEndian);
+        stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
+
+        d->mesh = SharedNavigationMesh(new NavigationMesh);
+        SharedNavigationMesh flyableMesh(new NavigationMesh);
+
+        stream >> *(d->mesh.data()) >> *(flyableMesh.data());
+
+        while (!stream.atEnd()) {
+            QString layerName;
+            uint count;
+            RegionLayer layer;
+            stream >> layerName >> count;
+            layer.resize(count);
+
+            for (int i = 0; i < count; ++i) {
+                TaggedRegion &region = layer[i];
+                stream >> region;
+            }
+            d->regionLayers[layerName] = layer;
         }
 
-        SharedNavigationMesh mesh(builder.takeWalkableMesh());
+        qDebug("Using mesh with %d rectangles and %d portals.", d->mesh->rectangles().size(),
+               d->mesh->portals().size());
 
-        d->mesh = mesh;
-
-        d->regionLayers = builder.takeRegionLayers();
-
-        qDebug("Using mesh with %d rectangles and %d portals.", mesh->rectangles().size(), mesh->portals().size());
-
-        /*
         if (d->scene) {
             Sector *sector = new Sector;
-            sector->setNavigationMesh(mesh);
+            sector->setNavigationMesh(d->mesh);
             sector->setLayer(d->regionLayers["groundMaterial"]);
 
             SceneNode *node = new SceneNode;
             node->attachObject(SharedRenderable(sector));
 
             d->scene->addNode(SharedSceneNode(node));
-        }*/
+        }
 
         return true;
     }

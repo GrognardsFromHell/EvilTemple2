@@ -300,7 +300,7 @@ namespace Troika
         }
     }
 
-    SkeletonState::SkeletonState(const Skeleton *skeleton) : _skeleton(skeleton) {
+    SkeletonState::SkeletonState(const Skeleton *skeleton) : _skeleton(skeleton), boneMatrices((QMatrix4x4*)0) {
         boneMatrices.reset(new QMatrix4x4[skeleton->bones().size()]);
     }
 
@@ -438,7 +438,7 @@ namespace Troika
                 state->rotation = state->nextRotation;
                 state->rotationFrame = state->nextRotationFrame;
 
-                qint16 nextFrame, x, y, z, w;                
+                qint16 nextFrame, x, y, z, w;
                 stream >> nextFrame >> x >> y >> z >> w;
 
                 state->nextRotationFrame = nextFrame;
@@ -487,11 +487,11 @@ namespace Troika
             _boneMap[boneId] = &boneState;
 
             boneState.boneId = boneId;
-            
+
             stream >> x >> y >> z; // Scale
             boneState.scale.setX(x * scaleFactor);
             boneState.scale.setY(y * scaleFactor);
-            boneState.scale.setZ(z * scaleFactor);            
+            boneState.scale.setZ(z * scaleFactor);
             boneState.scaleFrame = 0;
             boneState.nextScaleFrame = 0;
             boneState.nextScale = boneState.scale;
@@ -506,7 +506,7 @@ namespace Troika
             stream >> x >> y >> z; // Translation
             boneState.translation.setX(x * translationFactor);
             boneState.translation.setY(y * translationFactor);
-            boneState.translation.setZ(z * translationFactor);            
+            boneState.translation.setZ(z * translationFactor);
             boneState.translationFrame = 0;
             boneState.nextTranslationFrame = 0;
             boneState.nextTranslation = boneState.translation;

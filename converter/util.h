@@ -3,6 +3,9 @@
 
 #include "prototypes.h"
 
+#include "gamemath.h"
+using namespace GameMath;
+
 #include <QString>
 #include <QRegExp>
 #include <QXmlStreamWriter>
@@ -175,5 +178,11 @@ public:
 private:
     QXmlStreamWriter &mXml;
 };
+
+inline QDataStream &operator <<(QDataStream &stream, const Vector4 &vector)
+{
+    stream << vector.x() << vector.y() << vector.z() << vector.w();
+    return stream;
+}
 
 #endif // UTIL_H

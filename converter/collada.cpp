@@ -14,7 +14,7 @@
 #include "zonebackgroundmap.h"
 #include "skmreader.h"
 #include "model.h"
-#include "material.h"
+#include "troika_material.h"
 
 #include "util.h"
 

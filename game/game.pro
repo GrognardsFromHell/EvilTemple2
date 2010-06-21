@@ -51,7 +51,6 @@ SOURCES += \
     materials.cpp \
     translations.cpp \
     sectormap.cpp \
-    navigationmeshbuilder.cpp \
     navigationmesh.cpp
 HEADERS += \
     mainwindow.h \
@@ -89,7 +88,6 @@ HEADERS += \
     materials.h \
     translations.h \
     sectormap.h \
-    navigationmeshbuilder.h \
     navigationmesh.h
 OTHER_FILES += \
     resources/schema/materialfile.xsd \

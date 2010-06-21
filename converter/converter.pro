@@ -21,7 +21,8 @@ SOURCES += converter.cpp \
     converterwizard.cpp \
     choosedirectorypage.cpp \
     conversionpage.cpp \
-    pathnodeconverter.cpp
+    pathnodeconverter.cpp \
+    navigationmeshbuilder.cpp
 
 HEADERS += \
     util.h \
@@ -38,7 +39,8 @@ HEADERS += \
     converterwizard.h \
     choosedirectorypage.h \
     conversionpage.h \
-    pathnodeconverter.h
+    pathnodeconverter.h \
+    navigationmeshbuilder.h
 
 win32:SOURCES += basepathfinder_win32.cpp
 else:SOURCES += basepathfinder.cpp

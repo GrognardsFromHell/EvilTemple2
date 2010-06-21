@@ -26,6 +26,14 @@ var WalkJobs = {
             this.currentPathNode += 1;
             if (this.currentPathNode + 1 >= this.path.length) {
                 this.modelInstance.stopAnimation();
+
+                for (var i = 0; i < walkJobs.length; ++i) {
+                    if (walkJobs[i] === this) {
+                        walkJobs.splice(i, 1);
+                        --i;
+                    }
+                }
+
                 return;
             }
             this.driven = 0;
@@ -89,13 +97,13 @@ function walkTo(obj, sceneNode, modelInstance, to) {
         sceneNode: sceneNode,
         modelInstance: modelInstance,
         path: path,
-        speed: modelInstance.model.animationDps('unarmed_unarmed_walk'), // Pixel per second
+        speed: modelInstance.model.animationDps('unarmed_unarmed_run'), // Pixel per second
     };
     job.__proto__ = WalkJobs;
     job.init(path[0], path[1]);
 
     walkJobs.push(job);
-    modelInstance.playAnimation('unarmed_unarmed_walk', true);
+    modelInstance.playAnimation('unarmed_unarmed_run', true);
 
     gameView.addVisualTimer(30, function() {
         job.addTime(0.03);

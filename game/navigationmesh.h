@@ -24,6 +24,8 @@ struct TaggedRegion : public Region {
     QVariant tag;
 };
 
+QDataStream &operator >>(QDataStream &stream, TaggedRegion &region);
+
 typedef QVector<TaggedRegion> RegionLayer;
 typedef QHash<QString, RegionLayer> RegionLayers;
 
@@ -54,13 +56,14 @@ struct NavMeshPortal {
 
 class NavigationMesh
 {
+friend QDataStream &operator >>(QDataStream&, NavigationMesh&);
 public:
     NavigationMesh();
     NavigationMesh(const QList<NavMeshRect*> &rectangles, const QList<NavMeshPortal*> &portals);
     ~NavigationMesh();
 
-    const QList<NavMeshRect*> &rectangles() const;
-    const QList<NavMeshPortal*> &portals() const;
+    const QVector<NavMeshRect> &rectangles() const;
+    const QVector<NavMeshPortal> &portals() const;
 
     QVector<Vector4> findPath(const Vector4 &start, const Vector4 &end) const;
 
@@ -69,18 +72,20 @@ public:
     const NavMeshRect *findRect(const Vector4 &position) const;
 
 private:
-    QList<NavMeshRect*> mRectangles;
-    QList<NavMeshPortal*> mPortals;
+    QVector<NavMeshRect> mRectangles;
+    QVector<NavMeshPortal> mPortals;
 };
+
+QDataStream &operator >>(QDataStream &stream, NavigationMesh &mesh);
 
 typedef QSharedPointer<NavigationMesh> SharedNavigationMesh;
 
-inline const QList<NavMeshRect*> &NavigationMesh::rectangles() const
+inline const QVector<NavMeshRect> &NavigationMesh::rectangles() const
 {
     return mRectangles;
 }
 
-inline const QList<NavMeshPortal*> &NavigationMesh::portals() const
+inline const QVector<NavMeshPortal> &NavigationMesh::portals() const
 {
     return mPortals;
 }

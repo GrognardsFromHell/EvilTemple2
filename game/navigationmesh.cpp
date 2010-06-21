@@ -5,6 +5,8 @@
 #include <QHash>
 #include <QElapsedTimer>
 
+#include "util.h"
+
 namespace EvilTemple {
 
 inline static bool westeast_intersect(float z, int left, int right, float xascent, const Vector4 &from, const Vector4 &to, uint minX, uint maxX, Vector4 &intersection)
@@ -58,17 +60,9 @@ NavigationMesh::NavigationMesh()
 {
 }
 
-NavigationMesh::NavigationMesh(const QList<NavMeshRect*> &rectangles, const QList<NavMeshPortal*> &portals)
-    : mRectangles(rectangles), mPortals(portals)
-{
-}
-
 NavigationMesh::~NavigationMesh()
 {
-    qDeleteAll(mPortals);
-    qDeleteAll(mRectangles);
 }
-
 
 inline Vector4 vectorFromPoint(uint x, uint y)
 {
@@ -321,8 +315,10 @@ const NavMeshRect *NavigationMesh::findRect(const Vector4 &position) const
     uint x = position.x();
     uint z = position.z();
 
+    const NavMeshRect * const rects = mRectangles.constData();
+
     for (int i = 0; i < mRectangles.size(); ++i) {
-        const NavMeshRect *rect = mRectangles.at(i);
+        const NavMeshRect *rect = rects + i;
 
         if (x >= rect->left && x <= rect->right && z >= rect->top && z <= rect->bottom) {
             return rect;
@@ -330,6 +326,63 @@ const NavMeshRect *NavigationMesh::findRect(const Vector4 &position) const
     }
 
     return NULL;
+}
+
+inline QDataStream &operator >>(QDataStream &stream, NavMeshRect &rect)
+{
+    stream >> rect.topLeft >> rect.bottomRight >> rect.center
+            >> rect.left >> rect.top >> rect.right >> rect.bottom;
+
+    return stream;
+}
+
+QDataStream &operator >>(QDataStream &stream, NavigationMesh &mesh)
+{
+    uint count;
+
+    stream >> count;
+
+    mesh.mRectangles.resize(count);
+
+    NavMeshRect * const rects = mesh.mRectangles.data();
+
+    for (int i = 0; i < count; ++i) {
+         stream >> rects[i];
+    }
+
+    stream >> count;
+
+    mesh.mPortals.resize(count);
+
+    NavMeshPortal * const portals = mesh.mPortals.data();
+
+    for (int i = 0; i < count; ++i) {
+        NavMeshPortal *portal = portals + i;
+
+        uint sideAIndex, sideBIndex, axis;
+
+        stream >> portal->center >> sideAIndex >> sideBIndex
+                >> axis >> portal->start >> portal->end;
+
+        Q_ASSERT(sideAIndex < mesh.mRectangles.size());
+        Q_ASSERT(sideBIndex < mesh.mRectangles.size());
+
+        portal->axis = (PortalAxis)axis;
+        portal->sideA = rects + sideAIndex;
+        portal->sideB = rects + sideBIndex;
+
+        portal->sideA->portals.append(portal);
+        portal->sideB->portals.append(portal);
+    }
+
+    return stream;
+}
+
+QDataStream &operator >>(QDataStream &stream, TaggedRegion &region)
+{
+    stream >> region.topLeft >> region.bottomRight >> region.center >> region.tag;
+
+    return stream;
 }
 
 }

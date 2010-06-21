@@ -57,7 +57,7 @@ public:
     ~SectorMap();
 
 public slots:
-    bool load(const QVector<Vector4> &startPositions, const QString &filename) const;
+    bool load(const QString &filename) const;
 
     QVector<Vector4> findPath(const Vector4 &start, const Vector4 &end) const;
 
