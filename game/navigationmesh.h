@@ -30,12 +30,6 @@ typedef QVector<TaggedRegion> RegionLayer;
 typedef QHash<QString, RegionLayer> RegionLayers;
 
 struct NavMeshRect : public Region {
-    // Global coordinates
-    uint left;
-    uint top;
-    uint right;
-    uint bottom;
-
     QVector<const NavMeshPortal*> portals;
 };
 

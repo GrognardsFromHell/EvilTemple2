@@ -117,8 +117,8 @@ bool checkLos(const NavMeshRect *losStartRect, const Vector4 &start, const Vecto
     // Check with each of the current rects portals, whether the line intersects
     forever {
         // If the end point lies in the current rectangle, we succeeded
-        if (end.x() >= currentRect->left && end.x() <= currentRect->right
-            && end.z() >= currentRect->top && end.z() <= currentRect->bottom)
+        if (end.x() >= currentRect->topLeft.x() && end.x() <= currentRect->bottomRight.z()
+            && end.z() >= currentRect->topLeft.x() && end.z() <= currentRect->bottomRight.z())
         {
             // TODO: Take dynamic LOS into account?
             return true;
@@ -320,7 +320,8 @@ const NavMeshRect *NavigationMesh::findRect(const Vector4 &position) const
     for (int i = 0; i < mRectangles.size(); ++i) {
         const NavMeshRect *rect = rects + i;
 
-        if (x >= rect->left && x <= rect->right && z >= rect->top && z <= rect->bottom) {
+        if (x >= rect->topLeft.x() && x <= rect->bottomRight.x()
+            && z >= rect->topLeft.z() && z <= rect->bottomRight.z()) {
             return rect;
         }
     }
@@ -330,8 +331,7 @@ const NavMeshRect *NavigationMesh::findRect(const Vector4 &position) const
 
 inline QDataStream &operator >>(QDataStream &stream, NavMeshRect &rect)
 {
-    stream >> rect.topLeft >> rect.bottomRight >> rect.center
-            >> rect.left >> rect.top >> rect.right >> rect.bottom;
+    stream >> rect.topLeft >> rect.bottomRight >> rect.center;
 
     return stream;
 }

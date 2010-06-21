@@ -165,10 +165,10 @@ namespace EvilTemple {
         stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
 
         foreach (const NavMeshRect &rect, mNavigationMesh->rectangles()) {
-            float left = rect.left;
-            float top = rect.top;
-            float right = rect.right;
-            float bottom = rect.bottom;
+            float left = rect.topLeft.x();
+            float top = rect.topLeft.z();
+            float right = rect.bottomRight.x();
+            float bottom = rect.bottomRight.z();
 
             const float zero = 0;
 

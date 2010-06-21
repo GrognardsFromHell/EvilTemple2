@@ -960,8 +960,7 @@ static void writeNavigationMesh(QDataStream &stream,
     QHash<const NavMeshRect*, uint> rectIndices;
 
     foreach (const NavMeshRect *rect, rectangles) {
-        stream << rect->topLeft << rect->bottomRight << rect->center
-                << rect->left << rect->top << rect->right << rect->bottom;
+        stream << rect->topLeft << rect->bottomRight << rect->center;
         rectIndices[rect] = index++;
     }
 
