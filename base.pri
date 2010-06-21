@@ -123,4 +123,5 @@ contains(TEMPLE_LIBS,openal) {
 
 OTHER_FILES += \
     ../../MoneyDisplay.qml \
-    ../../bin/data/scripts/animations.js
+    ../../bin/data/scripts/animations.js \
+    ../bin/data/scripts/walking.js

@@ -48,6 +48,8 @@ function objectToString(value) {
     return result;
 }
 
+var currentSelection = null;
+
 // Base object for all prototypes
 var BaseObject = {
     scale: 100,
@@ -56,6 +58,12 @@ var BaseObject = {
     registerHandlers: function(sceneNode, modelInstance) {
         var obj = this;
         modelInstance.setClickHandler(function() {
+            currentSelection = {
+                sceneNode: sceneNode,
+                obj: obj,
+                modelInstance: modelInstance
+            };
+
             var mobileInfoDialog = gameView.addGuiItem("interface/MobileInfo.qml");
             var items = [];
 
@@ -280,8 +288,11 @@ function setupWorldClickHandler() {
 
     gameView.worldClicked.connect(function(worldPosition) {
         var color;
+        var material = gameView.sectorMap.regionTag("groundMaterial", worldPosition);
 
-        var material = gameView.sectorMap.regionTag("footsteps", worldPosition);
+        if (currentSelection != null) {
+            walkTo(currentSelection.obj, currentSelection.sceneNode, currentSelection.modelInstance, worldPosition);
+        }
 
         if (firstClick === undefined) {
             var text = "1st @ " + Math.floor(worldPosition.x) + "," + Math.floor(worldPosition.z) + " (" + material + ")";
@@ -350,6 +361,9 @@ var animEventGameFacade = {
 
         print("Playing sound " + filename)
         gameView.audioEngine.playSoundOnce(filename, SoundCategory_Effect);
+    },
+    shake: function(a, b) {
+        print("Shake: " + a + ", " + b);
     }
 };
 
@@ -361,6 +375,8 @@ var footstepSounds = {
     'water': ['sound/footstep_water1.wav', 'sound/footstep_water2.wav', 'sound/footstep_water3.wav', 'sound/footstep_water4.wav'],
     'wood': ['sound/footstep_wood1.wav', 'sound/footstep_wood2.wav', 'sound/footstep_wood3.wav', 'sound/footstep_wood4.wav']
 };
+
+var footstepCounter = 0;
 
 var animEventAnimObjFacade = {
     footstep: function() {
@@ -377,7 +393,7 @@ var animEventAnimObjFacade = {
             return;
         }
 
-        var sound = sounds[Math.floor(Math.random() * sounds.length)];
+        var sound = sounds[footstepCounter++ % sounds.length];
 
         gameView.audioEngine.playSoundOnce(sound, SoundCategory_Effect);
     }
@@ -426,6 +442,8 @@ function createMapObject(scene, obj)
 }
 
 function loadMap(filename) {
+    currentSelection = null;
+
     print("Loading map " + filename);
 
     var mapFile = readFile(filename);

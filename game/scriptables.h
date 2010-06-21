@@ -35,7 +35,8 @@ namespace EvilTemple {
         QScriptValue animations() const;
 
     public slots:
-        bool hasAnimation(const QString &name) const;        
+        bool hasAnimation(const QString &name) const;
+        QScriptValue animationDps(const QString &name) const;
 
     private:
         SharedModel data() const;
@@ -71,7 +72,7 @@ namespace EvilTemple {
     private:
         LineRenderable *data() const;
     };
-    
+
     class ModelInstanceScriptable : public QObject, protected QScriptable {
     Q_OBJECT
     Q_PROPERTY(SharedModel model READ model WRITE setModel);
@@ -86,7 +87,7 @@ namespace EvilTemple {
         void setModel(const SharedModel &model);
 
         uint renderCategory() const;
-        void setRenderCategory(uint category);       
+        void setRenderCategory(uint category);
 
         const Box3d &boundingBox() const;
 
@@ -104,8 +105,12 @@ namespace EvilTemple {
         void clearOverrideMaterials();
 
         bool playAnimation(const QString &name, bool looping);
-        
+        void stopAnimation();
+
         void addMesh(const SharedModel &model);
+
+        void elapseDistance(float distance);
+        void elapseRotation(float rotation);
 
     private:
         ModelInstance *data() const;

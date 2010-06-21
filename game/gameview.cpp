@@ -86,8 +86,17 @@ namespace EvilTemple {
     inline void VisualTimer::call()
     {
         mCallback.call();
+
+        QScriptEngine *engine = mCallback.engine();
+
+        if (!engine)
+            return;
+
+        if (engine->hasUncaughtException()) {
+            qDebug() << engine->uncaughtException().toString() << engine->uncaughtExceptionLineNumber();
+        }
     }
-    
+
     class GameViewData
     {
     public:
@@ -266,14 +275,13 @@ namespace EvilTemple {
         timer.start();
         qint64 reference = timer.msecsSinceReference();
 
-        VisualTimers::iterator it = visualTimers.begin();
-        while (it != visualTimers.end()) {
-            if (it->isElapsed(reference)) {
-                qDebug("Timer has elapsed.");
-                it->call();
-                it = visualTimers.erase(it);
-            } else {
-                it++;
+        for (int i = 0; i < visualTimers.size(); ++i) {
+            VisualTimer timer = visualTimers[i];
+
+            if (timer.isElapsed(reference)) {
+                // qDebug("Timer has elapsed.");
+                timer.call();
+                visualTimers.removeAt(i--);
             }
         }
     }
@@ -482,7 +490,7 @@ namespace EvilTemple {
     void GameView::mousePressEvent(QMouseEvent *evt)
     {
         QGraphicsView::mousePressEvent(evt);
-        
+
         if (!evt->isAccepted()) {
             d->dragging = true;
             d->mouseMovedDuringDrag = false;
@@ -504,7 +512,7 @@ namespace EvilTemple {
             }
         }
         d->dragging = false;
-        QGraphicsView::mouseReleaseEvent(evt);        
+        QGraphicsView::mouseReleaseEvent(evt);
     }
 
     QPoint GameView::screenCenter() const
@@ -598,7 +606,7 @@ namespace EvilTemple {
 
     void GameView::addVisualTimer(uint elapseAfter, const QScriptValue &callback)
     {
-        qDebug("Adding visual timer that'll elapse after %d ms.", elapseAfter);
+        // qDebug("Adding visual timer that'll elapse after %d ms.", elapseAfter);
         d->visualTimers.append(VisualTimer(callback, elapseAfter));
     }
 

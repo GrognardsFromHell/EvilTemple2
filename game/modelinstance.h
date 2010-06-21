@@ -35,6 +35,8 @@ public:
     void setModel(const SharedModel &model);
 
     void elapseTime(float elapsedSeconds);
+    void elapseDistance(float distance);
+    void elapseRotation(float rotation);
 
     void drawNormals() const;
     void render(RenderStates &renderStates);
@@ -62,12 +64,15 @@ public:
     bool isIdling() const; // No animation is playing
 
     bool playAnimation(const QString &name, bool loop = false);
+    void stopAnimation();
 
 signals:
     void animationFinished(const QString &name, bool canceled);
     void animationEvent(int type, const QString &content);
 
 private:
+
+    bool advanceFrame();
 
     void animateVertices(const SharedModel &model, Vector4 *transformedPositions, Vector4 *transformedNormals, QGLBuffer *positionBuffer, QGLBuffer *normalBuffer,
                          QVector<uint> *boneMapping);
@@ -109,7 +114,7 @@ private:
 
     // These relate to mModel->placeholders()
     QVector<SharedMaterialState> mReplacementMaterials;
-    
+
     Q_DISABLE_COPY(ModelInstance);
 };
 

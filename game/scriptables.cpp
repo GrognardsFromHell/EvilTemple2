@@ -112,7 +112,7 @@ void renderableFromScriptValue(const QScriptValue &object, SharedRenderable &out
     // Try all the known types of renderables
     QVariant variant = object.toVariant();
     int userType = variant.userType();
-    
+
     if (userType == qMetaTypeId<SharedModelInstance>()) {
         SharedModelInstance modelInstance = qvariant_cast<SharedModelInstance>(variant);
         out = modelInstance.objectCast<Renderable>();
@@ -171,6 +171,22 @@ QScriptValue ModelScriptable::animations() const
             result.setProperty(i++, QScriptValue(anim));
         }
         return result;
+    } else {
+        return engine()->undefinedValue();
+    }
+}
+
+QScriptValue ModelScriptable::animationDps(const QString &name) const
+{
+    SharedModel model = data();
+
+    if (model) {
+        const Animation *animation = model->animation(name);
+        if (animation) {
+            return QScriptValue(animation->dps());
+        } else {
+            return engine()->undefinedValue();
+        }
     } else {
         return engine()->undefinedValue();
     }
@@ -296,7 +312,7 @@ void ModelInstanceScriptable::registerWith(QScriptEngine *engine)
 
     int typeId = qRegisterMetaType<SharedModelInstance>("SharedModelInstance");
     engine->setDefaultPrototype(typeId, prototype);
-    
+
     QScriptValue ctor = engine->newFunction(ModelInstanceScriptableCtor);
     engine->globalObject().setProperty("ModelInstance", ctor);
 }
@@ -374,6 +390,22 @@ void ModelInstanceScriptable::setIdleAnimation(const QString &name)
     }
 }
 
+void ModelInstanceScriptable::elapseDistance(float distance)
+{
+    ModelInstance *modelInstance = data();
+    if (modelInstance) {
+        modelInstance->elapseDistance(distance);
+    }
+}
+
+void ModelInstanceScriptable::elapseRotation(float rotation)
+{
+    ModelInstance *modelInstance = data();
+    if (modelInstance) {
+        modelInstance->elapseRotation(rotation);
+    }
+}
+
 bool ModelInstanceScriptable::playAnimation(const QString &name, bool looping)
 {
     ModelInstance *modelInstance = data();
@@ -381,6 +413,14 @@ bool ModelInstanceScriptable::playAnimation(const QString &name, bool looping)
         return modelInstance->playAnimation(name, looping);
     } else {
         return false;
+    }
+}
+
+void ModelInstanceScriptable::stopAnimation()
+{
+    ModelInstance *modelInstance = data();
+    if (modelInstance) {
+        modelInstance->stopAnimation();
     }
 }
 
@@ -706,7 +746,7 @@ void SceneNodeScriptable::attachObject(const SharedRenderable &renderable)
 static QScriptValue SceneNodeScriptableCtor(QScriptContext *context, QScriptEngine *engine)
 {
     if (!context->isCalledAsConstructor())
-        return context->throwError(QScriptContext::SyntaxError, "please use the 'new' operator");    
+        return context->throwError(QScriptContext::SyntaxError, "please use the 'new' operator");
     SharedSceneNode node(new SceneNode);
     QScriptValue result = engine->newVariant(context->thisObject(), qVariantFromValue(node));
     result.setPrototype(engine->defaultPrototype(qMetaTypeId<SharedSceneNode>()));

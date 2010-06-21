@@ -85,10 +85,10 @@ namespace EvilTemple {
     }
 
     void ModelInstance::addMesh(const SharedModel &model)
-    {      
+    {
         mAddMeshes.append(model);
 
-        if (mCurrentAnimation) {           
+        if (mCurrentAnimation) {
             mTransformedNormalsAddMeshes.append(new Vector4[model->vertices]);
             mTransformedPositionsAddMeshes.append(new Vector4[model->vertices]);
 
@@ -128,10 +128,10 @@ namespace EvilTemple {
                 }
             }
             mAddMeshBoneMapping.append(boneMapping);
-            
-            Q_ASSERT(mTransformedPositionsAddMeshes.size() == mAddMeshes.size()); 
-            Q_ASSERT(mTransformedNormalsAddMeshes.size() == mAddMeshes.size()); 
-            Q_ASSERT(mPositionBufferAddMeshes.size() == mAddMeshes.size()); 
+
+            Q_ASSERT(mTransformedPositionsAddMeshes.size() == mAddMeshes.size());
+            Q_ASSERT(mTransformedNormalsAddMeshes.size() == mAddMeshes.size());
+            Q_ASSERT(mPositionBufferAddMeshes.size() == mAddMeshes.size());
             Q_ASSERT(mNormalBufferAddMeshes.size() == mAddMeshes.size());
             Q_ASSERT(mAddMeshBoneMapping.size() == mAddMeshes.size());
         }
@@ -179,8 +179,8 @@ namespace EvilTemple {
                 SAFE_GL(glUniform1i(typePos, 1));
                 //SAFE_GL(glUniform4f(colorPos, 0.662745f, 0.564706f, 0.905882f, 0));
                 SAFE_GL(glUniform4f(colorPos, 0.962745f, 0.964706f, 0.965882f, 0));
-                SAFE_GL(glUniform4f(positionPos, -0.632409f, -0.774634f, 0, 0));              
-                
+                SAFE_GL(glUniform4f(positionPos, -0.632409f, -0.774634f, 0, 0));
+
                 SAFE_GL(glDrawElements(GL_TRIANGLES, mElementCount, GL_UNSIGNED_SHORT, 0));
 
                 SAFE_GL(glDepthFunc(GL_LEQUAL));
@@ -202,7 +202,7 @@ namespace EvilTemple {
 
                     SAFE_GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
                 }
-                
+
                 SAFE_GL(glDepthFunc(GL_LESS));
 
                 SAFE_GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
@@ -438,7 +438,7 @@ namespace EvilTemple {
 
             if (material) {
                 ModelDrawStrategy drawStrategy(faceGroup.buffer, faceGroup.elementCount);
-                drawHelper.draw(renderStates, material, drawStrategy, bufferSource);            
+                drawHelper.draw(renderStates, material, drawStrategy, bufferSource);
             }
         }
 
@@ -454,10 +454,10 @@ namespace EvilTemple {
                 const FaceGroup &faceGroup = model->faceGroups[faceGroupId];
 
                 MaterialState *material = faceGroup.material;
-                
+
                 if (material) {
                     ModelDrawStrategy drawStrategy(faceGroup.buffer, faceGroup.elementCount);
-                    drawHelper.draw(renderStates, material, drawStrategy, bufferSource);            
+                    drawHelper.draw(renderStates, material, drawStrategy, bufferSource);
                 }
             }
         }
@@ -561,7 +561,7 @@ namespace EvilTemple {
 
     void ModelInstance::elapseTime(float elapsedSeconds)
     {
-        if (!mModel || !mCurrentAnimation)
+        if (!mModel || !mCurrentAnimation || mCurrentAnimation->driveType() != Animation::Time)
             return;
 
         mPartialFrameTime += elapsedSeconds;
@@ -571,38 +571,88 @@ namespace EvilTemple {
         if (mPartialFrameTime < timePerFrame)
             return;
 
+        while (mPartialFrameTime >= timePerFrame) {
+            if (!advanceFrame())
+                return;
+
+            mPartialFrameTime -= timePerFrame;
+        }
+    }
+
+    void ModelInstance::elapseDistance(float distance)
+    {
+        if (!mModel || !mCurrentAnimation || mCurrentAnimation->driveType() != Animation::Distance)
+            return;
+
+        mPartialFrameTime += distance;
+
+        float distancePerFrame = 1 / mCurrentAnimation->frameRate();
+
+        if (mPartialFrameTime < distancePerFrame)
+            return;
+
+        while (mPartialFrameTime >= distancePerFrame) {
+            if (!advanceFrame())
+                return;
+
+            mPartialFrameTime -= distancePerFrame;
+        }
+    }
+
+    void ModelInstance::elapseRotation(float rotation)
+    {
+        if (!mModel || !mCurrentAnimation || mCurrentAnimation->driveType() != Animation::Rotation)
+            return;
+
+        mPartialFrameTime += rotation;
+
+        float rotationPerFrame = 1 / mCurrentAnimation->frameRate();
+
+        if (mPartialFrameTime < rotationPerFrame)
+            return;
+
+        while (mPartialFrameTime >= rotationPerFrame) {
+            if (!advanceFrame())
+                return;
+
+            mPartialFrameTime -= rotationPerFrame;
+        }
+    }
+
+    bool ModelInstance::advanceFrame()
+    {
+        Q_ASSERT(mCurrentAnimation != NULL);
+
+        mCurrentFrame++;
+
         const QVector<AnimationEvent> &events = mCurrentAnimation->events();
 
-        while (mPartialFrameTime >= timePerFrame) {
-            mCurrentFrame++;
+        for (size_t i = 0; i < events.size(); ++i) {
+            if (events[i].frame() == mCurrentFrame) {
+                emit animationEvent(events[i].type(), events[i].content());
+            }
+        }
+
+        if (mCurrentFrame >= mCurrentAnimation->frames()) {
+            // Decide whether it's time to loop or end the animation
+            if (!mIdling && !mLooping) {
+                emit animationFinished(mCurrentAnimation->name(), false);
+                playIdleAnimation();
+                return false;
+            }
+
+            mCurrentFrame = 0;
 
             for (size_t i = 0; i < events.size(); ++i) {
                 if (events[i].frame() == mCurrentFrame) {
                     emit animationEvent(events[i].type(), events[i].content());
                 }
             }
-
-            if (mCurrentFrame >= mCurrentAnimation->frames()) {
-                // Decide whether it's time to loop or end the animation
-                if (!mIdling && !mLooping) {
-                    emit animationFinished(mCurrentAnimation->name(), false);
-                    playIdleAnimation();
-                    return;
-                }
-
-                mCurrentFrame = 0;
-
-                for (size_t i = 0; i < events.size(); ++i) {
-                    if (events[i].frame() == mCurrentFrame) {
-                        emit animationEvent(events[i].type(), events[i].content());
-                    }
-                }
-            }
-            mCurrentFrameChanged = true;
-            mPartialFrameTime -= timePerFrame;
         }
+        mCurrentFrameChanged = true;
+        return true;
     }
-    
+
     const Box3d &ModelInstance::boundingBox()
     {
         static Box3d emptyBox;
@@ -611,7 +661,7 @@ namespace EvilTemple {
         else
             return emptyBox;
     }
-    
+
     const Matrix4 &ModelInstance::worldTransform() const
     {
         Q_ASSERT(mParentNode);
@@ -795,6 +845,12 @@ namespace EvilTemple {
         mIdling = false;
 
         return true;
+    }
+
+    void ModelInstance::stopAnimation()
+    {
+        if (!mIdling)
+            playIdleAnimation();
     }
 
     void ModelInstance::playIdleAnimation()
