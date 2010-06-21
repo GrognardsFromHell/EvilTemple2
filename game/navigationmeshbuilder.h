@@ -18,7 +18,12 @@ public:
     NavigationMeshBuilder();
     ~NavigationMeshBuilder();
 
-    NavigationMesh *build(const QString &filename, const QVector<Vector4> &startPositions);
+    bool build(const QString &filename, const QVector<Vector4> &startPositions);
+
+    NavigationMesh *takeWalkableMesh() const;
+    NavigationMesh *takeFlyableMesh() const;
+
+    RegionLayers takeRegionLayers() const;
 private:
     QScopedPointer<NavigationMeshBuilderData> d;
 };

@@ -5,6 +5,8 @@
 using namespace GameMath;
 
 #include <QVector>
+#include <QHash>
+#include <QString>
 #include <QtGlobal>
 #include <QSharedPointer>
 
@@ -12,12 +14,20 @@ namespace EvilTemple {
 
 struct NavMeshPortal;
 
-class NavMeshRect {
-public:
-    Vector4 center;
+struct Region {
     Vector4 topLeft;
     Vector4 bottomRight;
+    Vector4 center;
+};
 
+struct TaggedRegion : public Region {
+    QVariant tag;
+};
+
+typedef QVector<TaggedRegion> RegionLayer;
+typedef QHash<QString, RegionLayer> RegionLayers;
+
+struct NavMeshRect : public Region {
     // Global coordinates
     uint left;
     uint top;
@@ -45,6 +55,7 @@ struct NavMeshPortal {
 class NavigationMesh
 {
 public:
+    NavigationMesh();
     NavigationMesh(const QList<NavMeshRect*> &rectangles, const QList<NavMeshPortal*> &portals);
     ~NavigationMesh();
 

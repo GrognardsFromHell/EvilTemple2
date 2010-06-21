@@ -20,10 +20,7 @@ namespace EvilTemple {
 
     static const float PixelPerWorldTile = 28.2842703f;
 
-    struct Tile {
-        uint flags;
-        uchar footsteps;
-    };
+    static const uint SectorSideLength = 192;
 
     struct TileSector {
         TileSector();
@@ -35,17 +32,24 @@ namespace EvilTemple {
 
         QPoint origin;
 
-        bool used[192][192];
-        bool visited[192][192];
-        bool walkable[192][192];
-        bool flyable[192][192];
+        uchar sound[SectorSideLength][SectorSideLength];
+        bool used[SectorSideLength][SectorSideLength];
+        bool visited[SectorSideLength][SectorSideLength];
+        bool walkable[SectorSideLength][SectorSideLength];
+        bool flyable[SectorSideLength][SectorSideLength];
+        bool cover[SectorSideLength][SectorSideLength];
 
+        /**
+          Indicates whether any tile in this sector is reachable.
+          */
         bool anyReachable;
 
         /**
-      Due to the akward tile-defs used by toee, this is necessary
-      */
-        bool reachable[192][192];
+          Due to the akward tile-defs used by toee, this is necessary.
+          There are non-blocking tiles outside of the map, at the borders
+          of the sectors. We do a flood-fill to exclude these unnecessary areas.
+        */
+        bool reachable[SectorSideLength][SectorSideLength];
     };
 
     inline TileSector::TileSector()
@@ -65,57 +69,26 @@ namespace EvilTemple {
         TILE_INDOOR = 1 << 6,
         TILE_REFLECTIVE = 1 << 7,
         TILE_BLOCKS_VISION = 1 << 8,
-        TILE_BLOCKS_UR = 1 << 9,
+        TILE_BLOCKS_UL = 1 << 9,
         TILE_BLOCKS_UM = 1 << 10,
-        TILE_BLOCKS_UL = 1 << 11,
-        TILE_BLOCKS_MR = 1 << 12,
+        TILE_BLOCKS_UR = 1 << 11,
+        TILE_BLOCKS_ML = 1 << 12,
         TILE_BLOCKS_MM = 1 << 13,
-        TILE_BLOCKS_ML = 1 << 14,
-        TILE_BLOCKS_LR = 1 << 15,
+        TILE_BLOCKS_MR = 1 << 14,
+        TILE_BLOCKS_LL = 1 << 15,
         TILE_BLOCKS_LM = 1 << 16,
-        TILE_BLOCKS_LL = 1 << 17,
-        TILE_FLYOVER_UR = 1 << 18,
+        TILE_BLOCKS_LR = 1 << 17,
+        TILE_FLYOVER_UL = 1 << 18,
         TILE_FLYOVER_UM = 1 << 19,
-        TILE_FLYOVER_UL = 1 << 20,
-        TILE_FLYOVER_MR = 1 << 21,
+        TILE_FLYOVER_UR = 1 << 20,
+        TILE_FLYOVER_ML = 1 << 21,
         TILE_FLYOVER_MM = 1 << 22,
-        TILE_FLYOVER_ML = 1 << 23,
-        TILE_FLYOVER_LR = 1 << 24,
+        TILE_FLYOVER_MR = 1 << 23,
+        TILE_FLYOVER_LL = 1 << 24,
         TILE_FLYOVER_LM = 1 << 25,
-        TILE_FLYOVER_LL = 1 << 26,
-        TILE_FLYOVER_COVER = 1 << 27
-                         };
-
-
-    inline static void pushNeighbours(QList<QPoint> &queue, TileSector *sector, QPoint tile)
-    {
-        uint x = tile.x();
-        uint y = tile.y();
-
-        // West
-        if (x > 0 && !sector->visited[x - 1][y]) {
-            queue.append(QPoint(x - 1, y));
-            sector->visited[x - 1][y] = true;
-        }
-
-        // North
-        if (y > 0 && !sector->visited[x][y - 1]) {
-            queue.append(QPoint(x, y - 1));
-            sector->visited[x][y - 1] = true;
-        }
-
-        // East
-        if (x < 191 && !sector->visited[x + 1][y]) {
-            queue.append(QPoint(x + 1, y));
-            sector->visited[x + 1][y] = true;
-        }
-
-        // South
-        if (y < 191 && !sector->visited[x][y + 1]) {
-            queue.append(QPoint(x, y + 1));
-            sector->visited[x][y + 1] = true;
-        }
-    }
+        TILE_FLYOVER_LR = 1 << 26,
+        TILE_FLYOVER_COVER = 1 << 27,
+    };
 
     enum SharedEdge {
         Shared_None = 0,
@@ -126,8 +99,8 @@ namespace EvilTemple {
     };
 
     /**
-  Gets the side on which two axis aligned rectangles touch, assuming they're non-intersecting.
-  */
+      Gets the side on which two axis aligned rectangles touch, assuming they're non-intersecting.
+    */
     inline static SharedEdge getSharedEdge(uint leftA, uint topA, uint rightA, uint bottomA,
                                            uint leftB, uint topB, uint rightB, uint bottomB)
     {
@@ -172,7 +145,7 @@ namespace EvilTemple {
             TileSector *sector = sectors.data() + i;
 
             QPoint d = pos - sector->origin;
-            if (d.x() < 192 && d.y() < 192)
+            if (d.x() < SectorSideLength && d.y() < SectorSideLength)
                 return sector;
         }
 
@@ -214,13 +187,13 @@ namespace EvilTemple {
 
             // Find neighbours + add
             if (x == 0 && sector->west) {
-                if (!sector->west->visited[191][y]) {
-                    sector->west->visited[191][y] = true;
+                if (!sector->west->visited[SectorSideLength - 1][y]) {
+                    sector->west->visited[SectorSideLength - 1][y] = true;
                     newWi.sector = sector->west;
-                    newWi.pos = QPoint(191, y);
+                    newWi.pos = QPoint(SectorSideLength - 1, y);
                     queue.append(newWi);
                 }
-            } else if (x == 191 && sector->east) {
+            } else if (x == (SectorSideLength - 1) && sector->east) {
                 if (!sector->east->visited[0][y]) {
                     sector->east->visited[0][y] = true;
                     newWi.sector = sector->east;
@@ -229,7 +202,7 @@ namespace EvilTemple {
                 }
             }
 
-            if (x < 191) {
+            if (x < (SectorSideLength - 1)) {
                 if (!sector->visited[x+1][y]) {
                     sector->visited[x+1][y] = true;
                     newWi.sector = sector;
@@ -247,13 +220,13 @@ namespace EvilTemple {
             }
 
             if (y == 0 && sector->north) {
-                if (!sector->north->visited[x][191]) {
-                    sector->north->visited[x][191] = true;
+                if (!sector->north->visited[x][SectorSideLength - 1]) {
+                    sector->north->visited[x][SectorSideLength - 1] = true;
                     newWi.sector = sector->north;
-                    newWi.pos = QPoint(x, 191);
+                    newWi.pos = QPoint(x, SectorSideLength - 1);
                     queue.append(newWi);
                 }
-            } else if (y == 191 && sector->south) {
+            } else if (y == (SectorSideLength - 1) && sector->south) {
                 if (!sector->south->visited[x][0]) {
                     sector->south->visited[x][0] = true;
                     newWi.sector = sector->south;
@@ -262,7 +235,7 @@ namespace EvilTemple {
                 }
             }
 
-            if (y < 191) {
+            if (y < (SectorSideLength - 1)) {
                 if (!sector->visited[x][y+1]) {
                     sector->visited[x][y+1] = true;
                     newWi.sector = sector;
@@ -281,15 +254,34 @@ namespace EvilTemple {
         }
     }
 
+    /*
+     All tiles that are not reachable by walking from the starting points are flagged as non-walkable.
+     The same restriction doesn't apply to "flyover" tiles, since they don't exhibit the odd behaviour of
+     being flagged as flyable far outside the reachable map.
+     */
+    static void makeUnreachableTilesBlocking(QVector<TileSector> &sectors)
+    {
+        for (int i = 0; i < sectors.size(); ++i) {
+            TileSector *sector = sectors.data() + i;
+
+            if (!sector->anyReachable) {
+                memset(sector->walkable, 0, sizeof(sector->walkable));
+            } else {
+                for (int x = 0; x < SectorSideLength; ++x) {
+                    for (int y = 0; y < SectorSideLength; ++y) {
+                        sector->walkable[x][y] = sector->reachable[x][y] & sector->walkable[x][y];
+                    }
+                }
+            }
+        }
+    }
+
     class NavigationMeshBuilderData
     {
     public:
-        QList<NavMeshRect*> rectangles;
-        QList<NavMeshPortal*> portals;
-
-        void findRectangles(QVector<TileSector> &sectors);
-        void findPortals();
-        bool validatePortals();
+        QScopedPointer<NavigationMesh> walkableMesh;
+        QScopedPointer<NavigationMesh> flyableMesh;
+        RegionLayers regionLayers;
     };
 
     NavigationMeshBuilder::NavigationMeshBuilder() : d(new NavigationMeshBuilderData)
@@ -300,264 +292,353 @@ namespace EvilTemple {
     {
     }
 
-    NavigationMesh *NavigationMeshBuilder::build(const QString &filename, const QVector<Vector4> &startPositions)
+    /**
+      Marks a tile in a sector as walkable by analysing a bitfield.
+      */
+    template<const uint Flags>
+    inline void markWalkable(int x, int y, QImage &debugTexture, TileSector *sector, uint bitfield)
     {
-        QFile file(filename);
-
-        if (!file.open(QIODevice::ReadOnly)) {
-            return NULL;
+        if (bitfield & TILE_BLOCKS || bitfield & Flags) {
+            debugTexture.setPixel(x, y, 0xFFFF0000);
+            sector->walkable[x][y] = false;
+        } else {
+            sector->walkable[x][y] = true;
         }
+    }
 
-        QDataStream stream(&file);
-        stream.setByteOrder(QDataStream::LittleEndian);
-        stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
-
-        uint count;
-        stream >> count;
-
-        if (count == 0) {
-            NavigationMesh *result = new NavigationMesh(d->rectangles, d->portals);
-            d->rectangles.clear();
-            d->portals.clear();
-            return result;
+    /**
+      Marks a tile in a sector as flyable by analysing a bitfield.
+      */
+    template<const uint Flags>
+    inline void markFlyable(int x, int y, QImage &debugTexture, TileSector *sector, uint bitfield)
+    {
+        if (bitfield & Flags) {
+            debugTexture.setPixel(x, y, 0xFF00FF00);
+            sector->flyable[x][y] = true;
+            if (bitfield & TILE_FLYOVER_COVER) {
+                sector->cover[x][y] = true;
+            }
+        } else {
+            sector->flyable[x][y] = false;
         }
+    }
 
-        uint secX, secY;
+    static void mergeRectangles(QList<QRect> &rectangles)
+    {
+        bool madeChanges = true;
+        int iteration = 0;
 
-        QVector<TileSector> sectors;
-        sectors.resize(count);
+        // Second-pass tries to unify more sector polygons
+        for (iteration = 0; (iteration < 1000) && madeChanges; ++iteration) {
+            madeChanges = false;
 
-        for (uint i = 0; i < count; ++i) {
-            TileSector *tileSector = sectors.data() + i;
-            memset(tileSector->visited, 0, sizeof(tileSector->visited));
-            memset(tileSector->used, 0, sizeof(tileSector->used));
+            for (int i = 0; i < rectangles.size(); ++i) {
+                for (int j = 0; j < rectangles.size(); ++j) {
+                    if(i == j)
+                        continue;
 
-            stream >> secY >> secX;
+                    const QRect &a = rectangles[i];
+                    uint leftA = a.x();
+                    uint topA = a.y();
+                    uint rightA = leftA + a.width();
+                    uint bottomA = topA + a.height();
 
-            tileSector->origin = QPoint(secX * 192, secY * 192);
+                    uint areaA = (rightA - leftA) * (bottomA - topA);
 
-            QImage image(256, 256, QImage::Format_RGB32);
-            image.fill(0);
+                    const QRect &b = rectangles[j];
+                    uint leftB = b.x();
+                    uint topB = b.y();
+                    uint rightB = leftB + b.width();
+                    uint bottomB = topB + b.height();
 
-            uchar footstepSound;
-            uint bitfield;
+                    uint areaB = (rightB - leftB) * (bottomB - topB);
 
-            for (int y = 0; y < 64; ++y) {
-                for (int x = 0; x < 64; ++x) {
-                    stream >> footstepSound >> bitfield;
+                    // Only consider merging, if the two polygons share an edge
+                    SharedEdge edge = getSharedEdge(leftA, topA, rightA, bottomA,
+                                                    leftB, topB, rightB, bottomB);
 
-                    int px = x * 3;
-                    int py = y * 3;
+                    uint t0, t1;
 
-                    // Blocking
-                    if (bitfield & TILE_BLOCKS || bitfield & TILE_BLOCKS_UL) {
-                        image.setPixel(px + 2, py, 0xFFFF0000);
-                        tileSector->walkable[px+2][py] = false;
-                    } else {
-                        tileSector->walkable[px+2][py] = true;
-                    }
-                    if (bitfield & TILE_BLOCKS || bitfield & TILE_BLOCKS_UM) {
-                        image.setPixel(px + 1, py, 0xFFFF0000);
-                        tileSector->walkable[px + 1][py] = false;
-                    } else {
-                        tileSector->walkable[px + 1][py] = true;
-                    }
-                    if (bitfield & TILE_BLOCKS || bitfield & TILE_BLOCKS_UR) {
-                        image.setPixel(px, py, 0xFFFF0000);
-                        tileSector->walkable[px][py] = false;
-                    } else {
-                        tileSector->walkable[px][py] = true;
-                    }
+                    uint resultingPrimitives = 1;
 
-                    if (bitfield & TILE_BLOCKS || bitfield & TILE_BLOCKS_ML) {
-                        image.setPixel(px + 2, py + 1, 0xFFFF0000);
-                        tileSector->walkable[px + 2][py + 1] = false;
-                    } else {
-                        tileSector->walkable[px + 2][py + 1] = true;
-                    }
-                    if (bitfield & TILE_BLOCKS || bitfield & TILE_BLOCKS_MM) {
-                        image.setPixel(px + 1, py + 1, 0xFFFF0000);
-                        tileSector->walkable[px + 1][py + 1] = false;
-                    } else {
-                        tileSector->walkable[px + 1][py + 1] = true;
-                    }
-                    if (bitfield & TILE_BLOCKS || bitfield & TILE_BLOCKS_MR) {
-                        image.setPixel(px, py + 1, 0xFFFF0000);
-                        tileSector->walkable[px][py + 1] = false;
-                    } else {
-                        tileSector->walkable[px][py + 1] = true;
+                    switch (edge) {
+                    case Shared_West:
+                    case Shared_East:
+                        t0 = qMax<uint>(topA, topB);
+                        t1 = qMin<uint>(bottomA, bottomB);
+                        if (topA != topB)
+                            resultingPrimitives++;
+                        if (bottomA != bottomB)
+                            resultingPrimitives++;
+                        break;
+                    case Shared_North:
+                    case Shared_South:
+                        t0 = qMax<uint>(leftA, leftB);
+                        t1 = qMin<uint>(rightA, rightB);
+                        if (leftA != leftB)
+                            resultingPrimitives++;
+                        if (rightA != rightB)
+                            resultingPrimitives++;
+                        break;
+                    default:
+                        continue;
                     }
 
-                    if (bitfield & TILE_BLOCKS || bitfield & TILE_BLOCKS_LL) {
-                        image.setPixel(px + 2, py + 2, 0xFFFF0000);
-                        tileSector->walkable[px + 2][py + 2] = false;
-                    } else {
-                        tileSector->walkable[px + 2][py + 2] = true;
-                    }
-                    if (bitfield & TILE_BLOCKS || bitfield & TILE_BLOCKS_LM) {
-                        image.setPixel(px + 1, py + 2, 0xFFFF0000);
-                        tileSector->walkable[px + 1][py + 2] = false;
-                    } else {
-                        tileSector->walkable[px + 1][py + 2] = true;
-                    }
-                    if (bitfield & TILE_BLOCKS || bitfield & TILE_BLOCKS_LR) {
-                        image.setPixel(px, py + 2, 0xFFFF0000);
-                        tileSector->walkable[px][py + 2] = false;
-                    } else {
-                        tileSector->walkable[px][py + 2] = true;
-                    }
+                    uint maxArea = qMax(areaA, areaB);
 
-                    // Flyover
-                    if (bitfield & TILE_FLYOVER_UL) {
-                        image.setPixel(px + 2, py, image.pixel(px + 2, py) | 0xFF00FF00);
-                        tileSector->flyable[px + 2][py] = true;
-                    } else {
-                        tileSector->flyable[px + 2][py] = false;
-                    }
+                    if (resultingPrimitives == 1) {
+                        leftA = qMin(leftA, leftB);
+                        rightA = qMax(rightA, rightB);
+                        topA = qMin(topA, topB);
+                        bottomA = qMax(bottomA, bottomB);
 
-                    if (bitfield & TILE_FLYOVER_UM) {
-                        image.setPixel(px + 1, py,  image.pixel(px + 1, py) | 0xFF00FF00);
-                        tileSector->flyable[px + 1][py] = true;
-                    } else {
-                        tileSector->flyable[px + 1][py] = false;
-                    }
-                    if (bitfield & TILE_FLYOVER_UR) {
-                        image.setPixel(px, py,  image.pixel(px, py) | 0xFF00FF00);
-                        tileSector->flyable[px][py] = true;
-                    } else {
-                        tileSector->flyable[px][py] = false;
-                    }
+                        rectangles[i].setCoords(leftA, topA, rightA - 1, bottomA - 1);
+                        if (j < i)
+                            i--; // Also adjust i for the removed element if it's after j
+                        rectangles.removeAt(j--);
 
-                    if (bitfield & TILE_FLYOVER_ML) {
-                        image.setPixel(px + 2, py + 1,  image.pixel(px + 2, py + 1) | 0xFF00FF00);
-                        tileSector->flyable[px + 2][py + 1] = true;
-                    } else {
-                        tileSector->flyable[px + 2][py + 1] = false;
-                    }
+                        madeChanges = true;
+                    } else if (resultingPrimitives == 2) {
+                        if (edge == Shared_North || edge == Shared_South) {
+                            if (rightB < rightA || leftB > leftA)
+                                continue;
+                        } else if (edge == Shared_West || edge == Shared_East) {
+                            if (bottomB < bottomA || topB > topA)
+                                continue;
+                        }
 
-                    if (bitfield & TILE_FLYOVER_MM) {
-                        image.setPixel(px + 1, py + 1,  image.pixel(px + 1, py + 1) | 0xFF00FF00);
-                        tileSector->flyable[px + 1][py + 1] = true;
-                    } else {
-                        tileSector->flyable[px + 1][py + 1] = false;
-                    }
-                    if (bitfield & TILE_FLYOVER_MR) {
-                        image.setPixel(px, py + 1,  image.pixel(px, py + 1) | 0xFF00FF00);
-                        tileSector->flyable[px][py + 1] = true;
-                    } else {
-                        tileSector->flyable[px][py + 1] = false;
-                    }
+                        switch (edge) {
+                        case Shared_West:
+                        case Shared_East:
+                            if (topB == topA)
+                                topB = bottomA;
+                            else if (bottomB == bottomA)
+                                bottomB = topA;
+                            else
+                                qFatal("FAIL");
+                            break;
+                        case Shared_North:
+                        case Shared_South:
+                            if (leftB == leftA)
+                                leftB = rightA;
+                            else if (rightB == rightA)
+                                rightB = leftA;
+                            else
+                                qFatal("FAIL");
+                            break;
+                        }
 
-                    if (bitfield & TILE_FLYOVER_LL) {
-                        image.setPixel(px + 2, py + 2,  image.pixel(px + 2, py + 2) | 0xFF00FF00);
-                        tileSector->flyable[px + 2][py + 2] = true;
-                    } else {
-                        tileSector->flyable[px + 2][py + 2] = false;
-                    }
-                    if (bitfield & TILE_FLYOVER_LM) {
-                        image.setPixel(px + 1, py + 2,  image.pixel(px + 1, py + 2) | 0xFF00FF00);
-                        tileSector->flyable[px + 1][py + 2] = true;
-                    } else {
-                        tileSector->flyable[px + 1][py + 2] = false;
-                    }
-                    if (bitfield & TILE_FLYOVER_LR) {
-                        image.setPixel(px, py + 2,  image.pixel(px, py + 2) | 0xFF00FF00);
-                        tileSector->flyable[px][py + 2] = true;
-                    } else {
-                        tileSector->flyable[px][py + 2] = false;
+                        switch (edge) {
+                        case Shared_West:
+                            leftA = leftB;
+                            break;
+                        case Shared_East:
+                            rightA = rightB;
+                            break;
+                        case Shared_North:
+                            topA = topB;
+                            break;
+                        case Shared_South:
+                            bottomA = bottomB;
+                            break;
+                        }
+
+                        uint newAreaA = (rightA - leftA) * (bottomA - topA);
+                        uint newAreaB = (rightB - leftB) * (bottomB - topB);
+                        Q_ASSERT(newAreaA + newAreaB == areaA + areaB);
+
+                        // Heuristic: Only merge, if it improves the area of the greater of the two rectangles
+                        if (newAreaA > maxArea || newAreaB > maxArea) {
+                            rectangles[i].setCoords(leftA, topA, rightA - 1, bottomA - 1);
+                            rectangles[j].setCoords(leftB, topB, rightB - 1, bottomB - 1);
+                            madeChanges = true;
+                        }
+                    } else if (resultingPrimitives == 3) {
+                        // The edges of the additional rectangle
+                        uint leftC = 0, topC = 0, rightC = 0, bottomC = 0;
+
+                        // West/North-edge intersection are treated by the other rectangle
+                        if (edge == Shared_East) {
+                            if (bottomB < bottomA && topB < topA) {
+                                // Define new rectangle
+                                leftC = leftB;
+                                topC = topB;
+                                rightC = rightB;
+                                bottomC = topA;
+
+                                // Modify B
+                                topB = topA;
+                                leftB = leftA;
+
+                                // Modify A
+                                topA = bottomB;
+                            } else if (bottomB > bottomA && topB > topA) {
+                                // Define new rectangle
+                                leftC = leftB;
+                                rightC = rightB;
+                                bottomC = bottomB;
+                                topC = bottomA;
+
+                                // Modify B
+                                leftB = leftA;
+                                bottomB = bottomA;
+
+                                // Modify A
+                                bottomA = topB;
+                            } else if (bottomB < bottomA && topB > topA) {
+                                // Define new rectangle
+                                leftC = leftA;
+                                rightC = rightA;
+                                bottomC = bottomA;
+                                topC = bottomB;
+
+                                // Modify B
+                                leftB = leftA;
+
+                                // Modify A
+                                bottomA = topB;
+                            } else if (bottomB > bottomA && topB < topA) {
+                                // Define new rectangle
+                                leftC = leftB;
+                                rightC = rightB;
+                                bottomC = bottomB;
+                                topC = bottomA;
+
+                                // Modify B
+                                bottomB = topA;
+
+                                // Modify A
+                                rightA = rightB;
+                            }
+                        } else if (edge == Shared_South) {
+                            bool rightIn = rightB < rightA; // Right edge of B inside of A's slab
+                            bool leftIn = leftB > leftA; // Left edge of B inside of A's slab
+
+                            if (leftIn && !rightIn) {
+                                leftC = rightA;
+                                rightC = rightB;
+                                topC = topB;
+                                bottomC = bottomB;
+
+                                rightB = rightA;
+                                topB = topA;
+
+                                rightA = leftB;
+                            } else if (!leftIn && rightIn) {
+                                leftC = rightB;
+                                rightC = rightA;
+                                topC = topA;
+                                bottomC = bottomA;
+
+                                rightA = rightB;
+                                bottomA = bottomB;
+
+                                rightB = leftA;
+                            } else if (leftIn && rightIn) {
+                                leftC = rightB;
+                                topC = topA;
+                                rightC = rightA;
+                                bottomC = bottomA;
+
+                                rightA = leftB;
+                                topB = topA;
+                            } else if (!leftIn && !rightIn) {
+                                leftC = rightA;
+                                topC = topB;
+                                rightC = rightB;
+                                bottomC = bottomB;
+
+                                bottomA = bottomB;
+                                rightB = leftA;
+                            }
+                        }
+
+                        uint newAreaA = (rightA - leftA) * (bottomA - topA);
+                        uint newAreaB = (rightB - leftB) * (bottomB - topB);
+                        uint areaC = (rightC - leftC) * (bottomC - topC);
+                        Q_ASSERT(newAreaA + newAreaB + areaC == areaA + areaB);
+
+                        // Heuristic: Only merge, if it improves the area of the greater of the two rectangles
+                        if (newAreaA > maxArea || newAreaB > maxArea || areaC > maxArea) {
+                            rectangles[i].setCoords(leftA, topA, rightA - 1, bottomA - 1);
+                            rectangles[j].setCoords(leftB, topB, rightB - 1, bottomB - 1);
+
+                            QRect newRect;
+                            newRect.setCoords(leftC, topC, rightC - 1, bottomC - 1);
+                            rectangles.append(newRect);
+                            madeChanges = true;
+                        }
                     }
                 }
             }
-
-            // TODO: We could (or should) save the generated texture for further debugging here
         }
-
-        // Link sectors to neighbouring sectors
-        for (uint i = 0; i < count; ++i) {
-            TileSector *sector = sectors.data() + i;
-
-            sector->west = 0;
-            sector->north = 0;
-            sector->south = 0;
-            sector->east = 0;
-
-            for (uint j = 0; j < count; ++j) {
-                TileSector *other = sectors.data() + j;
-
-                if (other->origin.x() == sector->origin.x() - 192 && other->origin.y() == sector->origin.y())
-                    sector->west = other;
-                else if (other->origin.x() == sector->origin.x() + 192 && other->origin.y() == sector->origin.y())
-                    sector->east = other;
-                else if (other->origin.y() == sector->origin.y() - 192 && other->origin.x() == sector->origin.x())
-                    sector->north = other;
-                else if (other->origin.y() == sector->origin.y() + 192 && other->origin.x() == sector->origin.x())
-                    sector->south = other;
-            }
-        }
-
-        foreach (const Vector4 &startPosition, startPositions) {
-            findReachableTiles(startPosition, sectors);
-        }
-
-        d->findRectangles(sectors);
-
-        d->findPortals();
-
-        Q_ASSERT(d->validatePortals());
-
-        NavigationMesh *result = new NavigationMesh(d->rectangles, d->portals);
-        d->rectangles.clear();
-        d->portals.clear();
-        return result;
     }
 
-    void NavigationMeshBuilderData::findRectangles(QVector<TileSector> &sectors)
+    inline static bool WalkablePredicate(TileSector *sector, int x, int y)
     {
-        qDeleteAll(rectangles);
-        rectangles.clear();
+        return sector->walkable[x][y] && !sector->flyable[x][y];
+    }
+
+    inline static bool FlyablePredicate(TileSector *sector, int x, int y)
+    {
+        return sector->walkable[x][y] || sector->flyable[x][y];
+    }
+
+    inline static bool CoverPredicate(TileSector *sector, int x, int y)
+    {
+        return sector->cover[x][y];
+    }
+
+    template<uchar type>
+    inline static bool FootstepSoundPredicate(TileSector *sector, int x, int y)
+    {
+        return sector->reachable[x][y] && sector->sound[x][y] == type;
+    }
+
+    template<bool InclusionPredicate(TileSector*,int,int)>
+    static void findRectangles(QVector<TileSector> &sectors, QList<QRect> &rectangles)
+    {
+        // Reset the used flag for every tile
+        for (int i = 0; i < sectors.size(); ++i) {
+            TileSector *sector = sectors.data() + i;
+            memset(sector->used, 0, sizeof(sector->used));
+        }
 
         for (int si = 0; si < sectors.size(); ++si) {
             TileSector *sector = sectors.data() + si;
 
-            if (!sector->anyReachable) {
-                qDebug("Skipping sector %d,%d because it's not reachable from the start position.",
-                       sector->origin.x(), sector->origin.y());
-            }
-
-            qDebug("Processing sector %d,%d", sector->origin.x(), sector->origin.y());
-
-            QList<QRect> sectorPolygons;
+            QList<QRect> sectorRectangles;
             QRect rect;
 
             forever {
+                bool foundTile = false;
+
                 // Try to find an unprocessed tile
-                for (int x = 0; x < 192; ++x) {
-                    for (int y = 0; y < 192; ++y) {
-                        if (sector->reachable[x][y]
-                            && sector->walkable[x][y]
-                            && !sector->used[x][y]
-                            && !sector->flyable[x][y]) {
+                for (int x = 0; x < SectorSideLength; ++x) {
+                    for (int y = 0; y < SectorSideLength; ++y) {
+                        if (!sector->used[x][y] && InclusionPredicate(sector, x, y)) {
                             rect = QRect(x, y, 1, 1);
                             sector->used[x][y] = true;
-                            goto foundTile;
+                            foundTile = true;
+                            break;
                         }
                     }
+                    if (foundTile)
+                        break;
                 }
 
-                break; // Found no more tiles
-
-                foundTile:
+                if (!foundTile)
+                    break;
 
                 forever {
-
                     uint right = rect.x() + rect.width();
                     uint bottom = rect.y() + rect.height();
 
                     // Try expanding the rectangle by one in every direction
-                    while (right < 192) {
+                    while (right < SectorSideLength) {
                         bool expanded = true;
                         for (uint y = rect.top(); y < bottom; ++y) {
-                            if (sector->used[right][y] || !sector->walkable[right][y] || sector->flyable[right][y]) {
+                            if (sector->used[right][y] || !InclusionPredicate(sector, right, y)) {
                                 expanded = false;
                                 break;
                             }
@@ -575,10 +656,10 @@ namespace EvilTemple {
                         }
                     }
 
-                    while (bottom < 192) {
+                    while (bottom < SectorSideLength) {
                         bool expanded = true;
                         for (uint x = rect.left(); x < right; ++x) {
-                            if (sector->used[x][bottom] || !sector->walkable[x][bottom] || sector->flyable[x][bottom]) {
+                            if (sector->used[x][bottom] || !InclusionPredicate(sector, x, bottom)) {
                                 expanded = false;
                                 break;
                             }
@@ -599,289 +680,23 @@ namespace EvilTemple {
                     break; // No further expansion was possible
                 }
 
-                sectorPolygons.append(rect);
+                int sectorX = sector->origin.x();
+                int sectorY = sector->origin.y();
+                sectorRectangles.append(QRect(sectorX + rect.x(), sectorY + rect.y(), rect.width(), rect.height()));
             }
 
-            bool madeChanges = true;
-            int iteration = 0;
+            // 1st merge on local sectors
+            mergeRectangles(sectorRectangles);
 
-            // Second-pass tries to unify more sector polygons
-            for (iteration = 0; (iteration < 1000) && madeChanges; ++iteration) {
-                madeChanges = false;
-
-                for (int i = 0; i < sectorPolygons.size(); ++i) {
-                    for (int j = 0; j < sectorPolygons.size(); ++j) {
-                        if(i == j)
-                            continue;
-
-                        const QRect &a = sectorPolygons[i];
-                        uint leftA = a.x();
-                        uint topA = a.y();
-                        uint rightA = leftA + a.width();
-                        uint bottomA = topA + a.height();
-
-                        uint areaA = (rightA - leftA) * (bottomA - topA);
-
-                        const QRect &b = sectorPolygons[j];
-                        uint leftB = b.x();
-                        uint topB = b.y();
-                        uint rightB = leftB + b.width();
-                        uint bottomB = topB + b.height();
-
-                        uint areaB = (rightB - leftB) * (bottomB - topB);
-
-                        // Only consider merging, if the two polygons share an edge
-                        SharedEdge edge = getSharedEdge(leftA, topA, rightA, bottomA,
-                                                        leftB, topB, rightB, bottomB);
-
-                        uint t0, t1;
-
-                        uint resultingPrimitives = 1;
-
-                        switch (edge) {
-                        case Shared_West:
-                        case Shared_East:
-                            t0 = qMax<uint>(topA, topB);
-                            t1 = qMin<uint>(bottomA, bottomB);
-                            if (topA != topB)
-                                resultingPrimitives++;
-                            if (bottomA != bottomB)
-                                resultingPrimitives++;
-                            break;
-                        case Shared_North:
-                        case Shared_South:
-                            t0 = qMax<uint>(leftA, leftB);
-                            t1 = qMin<uint>(rightA, rightB);
-                            if (leftA != leftB)
-                                resultingPrimitives++;
-                            if (rightA != rightB)
-                                resultingPrimitives++;
-                            break;
-                        default:
-                            continue;
-                        }
-
-                        uint maxArea = qMax(areaA, areaB);
-
-                        if (resultingPrimitives == 1) {
-                            leftA = qMin(leftA, leftB);
-                            rightA = qMax(rightA, rightB);
-                            topA = qMin(topA, topB);
-                            bottomA = qMax(bottomA, bottomB);
-
-                            sectorPolygons[i].setCoords(leftA, topA, rightA - 1, bottomA - 1);
-                            if (j < i)
-                                i--; // Also adjust i for the removed element if it's after j
-                            sectorPolygons.removeAt(j--);
-
-                            madeChanges = true;
-                        } else if (resultingPrimitives == 2) {
-                            if (edge == Shared_North || edge == Shared_South) {
-                                if (rightB < rightA || leftB > leftA)
-                                    continue;
-                            } else if (edge == Shared_West || edge == Shared_East) {
-                                if (bottomB < bottomA || topB > topA)
-                                    continue;
-                            }
-
-                            switch (edge) {
-                            case Shared_West:
-                                leftA = leftB;
-                                if (topB == topA)
-                                    topB = bottomA;
-                                else if (bottomA == bottomB)
-                                    bottomB = topA;
-                                else
-                                    qFatal("FAIL");
-                                break;
-                            case Shared_East:
-                                rightA = rightB;
-                                if (topB == topA)
-                                    topB = bottomA;
-                                else if (bottomB == bottomA)
-                                    bottomB = topA;
-                                else
-                                    qFatal("FAIL");
-                                break;
-                            case Shared_North:
-                                topA = topB;
-                                if (leftB == leftA)
-                                    leftB = rightA;
-                                else if (rightB == rightA)
-                                    rightB = leftA;
-                                else
-                                    qFatal("FAIL");
-                                break;
-                            case Shared_South:
-                                bottomA = bottomB;
-                                if (leftB == leftA)
-                                    leftB = rightA;
-                                else if (rightB == rightA)
-                                    rightB = leftA;
-                                else
-                                    qFatal("FAIL");
-                                break;
-                            }
-
-                            uint newAreaA = (rightA - leftA) * (bottomA - topA);
-                            uint newAreaB = (rightB - leftB) * (bottomB - topB);
-                            Q_ASSERT(newAreaA + newAreaB == areaA + areaB);
-
-                            // Heuristic: Only merge, if it improves the area of the greater of the two rectangles
-                            if (newAreaA > maxArea || newAreaB > maxArea) {
-                                sectorPolygons[i].setCoords(leftA, topA, rightA - 1, bottomA - 1);
-                                sectorPolygons[j].setCoords(leftB, topB, rightB - 1, bottomB - 1);
-                                madeChanges = true;
-                            }
-                        } else if (resultingPrimitives == 3) {
-                            // The edges of the additional rectangle
-                            uint leftC = 0, topC = 0, rightC = 0, bottomC = 0;
-
-                            // West/North-edge intersection are treated by the other rectangle
-                            if (edge == Shared_East) {
-                                if (bottomB < bottomA && topB < topA) {
-                                    // Define new rectangle
-                                    leftC = leftB;
-                                    topC = topB;
-                                    rightC = rightB;
-                                    bottomC = topA;
-
-                                    // Modify B
-                                    topB = topA;
-                                    leftB = leftA;
-
-                                    // Modify A
-                                    topA = bottomB;
-                                } else if (bottomB > bottomA && topB > topA) {
-                                    // Define new rectangle
-                                    leftC = leftB;
-                                    rightC = rightB;
-                                    bottomC = bottomB;
-                                    topC = bottomA;
-
-                                    // Modify B
-                                    leftB = leftA;
-                                    bottomB = bottomA;
-
-                                    // Modify A
-                                    bottomA = topB;
-                                } else if (bottomB < bottomA && topB > topA) {
-                                    // Define new rectangle
-                                    leftC = leftA;
-                                    rightC = rightA;
-                                    bottomC = bottomA;
-                                    topC = bottomB;
-
-                                    // Modify B
-                                    leftB = leftA;
-
-                                    // Modify A
-                                    bottomA = topB;
-                                } else if (bottomB > bottomA && topB < topA) {
-                                    // Define new rectangle
-                                    leftC = leftB;
-                                    rightC = rightB;
-                                    bottomC = bottomB;
-                                    topC = bottomA;
-
-                                    // Modify B
-                                    bottomB = topA;
-
-                                    // Modify A
-                                    rightA = rightB;
-                                }
-                            } else if (edge == Shared_South) {
-                                bool rightIn = rightB < rightA; // Right edge of B inside of A's slab
-                                bool leftIn = leftB > leftA; // Left edge of B inside of A's slab
-
-                                if (leftIn && !rightIn) {
-                                    leftC = rightA;
-                                    rightC = rightB;
-                                    topC = topB;
-                                    bottomC = bottomB;
-
-                                    rightB = rightA;
-                                    topB = topA;
-
-                                    rightA = leftB;
-                                } else if (!leftIn && rightIn) {
-                                    leftC = rightB;
-                                    rightC = rightA;
-                                    topC = topA;
-                                    bottomC = bottomA;
-
-                                    rightA = rightB;
-                                    bottomA = bottomB;
-
-                                    rightB = leftA;
-                                } else if (leftIn && rightIn) {
-                                    leftC = rightB;
-                                    topC = topA;
-                                    rightC = rightA;
-                                    bottomC = bottomA;
-
-                                    rightA = leftB;
-                                    topB = topA;
-                                } else if (!leftIn && !rightIn) {
-                                    leftC = rightA;
-                                    topC = topB;
-                                    rightC = rightB;
-                                    bottomC = bottomB;
-
-                                    bottomA = bottomB;
-                                    rightB = leftA;
-                                }
-                            }
-
-                            uint newAreaA = (rightA - leftA) * (bottomA - topA);
-                            uint newAreaB = (rightB - leftB) * (bottomB - topB);
-                            uint areaC = (rightC - leftC) * (bottomC - topC);
-                            Q_ASSERT(newAreaA + newAreaB + areaC == areaA + areaB);
-
-                            // Heuristic: Only merge, if it improves the area of the greater of the two rectangles
-                            if (newAreaA > maxArea || newAreaB > maxArea || areaC > maxArea) {
-                                sectorPolygons[i].setCoords(leftA, topA, rightA - 1, bottomA - 1);
-                                sectorPolygons[j].setCoords(leftB, topB, rightB - 1, bottomB - 1);
-
-                                QRect newRect;
-                                newRect.setCoords(leftC, topC, rightC - 1, bottomC - 1);
-                                sectorPolygons.append(newRect);
-                                madeChanges = true;
-                            }
-                        }
-                    }
-                }
-            }
-
-            qDebug("Stopped iterating after %d iterations.", iteration);
-
-            foreach (const QRect &sectorRect, sectorPolygons) {
-                uint sectorX = sector->origin.x();
-                uint sectorY = sector->origin.y();
-
-                NavMeshRect *rect = new NavMeshRect;
-                rect->left = (sectorX + sectorRect.left()) * (PixelPerWorldTile / 3);
-                rect->right = (sectorX + sectorRect.right() + 1) * (PixelPerWorldTile / 3);
-                rect->top = (sectorY + sectorRect.top()) * (PixelPerWorldTile / 3);
-                rect->bottom = (sectorY + sectorRect.bottom() + 1) * (PixelPerWorldTile / 3);
-
-                rect->topLeft = Vector4(rect->left, 0, rect->top, 1);
-                rect->bottomRight = Vector4(rect->right, 0, rect->bottom, 1);
-
-                rect->center = 0.5f * (rect->topLeft + rect->bottomRight);
-                rect->center.setW(1);
-
-                rectangles.append(rect);
-            }
+            rectangles.append(sectorRectangles);
         }
+
+        // 2nd merge on all rectangles
+        mergeRectangles(rectangles);
     }
 
-    void NavigationMeshBuilderData::findPortals()
+    static void findPortals(QList<NavMeshRect*> &rectangles, QList<NavMeshPortal*> &portals)
     {
-        // The rather involved process of finding neighbouring rectangles
-        qDeleteAll(portals);
-        portals.clear();
-
         for (int i = 0; i < rectangles.size(); ++i) {
             NavMeshRect *rect = rectangles.at(i);
 
@@ -951,7 +766,7 @@ namespace EvilTemple {
         }
     }
 
-    bool NavigationMeshBuilderData::validatePortals()
+    bool validatePortals(const QList<NavMeshRect*> &rectangles, const QList<NavMeshPortal*> &portals)
     {
         bool result = true;
 
@@ -1017,6 +832,222 @@ namespace EvilTemple {
             }
         }
 
+        return result;
+    }
+
+    template<bool InclusionPredicate(TileSector*,int,int)>
+    static void findNavRectangles(QVector<TileSector> &sectors, QList<NavMeshRect*> &rectangles)
+    {
+        QList<QRect> geometricRectangles;
+
+        findRectangles<InclusionPredicate>(sectors, geometricRectangles);
+
+        foreach (const QRect &tileRect, geometricRectangles) {
+            NavMeshRect *rect = new NavMeshRect;
+            rect->left = tileRect.left() * (PixelPerWorldTile / 3);
+            rect->right = (tileRect.right() + 1) * (PixelPerWorldTile / 3);
+            rect->top = tileRect.top() * (PixelPerWorldTile / 3);
+            rect->bottom = (tileRect.bottom() + 1) * (PixelPerWorldTile / 3);
+
+            rect->topLeft = Vector4(rect->left, 0, rect->top, 1);
+            rect->bottomRight = Vector4(rect->right, 0, rect->bottom, 1);
+
+            rect->center = 0.5f * (rect->topLeft + rect->bottomRight);
+            rect->center.setW(1);
+
+            rectangles.append(rect);
+        }
+    }
+
+    template<const uchar type>
+    static void buildSoundRegions(QVector<TileSector> &sectors, RegionLayer &layer, const char *tag)
+    {
+        QList<QRect> rectangles;
+
+        findRectangles< FootstepSoundPredicate<type> >(sectors, rectangles);
+
+        foreach (const QRect &rect, rectangles) {
+            uint left = rect.left() * (PixelPerWorldTile / 3);
+            uint right = (rect.right() + 1) * (PixelPerWorldTile / 3);
+            uint top = rect.top() * (PixelPerWorldTile / 3);
+            uint bottom = (rect.bottom() + 1) * (PixelPerWorldTile / 3);
+
+            TaggedRegion region;
+            region.topLeft = Vector4(left, 0, top, 1);
+            region.bottomRight = Vector4(right, 0, bottom, 1);
+
+            region.center = 0.5f * (region.topLeft + region.bottomRight);
+            region.center.setW(1);
+
+            region.tag = QVariant(QString::fromLatin1(tag));
+
+            layer.append(region);
+        }
+    }
+
+    static void buildSoundLayer(QVector<TileSector> &sectors, RegionLayer &layer)
+    {
+        buildSoundRegions<2>(sectors, layer, "dirt");
+        buildSoundRegions<3>(sectors, layer, "grass");
+        buildSoundRegions<4>(sectors, layer, "water");
+        buildSoundRegions<5>(sectors, layer, "deepWater");
+        buildSoundRegions<6>(sectors, layer, "ice");
+        buildSoundRegions<7>(sectors, layer, "fire");
+        buildSoundRegions<8>(sectors, layer, "wood");
+        buildSoundRegions<9>(sectors, layer, "stone");
+        buildSoundRegions<10>(sectors, layer, "metal");
+        buildSoundRegions<11>(sectors, layer, "marsh");
+    }
+
+    bool NavigationMeshBuilder::build(const QString &filename, const QVector<Vector4> &startPositions)
+    {
+        QFile file(filename);
+
+        if (!file.open(QIODevice::ReadOnly)) {
+            return false;
+        }
+
+        QDataStream stream(&file);
+        stream.setByteOrder(QDataStream::LittleEndian);
+        stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
+
+        uint count;
+        stream >> count;
+
+        if (count == 0) {
+            d->walkableMesh.reset(new NavigationMesh);
+            d->flyableMesh.reset(new NavigationMesh);
+            return true;
+        }
+
+        uint secX, secY;
+
+        QVector<TileSector> sectors;
+        sectors.resize(count);
+
+        for (uint i = 0; i < count; ++i) {
+            TileSector *sector = sectors.data() + i;
+            memset(sector->visited, 0, sizeof(sector->visited));
+            memset(sector->used, 0, sizeof(sector->used));
+
+            stream >> secY >> secX;
+
+            sector->origin = QPoint(secX * SectorSideLength, secY * SectorSideLength);
+
+            QImage image(256, 256, QImage::Format_RGB32);
+            image.fill(0);
+
+            uchar footstepSound;
+            uint bitfield;
+
+            for (int y = 0; y < 64; ++y) {
+                for (int x = 0; x < 64; ++x) {
+                    stream >> footstepSound >> bitfield;
+
+                    int px = x * 3;
+                    int py = y * 3;
+
+                    // Extract information about walkable tiles from the bitfield
+                    markWalkable<TILE_BLOCKS_UL>(px    , py    , image, sector, bitfield);
+                    markWalkable<TILE_BLOCKS_UM>(px + 1, py    , image, sector, bitfield);
+                    markWalkable<TILE_BLOCKS_UR>(px + 2, py    , image, sector, bitfield);
+                    markWalkable<TILE_BLOCKS_ML>(px    , py + 1, image, sector, bitfield);
+                    markWalkable<TILE_BLOCKS_MM>(px + 1, py + 1, image, sector, bitfield);
+                    markWalkable<TILE_BLOCKS_MR>(px + 2, py + 1, image, sector, bitfield);
+                    markWalkable<TILE_BLOCKS_LL>(px    , py + 2, image, sector, bitfield);
+                    markWalkable<TILE_BLOCKS_LM>(px + 1, py + 2, image, sector, bitfield);
+                    markWalkable<TILE_BLOCKS_LR>(px + 2, py + 2, image, sector, bitfield);
+
+                    // Flyover
+                    markFlyable<TILE_FLYOVER_UL>(px    , py    , image, sector, bitfield);
+                    markFlyable<TILE_FLYOVER_UM>(px + 1, py    , image, sector, bitfield);
+                    markFlyable<TILE_FLYOVER_UR>(px + 2, py    , image, sector, bitfield);
+                    markFlyable<TILE_FLYOVER_ML>(px    , py + 1, image, sector, bitfield);
+                    markFlyable<TILE_FLYOVER_MM>(px + 1, py + 1, image, sector, bitfield);
+                    markFlyable<TILE_FLYOVER_MR>(px + 2, py + 1, image, sector, bitfield);
+                    markFlyable<TILE_FLYOVER_LL>(px    , py + 2, image, sector, bitfield);
+                    markFlyable<TILE_FLYOVER_LM>(px + 1, py + 2, image, sector, bitfield);
+                    markFlyable<TILE_FLYOVER_LR>(px + 2, py + 2, image, sector, bitfield);
+
+                    for (int tx = px; tx < px + 3; ++tx) {
+                        for (int ty = py; ty < py + 3; ++ty) {
+                            sector->sound[tx][ty] = footstepSound;
+                        }
+                    }
+                }
+            }
+
+            // TODO: We could (or should) save the generated texture for further debugging here
+        }
+
+        // Link sectors to neighbouring sectors
+        for (uint i = 0; i < count; ++i) {
+            TileSector *sector = sectors.data() + i;
+
+            sector->west = 0;
+            sector->north = 0;
+            sector->south = 0;
+            sector->east = 0;
+
+            for (uint j = 0; j < count; ++j) {
+                TileSector *other = sectors.data() + j;
+
+                if (other->origin.x() == sector->origin.x() - SectorSideLength && other->origin.y() == sector->origin.y())
+                    sector->west = other;
+                else if (other->origin.x() == sector->origin.x() + SectorSideLength && other->origin.y() == sector->origin.y())
+                    sector->east = other;
+                else if (other->origin.y() == sector->origin.y() - SectorSideLength && other->origin.x() == sector->origin.x())
+                    sector->north = other;
+                else if (other->origin.y() == sector->origin.y() + SectorSideLength && other->origin.x() == sector->origin.x())
+                    sector->south = other;
+            }
+        }
+
+        foreach (const Vector4 &startPosition, startPositions) {
+            findReachableTiles(startPosition, sectors);
+        }
+
+        makeUnreachableTilesBlocking(sectors);
+
+        QList<NavMeshRect*> rectangles;
+        findNavRectangles<WalkablePredicate>(sectors, rectangles);
+
+        QList<NavMeshPortal*> portals;
+        findPortals(rectangles, portals);
+
+        Q_ASSERT(validatePortals(rectangles, portals));
+
+        d->walkableMesh.reset(new NavigationMesh(rectangles, portals));
+
+        rectangles.clear();
+        portals.clear();
+        findNavRectangles<FlyablePredicate>(sectors, rectangles);
+        findPortals(rectangles, portals);
+        Q_ASSERT(validatePortals(rectangles, portals));
+        d->flyableMesh.reset(new NavigationMesh(rectangles, portals));
+
+        RegionLayer soundLayer;
+        buildSoundLayer(sectors, soundLayer);
+
+        d->regionLayers["groundMaterial"] = soundLayer;
+
+        return true;
+    }
+
+    NavigationMesh *NavigationMeshBuilder::takeWalkableMesh() const
+    {
+        return d->walkableMesh.take();
+    }
+
+    NavigationMesh *NavigationMeshBuilder::takeFlyableMesh() const
+    {
+        return d->flyableMesh.take();
+    }
+
+    RegionLayers NavigationMeshBuilder::takeRegionLayers() const
+    {
+        RegionLayers result = d->regionLayers;
+        d->regionLayers.clear();
         return result;
     }
 

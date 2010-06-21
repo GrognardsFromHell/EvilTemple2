@@ -6,6 +6,7 @@
 
 #include <QtCore/QString>
 #include <QtCore/QSharedPointer>
+#include <QtCore/QScopedArrayPointer>
 #include <QtCore/QMap>
 #include <QtCore/QDataStream>
 
@@ -22,7 +23,7 @@ namespace EvilTemple {
 
     struct FaceGroup {
         MaterialState *material;
-        int placeholderId; // If this face group is connected to a placeholder 
+        int placeholderId; // If this face group is connected to a placeholder
         // slot, this is the index pointing to it, otherwise it's -1
         uint elementCount;
         GLuint buffer;
@@ -149,14 +150,14 @@ In addition, we could just point to the full transform matrix instead, further s
 
         return inverse * a + opposite * b;
 
-	// TODO: Try to use SLERP here, but also account for direction like this NLERP implementation
+        // TODO: Try to use SLERP here, but also account for direction like this NLERP implementation
         /*float dot = a.dot(b);
-	Quaternion result;
+        Quaternion result;
 
-	if (dot >= 0) {
-		result = (1 - t) * a + t * b;
-	} else {
-		result = (1 - t) * a - t * b;
+        if (dot >= 0) {
+                result = (1 - t) * a + t * b;
+        } else {
+                result = (1 - t) * a - t * b;
         }
 
         result.normalize();
@@ -168,18 +169,18 @@ In addition, we could just point to the full transform matrix instead, further s
         template<typename _T, typename _FT>
         friend inline QDataStream &operator >>(QDataStream &stream, KeyframeStream<_T,_FT> &keyframeStream);
     public:
-	KeyframeStream() : mFrameStream(0), mValueStream(0), mSize(0)
-	{
-	}
+        KeyframeStream() : mFrameStream(0), mValueStream(0), mSize(0)
+        {
+        }
 
-	~KeyframeStream()
-	{
+        ~KeyframeStream()
+        {
             delete [] mFrameStream;
             delete [] mValueStream;
-	}
+        }
 
         inline T interpolate(FT frame, FT totalFrames) const
-	{
+        {
             Q_ASSERT(mSize > 0);
 
             if (mSize == 1)
@@ -203,40 +204,40 @@ In addition, we could just point to the full transform matrix instead, further s
             }
 
             /*
-			return mValueStream[mSize - 1];
-			No visual difference was perceived between clamping (the line above) and interpolating
-			back to the starting frame. So we interpolate back to the starting frame if we're behind
-			the last keyframe.
-		*/
+                        return mValueStream[mSize - 1];
+                        No visual difference was perceived between clamping (the line above) and interpolating
+                        back to the starting frame. So we interpolate back to the starting frame if we're behind
+                        the last keyframe.
+                */
 
             // Interpolate between the last and first frame (TODO: is this really a good idea?)
             FT lastKeyFrame = mFrameStream[mSize - 1];
             float delta = (frame - lastKeyFrame) / (float)(totalFrames - lastKeyFrame);
             return lerp<T>(mValueStream[mSize - 1], mValueStream[0], delta);
-	}	
+        }
 
     private:
-	FT mSize;
-	FT* mFrameStream;
-	T* mValueStream;
+        FT mSize;
+        FT* mFrameStream;
+        T* mValueStream;
 
-	Q_DISABLE_COPY(KeyframeStream);
+        Q_DISABLE_COPY(KeyframeStream);
     };
 
     template<typename T, typename FT>
     inline QDataStream &operator >>(QDataStream &stream, KeyframeStream<T,FT> &keyframeStream)
     {
-	uint size;
-	stream >> size;
-	keyframeStream.mSize = size;
-	keyframeStream.mFrameStream = new FT[size];
-	keyframeStream.mValueStream = new T[size];
+        uint size;
+        stream >> size;
+        keyframeStream.mSize = size;
+        keyframeStream.mFrameStream = new FT[size];
+        keyframeStream.mValueStream = new T[size];
 
-	for (int i = 0; i < size; ++i) {
+        for (int i = 0; i < size; ++i) {
             stream >> keyframeStream.mFrameStream[i] >> keyframeStream.mValueStream[i];
-	}
+        }
 
-	return stream;
+        return stream;
     }
 
     /**
@@ -246,27 +247,27 @@ In addition, we could just point to the full transform matrix instead, further s
     {
         friend QDataStream &operator >>(QDataStream &stream, AnimationBone &bone);
     public:
-	AnimationBone()
-	{
-	}
+        AnimationBone()
+        {
+        }
 
-	Matrix4 getTransform(ushort frame, ushort totalFrames) const;
-	
+        Matrix4 getTransform(ushort frame, ushort totalFrames) const;
+
     private:
-	KeyframeStream<Quaternion> rotationStream;
-	KeyframeStream<Vector4> scaleStream;
-	KeyframeStream<Vector4> translationStream;
+        KeyframeStream<Quaternion> rotationStream;
+        KeyframeStream<Vector4> scaleStream;
+        KeyframeStream<Vector4> translationStream;
 
-	Q_DISABLE_COPY(AnimationBone);
+        Q_DISABLE_COPY(AnimationBone);
     };
 
     inline Matrix4 AnimationBone::getTransform(ushort frame, ushort totalFrames) const
     {
-	Quaternion rotation = rotationStream.interpolate(frame, totalFrames);
-	Vector4 scale = scaleStream.interpolate(frame, totalFrames);
-	Vector4 translation = translationStream.interpolate(frame, totalFrames);
+        Quaternion rotation = rotationStream.interpolate(frame, totalFrames);
+        Vector4 scale = scaleStream.interpolate(frame, totalFrames);
+        Vector4 translation = translationStream.interpolate(frame, totalFrames);
 
-	return Matrix4::transformation(scale, rotation, translation);
+        return Matrix4::transformation(scale, rotation, translation);
     }
 
     /**
@@ -291,7 +292,7 @@ In addition, we could just point to the full transform matrix instead, further s
             Rotation,
             DriveType_ForceDWord = 0x7fffffff
                                };
-	
+
         /**
      Type of the container that maps bone ids to their respective animated state.
      */
@@ -363,7 +364,7 @@ In addition, we could just point to the full transform matrix instead, further s
 
     inline const Animation::BoneMap &Animation::animationBones() const
     {
-	return mAnimationBonesMap;
+        return mAnimationBonesMap;
     }
 
     /**
@@ -383,10 +384,10 @@ A bone for skeletal animation
      */
         const QString &name() const;
 
-	/**
-		Id of this bone.
+        /**
+                Id of this bone.
       */
-	uint boneId() const;
+        uint boneId() const;
 
         /**
      * Returns the parent of this bone. NULL if this bone has no parent.
@@ -404,7 +405,7 @@ A bone for skeletal animation
      */
         const Matrix4 &relativeWorld() const;
 
-	void setBoneId(uint id);
+        void setBoneId(uint id);
 
         void setName(const QString &name);
 
@@ -415,7 +416,7 @@ A bone for skeletal animation
         void setRelativeWorld(const Matrix4 &relativeWorld);
 
     private:
-	uint mBoneId;
+        uint mBoneId;
         QString mName;
         const Bone *mParent; // Undeletable ref to parent
         Matrix4 mFullWorldInverse;
@@ -424,7 +425,7 @@ A bone for skeletal animation
 
     inline uint Bone::boneId() const
     {
-	return mBoneId;
+        return mBoneId;
     }
 
     inline const QString &Bone::name() const
@@ -449,7 +450,7 @@ A bone for skeletal animation
 
     inline void Bone::setBoneId(uint id)
     {
-	mBoneId = id;
+        mBoneId = id;
     }
 
     inline void Bone::setName(const QString &name)
@@ -600,7 +601,7 @@ A bone for skeletal animation
 
     inline const QVector<Bone> &Model::bones() const
     {
-	return mBones;
+        return mBones;
     }
 
     typedef QSharedPointer<Model> SharedModel;

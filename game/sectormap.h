@@ -26,10 +26,14 @@ public:
     const Box3d &boundingBox();
 
     void setNavigationMesh(const SharedNavigationMesh &navigationMesh);
+
+    void setLayer(const RegionLayer &layer);
 private:
     void buildBuffers();
 
     SharedNavigationMesh mNavigationMesh;
+
+    RegionLayer mLayer;
 
     bool mBuffersInvalid;
     QGLBuffer mVertexBuffer;
@@ -39,6 +43,11 @@ private:
 
     Box3d mBoundingBox;
 };
+
+inline void Sector::setLayer(const RegionLayer &layer)
+{
+    mLayer = layer;
+}
 
 class SectorMap : public QObject
 {
@@ -53,6 +62,8 @@ public slots:
     QVector<Vector4> findPath(const Vector4 &start, const Vector4 &end) const;
 
     bool hasLineOfSight(const Vector4 &from, const Vector4 &to) const;
+
+    QVariant regionTag(const QString &layer, const Vector4 &at) const;
 
 private:
     QScopedPointer<SectorMapData> d;

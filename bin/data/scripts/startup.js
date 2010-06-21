@@ -99,21 +99,21 @@ var BaseObject = {
             mobileInfoDialog.closeClicked.connect(function() {
                 mobileInfoDialog.deleteLater();
             });
-            
+
             mobileInfoDialog.openAnimations.connect(function() {
                 openAnimations(modelInstance);
             });
-            
-            mobileInfoDialog.hasInventory = (obj.content !== undefined && obj.content.length > 0);            
-            mobileInfoDialog.openInventory.connect(function() {				           
+
+            mobileInfoDialog.hasInventory = (obj.content !== undefined && obj.content.length > 0);
+            mobileInfoDialog.openInventory.connect(function() {
                 if (obj.content !== undefined && obj.content.length > 0) {
-                    var inventoryDialog = gameView.addGuiItem("interface/Inventory.qml");	
+                    var inventoryDialog = gameView.addGuiItem("interface/Inventory.qml");
 
                     var gold = 0;
                     var silver = 0;
                     var copper = 0;
                     var platinum = 0;
-                    
+
                     var objects = [];
                     for (var i = 0; i < obj.content.length; ++i) {
                         var item = obj.content[i];
@@ -146,7 +146,7 @@ var BaseObject = {
                             default:
                                     print("Unknown money prototype: " + item.prototype);
                                 break;
-                            }						
+                            }
                             continue; // Don't show money in the inventory
                         }
 
@@ -182,7 +182,7 @@ var BaseObject = {
                 } else {
                     print("Object has no contents. Skipping.");
                 }
-            });		
+            });
         });
     }
 };
@@ -281,10 +281,11 @@ function setupWorldClickHandler() {
     gameView.worldClicked.connect(function(worldPosition) {
         var color;
 
+        var material = gameView.sectorMap.regionTag("footsteps", worldPosition);
+
         if (firstClick === undefined) {
-            gameView.scene.addTextOverlay(worldPosition, "1st @ " + Math.floor(worldPosition.x) + ","
-                                                                + Math.floor(worldPosition.z),
-                                                               new Vector4(0.9, 0.9, 0.9, 0.9));
+            var text = "1st @ " + Math.floor(worldPosition.x) + "," + Math.floor(worldPosition.z) + " (" + material + ")";
+            gameView.scene.addTextOverlay(worldPosition, text, new Vector4(0.9, 0.9, 0.9, 0.9));
             firstClick = worldPosition;
         } else {
             var inLos = gameView.sectorMap.hasLineOfSight(firstClick, worldPosition);
@@ -294,9 +295,8 @@ function setupWorldClickHandler() {
                 color = new Vector4(0.9, 0.2, 0.2, 0.9);
             }
 
-            gameView.scene.addTextOverlay(worldPosition, "2nd @ " + Math.floor(worldPosition.x) + ","
-                                                                + Math.floor(worldPosition.z),
-                                                               color);
+            var text = "2nd @ " + Math.floor(worldPosition.x) + "," + Math.floor(worldPosition.z) + " (" + material + ")";
+            gameView.scene.addTextOverlay(worldPosition, text, color);
 
             var path = gameView.sectorMap.findPath(firstClick, worldPosition);
 
@@ -353,6 +353,36 @@ var animEventGameFacade = {
     }
 };
 
+var footstepSounds = {
+    'dirt': ['sound/footstep_dirt1.wav', 'sound/footstep_dirt2.wav', 'sound/footstep_dirt3.wav', 'sound/footstep_dirt4.wav'],
+    'sand': ['sound/footstep_sand1.wav', 'sound/footstep_sand2.wav', 'sound/footstep_sand3.wav', 'sound/footstep_sand4.wav'],
+    'ice': ['sound/footstep_snow1.wav', 'sound/footstep_snow2.wav', 'sound/footstep_snow3.wav', 'sound/footstep_snow4.wav'],
+    'stone': ['sound/footstep_stone1.wav', 'sound/footstep_stone2.wav', 'sound/footstep_stone3.wav', 'sound/footstep_stone4.wav'],
+    'water': ['sound/footstep_water1.wav', 'sound/footstep_water2.wav', 'sound/footstep_water3.wav', 'sound/footstep_water4.wav'],
+    'wood': ['sound/footstep_wood1.wav', 'sound/footstep_wood2.wav', 'sound/footstep_wood3.wav', 'sound/footstep_wood4.wav']
+};
+
+var animEventAnimObjFacade = {
+    footstep: function() {
+        // TODO: Should we use Bip01 Footsteps bone here?
+        var material = gameView.sectorMap.regionTag("groundMaterial", this.sceneNode.position);
+
+        if (material === undefined)
+            return;
+
+        var sounds = footstepSounds[material];
+
+        if (sounds === undefined) {
+            print("Unknown material-type: " + material);
+            return;
+        }
+
+        var sound = sounds[Math.floor(Math.random() * sounds.length)];
+
+        gameView.audioEngine.playSoundOnce(sound, SoundCategory_Effect);
+    }
+};
+
 function handleAnimationEvent(sceneNode, modelInstance, obj, type, content)
 {
     var game = animEventGameFacade;
@@ -362,6 +392,7 @@ function handleAnimationEvent(sceneNode, modelInstance, obj, type, content)
         modelInstance: modelInstance,
         obj: obj
     };
+    anim_obj.__proto__ = animEventAnimObjFacade;
 
     /*
         Python one-liners are in general valid javascript, so we directly evaluate them here.

@@ -90,7 +90,7 @@ private:
 
 class ClippingGeometryInstance : public Renderable, public BufferSource, public DrawStrategy {
 public:
-    
+
     void render(RenderStates &renderStates)
     {
         DrawHelper<ClippingGeometryInstance,ClippingGeometryInstance> drawHelper;
@@ -101,7 +101,7 @@ public:
     {
         return mMesh->boundingBox();
     }
-    
+
     void setMesh(const ClippingGeometryMesh *mesh) {
         mMesh = mesh;
     }
@@ -142,7 +142,7 @@ class ClippingGeometryData
 public:
 
     ClippingGeometryData(RenderStates &renderStates)
-        : mMeshCount(0), mInstanceCount(0), mRenderStates(renderStates) {
+        : mMeshCount(0), mInstanceCount(0), mRenderStates(renderStates), mMeshes((ClippingGeometryMesh*)0) {
 
         QFile clippingMaterialFile(":/material/clipping_material.xml");
 
@@ -210,8 +210,8 @@ public:
         float scale;
         float rotation;
         int meshIndex;
-        
-        for (int i = 0; i < mInstanceCount; ++i) {            
+
+        for (int i = 0; i < mInstanceCount; ++i) {
             stream >> position >> rotation >> scale >> meshIndex;
 
             Q_ASSERT(meshIndex >= 0 && meshIndex < mMeshCount);
@@ -226,7 +226,7 @@ public:
             node->setScale(Vector4(scale, scale, scale, 1));
             node->setRotation(Quaternion::fromAxisAndAngle(0, 1, 0, rotation));
             node->attachObject(instance);
-            
+
             scene->addNode(node);
         }
 

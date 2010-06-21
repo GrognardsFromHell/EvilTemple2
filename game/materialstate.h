@@ -130,44 +130,44 @@ private:
 
 class MaterialTextureSamplerState {
 public:
-	void bind();
-	void unbind();
+        void bind();
+        void unbind();
 
-	void setSamplerId(int samplerId);
-	void setTexture(const SharedTexture &texture);
-private:	
-	int mSamplerId;
-	SharedTexture mTexture;
+        void setSamplerId(int samplerId);
+        void setTexture(const SharedTexture &texture);
+private:
+        int mSamplerId;
+        SharedTexture mTexture;
 };
 
 inline void MaterialTextureSamplerState::bind()
 {
-	glActiveTexture(GL_TEXTURE0 + mSamplerId);
+        glActiveTexture(GL_TEXTURE0 + mSamplerId);
     mTexture->bind();
-	// TODO: Set sampler states (wrap+clam+filtering+etc)
+        // TODO: Set sampler states (wrap+clam+filtering+etc)
 }
 
 inline void MaterialTextureSamplerState::unbind()
 {
-	glActiveTexture(GL_TEXTURE0 + mSamplerId);
-	glBindTexture(GL_TEXTURE_2D, 0);
+        glActiveTexture(GL_TEXTURE0 + mSamplerId);
+        glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 inline void MaterialTextureSamplerState::setSamplerId(int samplerId)
 {
-	mSamplerId = samplerId;
+        mSamplerId = samplerId;
 }
 
 inline void MaterialTextureSamplerState::setTexture(const SharedTexture &texture)
 {
-	mTexture = texture;
+        mTexture = texture;
 }
 
 struct MaterialPassAttributeState
 {
-	GLint location;
-	int bufferType;
-	MaterialAttributeBinding binding; // Parameters
+        GLint location;
+        int bufferType;
+        MaterialAttributeBinding binding; // Parameters
 };
 
 class MaterialPassState {
@@ -189,6 +189,8 @@ private:
  */
 class MaterialState {
 public:
+    MaterialState();
+
     int passCount;
     QScopedArrayPointer<MaterialPassState> passes;
     bool createFrom(const Material &material, const RenderStates &renderState, TextureSource *textureSource = FileTextureSource::instance());
@@ -198,11 +200,15 @@ private:
     QString mError;
 };
 
+inline MaterialState::MaterialState() : passes((MaterialPassState*)NULL)
+{
+}
+
 typedef QSharedPointer<MaterialState> SharedMaterialState;
 
 inline const QString &MaterialState::error() const
 {
-	return mError;
+        return mError;
 }
 
 }

@@ -54,6 +54,10 @@ inline static bool northsouth_intersect(float x, int top, int bottom, float zasc
     return iz >= top && iz <= bottom;
 }
 
+NavigationMesh::NavigationMesh()
+{
+}
+
 NavigationMesh::NavigationMesh(const QList<NavMeshRect*> &rectangles, const QList<NavMeshPortal*> &portals)
     : mRectangles(rectangles), mPortals(portals)
 {

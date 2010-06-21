@@ -4,7 +4,6 @@
 #include <QtCore/QCryptographicHash>
 #include <QtGui/QImage>
 
-
 #include "modelfile.h"
 #include "util.h"
 
@@ -24,9 +23,10 @@ namespace EvilTemple {
     };
 
     Model::Model()
-	: faceGroups(0), positions(0), normals(0), texCoords(0), vertices(0), vertexData(0), faceData(0)
-        , positionBuffer(0), normalBuffer(0), texcoordBuffer(0), materialState(0), textureData(0), faces(0),
-        attachments(0), mRadius(std::numeric_limits<float>::infinity()), mRadiusSquared(std::numeric_limits<float>::infinity())
+        : mAnimations((Animation*)0), positions(0), normals(0), texCoords(0), vertices(0), vertexData(0), faceData(0),
+        positionBuffer(0), normalBuffer(0), texcoordBuffer(0), textureData(0), faces(0),
+        attachments(0), mRadius(std::numeric_limits<float>::infinity()), mRadiusSquared(std::numeric_limits<float>::infinity()),
+        materialState((MaterialState*)0), faceGroups((FaceGroup*)NULL)
     {
     }
 
@@ -42,18 +42,18 @@ namespace EvilTemple {
 
     struct ModelHeader
     {
-	char magic[4];
-	uint version;
-	uint checksum;
-	uint chunks;
+        char magic[4];
+        uint version;
+        uint checksum;
+        uint chunks;
     };
 
     struct ChunkHeader
     {
-	uint type;
-	uint flags;
-	uint reserved;
-	uint size;
+        uint type;
+        uint flags;
+        uint reserved;
+        uint size;
     };
 
     class ModelTextureSource : public TextureSource {
@@ -61,11 +61,11 @@ namespace EvilTemple {
         ModelTextureSource(const QVector<Md5Hash> &md5Hashes, const QVector<unsigned char*> &textures,
                            const QVector<int> &textureSizes)
                                : mTextures(textures), mTextureSizes(textureSizes), mMd5Hashes(md5Hashes)
-	{
-	}
+        {
+        }
 
-	SharedTexture loadTexture(const QString &name)
-	{
+        SharedTexture loadTexture(const QString &name)
+        {
             if (name.startsWith('#')) {
                 bool ok;
                 uint textureId = name.right(name.length() - 1).toUInt(&ok);
@@ -91,24 +91,24 @@ namespace EvilTemple {
 
             // Create an error texture and return it...
             return SharedTexture(0);
-	}
+        }
 
     private:
         QVector<Md5Hash> mMd5Hashes;
-	QVector<unsigned char*> mTextures;
-	QVector<int> mTextureSizes;
+        QVector<unsigned char*> mTextures;
+        QVector<int> mTextureSizes;
     };
-    
+
     bool Model::open(const QString &filename, const RenderStates &renderState)
     {
-	mError.clear();
+        mError.clear();
 
         QFile file(filename);
 
         if (!file.open(QIODevice::ReadOnly)) {
             mError.append(QString("Unable to open model file %1.").arg(filename));
             return false;
-	}
+        }
 
         ModelHeader header;
 
@@ -116,18 +116,18 @@ namespace EvilTemple {
         if (!file.read(reinterpret_cast<char*>(&header), sizeof(header))) {
             mError.append(QString("Unable to read model file header from %1.").arg(filename));
             return false;
-	}
+        }
 
-	if (header.magic[0] != 'M' || header.magic[1] != 'O' || header.magic[2] != 'D' || header.magic[3] != 'L') {
+        if (header.magic[0] != 'M' || header.magic[1] != 'O' || header.magic[2] != 'D' || header.magic[3] != 'L') {
             mError.append(QString("File has invalid magic number: %1.").arg(filename));
             return false;
-	}
+        }
 
         QVector<Md5Hash> hashes;
-	QVector<unsigned char*> textures;
-	QVector<int> texturesSize;
+        QVector<unsigned char*> textures;
+        QVector<int> texturesSize;
 
-	for (uint i = 0; i < header.chunks; ++i) {
+        for (uint i = 0; i < header.chunks; ++i) {
             ChunkHeader chunkHeader;
 
             if (!file.read(reinterpret_cast<char*>(&chunkHeader), sizeof(ChunkHeader))) {
@@ -320,28 +320,28 @@ namespace EvilTemple {
             }
         }
 
-	return true;
+        return true;
     }
 
     void Model::close()
     {
-	if (positionBuffer)
-	{
+        if (positionBuffer)
+        {
             glDeleteBuffersARB(1, &positionBuffer);
             positionBuffer = 0;
-	}
+        }
 
-	if (normalBuffer)
-	{
+        if (normalBuffer)
+        {
             glDeleteBuffersARB(1, &normalBuffer);
             normalBuffer = 0;
-	}
+        }
 
-	if (texcoordBuffer)
-	{
+        if (texcoordBuffer)
+        {
             glDeleteBuffersARB(1, &texcoordBuffer);
             texcoordBuffer = 0;
-	}
+        }
 
         faceGroups.reset();
         faceData.reset();
@@ -351,19 +351,19 @@ namespace EvilTemple {
     }
 
     struct VertexHeader {
-	uint count;
-	uint reserved1;
-	uint reserved2;
-	uint reserved3;
+        uint count;
+        uint reserved1;
+        uint reserved2;
+        uint reserved3;
     };
 
     void Model::loadVertexData()
     {
-	VertexHeader *vertexHeader;
+        VertexHeader *vertexHeader;
 
         vertexHeader = reinterpret_cast<VertexHeader*>(vertexData.data());
 
-	vertices = vertexHeader->count;
+        vertices = vertexHeader->count;
 
         char* vertexDataStart = vertexData.data() + sizeof(VertexHeader);
 
@@ -371,56 +371,56 @@ namespace EvilTemple {
         normals = reinterpret_cast<Vector4*>(vertexDataStart + sizeof(Vector4) * vertices);
         texCoords = reinterpret_cast<float*>(vertexDataStart + sizeof(Vector4) * vertices * 2);
 
-	glGenBuffersARB(1, &positionBuffer);
-	glGenBuffersARB(1, &normalBuffer);
-	glGenBuffersARB(1, &texcoordBuffer);
+        glGenBuffersARB(1, &positionBuffer);
+        glGenBuffersARB(1, &normalBuffer);
+        glGenBuffersARB(1, &texcoordBuffer);
 
         for (int i = 0; i < vertices; ++i) {
             //positions[i].data()[2] *= -1;
         }
 
-	glBindBufferARB(GL_ARRAY_BUFFER_ARB, positionBuffer);
-	glBufferDataARB(GL_ARRAY_BUFFER_ARB, sizeof(Vector4) * vertices, positions, GL_STATIC_DRAW_ARB);
+        glBindBufferARB(GL_ARRAY_BUFFER_ARB, positionBuffer);
+        glBufferDataARB(GL_ARRAY_BUFFER_ARB, sizeof(Vector4) * vertices, positions, GL_STATIC_DRAW_ARB);
 
-	for (int i = 0; i < vertices; ++i) {
+        for (int i = 0; i < vertices; ++i) {
             //normals[i].data()[2] *= -1;
-	}
+        }
 
-	glBindBufferARB(GL_ARRAY_BUFFER_ARB, normalBuffer);
-	glBufferDataARB(GL_ARRAY_BUFFER_ARB, sizeof(Vector4) * vertices, normals, GL_STATIC_DRAW_ARB);
+        glBindBufferARB(GL_ARRAY_BUFFER_ARB, normalBuffer);
+        glBufferDataARB(GL_ARRAY_BUFFER_ARB, sizeof(Vector4) * vertices, normals, GL_STATIC_DRAW_ARB);
 
-	glBindBufferARB(GL_ARRAY_BUFFER_ARB, texcoordBuffer);
-	glBufferDataARB(GL_ARRAY_BUFFER_ARB, sizeof(float) * 2 * vertices, texCoords, GL_STATIC_DRAW_ARB);
+        glBindBufferARB(GL_ARRAY_BUFFER_ARB, texcoordBuffer);
+        glBufferDataARB(GL_ARRAY_BUFFER_ARB, sizeof(float) * 2 * vertices, texCoords, GL_STATIC_DRAW_ARB);
 
-	glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0); // Unbind array buffer
+        glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0); // Unbind array buffer
     }
 
     struct FacesHeader
     {
-	uint groups;
-	uint reserved1;
-	uint reserved2;
-	uint reserved3;
+        uint groups;
+        uint reserved1;
+        uint reserved2;
+        uint reserved3;
     };
 
     struct FaceGroupHeader
     {
-	int materialId;
-	uint elementCount;
-	uint elementSize;
-	uint reserved;
+        int materialId;
+        uint elementCount;
+        uint elementSize;
+        uint reserved;
     };
 
     void Model::loadFaceData()
     {
         const FacesHeader *header = reinterpret_cast<FacesHeader*>(faceData.data());
-	
-	faces = header->groups;
+
+        faces = header->groups;
         faceGroups.reset(new FaceGroup[faces]);
 
         char *currentDataPointer = faceData.data() + sizeof(FacesHeader);
 
-	for (int i = 0; i < faces; ++i) {
+        for (int i = 0; i < faces; ++i) {
             FaceGroup *faceGroup = faceGroups.data() + i;
             const FaceGroupHeader *groupHeader = reinterpret_cast<FaceGroupHeader*>(currentDataPointer);
             currentDataPointer += sizeof(FaceGroupHeader);
@@ -445,27 +445,27 @@ namespace EvilTemple {
             memcpy(faceGroup->indices, currentDataPointer, sizeof(ushort) * faceGroup->elementCount);
 
             currentDataPointer += groupSize;
-	}
+        }
 
-	glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0); // Unbind array buffer
+        glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0); // Unbind array buffer
     }
 
     void Model::drawNormals() const
     {
         glLineWidth(1.5);
-	glEnable(GL_LINE_SMOOTH);
-	glColor3f(0, 0, 1);
-	glDisable(GL_LIGHTING);
-	glBegin(GL_LINES);
+        glEnable(GL_LINE_SMOOTH);
+        glColor3f(0, 0, 1);
+        glDisable(GL_LIGHTING);
+        glBegin(GL_LINES);
 
         for (int i = 0; i < vertices; i += 2) {
             const Vector4 &vertex = positions[i];
             const Vector4 &normal = normals[i];
             glVertex3fv(vertex.data());
             glVertex3fv((vertex + 15 * normal).data());
-	}
+        }
 
-	glEnd();
+        glEnd();
 
         glPointSize(2);
         glBegin(GL_POINTS);
@@ -476,7 +476,7 @@ namespace EvilTemple {
         }
         glEnd();
 
-	glEnable(GL_LIGHTING);
+        glEnable(GL_LIGHTING);
     }
 
     FaceGroup::FaceGroup() : buffer(0), material(0), elementCount(0), indices(0)
@@ -485,9 +485,9 @@ namespace EvilTemple {
 
     FaceGroup::~FaceGroup()
     {
-	if (buffer) {
+        if (buffer) {
             glDeleteBuffers(1, &buffer);
-	}
+        }
         delete [] indices;
     }
 

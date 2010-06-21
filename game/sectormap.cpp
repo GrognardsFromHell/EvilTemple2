@@ -11,6 +11,7 @@
 #include <QImage>
 #include <QDataStream>
 #include <QElapsedTimer>
+#include <QVariant>
 
 namespace EvilTemple {
 
@@ -23,6 +24,8 @@ namespace EvilTemple {
         QWeakPointer<Sector> sector;
 
         SharedNavigationMesh mesh;
+
+        RegionLayers regionLayers;
     };
 
     SectorMapData::SectorMapData() : mesh(0), scene(0)
@@ -81,7 +84,7 @@ namespace EvilTemple {
             buildBuffers();
             mBuffersInvalid = false;
         }
-
+/*
         mVertexBuffer.bind();
         glEnableClientState(GL_VERTEX_ARRAY);
         glVertexPointer(3, GL_FLOAT, 0, 0);
@@ -100,6 +103,41 @@ namespace EvilTemple {
         glPointSize(2);
         glColor3f(0.1, 0.1f, 0.8f);
         glDrawArrays(GL_POINTS, 0, mNavigationMesh->portals().size());
+        glDisableClientState(GL_VERTEX_ARRAY);
+*/
+
+        glBegin(GL_QUADS);
+        foreach (const TaggedRegion &region, mLayer) {
+            QString type = region.tag.toString();
+
+            if (type == "dirt") {
+                glColor4f(89 / 255.0, 82 / 255.0, 49 / 255.0, 0.5f);
+            } else if (type == "grass") {
+                glColor4f(98 / 255.0, 164 / 255.0, 50 / 255.0, 0.5f);
+            } else if (type == "water") {
+                glColor4f(44 / 255.0, 89 / 255.0, 255 / 255.0, 0.5f);
+            } else if (type == "deepWater") {
+                glColor4f(32 / 255.0, 57 / 255.0, 153 / 255.0, 0.5f);
+            } else if (type == "ice") {
+                glColor4f(132 / 255.0, 251 / 255.0, 255 / 255.0, 0.5f);
+            } else if (type == "fire") {
+                glColor4f(252 / 255.0, 130 / 255.0, 0 / 255.0, 0.5f);
+            } else if (type == "wood") {
+                glColor4f(166 / 255.0, 139 / 255.0, 102 / 255.0, 0.5f);
+            } else if (type == "stone") {
+                glColor4f(80 / 255.0, 80 / 255.0, 80 / 255.0, 0.5f);
+            } else if (type == "metal") {
+                glColor4f(179 / 255.0, 179 / 255.0, 179 / 255.0, 0.5f);
+            } else {
+                glColor4f(1, 0, 0, 0.5f);
+            }
+
+            glVertex3f(region.topLeft.x(), 0, region.topLeft.z());
+            glVertex3f(region.topLeft.x(), 0, region.bottomRight.z());
+            glVertex3f(region.bottomRight.x(), 0, region.bottomRight.z());
+            glVertex3f(region.bottomRight.x(), 0, region.topLeft.z());
+        }
+        glEnd();
 
         glEnable(GL_CULL_FACE);
         glEnable(GL_DEPTH_TEST);
@@ -211,28 +249,57 @@ namespace EvilTemple {
     bool SectorMap::load(const QVector<Vector4> &startPositions, const QString &filename) const
     {
         NavigationMeshBuilder builder;
-        SharedNavigationMesh mesh(builder.build(filename, startPositions));
 
-        if (!mesh) {
+        if (!builder.build(filename, startPositions)) {
             qWarning("Unable to open %s.", qPrintable(filename));
             return false;
         }
 
+        SharedNavigationMesh mesh(builder.takeWalkableMesh());
+
         d->mesh = mesh;
+
+        d->regionLayers = builder.takeRegionLayers();
 
         qDebug("Using mesh with %d rectangles and %d portals.", mesh->rectangles().size(), mesh->portals().size());
 
+        /*
         if (d->scene) {
             Sector *sector = new Sector;
             sector->setNavigationMesh(mesh);
+            sector->setLayer(d->regionLayers["groundMaterial"]);
 
             SceneNode *node = new SceneNode;
             node->attachObject(SharedRenderable(sector));
 
             d->scene->addNode(SharedSceneNode(node));
-        }
+        }*/
 
         return true;
+    }
+
+    QVariant SectorMap::regionTag(const QString &layerName, const Vector4 &at) const
+    {
+        RegionLayers::const_iterator it = d->regionLayers.find(layerName);
+
+        if (it == d->regionLayers.end()) {
+            qWarning("Unknown region layer: %s.", qPrintable(layerName));
+            return QVariant();
+        }
+
+        // Find the layer
+        const RegionLayer &layer = it.value();
+
+        // Find the rectangle that contains the point
+        foreach (const TaggedRegion &region, layer) {
+            if (at.x() >= region.topLeft.x()
+                && at.z() >= region.topLeft.z()
+                && at.x() <= region.bottomRight.x()
+                && at.z() <= region.bottomRight.z())
+                return region.tag;
+        }
+
+        return QVariant();
     }
 
 }
