@@ -3,11 +3,12 @@
 
 #include <QtCore/QString>
 #include <QtCore/QSharedPointer>
-#include <QtOpenGL/QGLBuffer>
 
 #include "modelfile.h"
 #include "materialstate.h"
 #include "renderable.h"
+
+#include <QtOpenGL/QGLBuffer>
 
 #include <gamemath.h>
 using namespace GameMath;

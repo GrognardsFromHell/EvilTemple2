@@ -1,13 +1,16 @@
 
+#include <QtCore/QObject>
 #include <QtCore/QTimer>
+#include <QtCore/QList>
+#include <QtGui/QStandardItem>
 #include <QtGui/QTableView>
 
 #include "profilerdialog.h"
 #include "profiler.h"
 
-namespace EvilTemple {
-
 #include "ui_profilerdialog.h"
+
+namespace EvilTemple {
 
 ProfilerDialog::ProfilerDialog(QWidget *parent) :
     QDialog(parent),

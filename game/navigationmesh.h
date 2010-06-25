@@ -9,6 +9,7 @@ using namespace GameMath;
 #include <QString>
 #include <QtGlobal>
 #include <QSharedPointer>
+#include <QVariant>
 
 namespace EvilTemple {
 

@@ -16,9 +16,10 @@
 
 #include <QtXml/QDomElement>
 
+#include "texture.h"
+
 #include "particlesystem.h"
 #include "renderstates.h"
-#include "texture.h"
 #include "material.h"
 #include "materialstate.h"
 #include "materials.h"

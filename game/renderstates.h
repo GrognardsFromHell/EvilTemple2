@@ -4,6 +4,7 @@
 
 #include <QtCore/QString>
 #include <QtCore/QScopedPointer>
+#include <QtCore/QList>
 
 #include <gamemath.h>
 using namespace GameMath;

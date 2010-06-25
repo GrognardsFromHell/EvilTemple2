@@ -4,25 +4,26 @@
 #include <QImage>
 #include <QDataStream>
 #include <QElapsedTimer>
+#include <QDir>
 
 #include "zonetemplate.h"
 #include "util.h"
 
 #include "navigationmeshbuilder.h"
 
-GAMEMATH_ALIGN struct TaggedRegion {
+GAMEMATH_ALIGNEDTYPE_PRE struct GAMEMATH_ALIGNEDTYPE_MID TaggedRegion {
     Vector4 topLeft;
     Vector4 bottomRight;
     Vector4 center;
     QVariant tag;
-};
+} GAMEMATH_ALIGNEDTYPE_POST;
 
 typedef QVector<TaggedRegion> RegionLayer;
 typedef QHash<QString, RegionLayer> RegionLayers;
 
 struct NavMeshPortal;
 
-GAMEMATH_ALIGN struct NavMeshRect {
+GAMEMATH_ALIGNEDTYPE_PRE struct GAMEMATH_ALIGNEDTYPE_MID NavMeshRect {
     Vector4 topLeft;
     Vector4 bottomRight;
     Vector4 center;
@@ -60,7 +61,7 @@ GAMEMATH_ALIGN struct NavMeshRect {
     {
             ALIGNED_FREE(ptr);
     }
-};
+} GAMEMATH_ALIGNEDTYPE_POST;
 
 enum PortalAxis {
     NorthSouth,
@@ -78,12 +79,12 @@ struct NavMeshPortal {
 };
 
 inline static uint qHash(const QPoint &key) {
-    return ((key.x() & 0xFFFF) << 16) | key.y() & 0xFFFF;
+    return ((key.x() & 0xFFFF) << 16) | (key.y() & 0xFFFF);
 }
 
 static const float PixelPerWorldTile = 28.2842703f;
 
-static const uint SectorSideLength = 192;
+static const int SectorSideLength = 192;
 
 struct ProcessedSector {
     ProcessedSector();
@@ -476,6 +477,8 @@ static void mergeRectangles(QList<QRect> &rectangles)
                         else
                             qFatal("FAIL");
                         break;
+		    case Shared_None:
+			Q_ASSERT(false);
                     }
 
                     switch (edge) {
@@ -491,6 +494,8 @@ static void mergeRectangles(QList<QRect> &rectangles)
                     case Shared_South:
                         bottomA = bottomB;
                         break;
+		    case Shared_None:
+			Q_ASSERT(false);
                     }
 
                     uint newAreaA = (rightA - leftA) * (bottomA - topA);
@@ -624,28 +629,40 @@ static void mergeRectangles(QList<QRect> &rectangles)
     }
 }
 
-inline static bool WalkablePredicate(ProcessedSector *sector, int x, int y)
+struct WalkablePredicate
 {
-    return sector->walkable[x][y] && !sector->flyable[x][y];
-}
+    static bool include(ProcessedSector *sector, int x, int y)
+    {
+        return sector->walkable[x][y] && !sector->flyable[x][y];
+    }
+};
 
-inline static bool FlyablePredicate(ProcessedSector *sector, int x, int y)
+struct FlyablePredicate
 {
-    return sector->walkable[x][y] || sector->flyable[x][y];
-}
+    static bool include(ProcessedSector *sector, int x, int y)
+    {
+        return sector->walkable[x][y] || sector->flyable[x][y];
+    }
+};
 
-inline static bool CoverPredicate(ProcessedSector *sector, int x, int y)
+struct CoverPredicate
 {
-    return sector->cover[x][y];
-}
+    static bool include(ProcessedSector *sector, int x, int y)
+    {
+        return sector->cover[x][y];
+    }
+};
 
 template<uchar type>
-inline static bool FootstepSoundPredicate(ProcessedSector *sector, int x, int y)
+struct FootstepSoundPredicate
 {
-    return sector->reachable[x][y] && sector->sound[x][y] == type;
-}
+    static bool include(ProcessedSector *sector, int x, int y)
+    {
+        return sector->reachable[x][y] && sector->sound[x][y] == type;
+    }
+};
 
-template<bool InclusionPredicate(ProcessedSector*,int,int)>
+template<typename InclusionPredicate>
 static void findRectangles(QVector<ProcessedSector> &sectors, QList<QRect> &rectangles)
 {
     // Reset the used flag for every tile
@@ -666,7 +683,7 @@ static void findRectangles(QVector<ProcessedSector> &sectors, QList<QRect> &rect
             // Try to find an unprocessed tile
             for (int x = 0; x < SectorSideLength; ++x) {
                 for (int y = 0; y < SectorSideLength; ++y) {
-                    if (!sector->used[x][y] && InclusionPredicate(sector, x, y)) {
+                    if (!sector->used[x][y] && InclusionPredicate::include(sector, x, y)) {
                         rect = QRect(x, y, 1, 1);
                         sector->used[x][y] = true;
                         foundTile = true;
@@ -681,14 +698,14 @@ static void findRectangles(QVector<ProcessedSector> &sectors, QList<QRect> &rect
                 break;
 
             forever {
-                uint right = rect.x() + rect.width();
-                uint bottom = rect.y() + rect.height();
+                int right = rect.x() + rect.width();
+                int bottom = rect.y() + rect.height();
 
                 // Try expanding the rectangle by one in every direction
                 while (right < SectorSideLength) {
                     bool expanded = true;
-                    for (uint y = rect.top(); y < bottom; ++y) {
-                        if (sector->used[right][y] || !InclusionPredicate(sector, right, y)) {
+                    for (int y = rect.top(); y < bottom; ++y) {
+                        if (sector->used[right][y] || !InclusionPredicate::include(sector, right, y)) {
                             expanded = false;
                             break;
                         }
@@ -696,7 +713,7 @@ static void findRectangles(QVector<ProcessedSector> &sectors, QList<QRect> &rect
 
                     if (expanded) {
                         // Mark as used
-                        for (uint y = rect.top(); y < bottom; ++y) {
+                        for (int y = rect.top(); y < bottom; ++y) {
                             sector->used[right][y] = true;
                         }
                         rect.setWidth(rect.width() + 1);
@@ -708,8 +725,8 @@ static void findRectangles(QVector<ProcessedSector> &sectors, QList<QRect> &rect
 
                 while (bottom < SectorSideLength) {
                     bool expanded = true;
-                    for (uint x = rect.left(); x < right; ++x) {
-                        if (sector->used[x][bottom] || !InclusionPredicate(sector, x, bottom)) {
+                    for (int x = rect.left(); x < right; ++x) {
+                        if (sector->used[x][bottom] || !InclusionPredicate::include(sector, x, bottom)) {
                             expanded = false;
                             break;
                         }
@@ -717,7 +734,7 @@ static void findRectangles(QVector<ProcessedSector> &sectors, QList<QRect> &rect
 
                     if (expanded) {
                         // Mark as used
-                        for (uint x = rect.left(); x < right; ++x) {
+                        for (int x = rect.left(); x < right; ++x) {
                             sector->used[x][bottom] = true;
                         }
                         rect.setHeight(rect.height() + 1);
@@ -885,7 +902,7 @@ bool validatePortals(const QList<NavMeshRect*> &rectangles, const QList<NavMeshP
     return result;
 }
 
-template<bool InclusionPredicate(ProcessedSector*,int,int)>
+template<typename InclusionPredicate>
 static void findNavRectangles(QVector<ProcessedSector> &sectors, QList<NavMeshRect*> &rectangles)
 {
     QList<QRect> geometricRectangles;
@@ -909,7 +926,7 @@ static void findNavRectangles(QVector<ProcessedSector> &sectors, QList<NavMeshRe
     }
 }
 
-template<const uchar type>
+template<uchar type>
 static void buildSoundRegions(QVector<ProcessedSector> &sectors, RegionLayer &layer, const char *tag)
 {
     QList<QRect> rectangles;
@@ -989,7 +1006,7 @@ QByteArray NavigationMeshBuilder::build(const Troika::ZoneTemplate *tpl, const Q
     QVector<ProcessedSector> sectors;
     sectors.resize(tpl->tileSectors().size());
 
-    for (uint i = 0; i < tpl->tileSectors().size(); ++i) {
+    for (int i = 0; i < tpl->tileSectors().size(); ++i) {
         const Troika::TileSector &troikaSector = tpl->tileSectors()[i];
 
         ProcessedSector *sector = sectors.data() + i;
@@ -1007,7 +1024,7 @@ QByteArray NavigationMeshBuilder::build(const Troika::ZoneTemplate *tpl, const Q
         for (int y = 0; y < 64; ++y) {
             for (int x = 0; x < 64; ++x) {
                 bitfield = troikaSector.tiles[x][y].bitfield;
-                footstepSound = footstepSound = troikaSector.tiles[x][y].footstepsSound;
+		footstepSound = troikaSector.tiles[x][y].footstepsSound;
 
                 int px = x * 3;
                 int py = y * 3;
@@ -1046,7 +1063,7 @@ QByteArray NavigationMeshBuilder::build(const Troika::ZoneTemplate *tpl, const Q
     }
 
     // Link sectors to neighbouring sectors
-    for (uint i = 0; i < sectors.size(); ++i) {
+    for (int i = 0; i < sectors.size(); ++i) {
         ProcessedSector *sector = sectors.data() + i;
 
         sector->west = 0;
@@ -1054,7 +1071,7 @@ QByteArray NavigationMeshBuilder::build(const Troika::ZoneTemplate *tpl, const Q
         sector->south = 0;
         sector->east = 0;
 
-        for (uint j = 0; j < sectors.size(); ++j) {
+        for (int j = 0; j < sectors.size(); ++j) {
             ProcessedSector *other = sectors.data() + j;
 
             if (other->origin.x() == sector->origin.x() - SectorSideLength && other->origin.y() == sector->origin.y())

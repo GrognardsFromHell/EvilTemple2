@@ -3,6 +3,7 @@
 
 #include "audioengineglobal.h"
 
+#include <QMetaType>
 #include <QObject>
 #include <QScopedPointer>
 #include <QStringList>

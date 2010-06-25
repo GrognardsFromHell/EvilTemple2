@@ -1,4 +1,6 @@
 
+#include <QMetaObject>
+#include <QObject>
 #include <QHash>
 #include <QFile>
 #include <QDataStream>

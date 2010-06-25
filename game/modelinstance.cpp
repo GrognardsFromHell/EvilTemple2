@@ -1,6 +1,7 @@
 
 #include <QVector>
 
+#include "texture.h"
 #include "modelinstance.h"
 #include "util.h"
 #include "drawhelper.h"

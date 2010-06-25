@@ -1,6 +1,8 @@
 #ifndef PARTICLESYSTEM_H
 #define PARTICLESYSTEM_H
 
+#include <QtCore/QMetaType>
+#include <QtCore/QObject>
 #include <QtCore/QString>
 #include <QtCore/QScopedPointer>
 

@@ -1,14 +1,15 @@
 #ifndef PROFILERDIALOG_H
 #define PROFILERDIALOG_H
 
+#include <QObject>
 #include <QDialog>
 #include <QStandardItemModel>
-
-namespace EvilTemple {
 
 namespace Ui {
     class ProfilerDialog;
 }
+
+namespace EvilTemple {
 
 class ProfilerDialog : public QDialog
 {

@@ -99,21 +99,7 @@ public:
     }
 
     template<typename T>
-    void write(const QString &name, T value) {
-        mMap[name] = QVariant(value);
-    }
-
-    template<>
-    void write<Troika::Float>(const QString &name, Troika::Float value) {
-        if (value.isDefined())
-            mMap[name] = QVariant(value.value());
-    }
-
-    template<>
-    void write<Troika::Integer>(const QString &name, Troika::Integer value) {
-        if (value.isDefined())
-            mMap[name] = QVariant(value.value());
-    }
+    void write(const QString &name, T value);
 
     void write(const QString &name, const QVariantList &list) {
         if (list.isEmpty())
@@ -130,6 +116,24 @@ public:
 private:
     QVariantMap &mMap;
 };
+
+template<typename T>
+inline void JsonPropertyWriter::write(const QString &name, T value)
+{
+	mMap[name] = QVariant(value);
+}
+
+template<>
+inline void JsonPropertyWriter::write<Troika::Float>(const QString &name, Troika::Float value) {
+if (value.isDefined())
+    mMap[name] = QVariant(value.value());
+}
+
+template<>
+inline void JsonPropertyWriter::write<Troika::Integer>(const QString &name, Troika::Integer value) {
+if (value.isDefined())
+    mMap[name] = QVariant(value.value());
+}
 
 class PropertyWriter {
 public:

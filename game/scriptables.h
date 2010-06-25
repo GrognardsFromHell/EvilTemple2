@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QScriptable>
+#include <QScriptValue>
 
 #include "scene.h"
 #include "scenenode.h"

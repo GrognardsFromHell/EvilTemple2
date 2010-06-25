@@ -34,7 +34,8 @@ contains(TEMPLE_LIBS,game) {
 # It's possible we should instead use the system libjpeg here on unix
 contains(TEMPLE_LIBS,jpeg) {
     INCLUDEPATH += $${PWD}/3rdparty/libjpeg-turbo/include
-    LIBS += $${PWD}/3rdparty/libjpeg-turbo/lib/turbojpeg.lib
+    win32:LIBS += $${PWD}/3rdparty/libjpeg-turbo/lib/turbojpeg.lib
+    else:LIBS += -L$${PWD}/bin/ -lturbojpeg
 }
 
 contains(TEMPLE_LIBS,glew) {
@@ -89,11 +90,7 @@ contains(TEMPLE_LIBS,audioengine) {
 
 contains(TEMPLE_LIBS,qjson) {
     INCLUDEPATH += $${PWD}/3rdparty/qjson/src/    
-    CONFIG(debug, debug|release) {
-        LIBS += -lqjson_d
-    } else {
-        LIBS += -lqjson
-    }
+    LIBS += -lqjson
 }
 
 # Add game libraries

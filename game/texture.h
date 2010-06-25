@@ -135,7 +135,8 @@ private:
     GlobalTextureCache();
     ~GlobalTextureCache();
 
-    typedef QHash<Md5Hash, QWeakPointer<Texture> > CacheContainer;
+    typedef QWeakPointer<Texture> WeakTexture;
+    typedef QHash<Md5Hash, WeakTexture> CacheContainer;
     typedef CacheContainer::iterator iterator;
 
     CacheContainer mTextures;

@@ -1,6 +1,8 @@
 
 #include <GL/glew.h>
 
+#include <QtCore/QFile>
+
 #include "materialstate.h"
 #include "material.h"
 
