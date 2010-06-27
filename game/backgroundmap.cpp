@@ -1,4 +1,6 @@
 
+#include "materialstate.h"
+
 #include <QtCore/QFile>
 #include <QtOpenGL/QGLBuffer>
 
@@ -8,7 +10,6 @@
 
 #include "backgroundmap.h"
 #include "renderstates.h"
-#include "materialstate.h"
 
 inline uint qHash(const QPoint &key)
 {

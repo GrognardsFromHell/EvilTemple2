@@ -1,5 +1,6 @@
 
 #include <QtCore/QFile>
+#include <QtCore/QDir>
 #include <QtCore/QCryptographicHash>
 
 #include "texture.h"

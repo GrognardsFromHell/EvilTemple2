@@ -4,11 +4,12 @@
 #include <QObject>
 #include <QScopedPointer>
 #include <QPolygon>
-#include <QGLBuffer>
 
 #include "renderable.h"
 #include "texture.h"
 #include "navigationmesh.h"
+
+#include <QGLBuffer>
 
 namespace EvilTemple {
 

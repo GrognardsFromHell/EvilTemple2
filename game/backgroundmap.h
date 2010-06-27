@@ -1,6 +1,7 @@
 #ifndef BACKGROUNDMAP_H
 #define BACKGROUNDMAP_H
 
+#include <QMetaType>
 #include <QObject>
 #include <QScopedPointer>
 

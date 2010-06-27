@@ -111,7 +111,7 @@ namespace Troika
 
     inline const AnimationBoneState *AnimationStream::getBoneState(quint16 boneId) const
     {
-        Q_ASSERT(boneId >= 0 && boneId < _boneCount);
+        Q_ASSERT(boneId < _boneCount);
         return _boneMap[boneId];
     }
 

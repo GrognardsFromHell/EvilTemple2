@@ -1,8 +1,9 @@
 
+#include "texture.h"
+
 #include <QtOpenGL/QGLContext>
 #include <QtCore/QWaitCondition>
 
-#include "texture.h"
 #include "turbojpeg.h"
 #include "tga.h"
 

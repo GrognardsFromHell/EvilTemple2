@@ -1,7 +1,7 @@
 
 #include <GL/glew.h>
 
-#include <QFile>
+#include <QtCore/QFile>
 
 #include "materialstate.h"
 #include "material.h"

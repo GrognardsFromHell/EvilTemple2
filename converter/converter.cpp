@@ -1366,9 +1366,7 @@ public:
             int nextFrame = animStream->getNextFrameId();
             while (!animStream->atEnd()) {
                 animStream->readNextFrame();
-                if (animStream->getNextFrameId() <= nextFrame && !animStream->atEnd()) {
-                    _CrtDbgBreak();
-                }
+		Q_ASSERT(animStream->getNextFrameId() > nextFrame || animStream->atEnd());
                 nextFrame = animStream->getNextFrameId();
 
                 for (int i = 0; i < skeleton->bones().size(); ++i) {

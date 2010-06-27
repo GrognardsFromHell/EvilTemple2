@@ -74,9 +74,13 @@ public:
             errorDetails = "Operation not supported";
             break;
         default:
+#if LIBAVUTIL_VERSION_MAJOR < 51 
+	    errorDetails = QString("Error Code: %1").arg(errorCode);
+#else
             av_strerror(errorCode, errorDescription, sizeof(errorDescription));
             errorDescription[sizeof(errorDescription) - 1] = 0; // Always nul-terminate
             errorDetails = QString::fromLocal8Bit(errorDescription);
+#endif
         }
 
         lastError = QString("%1: %2 (File: %3, Error: %4)")
@@ -253,7 +257,7 @@ void BinkPlayer::play()
                                   packet.size);
 
             if (result <= 0) {
-                qWarning("Unable to decode audio packet @ %d.", packet.pos);
+                qWarning("Unable to decode audio packet @ %ld.", packet.pos);
             }
 
             if (frameSize == 0)
@@ -292,7 +296,7 @@ void BinkPlayer::play()
                                          packet.size);
 
             if (error <= 0) {
-                qWarning("Unable to decode video packet @ %d.", packet.pos);
+                qWarning("Unable to decode video packet @ %ld.", packet.pos);
             }
 
             if (frameFinished) {

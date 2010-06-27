@@ -2,7 +2,7 @@
 #include <QtCore/QByteArray>
 #include <QtCore/QFile>
 
-#include "GLSLProgram.h"
+#include "glslprogram.h"
 #include "util.h"
 
 #include <stdio.h>

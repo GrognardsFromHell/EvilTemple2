@@ -1,5 +1,6 @@
-#include "sectormap.h"
+
 #include "texture.h"
+#include "sectormap.h"
 #include "scenenode.h"
 #include "scene.h"
 

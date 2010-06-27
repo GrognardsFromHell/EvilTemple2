@@ -4,6 +4,8 @@
 
 #include <QObject>
 #include <QSharedPointer>
+#include <QPair>
+#include <QVector>
 
 #include "renderstates.h"
 #include "renderqueue.h"

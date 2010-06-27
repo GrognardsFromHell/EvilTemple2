@@ -1,11 +1,11 @@
 #ifndef WAVEREADER_H
 #define WAVEREADER_H
 
+#include <QString>
+
 #include "audioengineglobal.h"
 
 #include "isound.h"
-
-#include <QString>
 
 namespace EvilTemple {
 
@@ -16,4 +16,5 @@ public:
 };
 
 }
+
 #endif // WAVEREADER_H

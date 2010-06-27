@@ -200,7 +200,7 @@ bool MP3SoundSource::atEnd() const
 void MP3SoundSource::rewind()
 {
     sampleBuffer.clear();
-    av_seek_frame(formatCtx, streamIndex, 0, AVSEEK_FLAG_FRAME);
+    av_seek_frame(formatCtx, streamIndex, 0, AVSEEK_FLAG_ANY);
     readNextPacket();
 }
 

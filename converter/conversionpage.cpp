@@ -93,9 +93,9 @@ inline void ConversionThread::setOutputPath(const QString &outputPath)
 ConversionPage::ConversionPage(QWidget *parent) :
     QWizardPage(parent),
     ui(new Ui::ConversionPage),
-    conversionThread(new ConversionThread),
+    conversionThread(new ConversionThread)
 #ifdef Q_OS_WIN32
-    mTaskbarList(0), mDontUseTaskbarList(false)
+    , mTaskbarList(0), mDontUseTaskbarList(false)
 #endif
 {
     ui->setupUi(this);

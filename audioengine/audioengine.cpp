@@ -181,7 +181,7 @@ private:
 class AudioEngineData
 {
 public:
-    AudioEngineData() : device(NULL), audioThread(new AudioEngineThread(categoryVolume, categoryVolumeChanged))
+    AudioEngineData() : device(NULL), context(NULL), audioThread(new AudioEngineThread(categoryVolume, categoryVolumeChanged))
     {
         for (int i = 0; i < (int)SoundCategory_Count; ++i) {
             categoryVolume[i] = 1.0;

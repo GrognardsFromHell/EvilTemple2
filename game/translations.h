@@ -1,6 +1,7 @@
 #ifndef TRANSLATIONS_H
 #define TRANSLATIONS_H
 
+#include <QMetaType>
 #include <QObject>
 
 namespace EvilTemple {
