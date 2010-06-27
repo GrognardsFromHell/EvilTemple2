@@ -477,8 +477,8 @@ static void mergeRectangles(QList<QRect> &rectangles)
                         else
                             qFatal("FAIL");
                         break;
-		    case Shared_None:
-			Q_ASSERT(false);
+                    case Shared_None:
+                        Q_ASSERT(false);
                     }
 
                     switch (edge) {
@@ -494,8 +494,8 @@ static void mergeRectangles(QList<QRect> &rectangles)
                     case Shared_South:
                         bottomA = bottomB;
                         break;
-		    case Shared_None:
-			Q_ASSERT(false);
+                    case Shared_None:
+                        Q_ASSERT(false);
                     }
 
                     uint newAreaA = (rightA - leftA) * (bottomA - topA);
@@ -1024,7 +1024,7 @@ QByteArray NavigationMeshBuilder::build(const Troika::ZoneTemplate *tpl, const Q
         for (int y = 0; y < 64; ++y) {
             for (int x = 0; x < 64; ++x) {
                 bitfield = troikaSector.tiles[x][y].bitfield;
-		footstepSound = troikaSector.tiles[x][y].footstepsSound;
+                footstepSound = troikaSector.tiles[x][y].footstepsSound;
 
                 int px = x * 3;
                 int py = y * 3;
