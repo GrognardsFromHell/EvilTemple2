@@ -16,7 +16,7 @@ namespace EvilTemple {
 class RenderStates;
 class Scene;
 
-class SceneNode
+class SceneNode : public AlignedAllocation
 {
 public:
     SceneNode();
@@ -56,7 +56,7 @@ public:
       call this method on child nodes of this node recursively.
       */
     void addVisibleObjects(const Frustum &viewFrustum, RenderQueue *renderQueue, bool addChildren = true);
-    
+
     /**
      Gets the full transformation matrix derived from this node's and its parent's transformations.
      */
@@ -109,7 +109,7 @@ inline const Box3d &SceneNode::worldBoundingBox() const
         mWorldBoundingBoxInvalid = false;
     }
 
-    return mWorldBoundingBox;    
+    return mWorldBoundingBox;
 }
 
 inline const Matrix4 &SceneNode::fullTransform() const
@@ -152,7 +152,7 @@ inline const Matrix4 &SceneNode::worldMatrix() const
 {
     if (mWorldMatrixInvalid) {
         mWorldMatrix = Matrix4::transformation(mScale, mRotation, mPosition);
-        mWorldMatrixInvalid = false;        
+        mWorldMatrixInvalid = false;
     }
 
     return mWorldMatrix;
@@ -197,7 +197,7 @@ inline void SceneNode::setAnimated(bool animated)
     mAnimated = animated;
 }
 
-inline void SceneNode::setScene(Scene *scene) 
+inline void SceneNode::setScene(Scene *scene)
 {
     mScene = scene;
 }

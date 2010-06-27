@@ -97,7 +97,7 @@ namespace EvilTemple {
         }
     }
 
-    class GameViewData
+    class GameViewData : public AlignedAllocation
     {
     public:
         GameViewData(GameView *view)

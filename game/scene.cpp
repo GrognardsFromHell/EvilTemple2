@@ -16,7 +16,7 @@ namespace EvilTemple {
 
 static const float FadeoutTime = 0.5f; // in seconds
 
-struct TextOverlay {
+struct TextOverlay : public AlignedAllocation {
     Vector4 position;
     QString text;
     QColor color;
@@ -102,7 +102,7 @@ void Scene::render(RenderStates &renderStates)
         d->sceneNodes[i]->addVisibleObjects(viewFrustum, &d->renderQueue);
     }
 
-    const RenderQueue::Category renderOrder[RenderQueue::Count] = { 
+    const RenderQueue::Category renderOrder[RenderQueue::Count] = {
         RenderQueue::ClippingGeometry,
         RenderQueue::Default,
         RenderQueue::Lights,
@@ -122,7 +122,7 @@ void Scene::render(RenderStates &renderStates)
     for (int catOrder = 0; catOrder < RenderQueue::Count; ++catOrder) {
         RenderQueue::Category category = renderOrder[catOrder];
         const QList<Renderable*> &renderables = d->renderQueue.queuedObjects(category);
-        for (int i = 0; i < renderables.size(); ++i) {            
+        for (int i = 0; i < renderables.size(); ++i) {
             Renderable *renderable = renderables.at(i);
 
             // Find all light sources that intersect the bounding volume of the given object

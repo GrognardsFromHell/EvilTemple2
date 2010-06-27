@@ -17,6 +17,12 @@
 #include "profilerdialog.h"
 #include "scene.h"
 
+#include "materialstate.h"
+#include "modelinstance.h"
+#include "texture.h"
+#include "navigationmesh.h"
+#include "renderable.h"
+
 // Used to display the memory usage in the title bar
 #if defined(Q_OS_WIN32)
 #include <Psapi.h>
@@ -132,10 +138,6 @@ namespace EvilTemple {
             connect(this, SIGNAL(consoleToggled()), d_ptr->consoleWidget, SLOT(toggle()));
             connect(this, SIGNAL(logMessage(QVariant,QVariant)), d_ptr->consoleWidget, SLOT(addMessage(QVariant,QVariant)));
         }
-
-        currentMainWindow = this;
-        qInstallMsgHandler(consoleMessageHandler);
-
     }
 
     MainWindow::~MainWindow()
@@ -178,8 +180,6 @@ namespace EvilTemple {
 
     void MainWindow::updateTitle()
     {
-        QPoint centeredOn = d_ptr->gameView->screenCenter();
-
         QString windowTitle = QString("Evil Temple");
 
         windowTitle.append(QString(" (Drawn: %1)").arg(d_ptr->gameView->objectsDrawn()));
@@ -194,6 +194,12 @@ namespace EvilTemple {
             windowTitle.append(QString(" %1 MB").arg(int(pmc.WorkingSetSize / (1024 * 1024))));
         }
 #endif
+
+        windowTitle.append(QString(" Models: %1").arg(getActiveModels()));
+        windowTitle.append(QString(" Textures: %1").arg(getActiveTextures()));
+        windowTitle.append(QString(" Mat-States: %1").arg(getActiveMaterialStates()));
+        windowTitle.append(QString(" NavMeshes: %1").arg(getActiveNavigationMeshes()));
+        windowTitle.append(QString(" Renderables: %1").arg(getActiveRenderables()));
 
         setWindowTitle(windowTitle);
     }

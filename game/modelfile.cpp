@@ -22,22 +22,24 @@ namespace EvilTemple {
         Chunk_Metadata = 0xFFFF,  // Last chunk is always metadata
     };
 
+    static uint activeModels = 0;
+
+    uint getActiveModels()
+    {
+        return activeModels;
+    }
+
     Model::Model()
-        : mAnimations((Animation*)0), positions(0), normals(0), texCoords(0), vertices(0), vertexData(0), faceData(0),
-        positionBuffer(0), normalBuffer(0), texcoordBuffer(0), textureData(0), faces(0),
+        : mAnimations((Animation*)0), positions(0), normals(0), texCoords(0), vertices(0), textureData(0), faces(0),
         attachments(0), mRadius(std::numeric_limits<float>::infinity()), mRadiusSquared(std::numeric_limits<float>::infinity()),
         materialState((MaterialState*)0), faceGroups((FaceGroup*)NULL)
     {
+        activeModels++;
     }
 
     Model::~Model()
     {
-        if (positionBuffer)
-            glDeleteBuffers(1, &positionBuffer);
-        if (normalBuffer)
-            glDeleteBuffers(1, &normalBuffer);
-        if (texcoordBuffer)
-            glDeleteBuffers(1, &texcoordBuffer);
+        activeModels--;
     }
 
     struct ModelHeader
@@ -150,7 +152,7 @@ namespace EvilTemple {
             }
 
             if (chunkHeader.type == Chunk_Textures) {
-                textureData.reset(chunkData.take());
+                textureData.swap(chunkData);
 
                 unsigned int textureCount = *(unsigned int*)textureData.data();
                 textures.resize(textureCount);
@@ -210,7 +212,6 @@ namespace EvilTemple {
                     stream >> placeholderName;
                     mPlaceholders.append(QString::fromUtf8(placeholderName.constData(), placeholderName.size()));
                 }
-
             } else if (chunkHeader.type == Chunk_MaterialReferences) {
                 Q_ASSERT(materialState.isNull()); // Materials and MaterialReferences are exclusive
 
@@ -253,10 +254,10 @@ namespace EvilTemple {
 
                 stream >> mBoundingBox >> mRadius >> mRadiusSquared;
             } else if (chunkHeader.type == Chunk_Geometry) {
-                vertexData.reset(chunkData.take());
+                vertexData.swap(chunkData);
                 loadVertexData();
             } else if (chunkHeader.type == Chunk_Faces) {
-                faceData.reset(chunkData.take());
+                faceData.swap(chunkData);
                 loadFaceData();
             } else if (chunkHeader.type == Chunk_Bones) {
                 QDataStream stream(QByteArray::fromRawData(chunkData.data(), chunkHeader.size));
@@ -286,9 +287,8 @@ namespace EvilTemple {
 
                     bone.mParent = mBones.constData() + parentId;
                 }
-
             } else if (chunkHeader.type == Chunk_BoneAttachments) {
-                boneAttachmentData.reset(chunkData.take());
+                boneAttachmentData.swap(chunkData);
 
                 int count = *reinterpret_cast<unsigned int*>(boneAttachmentData.data());
                 if (count != vertices) {
@@ -316,7 +316,7 @@ namespace EvilTemple {
                 }
 
             } else {
-                // This should never happen
+                qFatal("Unknown chunk type encountered, although asserted before!");
             }
         }
 
@@ -325,29 +325,20 @@ namespace EvilTemple {
 
     void Model::close()
     {
-        if (positionBuffer)
-        {
-            glDeleteBuffersARB(1, &positionBuffer);
-            positionBuffer = 0;
-        }
-
-        if (normalBuffer)
-        {
-            glDeleteBuffersARB(1, &normalBuffer);
-            normalBuffer = 0;
-        }
-
-        if (texcoordBuffer)
-        {
-            glDeleteBuffersARB(1, &texcoordBuffer);
-            texcoordBuffer = 0;
-        }
+        positionBuffer.clear();
+        normalBuffer.clear();
+        texcoordBuffer.clear();
 
         faceGroups.reset();
         faceData.reset();
         vertexData.reset();
-        boneData.reset();
         boneAttachmentData.reset();
+
+        attachments = NULL;
+        positions = NULL;
+        normals = NULL;
+        texCoords = NULL;
+        vertices = 0;
     }
 
     struct VertexHeader {
@@ -365,34 +356,15 @@ namespace EvilTemple {
 
         vertices = vertexHeader->count;
 
-        char* vertexDataStart = vertexData.data() + sizeof(VertexHeader);
+        const char* vertexDataStart = vertexData.data() + sizeof(VertexHeader);
 
-        positions = reinterpret_cast<Vector4*>(vertexDataStart);
-        normals = reinterpret_cast<Vector4*>(vertexDataStart + sizeof(Vector4) * vertices);
-        texCoords = reinterpret_cast<float*>(vertexDataStart + sizeof(Vector4) * vertices * 2);
+        positions = reinterpret_cast<const Vector4*>(vertexDataStart);
+        normals = reinterpret_cast<const Vector4*>(vertexDataStart + sizeof(Vector4) * vertices);
+        texCoords = reinterpret_cast<const float*>(vertexDataStart + sizeof(Vector4) * vertices * 2);
 
-        glGenBuffersARB(1, &positionBuffer);
-        glGenBuffersARB(1, &normalBuffer);
-        glGenBuffersARB(1, &texcoordBuffer);
-
-        for (int i = 0; i < vertices; ++i) {
-            //positions[i].data()[2] *= -1;
-        }
-
-        glBindBufferARB(GL_ARRAY_BUFFER_ARB, positionBuffer);
-        glBufferDataARB(GL_ARRAY_BUFFER_ARB, sizeof(Vector4) * vertices, positions, GL_STATIC_DRAW_ARB);
-
-        for (int i = 0; i < vertices; ++i) {
-            //normals[i].data()[2] *= -1;
-        }
-
-        glBindBufferARB(GL_ARRAY_BUFFER_ARB, normalBuffer);
-        glBufferDataARB(GL_ARRAY_BUFFER_ARB, sizeof(Vector4) * vertices, normals, GL_STATIC_DRAW_ARB);
-
-        glBindBufferARB(GL_ARRAY_BUFFER_ARB, texcoordBuffer);
-        glBufferDataARB(GL_ARRAY_BUFFER_ARB, sizeof(float) * 2 * vertices, texCoords, GL_STATIC_DRAW_ARB);
-
-        glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0); // Unbind array buffer
+        positionBuffer.upload(positions, sizeof(Vector4) * vertices);
+        normalBuffer.upload(normals, sizeof(Vector4) * vertices);
+        texcoordBuffer.upload(texCoords, sizeof(float) * 2 * vertices);
     }
 
     struct FacesHeader
@@ -425,7 +397,6 @@ namespace EvilTemple {
             const FaceGroupHeader *groupHeader = reinterpret_cast<FaceGroupHeader*>(currentDataPointer);
             currentDataPointer += sizeof(FaceGroupHeader);
 
-            faceGroup->elementCount = groupHeader->elementCount;
             if (groupHeader->materialId < 0) {
                 faceGroup->material = 0;
                 faceGroup->placeholderId = (- groupHeader->materialId) - 1;
@@ -436,13 +407,11 @@ namespace EvilTemple {
 
             uint groupSize = groupHeader->elementCount * groupHeader->elementSize;
 
-            glGenBuffersARB(1, &faceGroup->buffer);
-            glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, faceGroup->buffer);
-            glBufferDataARB(GL_ELEMENT_ARRAY_BUFFER_ARB, groupSize, currentDataPointer, GL_STATIC_DRAW_ARB);
+            faceGroup->buffer.upload(currentDataPointer, groupSize);
 
             // Also keep a copy in system memory for normal recalculation (maybe base this on a flag?)
-            faceGroup->indices = new ushort[faceGroup->elementCount];
-            memcpy(faceGroup->indices, currentDataPointer, sizeof(ushort) * faceGroup->elementCount);
+            faceGroup->indices.resize(groupHeader->elementCount);
+            memcpy(faceGroup->indices.data(), currentDataPointer, sizeof(ushort) * groupHeader->elementCount);
 
             currentDataPointer += groupSize;
         }
@@ -479,16 +448,8 @@ namespace EvilTemple {
         glEnable(GL_LIGHTING);
     }
 
-    FaceGroup::FaceGroup() : buffer(0), material(0), elementCount(0), indices(0)
+    FaceGroup::FaceGroup() : material(0)
     {
-    }
-
-    FaceGroup::~FaceGroup()
-    {
-        if (buffer) {
-            glDeleteBuffers(1, &buffer);
-        }
-        delete [] indices;
     }
 
     QDataStream &operator >>(QDataStream &stream, Animation &animation)

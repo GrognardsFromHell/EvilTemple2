@@ -13,6 +13,7 @@
 #include "materialstate.h"
 #include "renderstates.h"
 #include "util.h"
+#include "vertexbufferobject.h"
 
 #include <cmath>
 
@@ -21,22 +22,25 @@ using namespace GameMath;
 
 namespace EvilTemple {
 
-    struct FaceGroup {
+    /**
+      Represents a group of faces, and the material used to draw them.
+      */
+    class FaceGroup {
+    public:
+        FaceGroup();
+
         MaterialState *material;
         int placeholderId; // If this face group is connected to a placeholder
         // slot, this is the index pointing to it, otherwise it's -1
-        uint elementCount;
-        GLuint buffer;
-        ushort *indices;
 
-        FaceGroup();
-        ~FaceGroup();
+        IndexBufferObject buffer;
+        QVector<ushort> indices;
     };
 
     /**
-Models the attachment of a single vertex to several bones.
-This is used for skeletal animation
-*/
+    Models the attachment of a single vertex to several bones.
+    This is used for skeletal animation
+    */
     class BoneAttachment {
     public:
 
@@ -57,12 +61,6 @@ This is used for skeletal animation
 
         static const uint MaxCount = 6; // Maximum number of attachments
 
-        /*
-TODO: Can't we convert this to a pointer instead?
-The lifetime of the bones is exactly as long as the lifetime of the model, which in turn
-dictates the lifetime of the attachments. Thus, it should be no problem.
-In addition, we could just point to the full transform matrix instead, further simplifying things.
-*/
         int mBones[MaxCount]; // Index to every bone this vertex is attached to
 
         float mWeights[MaxCount]; // Weights for every one of these bones. Assumption is: Sum(mWeights) = 1.0f
@@ -284,6 +282,7 @@ In addition, we could just point to the full transform matrix instead, further s
 
         ~Animation()
         {
+            delete [] mAnimationBones;
         }
 
         enum DriveType {
@@ -291,11 +290,11 @@ In addition, we could just point to the full transform matrix instead, further s
             Distance,
             Rotation,
             DriveType_ForceDWord = 0x7fffffff
-                               };
+        };
 
         /**
-     Type of the container that maps bone ids to their respective animated state.
-     */
+         Type of the container that maps bone ids to their respective animated state.
+         */
         typedef QHash<uint, const AnimationBone*> BoneMap;
 
         const QString &name() const;
@@ -368,9 +367,9 @@ In addition, we could just point to the full transform matrix instead, further s
     }
 
     /**
-A bone for skeletal animation
-*/
-    class Bone
+    A bone for skeletal animation
+    */
+    class Bone : public AlignedAllocation
     {
         friend class Model;
     public:
@@ -380,8 +379,8 @@ A bone for skeletal animation
         }
 
         /**
-     * Returns the name of this bone.
-     */
+         * Returns the name of this bone.
+         */
         const QString &name() const;
 
         /**
@@ -473,7 +472,7 @@ A bone for skeletal animation
         mRelativeWorld = relativeWorld;
     }
 
-    class Model
+    class Model : public AlignedAllocation
     {
     public:
         Model();
@@ -488,9 +487,9 @@ A bone for skeletal animation
         const float *texCoords;
         int vertices;
 
-        GLuint positionBuffer;
-        GLuint normalBuffer;
-        GLuint texcoordBuffer;
+        VertexBufferObject positionBuffer;
+        VertexBufferObject normalBuffer;
+        VertexBufferObject texcoordBuffer;
 
         int faces;
         QScopedArrayPointer<FaceGroup> faceGroups;
@@ -542,7 +541,6 @@ A bone for skeletal animation
 
         QStringList mPlaceholders;
 
-        AlignedPointer boneData;
         AlignedPointer boneAttachmentData;
         AlignedPointer vertexData;
         AlignedPointer faceData;
@@ -605,6 +603,8 @@ A bone for skeletal animation
     }
 
     typedef QSharedPointer<Model> SharedModel;
+
+    uint getActiveModels();
 
 }
 

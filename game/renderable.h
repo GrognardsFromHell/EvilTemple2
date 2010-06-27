@@ -16,12 +16,12 @@ namespace EvilTemple {
 class SceneNode;
 class RenderStates;
 
-class Renderable : public QObject {
+class Renderable : public QObject, public AlignedAllocation {
 Q_OBJECT
 public:
     Renderable();
     virtual ~Renderable();
-    
+
     virtual void elapseTime(float secondsElapsed);
 
     virtual void render(RenderStates &renderStates) = 0;
@@ -129,6 +129,8 @@ private:
     QVector<Line> mLines;
     Box3d mBoundingBox;
 };
+
+uint getActiveRenderables();
 
 };
 

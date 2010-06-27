@@ -226,7 +226,6 @@ var MapChanger = {
     interactive: true,
     onClicked: function() {
         var jumpPoint = jumppoints[this.teleportTarget];
-        gameView.scene.clear();
         loadMap('maps/' + jumpPoint.map + '/map.js');
         gameView.centerOnWorld(jumpPoint.x, jumpPoint.z);
     },
@@ -250,7 +249,6 @@ function startup() {
         var loadMapUi = gameView.addGuiItem('interface/LoadMap.qml');
         loadMapUi.setMapList(maps);
         loadMapUi.mapSelected.connect(function(dir) {
-            gameView.scene.clear();
             loadMap('maps/' + dir + '/map.js');
         });
         loadMapUi.closeClicked.connect(function() {
@@ -295,18 +293,18 @@ function setupWorldClickHandler() {
         }
 
         if (firstClick === undefined) {
-            var text = "1st @ " + Math.floor(worldPosition.x) + "," + Math.floor(worldPosition.z) + " (" + material + ")";
-            gameView.scene.addTextOverlay(worldPosition, text, new Vector4(0.9, 0.9, 0.9, 0.9));
+            var text = "1st @ " + Math.floor(worldPosition[0]) + "," + Math.floor(worldPosition[2]) + " (" + material + ")";
+            gameView.scene.addTextOverlay(worldPosition, text, [0.9, 0.9, 0.9, 0.9]);
             firstClick = worldPosition;
         } else {
             var inLos = gameView.sectorMap.hasLineOfSight(firstClick, worldPosition);
             if (inLos) {
-                color = new Vector4(0.2, 0.9, 0.2, 0.9);
+                color = [0.2, 0.9, 0.2, 0.9];
             } else {
-                color = new Vector4(0.9, 0.2, 0.2, 0.9);
+                color = [0.9, 0.2, 0.2, 0.9];
             }
 
-            var text = "2nd @ " + Math.floor(worldPosition.x) + "," + Math.floor(worldPosition.z) + " (" + material + ")";
+            var text = "2nd @ " + Math.floor(worldPosition[0]) + "," + Math.floor(worldPosition[2]) + " (" + material + ")";
             gameView.scene.addTextOverlay(worldPosition, text, color);
 
             var path = gameView.sectorMap.findPath(firstClick, worldPosition);
@@ -322,7 +320,7 @@ function setupWorldClickHandler() {
                     sceneNode.attachObject(line);
                 }
 
-                gameView.scene.addTextOverlay(path[i], 'X', new Vector4(1, 0, 0, 1), 1);
+                gameView.scene.addTextOverlay(path[i], 'X', [1, 0, 0], 1);
             }
 
             gameView.scene.addNode(sceneNode);
@@ -335,13 +333,6 @@ function setupWorldClickHandler() {
             firstClick = undefined;
         }
     });
-}
-
-function rotationFromDegrees(degrees) {
-    var radians = degrees * 0.0174532925199432;
-    var cosRot = Math.cos(radians / 2);
-    var sinRot = Math.sin(radians / 2);
-    return new Quaternion(0, sinRot, 0, cosRot);
 }
 
 var animEventGameFacade = {
@@ -422,10 +413,10 @@ function createMapObject(scene, obj)
 {
     var sceneNode = new SceneNode();
     sceneNode.interactive = obj.interactive;
-    sceneNode.position = new Vector4(obj.position[0], obj.position[1], obj.position[2], 1);
+    sceneNode.position = obj.position;
     sceneNode.rotation = rotationFromDegrees(obj.rotation);
     var scale = obj.scale / 100.0;
-    sceneNode.scale = new Vector4(scale, scale, scale, 0);
+    sceneNode.scale = [scale, scale, scale];
     scene.addNode(sceneNode);
 
     var modelObj = gameView.loadModel(obj.model);
@@ -442,19 +433,13 @@ function createMapObject(scene, obj)
 }
 
 function loadMap(filename) {
+    var start = timerReference();
+
     currentSelection = null;
+    gameView.scene.clear();
+    gc();
 
-    print("Loading map " + filename);
-
-    var mapFile = readFile(filename);
-    if (mapFile === undefined) {
-        print("Unable to open map file.");
-        return;
-    }
-
-    var mapObj = eval('(' + mapFile + ')');
-
-    print(mapObj.name);
+    var mapObj = readJson(filename);
 
     gameView.scrollBoxMinX = mapObj.scrollBox[0];
     gameView.scrollBoxMinY = mapObj.scrollBox[1];
@@ -471,8 +456,10 @@ function loadMap(filename) {
 
     print("Creating " + mapObj.staticObjects.length + " static objects.");
 
+    var obj;
+
     for (var i = 0; i < mapObj.staticObjects.length; ++i) {
-        var obj = mapObj.staticObjects[i];
+        obj = mapObj.staticObjects[i];
         connectToPrototype(obj);
         createMapObject(scene, obj);
     }
@@ -480,7 +467,7 @@ function loadMap(filename) {
     print("Creating " + mapObj.dynamicObjects.length + " dynamic objects.");
 
     for (var i = 0; i < mapObj.dynamicObjects.length; ++i) {
-        var obj = mapObj.dynamicObjects[i];
+        obj = mapObj.dynamicObjects[i];
         connectToPrototype(obj);
         createMapObject(scene, obj);
     }
@@ -488,18 +475,18 @@ function loadMap(filename) {
     print("Creating " + mapObj.lights.length + " lights.");
 
     for (var i = 0; i < mapObj.lights.length; ++i) {
-        var obj = mapObj.lights[i];
+        obj = mapObj.lights[i];
 
         var sceneNode = new SceneNode();
         sceneNode.interactive = false;
-        sceneNode.position = new Vector4(obj.position[0], obj.position[1], obj.position[2], 1);
+        sceneNode.position = obj.position;
 
         var light = new Light();
         light.type = obj.type;
         light.range = obj.range;
         // Enable this to see the range of lights
         // light.debugging = true;
-        light.color = new Vector4(obj.color[0] / 255, obj.color[1] / 255, obj.color[2] / 255, 1);
+        light.color = [obj.color[0] / 255, obj.color[1] / 255, obj.color[2] / 255, 1];
         sceneNode.attachObject(light);
 
         scene.addNode(sceneNode);
@@ -508,11 +495,11 @@ function loadMap(filename) {
     print("Creating " + mapObj.particleSystems.length + " particle systems.");
 
     for (var i = 0; i < mapObj.particleSystems.length; ++i) {
-        var obj = mapObj.particleSystems[i];
+        obj = mapObj.particleSystems[i];
 
         var sceneNode = new SceneNode();
         sceneNode.interactive = false;
-        sceneNode.position = new Vector4(obj.position[0], obj.position[1], obj.position[2], 1);
+        sceneNode.position = obj.position;
 
         var particleSystem = gameView.particleSystems.instantiate(obj.name);
         sceneNode.attachObject(particleSystem);
@@ -520,13 +507,13 @@ function loadMap(filename) {
         scene.addNode(sceneNode);
     }
 
-/*    print("Creating debug objects for waypoints.");
+    /*print("Creating debug objects for waypoints.");
     for (var waypointId in mapObj.waypoints) {
         var waypoint = mapObj.waypoints[waypointId];
 
         var sceneNode = new SceneNode();
         sceneNode.interactive = false;
-        sceneNode.position = new Vector4(waypoint.x, 0, waypoint.y, 1);
+        sceneNode.position = [waypoint.x, 0, waypoint.y];
 
         var testModel = gameView.loadModel('meshes/items/Ale_stien.model');
 
@@ -534,7 +521,7 @@ function loadMap(filename) {
         modelInstance.model = testModel;
         sceneNode.attachObject(modelInstance);
 
-        var origin = new Vector4(0,0,0,1);
+        var origin = [];
 
         // Connect with targets
         for (var i = 0; i < waypoint.goals.length; ++i) {
@@ -543,14 +530,19 @@ function loadMap(filename) {
             var diffY = goal.y - waypoint.y;
 
             var line = new LineRenderable();
-            line.addLine(origin, new Vector4(diffX, 0, diffY, 1));
+            line.addLine(origin, [diffX, 0, diffY]);
             sceneNode.attachObject(line);
         }
 
         scene.addNode(sceneNode);
     }*/
 
-    gameView.centerOnWorld(mapObj.startPosition[0], mapObj.startPosition[2])
+    gameView.centerOnWorld(mapObj.startPosition[0], mapObj.startPosition[2]);
+
+    gc();
+
+    var elapsed = timerReference() - start;
+    print("Loaded map in " + elapsed + " ms.");
 }
 
 function connectToPrototype(obj) {

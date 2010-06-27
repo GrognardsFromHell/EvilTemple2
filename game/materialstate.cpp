@@ -1,12 +1,21 @@
 
 #include <GL/glew.h>
 
+#include <QFile>
+
 #include "materialstate.h"
 #include "material.h"
 
 namespace EvilTemple {
 
-class NullBinder : public UniformBinder 
+static uint activeMaterialStates = 0;
+
+uint getActiveMaterialStates()
+{
+    return activeMaterialStates;
+}
+
+class NullBinder : public UniformBinder
 {
     void bind(GLint) const;
 };
@@ -21,6 +30,16 @@ UniformBinder::~UniformBinder()
 {
 }
 
+MaterialState::MaterialState() : passes((MaterialPassState*)NULL)
+{
+    activeMaterialStates++;
+}
+
+MaterialState::~MaterialState()
+{
+    activeMaterialStates--;
+}
+
 bool MaterialState::createFromFile(const QString &filename, const RenderStates &renderState, TextureSource *textureSource)
 {
     Material material;
@@ -33,12 +52,14 @@ bool MaterialState::createFromFile(const QString &filename, const RenderStates &
     return createFrom(material, renderState, textureSource);
 }
 
-QString getFullCode(const MaterialShader &shader) {
-    QString result;
+QByteArray getFullCode(const MaterialShader &shader) {
+    QByteArray result;
 
     // Prepend version if specified
     if (!shader.version().isEmpty()) {
-        result = "#version " + shader.version() + "\n";
+        result.append("#version ");
+        result.append(shader.version());
+        result.append("\n");
     }
 
     foreach (const QString &includedFile, shader.includes()) {
@@ -54,7 +75,7 @@ QString getFullCode(const MaterialShader &shader) {
         result.append('\n');
     }
 
-    result.append(shader.code());
+    result.append(shader.code().toLatin1());
 
     return result;
 }
@@ -70,8 +91,8 @@ bool MaterialState::createFrom(const Material &material, const RenderStates &sta
 
         passState.renderStates = pass->renderStates();
 
-
-        if (!passState.program.load(qPrintable(getFullCode(pass->vertexShader())), qPrintable(getFullCode(pass->fragmentShader())))) {
+        if (!passState.program.load(getFullCode(pass->vertexShader()),
+                                    getFullCode(pass->fragmentShader()))) {
             mError = QString("Unable to compile shader:\n%1").arg(passState.program.error());
             return false;
         }

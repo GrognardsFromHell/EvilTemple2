@@ -62,21 +62,21 @@ namespace EvilTemple {
     const static uint ParticleLimit = 1000; // The maximum number of particles a single particle system may have
 
     enum ParticleType {
-	Sprite,
-	Disc,
-	Model,
+        Sprite,
+        Disc,
+        Model,
         Point
     };
 
     enum CoordinateType {
-	Cartesian,
-	Polar
+        Cartesian,
+        Polar
     };
 
     enum ParticleBlendMode {
-	Blend_Add,
-	Blend_Subtract,
-	Blend_Blend,
+        Blend_Add,
+        Blend_Subtract,
+        Blend_Blend,
     };
 
     enum SpaceType {
@@ -97,16 +97,16 @@ namespace EvilTemple {
         {
         }
 
-	/**
-	 * Returns the value of the property, given the life-time of the particle expressed as a range of [0,1].
-	 */
+        /**
+         * Returns the value of the property, given the life-time of the particle expressed as a range of [0,1].
+         */
         virtual T operator()(const Emitter *emitter, uint randomSeed, float ratio) const = 0;
 
-	/**
-	 * Indicates whether this property is animated and needs to be queried constantly. If not,
-	 * the value will only be queried whenever a particle system or emitter is created.
-	 */
-	virtual bool isAnimated() const = 0;
+        /**
+         * Indicates whether this property is animated and needs to be queried constantly. If not,
+         * the value will only be queried whenever a particle system or emitter is created.
+         */
+        virtual bool isAnimated() const = 0;
     };
 
     /**
@@ -114,23 +114,23 @@ namespace EvilTemple {
       */
     template<typename T> class ConstantParticleProperty : public ParticleProperty<T> {
     public:
-	ConstantParticleProperty(T value) : mValue(value) 
-	{
-	}
+        ConstantParticleProperty(T value) : mValue(value)
+        {
+        }
 
         T operator()(const Emitter *emitter, uint randomSeed, float ratio) const
-	{
+        {
             Q_UNUSED(ratio)
             return mValue;
-	}
+        }
 
-	bool isAnimated() const
-	{
+        bool isAnimated() const
+        {
             return false;
-	}
+        }
 
     private:
-	T mValue;
+        T mValue;
     };
 
     /**
@@ -140,15 +140,15 @@ namespace EvilTemple {
     template<typename T> class RadiusProperty : public ParticleProperty<T> {
     public:
         T operator()(const Emitter *emitter, uint randomSeed, float ratio) const
-	{
+        {
             Q_UNUSED(ratio);
             return 20;
-	}
+        }
 
-	bool isAnimated() const
-	{
+        bool isAnimated() const
+        {
             return false;
-	}
+        }
     };
 
     static uint nextRandomPropertyId = 0;
@@ -159,29 +159,29 @@ namespace EvilTemple {
     template<typename T> class RandomParticleProperty : public ParticleProperty<T> {
     public:
 
-	/**
-	 * Constructs a random particle property with a minimum and maximum value (both inclusive).
-	 */
+        /**
+         * Constructs a random particle property with a minimum and maximum value (both inclusive).
+         */
         RandomParticleProperty(T minValue, T maxValue)
             : mMinValue(minValue), mSpan(maxValue - mMinValue), mPropertyId(nextRandomPropertyId++)
-	{
-	}
+        {
+        }
 
         T operator()(const Emitter *emitter, uint randomSeed, float ratio) const
-	{
+        {
             Q_UNUSED(ratio)
             // srand(randomSeed + mPropertyId);
             float result = mMinValue + (rand() / (float)RAND_MAX) * mSpan;
             //srand(time(NULL)); // TODO: This should probably be removed, and the PRNG polynom be used directly
             return result;
-	}
+        }
 
-	bool isAnimated() const
-	{
+        bool isAnimated() const
+        {
             return false;
-	}
+        }
 
-	static RandomParticleProperty<float> *fromString(const QString &string) {
+        static RandomParticleProperty<float> *fromString(const QString &string) {
             QStringList parts = string.split('?');
             if (parts.length() > 2) {
                 qWarning("Random properties may only contain a single question mark: %s.", qPrintable(string));
@@ -204,11 +204,11 @@ namespace EvilTemple {
             }
 
             return new RandomParticleProperty<float>(minValue, maxValue);
-	}
+        }
 
     private:
-	T mMinValue;
-	T mSpan;
+        T mMinValue;
+        T mSpan;
         uint mPropertyId;
     };
 
@@ -247,13 +247,13 @@ namespace EvilTemple {
             return first + (second - first) * i;
         }
 
-	bool isAnimated() const
-	{
+        bool isAnimated() const
+        {
             return true;
-	}
+        }
 
-	static AnimatedParticleProperty<float> *fromString(const QString &string) 
-	{
+        static AnimatedParticleProperty<float> *fromString(const QString &string)
+        {
             QStringList parts = string.split(',', QString::SkipEmptyParts);
             QVector<float> values;
             values.reserve(parts.size());
@@ -270,7 +270,7 @@ namespace EvilTemple {
             }
 
             return new AnimatedParticleProperty<float>(values);
-	}
+        }
 
     private:
         float mStep;
@@ -372,17 +372,17 @@ namespace EvilTemple {
 
     inline ParticleProperty<float> *propertyFromString(const QString &string)
     {
-	ParticleProperty<float> *result = NULL;
+        ParticleProperty<float> *result = NULL;
 
         if (string.contains('?') && string.contains(',')) {
             result = AnimatedRandomParticleProperty<float>::fromString(string);
         } else if (string.contains('?')) {
             result = RandomParticleProperty<float>::fromString(string);
-	} else if (string.contains(',')) {
+        } else if (string.contains(',')) {
             result = AnimatedParticleProperty<float>::fromString(string);
-	} else if (string == "#radius") {
+        } else if (string == "#radius") {
             result = new RadiusProperty<float>();
-	} else {
+        } else {
             bool ok;
             float value = string.toFloat(&ok);
 
@@ -391,34 +391,34 @@ namespace EvilTemple {
             } else {
                 result = new ConstantParticleProperty<float>(value);
             }
-	}
-	
-	// Fall back to 0 constant
-	if (!result) {
-            result = new ConstantParticleProperty<float>(0);
-	}
+        }
 
-	return result;
+        // Fall back to 0 constant
+        if (!result) {
+            result = new ConstantParticleProperty<float>(0);
+        }
+
+        return result;
     }
 
 
-    class Particle {
+    class Particle : public AlignedAllocation {
     public:
-	Particle() : rotationYaw(0), rotationPitch(0), rotationRoll(0),
+        Particle() : rotationYaw(0), rotationPitch(0), rotationRoll(0),
             colorRed(255), colorGreen(255), colorBlue(255), colorAlpha(255),
             scale(100),
             accelerationX(0), accelerationY(0), accelerationZ(0),
             velocityX(0), velocityY(0), velocityZ(0)
-	{
+        {
             randomSeed = rand();
-	}
+        }
 
         Vector4 position;
         float rotationYaw, rotationPitch, rotationRoll;
-	float colorRed, colorGreen, colorBlue, colorAlpha;
-	float accelerationX, accelerationY, accelerationZ;
-	float velocityX, velocityY, velocityZ;
-	float scale;
+        float colorRed, colorGreen, colorBlue, colorAlpha;
+        float accelerationX, accelerationY, accelerationZ;
+        float velocityX, velocityY, velocityZ;
+        float scale;
         float expireTime;
         float startTime;
         uint randomSeed; // Used for per-particle randomness
@@ -427,14 +427,14 @@ namespace EvilTemple {
     class Emitter {
     public:
 
-	typedef const ParticleProperty<float> *Property;
+        typedef const ParticleProperty<float> *Property;
 
-	Emitter(float spawnRate, float particleLifetime) 
+        Emitter(float spawnRate, float particleLifetime)
             : mPartialSpawnedParticles(0), mElapsedTime(0), mExpired(false),
             mSpawnRate(1/(spawnRate *ParticlesTimeUnit)), mParticleLifetime(particleLifetime), mLifetime(std::numeric_limits<float>::infinity()),
             mEmitterSpace(Space_World)
-	{
-	}
+        {
+        }
 
         void elapseTime(float timeUnits);
 
@@ -443,9 +443,9 @@ namespace EvilTemple {
       */
         void spawnParticle(float atTime);
 
-	void updateParticles(float elapsedTimeUnits);
+        void updateParticles(float elapsedTimeUnits);
 
-	void updateParticle(Particle &particle, float elapsedTimeUnits);
+        void updateParticle(Particle &particle, float elapsedTimeUnits);
 
         void render(RenderStates &renderStates);
 
@@ -465,68 +465,68 @@ namespace EvilTemple {
             }
         }
 
-	void setScale(Property scale)
-	{
+        void setScale(Property scale)
+        {
             mScale = scale;
-	}
+        }
 
-	void setColor(Property colorRed, Property colorGreen, Property colorBlue, Property colorAlpha)
-	{
+        void setColor(Property colorRed, Property colorGreen, Property colorBlue, Property colorAlpha)
+        {
             mColorRed = colorRed;
             mColorGreen = colorGreen;
             mColorBlue = colorBlue;
             mColorAlpha = colorAlpha;
-	}
+        }
 
         void setEmitterSpace(SpaceType spaceType)
         {
             mEmitterSpace = spaceType;
         }
 
-	void setRotation(Property rotationYaw, Property rotationPitch, Property rotationRoll)
-	{
+        void setRotation(Property rotationYaw, Property rotationPitch, Property rotationRoll)
+        {
             mRotationYaw = rotationYaw;
             mRotationPitch = rotationPitch;
             mRotationRoll = rotationRoll;
-	}
+        }
 
-	void setParticleVelocity(Property velocityX, Property velocityY, Property velocityZ, CoordinateType type)
-	{
+        void setParticleVelocity(Property velocityX, Property velocityY, Property velocityZ, CoordinateType type)
+        {
             mParticleVelocityX = velocityX;
             mParticleVelocityY = velocityY;
             mParticleVelocityZ = velocityZ;
             mParticleVelocityType = type;
-	}
+        }
 
-	void setParticlePosition(Property positionX, Property positionY, Property positionZ, CoordinateType type)
-	{
+        void setParticlePosition(Property positionX, Property positionY, Property positionZ, CoordinateType type)
+        {
             mParticlePositionX = positionX;
             mParticlePositionY = positionY;
             mParticlePositionZ = positionZ;
             mParticlePositionType = type;
-	}
+        }
 
-	void setAcceleration(Property accelerationX, Property accelerationY, Property accelerationZ)
-	{
+        void setAcceleration(Property accelerationX, Property accelerationY, Property accelerationZ)
+        {
             mAccelerationX = accelerationX;
             mAccelerationY = accelerationY;
             mAccelerationZ = accelerationZ;
-	}
+        }
 
-	void setBlendMode(ParticleBlendMode blendMode)
-	{
+        void setBlendMode(ParticleBlendMode blendMode)
+        {
             mBlendMode = blendMode;
-	}
+        }
 
         void setModelInstance(ModelInstance *modelInstance)
         {
             mModelInstance = modelInstance;
         }
 
-	void setTexture(const SharedTexture &texture)
-	{
+        void setTexture(const SharedTexture &texture)
+        {
             mTexture = texture;
-	}
+        }
 
         void setPosition(Property positionX, Property positionY, Property positionZ)
         {
@@ -535,20 +535,20 @@ namespace EvilTemple {
             mPositionZ = positionZ;
         }
 
-	void setParticleType(ParticleType type) 
-	{
+        void setParticleType(ParticleType type)
+        {
             mParticleType = type;
-	}
+        }
 
         void setBoneName(const QString &boneName)
         {
             mBoneName = boneName;
         }
 
-	void setName(const QString &name)
-	{
+        void setName(const QString &name)
+        {
             mName = name;
-	}
+        }
 
         void setMaterial(const SharedMaterialState &material)
         {
@@ -561,21 +561,21 @@ namespace EvilTemple {
 
         SharedMaterialState mMaterial;
 
-	Property mScale;
+        Property mScale;
 
-	Property mColorAlpha, mColorRed, mColorGreen, mColorBlue;
+        Property mColorAlpha, mColorRed, mColorGreen, mColorBlue;
 
-	Property mRotationYaw, mRotationPitch, mRotationRoll;
+        Property mRotationYaw, mRotationPitch, mRotationRoll;
 
-	Property mAccelerationX, mAccelerationY, mAccelerationZ;
+        Property mAccelerationX, mAccelerationY, mAccelerationZ;
 
-	Property mParticleVelocityX, mParticleVelocityY, mParticleVelocityZ;
-	CoordinateType mParticleVelocityType;
+        Property mParticleVelocityX, mParticleVelocityY, mParticleVelocityZ;
+        CoordinateType mParticleVelocityType;
 
-	Property mParticlePositionX, mParticlePositionY, mParticlePositionZ;
-	CoordinateType mParticlePositionType;
+        Property mParticlePositionX, mParticlePositionY, mParticlePositionZ;
+        CoordinateType mParticlePositionType;
 
-	ParticleType mParticleType;
+        ParticleType mParticleType;
 
         QList<Particle> mParticles;
 
@@ -583,101 +583,101 @@ namespace EvilTemple {
 
         QString mBoneName; // For direct bone refs
 
-	QString mName;
+        QString mName;
 
-	// Current position of this emitter
+        // Current position of this emitter
         Property mPositionX, mPositionY, mPositionZ;
 
         // All particles of an emitter use the same material
-	SharedTexture mTexture;
+        SharedTexture mTexture;
 
-	ParticleBlendMode mBlendMode;
+        ParticleBlendMode mBlendMode;
         bool mExpired; // More time elapsed than this emitter's lifetime
         float mElapsedTime;
         float mParticleLifetime; // Lifetime of newly created particles in time units
         float mLifetime; // Number of time units until this emitter stops working. Can be Infinity.
         float mSpawnRate; // One particle per this many time units is spawned
         float mPartialSpawnedParticles; // If the elapsed time is not enough to spawn another particle, it is accumulated.
-	
-	Q_DISABLE_COPY(Emitter);
+
+        Q_DISABLE_COPY(Emitter);
     };
 
     void Emitter::updateParticles(float elapsedTimeunits)
     {
-	for (int i = 0; i < mParticles.size(); ++i) {
+        for (int i = 0; i < mParticles.size(); ++i) {
             updateParticle(mParticles[i], elapsedTimeunits);
-	}
+        }
     }
 
     void Emitter::spawnParticle(float atTime)
     {
-	Particle particle;
+        Particle particle;
 
-	if (mRotationYaw) {
+        if (mRotationYaw) {
             particle.rotationYaw = (*mRotationYaw)(this, particle.randomSeed, 0);
-	}
-	if (mRotationPitch) {
+        }
+        if (mRotationPitch) {
             particle.rotationPitch = (*mRotationPitch)(this, particle.randomSeed,0);
-	}
-	if (mRotationRoll) {
+        }
+        if (mRotationRoll) {
             particle.rotationRoll = (*mRotationRoll)(this, particle.randomSeed,0);
-	}
+        }
 
-	if (mAccelerationX) {
+        if (mAccelerationX) {
             particle.accelerationX = (*mAccelerationX)(this, particle.randomSeed,0);
-	}
-	if (mAccelerationY) {
+        }
+        if (mAccelerationY) {
             particle.accelerationY = (*mAccelerationY)(this, particle.randomSeed,0);
-	}
-	if (mAccelerationZ) {
+        }
+        if (mAccelerationZ) {
             particle.accelerationZ = (*mAccelerationZ)(this, particle.randomSeed,0);
-	}
+        }
 
-	if (mParticleVelocityX) {
+        if (mParticleVelocityX) {
             particle.velocityX = (*mParticleVelocityX)(this, particle.randomSeed,0);
             if (mParticleVelocityType == Polar)
                 particle.velocityX = deg2rad(particle.velocityX);
-	}
-	if (mParticleVelocityY) {
+        }
+        if (mParticleVelocityY) {
             particle.velocityY = (*mParticleVelocityY)(this, particle.randomSeed,0);
             if (mParticleVelocityType == Polar)
                 particle.velocityY = deg2rad(particle.velocityY);
-	}
-	if (mParticleVelocityZ) {
+        }
+        if (mParticleVelocityZ) {
             particle.velocityZ = (*mParticleVelocityZ)(this, particle.randomSeed,0);
-	}
+        }
 
-	if (mScale) {
+        if (mScale) {
             particle.scale = (*mScale)(this, particle.randomSeed,0);
-	}
+        }
 
-	if (mColorRed) {
+        if (mColorRed) {
             particle.colorRed = (*mColorRed)(this, particle.randomSeed, 0);
-	}
-	if (mColorGreen) {
+        }
+        if (mColorGreen) {
             particle.colorGreen = (*mColorGreen)(this, particle.randomSeed, 0);
-	}
-	if (mColorBlue) {
+        }
+        if (mColorBlue) {
             particle.colorBlue = (*mColorBlue)(this, particle.randomSeed, 0);
-	}
-	if (mColorAlpha) {
+        }
+        if (mColorAlpha) {
             particle.colorAlpha = (*mColorAlpha)(this, particle.randomSeed, 0);
-	}
+        }
 
-	Vector4 positionOffset(0, 0, 0, 0);
-	if (mParticlePositionX) {
+        Vector4 positionOffset(0, 0, 0, 0);
+        if (mParticlePositionX) {
             positionOffset.setX((*mParticlePositionX)(this, particle.randomSeed,0));
-	}
-	if (mParticlePositionY) {
+        }
+        if (mParticlePositionY) {
             positionOffset.setY((*mParticlePositionY)(this, particle.randomSeed,0));
-	}
-	if (mParticlePositionZ) {
+        }
+        if (mParticlePositionZ) {
             positionOffset.setZ((*mParticlePositionZ)(this, particle.randomSeed,0));
-	}
-	// Convert to cartesian if necessary
-	if (mParticlePositionType == Polar) {
+        }
+        // Convert to cartesian if necessary
+        if (mParticlePositionType == Polar) {
             positionOffset = polarToCartesian(positionOffset.x(), positionOffset.y(), positionOffset.z());
-	}
+        }
         particle.position = Vector4((*mPositionX)(this, particle.randomSeed, 0),
                                     (*mPositionY)(this, particle.randomSeed, 0),
                                     (*mPositionZ)(this, particle.randomSeed, 0),
@@ -727,7 +727,7 @@ namespace EvilTemple {
 
         particle.startTime = atTime;
         particle.expireTime = atTime + mParticleLifetime;
-	mParticles.append(particle);
+        mParticles.append(particle);
     }
 
     void Emitter::updateParticle(Particle &particle, float elapsedTimeUnits)
@@ -735,80 +735,80 @@ namespace EvilTemple {
         // How many time units have elapsed since the particle was created
         float particleElapsed = mElapsedTime - particle.startTime;
         // The number of time units the particle will live after its creation
-	float particleLifetime = particle.expireTime - particle.startTime;
+        float particleLifetime = particle.expireTime - particle.startTime;
         // A factor between 0 and 1 that indicates how much of the particles lifetime has elapsed
-	float lifecycle = particleElapsed / particleLifetime;
+        float lifecycle = particleElapsed / particleLifetime;
 
         float scalingFactor = elapsedTimeUnits * ParticlesTimeUnit;
 
-	if (mRotationYaw && mRotationYaw->isAnimated()) {
+        if (mRotationYaw && mRotationYaw->isAnimated()) {
             particle.rotationYaw = (*mRotationYaw)(this, particle.randomSeed, lifecycle);
-	}
-	if (mRotationPitch && mRotationPitch->isAnimated()) {
+        }
+        if (mRotationPitch && mRotationPitch->isAnimated()) {
             particle.rotationPitch = (*mRotationPitch)(this, particle.randomSeed, lifecycle);
-	}
-	if (mRotationRoll && mRotationRoll->isAnimated()) {
+        }
+        if (mRotationRoll && mRotationRoll->isAnimated()) {
             particle.rotationRoll = (*mRotationRoll)(this, particle.randomSeed, lifecycle);
-	}
+        }
 
-	if (mScale && mScale->isAnimated()) {
+        if (mScale && mScale->isAnimated()) {
             particle.scale = (*mScale)(this, particle.randomSeed, lifecycle);
-	}
+        }
 
-	if (mColorRed && mColorRed->isAnimated()) {
+        if (mColorRed && mColorRed->isAnimated()) {
             particle.colorRed = (*mColorRed)(this, particle.randomSeed, lifecycle);
-	}
-	if (mColorGreen && mColorGreen->isAnimated()) {
+        }
+        if (mColorGreen && mColorGreen->isAnimated()) {
             particle.colorGreen = (*mColorGreen)(this, particle.randomSeed, lifecycle);
-	}
-	if (mColorBlue && mColorBlue->isAnimated()) {
+        }
+        if (mColorBlue && mColorBlue->isAnimated()) {
             particle.colorBlue = (*mColorBlue)(this, particle.randomSeed, lifecycle);
-	}
-	if (mColorAlpha && mColorAlpha->isAnimated()) {
+        }
+        if (mColorAlpha && mColorAlpha->isAnimated()) {
             particle.colorAlpha = (*mColorAlpha)(this, particle.randomSeed, lifecycle);
-	}
+        }
 
-	if (mAccelerationX && mAccelerationX->isAnimated()) {
+        if (mAccelerationX && mAccelerationX->isAnimated()) {
             particle.accelerationX = (*mAccelerationX)(this, particle.randomSeed, lifecycle);
-	}
-	if (mAccelerationY && mAccelerationY->isAnimated()) {
+        }
+        if (mAccelerationY && mAccelerationY->isAnimated()) {
             particle.accelerationY = (*mAccelerationY)(this, particle.randomSeed, lifecycle);
-	}
-	if (mAccelerationZ && mAccelerationZ->isAnimated()) {
+        }
+        if (mAccelerationZ && mAccelerationZ->isAnimated()) {
             particle.accelerationZ = (*mAccelerationZ)(this, particle.randomSeed, lifecycle);
-	}
+        }
 
-	// Increase velocity according to acceleration or animate it using keyframes	
+        // Increase velocity according to acceleration or animate it using keyframes
         if (mParticleVelocityX && mParticleVelocityX->isAnimated()) {
             particle.velocityX = (*mParticleVelocityX)(this, particle.randomSeed, lifecycle);
             if (mParticleVelocityType == Polar)
                 particle.velocityX = deg2rad((*mParticleVelocityX)(this, particle.randomSeed, lifecycle));
             else
                 particle.velocityX = (*mParticleVelocityX)(this, particle.randomSeed, lifecycle);
-	} else {
+        } else {
             if (mParticleVelocityType == Polar)
                particle.velocityX += deg2rad(particle.accelerationX) * scalingFactor;
             else
                particle.velocityX += particle.accelerationX * scalingFactor;
-	}
-	if (mParticleVelocityY && mParticleVelocityY->isAnimated()) {
+        }
+        if (mParticleVelocityY && mParticleVelocityY->isAnimated()) {
             if (mParticleVelocityType == Polar)
                 particle.velocityY = deg2rad((*mParticleVelocityY)(this, particle.randomSeed, lifecycle));
             else
                 particle.velocityY = (*mParticleVelocityY)(this, particle.randomSeed, lifecycle);
-	} else {
+        } else {
              if (mParticleVelocityType == Polar)
                 particle.velocityY += deg2rad(particle.accelerationY) * scalingFactor;
              else
                  particle.velocityY += particle.accelerationY * scalingFactor;
-	}
-	if (mParticleVelocityZ && mParticleVelocityZ->isAnimated()) {
+        }
+        if (mParticleVelocityZ && mParticleVelocityZ->isAnimated()) {
             particle.velocityZ = (*mParticleVelocityZ)(this, particle.randomSeed, lifecycle);
-	} else {
+        } else {
             particle.velocityZ += particle.accelerationZ * scalingFactor;
-	}
+        }
 
-	if (mParticleVelocityType == Polar) {
+        if (mParticleVelocityType == Polar) {
             float r = (particle.position - Vector4(0, 0, 0, 1)).length();
             if (r != 0) {
                 Vector4 rotAxis;
@@ -829,9 +829,9 @@ namespace EvilTemple {
                 direction.setW(0);
                 particle.position += ((particle.velocityZ * scalingFactor) / direction.length()) * direction;
             }
-	} else {
+        } else {
             particle.position += scalingFactor * Vector4(particle.velocityX, particle.velocityY, particle.velocityZ, 0);
-	}
+        }
 
         // An animated position overrides any velocity calculations
         if (mParticlePositionType == Cartesian) {
@@ -870,18 +870,18 @@ namespace EvilTemple {
     }
 
     void Emitter::elapseTime(float timeUnits) {
-	Q_ASSERT(mSpawnRate > 0);
+        Q_ASSERT(mSpawnRate > 0);
 
         mElapsedTime += timeUnits;
 
-	// Check for expired particles
-	QList<Particle>::iterator it = mParticles.begin();
-	while (it != mParticles.end()) {
+        // Check for expired particles
+        QList<Particle>::iterator it = mParticles.begin();
+        while (it != mParticles.end()) {
             if (mElapsedTime >= it->expireTime)
                 it = mParticles.erase(it);
             else
                 ++it;
-	}
+        }
 
         // Special case: If this emitter depends on a bone that doesn't exist,
         // don't do anything.
@@ -889,9 +889,9 @@ namespace EvilTemple {
             if (!mModelInstance || !mModelInstance->model() || mModelInstance->model()->bone(mBoneName) == -1)
                 return;
         }
-	
-	// Spawn new particles
-	if (!mExpired) {
+
+        // Spawn new particles
+        if (!mExpired) {
             float remainingSpawnTime = mPartialSpawnedParticles + timeUnits;
 
             while (remainingSpawnTime > mSpawnRate) {
@@ -905,7 +905,7 @@ namespace EvilTemple {
             if (mElapsedTime > mLifetime) {
                 mExpired = true;
             }
-	}
+        }
 
         updateParticles(timeUnits);
     }
@@ -914,34 +914,34 @@ namespace EvilTemple {
     {
         MaterialPassState &pass = mMaterial->passes[0];
 
-	int posAttrib = pass.program.attributeLocation("vertexPosition");
-	int texAttrib = pass.program.attributeLocation("vertexTexCoord");
-	int rotationLoc = pass.program.uniformLocation("rotation");
-	int materialColorLoc = pass.program.uniformLocation("materialColor");
+        int posAttrib = pass.program.attributeLocation("vertexPosition");
+        int texAttrib = pass.program.attributeLocation("vertexTexCoord");
+        int rotationLoc = pass.program.uniformLocation("rotation");
+        int materialColorLoc = pass.program.uniformLocation("materialColor");
 
-	pass.program.bind();			
+        pass.program.bind();
 
         glActiveTexture(GL_TEXTURE0);
-	mTexture->bind();
-	glDepthMask(GL_FALSE);
-	glEnable(GL_BLEND);
-	switch (mBlendMode)
-	{
-	case Blend_Add:
+        mTexture->bind();
+        glDepthMask(GL_FALSE);
+        glEnable(GL_BLEND);
+        switch (mBlendMode)
+        {
+        case Blend_Add:
             glBlendFunc(GL_SRC_ALPHA, GL_ONE);
             break;
-	case Blend_Blend:
+        case Blend_Blend:
             glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE);
             break;
-	case Blend_Subtract:
+        case Blend_Subtract:
             glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ZERO, GL_ONE);
             glBlendEquation(GL_FUNC_REVERSE_SUBTRACT);
             break;
-	}
+        }
 
         Matrix4 oldWorld = renderStates.worldMatrix();
-	
-	foreach (const Particle &particle, mParticles) {
+
+        foreach (const Particle &particle, mParticles) {
             Vector4 origin = oldWorld.mapPosition(particle.position);
             renderStates.setWorldMatrix(Matrix4::translation(origin.x(), origin.y(), origin.z()));
 
@@ -951,9 +951,9 @@ namespace EvilTemple {
             }
 
             glUniform4f(materialColorLoc, particle.colorRed / 255.0f,
-			particle.colorGreen / 255.0f, 
-			particle.colorBlue / 255.0f,
-			particle.colorAlpha / 255.0f);
+                        particle.colorGreen / 255.0f,
+                        particle.colorBlue / 255.0f,
+                        particle.colorAlpha / 255.0f);
             glUniform1f(rotationLoc, particle.rotationYaw);
 
             float d = particle.scale / 100.0 * 128;
@@ -981,31 +981,31 @@ namespace EvilTemple {
                 break;
             }
             glEnd();
-	}
+        }
 
-	renderStates.setWorldMatrix(oldWorld);
+        renderStates.setWorldMatrix(oldWorld);
 
-	glDepthMask(GL_TRUE);
-	glDisable(GL_BLEND);
+        glDepthMask(GL_TRUE);
+        glDisable(GL_BLEND);
         glBlendEquation(GL_FUNC_ADD);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	pass.program.unbind();
+        pass.program.unbind();
     }
 
-    class ParticleSystemData
+    class ParticleSystemData : public AlignedAllocation
     {
     public:
         ParticleSystemData(const QString &_id, const QList<Emitter*> &_emitters)
             : id(_id), emitters(_emitters)
-	{
+        {
         }
 
-	~ParticleSystemData() {
+        ~ParticleSystemData() {
             qDeleteAll(emitters);
-	}
-	
-	QString id;
+        }
+
+        QString id;
         QList<Emitter*> emitters;
         Box3d boundingBox;
     };
@@ -1014,37 +1014,37 @@ namespace EvilTemple {
 
     SharedTexture loadTexture(const QString &filename) {
 
-	if (spriteCache.contains(filename.toLower())) {
+        if (spriteCache.contains(filename.toLower())) {
             SharedTexture cachedResult = SharedTexture(spriteCache[filename.toLower()]);
             if (cachedResult) {
                 return cachedResult;
             }
-	}	
+        }
 
-	QFile f(filename);
-	if (!f.open(QIODevice::ReadOnly)) {
+        QFile f(filename);
+        if (!f.open(QIODevice::ReadOnly)) {
             qWarning("Unable to open texture: %s.", qPrintable(filename));
             return SharedTexture(0);
-	}
+        }
 
-	SharedTexture t(new Texture);
-	if (!t->loadTga(f.readAll())) {
+        SharedTexture t(new Texture);
+        if (!t->loadTga(f.readAll())) {
             qWarning("Unable to read texture: %s.", qPrintable(filename));
             return SharedTexture(0);
-	}
+        }
 
-	t->bind();
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-	glBindTexture(GL_TEXTURE_2D, 0);
+        t->bind();
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+        glBindTexture(GL_TEXTURE_2D, 0);
 
-	spriteCache[filename.toLower()] = QWeakPointer<Texture>(t);
+        spriteCache[filename.toLower()] = QWeakPointer<Texture>(t);
 
-	return t;
+        return t;
     }
 
     ParticleSystem::ParticleSystem(const QString &id, const QList<Emitter*> &emitters)
-	: d(new ParticleSystemData(id, emitters))
+        : d(new ParticleSystemData(id, emitters))
     {
     }
 
@@ -1063,9 +1063,9 @@ namespace EvilTemple {
     {
         float timeUnits = seconds / ParticlesTimeUnit;
 
-	foreach (Emitter *emitter, d->emitters) {
+        foreach (Emitter *emitter, d->emitters) {
             emitter->elapseTime(timeUnits);
-	}
+        }
     }
 
     void ParticleSystem::render(RenderStates &renderStates) {
@@ -1092,61 +1092,61 @@ namespace EvilTemple {
 
     class EmitterTemplate {
     public:
-	// Typedef a scoped property
-	typedef QSharedPointer<ParticleProperty<float> > Property;
+        // Typedef a scoped property
+        typedef QSharedPointer<ParticleProperty<float> > Property;
 
-	bool loadFromXml(const QDomElement &emitterNode);
+        bool loadFromXml(const QDomElement &emitterNode);
 
-	bool readPosition(const QDomElement &element);
-	bool readParticles(const QDomElement &element);
+        bool readPosition(const QDomElement &element);
+        bool readParticles(const QDomElement &element);
 
-	QString mName;
-	float mLifespan;
-	ParticleBlendMode mBlendMode;
+        QString mName;
+        float mLifespan;
+        ParticleBlendMode mBlendMode;
         SpaceType mEmitterSpace;
         QString mBoneName; // For mEmitterSpace == Space_Bone
-	Property mScale;
-	float mDelay;
+        Property mScale;
+        float mDelay;
 
-	static const Property ZeroProperty;
-	Property mPositionX;
-	Property mPositionY;
-	Property mPositionZ;
+        static const Property ZeroProperty;
+        Property mPositionX;
+        Property mPositionY;
+        Property mPositionZ;
 
-	// Required particle properties
-	float mParticleSpawnRate;
-	float mParticleLifespan;
-	QString mParticleTexture;
+        // Required particle properties
+        float mParticleSpawnRate;
+        float mParticleLifespan;
+        QString mParticleTexture;
 
-	// A velocity is optional (each component is), but the values should be zero in case they're unused
-	Property mParticleVelocityX;
-	Property mParticleVelocityY;
-	Property mParticleVelocityZ;
-	CoordinateType mParticleVelocityType;
+        // A velocity is optional (each component is), but the values should be zero in case they're unused
+        Property mParticleVelocityX;
+        Property mParticleVelocityY;
+        Property mParticleVelocityZ;
+        CoordinateType mParticleVelocityType;
 
-	// Particle acceleration affects velocity
-	Property mParticleAccelerationX;
-	Property mParticleAccelerationY;
-	Property mParticleAccelerationZ;
+        // Particle acceleration affects velocity
+        Property mParticleAccelerationX;
+        Property mParticleAccelerationY;
+        Property mParticleAccelerationZ;
 
-	// Particle position deviation. If present this overrides velocity (component-wise)
-	Property mParticlePositionX;
-	Property mParticlePositionY;
-	Property mParticlePositionZ;
-	CoordinateType mParticlePositionType;
+        // Particle position deviation. If present this overrides velocity (component-wise)
+        Property mParticlePositionX;
+        Property mParticlePositionY;
+        Property mParticlePositionZ;
+        CoordinateType mParticlePositionType;
 
-	// Particle rotation. For sprites, only Yaw matters
-	Property mRotationYaw;
-	Property mRotationPitch;
-	Property mRotationRoll;
+        // Particle rotation. For sprites, only Yaw matters
+        Property mRotationYaw;
+        Property mRotationPitch;
+        Property mRotationRoll;
 
-	ParticleType mParticleType;
+        ParticleType mParticleType;
 
-	// Particle color
-	Property mColorRed;
-	Property mColorGreen;
-	Property mColorBlue;
-	Property mColorAlpha;
+        // Particle color
+        Property mColorRed;
+        Property mColorGreen;
+        Property mColorBlue;
+        Property mColorAlpha;
     };
 
     /**
@@ -1156,59 +1156,59 @@ namespace EvilTemple {
     class ParticleSystemTemplate {
     public:
 
-	/**
-	 * Returns templates for the emitters contained in this particle system template.
-	 */
-	const QList<EmitterTemplate> &emitterTemplates() const
-	{
+        /**
+         * Returns templates for the emitters contained in this particle system template.
+         */
+        const QList<EmitterTemplate> &emitterTemplates() const
+        {
             return mEmitterTemplates;
-	}
+        }
 
-	/**
-	 * Returns the unique id of this particle system template.
-	 */
-	const QString &id() const
-	{
+        /**
+         * Returns the unique id of this particle system template.
+         */
+        const QString &id() const
+        {
             return mId;
-	}
+        }
 
-	/**
-	 * Tries to load the definition of this particle system template from an XML node.
-	 */
-	bool loadFromXml(const QDomElement &element);
+        /**
+         * Tries to load the definition of this particle system template from an XML node.
+         */
+        bool loadFromXml(const QDomElement &element);
 
     private:
-	QList<EmitterTemplate> mEmitterTemplates;
-	QString mId;
+        QList<EmitterTemplate> mEmitterTemplates;
+        QString mId;
     };
 
     const EmitterTemplate::Property EmitterTemplate::ZeroProperty(new ConstantParticleProperty<float>(0));
 
     bool EmitterTemplate::loadFromXml(const QDomElement &element)
     {
-	if (element.nodeName() != "emitter") {
+        if (element.nodeName() != "emitter") {
             qWarning("Node name of emitter element must be emitter.");
             return false;
-	}
-	
-	bool ok;
+        }
 
-	mName = element.attribute("name");
-	if (element.hasAttribute("lifespan")) {
+        bool ok;
+
+        mName = element.attribute("name");
+        if (element.hasAttribute("lifespan")) {
             mLifespan = element.attribute("lifespan").toFloat(&ok); // This seems to be really "fixed" length, no variations
             if (!ok) {
                 qWarning("Invalid lifetime for emitter template: %s", qPrintable(element.attribute("lifespan")));
                 return false;
             }
-	} else {
+        } else {
             mLifespan = std::numeric_limits<float>::infinity();
-	}
+        }
 
-	mDelay = element.attribute("delay", "0").toFloat(&ok);
-	if (!ok) {
+        mDelay = element.attribute("delay", "0").toFloat(&ok);
+        if (!ok) {
             qWarning("Invalid delay for emitter template: %s", qPrintable(element.attribute("delay")));
             return false;
-	}
+        }
 
         QString space = element.attribute("space", "world").toLower();
 
@@ -1227,150 +1227,150 @@ namespace EvilTemple {
             mEmitterSpace = Space_World;
         }
 
-	QString blendMode = element.attribute("blendMode", "add").toLower();
+        QString blendMode = element.attribute("blendMode", "add").toLower();
 
-	if (blendMode == "add") {
+        if (blendMode == "add") {
             mBlendMode = Blend_Add;
-	} else if (blendMode == "subtract") {
+        } else if (blendMode == "subtract") {
             mBlendMode = Blend_Subtract;
-	} else if (blendMode == "blend") {
+        } else if (blendMode == "blend") {
             mBlendMode = Blend_Blend;
-	} else {
+        } else {
             mBlendMode = Blend_Add;
             qWarning("Unknown blend mode: %s", qPrintable(blendMode));
             return false;
-	}
+        }
 
-	// Scaling (first)
-	QDomElement scaleElement = element.firstChildElement("scale");
-	if (!scaleElement.isNull()) {
+        // Scaling (first)
+        QDomElement scaleElement = element.firstChildElement("scale");
+        if (!scaleElement.isNull()) {
             QString scale = element.text();
             mScale = Property(propertyFromString(scale));
             if (!mScale) {
                 mScale = ZeroProperty;
                 return false;
             }
-	}
+        }
 
-	// Emitter Position (x,y,z)
-	mPositionX = ZeroProperty;
-	mPositionY = ZeroProperty;
-	mPositionZ = ZeroProperty;
+        // Emitter Position (x,y,z)
+        mPositionX = ZeroProperty;
+        mPositionY = ZeroProperty;
+        mPositionZ = ZeroProperty;
 
-	QDomElement position = element.firstChildElement("position");
-	if (!position.isNull()) {
+        QDomElement position = element.firstChildElement("position");
+        if (!position.isNull()) {
             if (!readPosition(position))
                 return false;
-	}
+        }
 
-	// Particle properties
-	QDomElement particles = element.firstChildElement("particles");
+        // Particle properties
+        QDomElement particles = element.firstChildElement("particles");
 
-	if (particles.isNull()) {
+        if (particles.isNull()) {
             qWarning("A particles element is required.");
             return false;
-	}
+        }
 
-	if (!readParticles(particles)) {
+        if (!readParticles(particles)) {
             return false;
-	}
+        }
 
-	return true;
+        return true;
 
     }
 
     bool EmitterTemplate::readPosition(const QDomElement &position)
     {
-	if (position.hasAttribute("x")) {
+        if (position.hasAttribute("x")) {
             mPositionX = Property(propertyFromString(position.attribute("x")));
             if (!mPositionX) {
                 mPositionX = ZeroProperty;
                 return false;
             }
-	}
-	if (position.hasAttribute("y")) {
+        }
+        if (position.hasAttribute("y")) {
             mPositionY = Property(propertyFromString(position.attribute("y")));
             if (!mPositionY) {
                 mPositionY = ZeroProperty;
                 return false;
             }
-	}
-	if (position.hasAttribute("z")) {
+        }
+        if (position.hasAttribute("z")) {
             mPositionZ = Property(propertyFromString(position.attribute("z")));
             if (!mPositionZ) {
                 mPositionZ = ZeroProperty;
                 return false;
             }
-	}
+        }
 
-	return true;
+        return true;
     }
 
     inline static bool readVector(const QDomElement &element,
                                   EmitterTemplate::Property &x, EmitterTemplate::Property &y, EmitterTemplate::Property &z) {
-	if (element.hasAttribute("x")) {
+        if (element.hasAttribute("x")) {
             x = EmitterTemplate::Property(propertyFromString(element.attribute("x")));
             if (!x)
                 return false;
-	}
-	if (element.hasAttribute("y")) {
+        }
+        if (element.hasAttribute("y")) {
             y = EmitterTemplate::Property(propertyFromString(element.attribute("y")));
             if (!y)
                 return false;
-	}
-	if (element.hasAttribute("z")) {
+        }
+        if (element.hasAttribute("z")) {
             z = EmitterTemplate::Property(propertyFromString(element.attribute("z")));
             if (!z)
                 return false;
-	}
-	return true;
+        }
+        return true;
     }
 
     bool EmitterTemplate::readParticles(const QDomElement &element)
     {
-	bool ok;
+        bool ok;
 
-	QString type = element.attribute("type", "sprite").toLower();
+        QString type = element.attribute("type", "sprite").toLower();
 
-	if (type == "sprite") {
+        if (type == "sprite") {
             mParticleType = Sprite;
-	} else if (type == "disc") {
+        } else if (type == "disc") {
             mParticleType = Disc;
-	} else if (type == "model") {
+        } else if (type == "model") {
             mParticleType = Model;
         } else if (type == "point") {
             mParticleType = Point;
-	} else {
+        } else {
             qWarning("Invalid particle type: %s.", qPrintable(type));
             return false;
-	}
+        }
 
-	mParticleSpawnRate = element.attribute("rate").toFloat(&ok);
+        mParticleSpawnRate = element.attribute("rate").toFloat(&ok);
 
-	if (!ok) {
+        if (!ok) {
             qWarning("Emitter has invalid particle spawn rate: %s.", qPrintable(element.attribute("rate")));
             return false;
-	}
+        }
 
-	if (element.hasAttribute("lifespan")) {
+        if (element.hasAttribute("lifespan")) {
             mParticleLifespan = element.attribute("lifespan").toFloat(&ok);
 
             if (!ok) {
                 qWarning("Emitter has invalid particle lifetime: %s.", qPrintable(element.attribute("lifespan")));
                 return false;
             }
-	} else {
+        } else {
             mParticleLifespan = std::numeric_limits<float>::infinity();
-	}
+        }
 
-	if (element.hasAttribute("material")) {
+        if (element.hasAttribute("material")) {
             mParticleTexture = element.attribute("material");
-	}
-	
-	mParticleVelocityType = Cartesian;
-	mParticlePositionType = Cartesian;
+        }
 
-	for (QDomElement child = element.firstChildElement(); !child.isNull(); child = child.nextSiblingElement()) {
+        mParticleVelocityType = Cartesian;
+        mParticlePositionType = Cartesian;
+
+        for (QDomElement child = element.firstChildElement(); !child.isNull(); child = child.nextSiblingElement()) {
 
             if (child.nodeName() == "velocity") {
                 if (!readVector(child, mParticleVelocityX, mParticleVelocityY, mParticleVelocityZ))
@@ -1432,27 +1432,27 @@ namespace EvilTemple {
                 if (!mColorRed || !mColorBlue || !mColorGreen || !mColorAlpha)
                     return false;
             }
-	}
-	
-	return true;
+        }
+
+        return true;
     }
 
     bool ParticleSystemTemplate::loadFromXml(const QDomElement &element)
     {
-	if (element.nodeName() != "particleSystem") {
+        if (element.nodeName() != "particleSystem") {
             qWarning("Name of particle system nodes must be particleSystem.");
             return false;
-	}
+        }
 
-	mId = element.attribute("id");
+        mId = element.attribute("id");
 
-	if (mId.isNull()) {
+        if (mId.isNull()) {
             qWarning("Particle system is missing id.");
             return false;
-	}
+        }
 
-	QDomElement emitterNode = element.firstChildElement("emitter");
-	while (!emitterNode.isNull()) {
+        QDomElement emitterNode = element.firstChildElement("emitter");
+        while (!emitterNode.isNull()) {
             EmitterTemplate emitterTemplate;
 
             if (emitterTemplate.loadFromXml(emitterNode)) {
@@ -1460,9 +1460,9 @@ namespace EvilTemple {
             }
 
             emitterNode = emitterNode.nextSiblingElement("emitter");
-	}
+        }
 
-	return true;
+        return true;
     }
 
     //////////////////////////////////////////////////////////////////////////
@@ -1515,7 +1515,7 @@ namespace EvilTemple {
 
             qDebug("Loaded %d particle systems in %d ms.", templates.size(), timer.elapsed());
             return true;
-	}
+        }
 
         /**
          * Instantiates this template and creates an emitter.

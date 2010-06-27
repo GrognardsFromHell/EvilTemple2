@@ -10,13 +10,23 @@ static tjhandle turboJpeg; // TODO: Clean up this handle
 
 namespace EvilTemple {
 
+static uint activeTextures = 0;
+
+uint getActiveTextures()
+{
+    return activeTextures;
+}
+
 Texture::Texture() : mValid(false), mHandle(-1), mMinFilter(GL_LINEAR), mMagFilter(GL_LINEAR),
     mWrapModeS(GL_CLAMP), mWrapModeT(GL_CLAMP)
 {
+    activeTextures++;
 }
 
 Texture::~Texture()
 {
+    activeTextures--;
+
     if (mValid)
         glDeleteTextures(1, &mHandle);
 }
@@ -46,7 +56,7 @@ static inline void qgl_byteSwapImage(QImage &image, GLenum pixel_type)
 
 inline bool isPowerOfTwo(int x)
 {
-	return (x & (x - 1)) == 0;
+        return (x & (x - 1)) == 0;
 }
 
 bool Texture::load(QImage image)

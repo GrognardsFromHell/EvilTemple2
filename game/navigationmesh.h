@@ -12,6 +12,8 @@ using namespace GameMath;
 
 namespace EvilTemple {
 
+uint getActiveNavigationMeshes();
+
 struct NavMeshPortal;
 
 struct Region {

@@ -30,7 +30,7 @@ public:
     /**
      * Loads program from two strings.
      */
-    bool load(const char *vertexShaderCode, const char *fragmentShaderCode);
+    bool load(const QByteArray &vertexShaderCode, const QByteArray &fragmentShaderCode);
 
     /**
      * Releases resources held by this class.
@@ -69,7 +69,7 @@ private:
 
 inline GLuint GLSLProgram::handle() const
 {
-	return program;
+        return program;
 }
 
 }

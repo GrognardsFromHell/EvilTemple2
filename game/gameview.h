@@ -119,7 +119,7 @@ protected:
 private:
     int mScrollBoxMinX, mScrollBoxMaxX, mScrollBoxMinY, mScrollBoxMaxY;
 
-    QScopedPointer<GameViewData> d;    
+    QScopedPointer<GameViewData> d;
 
 };
 

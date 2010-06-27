@@ -190,43 +190,13 @@ namespace EvilTemple {
         SharedSceneNode sceneNode() const;
     };
 
-    class Vector4Scriptable : public QObject, protected QScriptable {
-    Q_OBJECT
-    Q_PROPERTY(float x READ x WRITE setX)
-    Q_PROPERTY(float y READ y WRITE setY)
-    Q_PROPERTY(float z READ z WRITE setZ)
-    Q_PROPERTY(float w READ w WRITE setW)
+    class Vector4Scriptable {
     public:
-        float x() const;
-        float y() const;
-        float z() const;
-        float w() const;
-
-        void setX(float value);
-        void setY(float value);
-        void setZ(float value);
-        void setW(float value);
-
         static void registerWith(QScriptEngine *engine);
     };
 
-    class QuaternionScriptable : public QObject, protected QScriptable {
-    Q_OBJECT
-    Q_PROPERTY(float x READ x WRITE setX)
-    Q_PROPERTY(float y READ y WRITE setY)
-    Q_PROPERTY(float z READ z WRITE setZ)
-    Q_PROPERTY(float scalar READ scalar WRITE setScalar)
+    class QuaternionScriptable {
     public:
-        float x() const;
-        float y() const;
-        float z() const;
-        float scalar() const;
-
-        void setX(float value);
-        void setY(float value);
-        void setZ(float value);
-        void setScalar(float value);
-
         static void registerWith(QScriptEngine *engine);
     };
 

@@ -767,164 +767,116 @@ void SceneNodeScriptable::registerWith(QScriptEngine *engine)
     globalObject.setProperty("SceneNode", ctor);
 }
 
-float Vector4Scriptable::x() const
+template<typename T>
+QScriptValue float4ToScriptValue(QScriptEngine *engine, const T &in)
 {
-    return (qscriptvalue_cast<Vector4>(thisObject())).x();
+    QScriptValue result = engine->newArray(4);
+    result.setProperty(0, QScriptValue(in.x()));
+    result.setProperty(1, QScriptValue(in.y()));
+    result.setProperty(2, QScriptValue(in.z()));
+    result.setProperty(3, QScriptValue(in.w()));
+    return result;
 }
 
-float Vector4Scriptable::y() const
+template<typename T>
+void float4FromScriptValue(const QScriptValue &object, T &out)
 {
-    return (qscriptvalue_cast<Vector4>(thisObject())).y();
-}
+    if (object.isArray()) {
+        QScriptValue element = object.property(0);
 
-float Vector4Scriptable::z() const
-{
-    return (qscriptvalue_cast<Vector4>(thisObject())).z();
-}
+        if (!element.isUndefined()) {
+            out.setX(element.toNumber());
+        } else {
+            out.setX(0);
+            out.setY(0);
+            out.setZ(0);
+            out.setW(1);
+            return;
+        }
 
-float Vector4Scriptable::w() const
-{
-    return (qscriptvalue_cast<Vector4>(thisObject())).w();
-}
+        element = object.property(1);
 
-void Vector4Scriptable::setX(float value)
-{
-    Vector4 vector = qscriptvalue_cast<Vector4>(thisObject());
-    vector.setX(value);
-    thisObject().setData(engine()->newVariant(qVariantFromValue(vector)));
-}
+        if (!element.isUndefined()) {
+            out.setY(element.toNumber());
+        } else {
+            out.setY(0);
+            out.setZ(0);
+            out.setW(1);
+            return;
+        }
 
-void Vector4Scriptable::setY(float value)
-{
-    Vector4 vector = qscriptvalue_cast<Vector4>(thisObject());
-    vector.setY(value);
-    thisObject().setData(engine()->newVariant(qVariantFromValue(vector)));
-}
+        element = object.property(2);
 
-void Vector4Scriptable::setZ(float value)
-{
-    Vector4 vector = qscriptvalue_cast<Vector4>(thisObject());
-    vector.setZ(value);
-    thisObject().setData(engine()->newVariant(qVariantFromValue(vector)));
-}
+        if (!element.isUndefined()) {
+            out.setZ(element.toNumber());
+        } else {
+            out.setZ(0);
+            out.setW(1);
+            return;
+        }
 
-void Vector4Scriptable::setW(float value)
-{
-    Vector4 vector = qscriptvalue_cast<Vector4>(thisObject());
-    vector.setW(value);
-    thisObject().setData(engine()->newVariant(qVariantFromValue(vector)));
-}
+        element = object.property(3);
 
-static QScriptValue Vector4ScriptableCtor(QScriptContext *context, QScriptEngine *engine)
-{
-    if (!context->isCalledAsConstructor())
-        return context->throwError(QScriptContext::SyntaxError, "please use the 'new' operator");
+        if (!element.isUndefined()) {
+            out.setW(element.toNumber());
+        } else {
+            out.setW(1);
+            return;
+        }
 
-    if (context->argumentCount() == 0) {
-        return engine->newVariant(context->thisObject(), qVariantFromValue(Vector4(0, 0, 0, 0)));
-    } else if (context->argumentCount() == 4) {
-        float x = context->argument(0).toNumber();
-        float y = context->argument(1).toNumber();
-        float z = context->argument(2).toNumber();
-        float w = context->argument(3).toNumber();
-
-        return engine->newVariant(context->thisObject(), qVariantFromValue(Vector4(x, y, z, w)));
     } else {
-        return context->throwError("vector4 takes 0 or 4 arguments.");
+        qWarning("Trying to convert a non-array to a Vector4 object.");
+
+        out.setX(std::numeric_limits<float>::quiet_NaN());
+        out.setY(std::numeric_limits<float>::quiet_NaN());
+        out.setZ(std::numeric_limits<float>::quiet_NaN());
+        out.setW(std::numeric_limits<float>::quiet_NaN());
+    }
+}
+
+QScriptValue vectorOfVector4ToScriptValue(QScriptEngine *engine, const QVector<Vector4> &in)
+{
+    QScriptValue result = engine->newArray(in.size());
+
+    for (int i = 0; i < in.size(); ++i) {
+        result.setProperty(i, float4ToScriptValue(engine, in.at(i)));
+    }
+
+    return result;
+}
+
+void vectorOfVector4FromScriptValue(const QScriptValue &object, QVector<Vector4> &out)
+{
+    if (object.isArray()) {
+        QScriptValue length = object.property("length");
+
+        if (length.isNumber()) {
+            out.resize(length.toUInt32());
+        }
+
+        uint i = 0;
+        forever {
+            QScriptValue element = object.property(i++);
+
+            if (element.isUndefined())
+                break;
+
+            float4FromScriptValue(element, out[i]);
+        }
+    } else {
+        qWarning("Trying to convert a non-array to a vector of vector4 objects.");
     }
 }
 
 void Vector4Scriptable::registerWith(QScriptEngine *engine)
 {
-    registerVectorType<Vector4>(engine, "QVector<Vector4>");
-
-    int metaId = qRegisterMetaType<Vector4>();
-    QScriptValue prototype = engine->newQObject(new Vector4Scriptable, QScriptEngine::ScriptOwnership);
-    engine->setDefaultPrototype(metaId, prototype);
-
-    // Add a constructor function for scene nodes
-    QScriptValue globalObject = engine->globalObject();
-    QScriptValue ctor = engine->newFunction(Vector4ScriptableCtor);
-    globalObject.setProperty("Vector4", ctor);
-}
-
-float QuaternionScriptable::x() const
-{
-    return (qscriptvalue_cast<Quaternion>(thisObject())).x();
-}
-
-float QuaternionScriptable::y() const
-{
-    return (qscriptvalue_cast<Quaternion>(thisObject())).y();
-}
-
-float QuaternionScriptable::z() const
-{
-    return (qscriptvalue_cast<Quaternion>(thisObject())).z();
-}
-
-float QuaternionScriptable::scalar() const
-{
-    return (qscriptvalue_cast<Quaternion>(thisObject())).w();
-}
-
-void QuaternionScriptable::setX(float value)
-{
-    Quaternion vector = qscriptvalue_cast<Quaternion>(thisObject());
-    Quaternion newVector(value, vector.y(), vector.z(), vector.w());
-    thisObject().setData(engine()->newVariant(qVariantFromValue(newVector)));
-}
-
-void QuaternionScriptable::setY(float value)
-{
-    Quaternion vector = qscriptvalue_cast<Quaternion>(thisObject());
-    Quaternion newVector(vector.x(), value, vector.z(), vector.w());
-    thisObject().setData(engine()->newVariant(qVariantFromValue(newVector)));
-}
-
-void QuaternionScriptable::setZ(float value)
-{
-    Quaternion vector = qscriptvalue_cast<Quaternion>(thisObject());
-    Quaternion newVector(vector.x(), vector.y(), value, vector.w());
-    thisObject().setData(engine()->newVariant(qVariantFromValue(newVector)));
-}
-
-void QuaternionScriptable::setScalar(float value)
-{
-    Quaternion vector = qscriptvalue_cast<Quaternion>(thisObject());
-    Quaternion newVector(vector.x(), vector.y(), vector.z(), value);
-    thisObject().setData(engine()->newVariant(qVariantFromValue(newVector)));
-}
-
-static QScriptValue QuaternionScriptableCtor(QScriptContext *context, QScriptEngine *engine)
-{
-    if (!context->isCalledAsConstructor())
-        return context->throwError(QScriptContext::SyntaxError, "please use the 'new' operator");
-
-    if (context->argumentCount() == 0) {
-        return engine->newVariant(context->thisObject(), qVariantFromValue(Quaternion(0, 0, 0, 1)));
-    } else if (context->argumentCount() == 4) {
-        float x = context->argument(0).toNumber();
-        float y = context->argument(1).toNumber();
-        float z = context->argument(2).toNumber();
-        float w = context->argument(3).toNumber();
-
-        return engine->newVariant(context->thisObject(), qVariantFromValue(Quaternion(x, y, z, w)));
-    } else {
-        return context->throwError("Quaternion takes 0 or 4 arguments.");
-    }
+    qScriptRegisterMetaType< QVector<Vector4> >(engine, vectorOfVector4ToScriptValue, vectorOfVector4FromScriptValue);
+    qScriptRegisterMetaType<Vector4>(engine, float4ToScriptValue<Vector4>, float4FromScriptValue<Vector4>);
 }
 
 void QuaternionScriptable::registerWith(QScriptEngine *engine)
 {
-    int metaId = qRegisterMetaType<Quaternion>();
-    QScriptValue prototype = engine->newQObject(new QuaternionScriptable, QScriptEngine::ScriptOwnership);
-    engine->setDefaultPrototype(metaId, prototype);
-
-    // Add a constructor function for scene nodes
-    QScriptValue globalObject = engine->globalObject();
-    QScriptValue ctor = engine->newFunction(QuaternionScriptableCtor);
-    globalObject.setProperty("Quaternion", ctor);
+    qScriptRegisterMetaType<Quaternion>(engine, float4ToScriptValue<Quaternion>, float4FromScriptValue<Quaternion>);
 }
 
 Vector4 Box3dScriptable::minimum() const

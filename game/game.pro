@@ -13,10 +13,10 @@ TARGET = game
 
 CONFIG += dll
 
-TEMPLE_LIBS += qt3d minizip glew jpeg audioengine
+TEMPLE_LIBS += qt3d minizip glew jpeg audioengine qjson
 include(../3rdparty/game-math/game-math.pri)
 
-DEFINES += GAME_LIBRARY GAMEMATH_MEMORY_OPERATORS
+DEFINES += GAME_LIBRARY
 
 INCLUDEPATH += ../3rdparty/boost_1_43_0
 
@@ -88,7 +88,8 @@ HEADERS += \
     materials.h \
     translations.h \
     sectormap.h \
-    navigationmesh.h
+    navigationmesh.h \
+    vertexbufferobject.h
 OTHER_FILES += \
     resources/schema/materialfile.xsd \
     resources/materials/map_material.xml \

@@ -18,6 +18,8 @@ using namespace GameMath;
 
 namespace EvilTemple {
 
+uint getActiveMaterialStates();
+
 class RenderStates;
 
 /**
@@ -165,9 +167,9 @@ inline void MaterialTextureSamplerState::setTexture(const SharedTexture &texture
 
 struct MaterialPassAttributeState
 {
-        GLint location;
-        int bufferType;
-        MaterialAttributeBinding binding; // Parameters
+    GLint location;
+    int bufferType;
+    MaterialAttributeBinding binding; // Parameters
 };
 
 class MaterialPassState {
@@ -190,6 +192,7 @@ private:
 class MaterialState {
 public:
     MaterialState();
+    ~MaterialState();
 
     int passCount;
     QScopedArrayPointer<MaterialPassState> passes;
@@ -199,10 +202,6 @@ public:
 private:
     QString mError;
 };
-
-inline MaterialState::MaterialState() : passes((MaterialPassState*)NULL)
-{
-}
 
 typedef QSharedPointer<MaterialState> SharedMaterialState;
 

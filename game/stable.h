@@ -14,6 +14,7 @@
 #include <QtOpenGL>
 #include <QtScript>
 #include <QtDeclarative>
+#include <QtScriptTools>
 
 #include "qbox3d.h"
 

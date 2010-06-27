@@ -12,64 +12,64 @@
 
 namespace EvilTemple {
 
-GLSLProgram::GLSLProgram() : vertexShader(0), fragmentShader(0), program(0)
-{
-}
+    GLSLProgram::GLSLProgram() : vertexShader(0), fragmentShader(0), program(0)
+    {
+    }
 
-GLSLProgram::~GLSLProgram()
-{
-	release();
-}
+    GLSLProgram::~GLSLProgram()
+    {
+        release();
+    }
 
-bool GLSLProgram::bind()
-{
+    bool GLSLProgram::bind()
+    {
         glUseProgram(program);
-	HANDLE_GL_ERROR
-	return true;
-}
+        HANDLE_GL_ERROR
+                return true;
+    }
 
-void GLSLProgram::unbind()
-{
-	glUseProgram(0);
-}
+    void GLSLProgram::unbind()
+    {
+        glUseProgram(0);
+    }
 
-bool GLSLProgram::checkShaderError(GLuint shader, const char *file, int line)
-{
-	GLint success;
-	glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+    bool GLSLProgram::checkShaderError(GLuint shader, const char *file, int line)
+    {
+        GLint success;
+        glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
 
-	if (success == GL_TRUE) {
-		return false;
-	}
+        if (success == GL_TRUE) {
+            return false;
+        }
 
-	GLint length;
-	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &length);
-	if (length > 0) {		
-                mError.append(QString("GLSL Shader error @ %1:%2: ").arg(file).arg(line));
+        GLint length;
+        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &length);
+        if (length > 0) {
+            mError.append(QString("GLSL Shader error @ %1:%2: ").arg(file).arg(line));
 
-                QByteArray message(length, Qt::Uninitialized);
-		GLsizei actualLength;
-                glGetShaderInfoLog(shader, length, &actualLength, message.data());
-                mError.append(message);
-                mError.append("\n");
-		return true;
-	}
+            QByteArray message(length, Qt::Uninitialized);
+            GLsizei actualLength;
+            glGetShaderInfoLog(shader, length, &actualLength, message.data());
+            mError.append(message);
+            mError.append("\n");
+            return true;
+        }
 
-	return false;
-}
+        return false;
+    }
 
-bool GLSLProgram::checkProgramError(const char *file, int line)
-{
-	GLint status;
-	glGetProgramiv(program, GL_LINK_STATUS, &status);
+    bool GLSLProgram::checkProgramError(const char *file, int line)
+    {
+        GLint status;
+        glGetProgramiv(program, GL_LINK_STATUS, &status);
 
-	if (status == GL_TRUE) {
-		return false;
-	}
+        if (status == GL_TRUE) {
+            return false;
+        }
 
-	GLint length;
-	glGetProgramiv(program, GL_INFO_LOG_LENGTH, &length);
-	if (length > 0) {
+        GLint length;
+        glGetProgramiv(program, GL_INFO_LOG_LENGTH, &length);
+        if (length > 0) {
             mError.append(QString("GLSL Program error @ %1:%2: ").arg(file).arg(line));
 
             QByteArray message(length, Qt::Uninitialized);
@@ -78,28 +78,28 @@ bool GLSLProgram::checkProgramError(const char *file, int line)
             mError.append(message);
             mError.append("\n");
             return true;
-	}
+        }
 
-	return false;
-}
+        return false;
+    }
 
-bool GLSLProgram::handleGlError(const char *file, int line) {	
-	bool errorOccured = false;
+    bool GLSLProgram::handleGlError(const char *file, int line) {
+        bool errorOccured = false;
 
         mError.clear();
 
-	if (program) {
-		errorOccured |= checkProgramError(file, line);		
-	}
-	if (vertexShader) {
-		errorOccured |= checkShaderError(vertexShader, file, line);
-	}
-	if (fragmentShader) {
-		errorOccured |= checkShaderError(fragmentShader, file, line);
-	}
+        if (program) {
+            errorOccured |= checkProgramError(file, line);
+        }
+        if (vertexShader) {
+            errorOccured |= checkShaderError(vertexShader, file, line);
+        }
+        if (fragmentShader) {
+            errorOccured |= checkShaderError(fragmentShader, file, line);
+        }
 
-	GLenum glErr = glGetError();
-	while (glErr != GL_NO_ERROR) {
+        GLenum glErr = glGetError();
+        while (glErr != GL_NO_ERROR) {
             const char *errorString = (const char*)gluErrorString(glErr);
             if (errorString)
                 mError.append(QString("OpenGL error @ %1:%2: %3").arg(file).arg(line).arg(errorString));
@@ -107,117 +107,116 @@ bool GLSLProgram::handleGlError(const char *file, int line) {
                 mError.append(QString("Unknown OpenGL error @ %1:%2").arg(file).arg(line));
             errorOccured = true;
             glErr = glGetError();
-	}
+        }
 
-	return errorOccured;
-}
-
-bool GLSLProgram::loadFromFile( const QString &vertexShaderFile, const QString &fragmentShaderFile )
-{
-    QFile file(vertexShaderFile);
-
-    if (!file.open(QIODevice::ReadOnly|QIODevice::Text)) {
-        mError = QString("Unable to open vertex shader file %1").arg(file.fileName());
-        return false;
+        return errorOccured;
     }
 
-    QByteArray vertexShaderCode = file.readAll();
-    vertexShaderCode.append('\0');
-    file.close();
+    bool GLSLProgram::loadFromFile( const QString &vertexShaderFile, const QString &fragmentShaderFile )
+    {
+        QFile file(vertexShaderFile);
 
-    file.setFileName(fragmentShaderFile);
-    if (!file.open(QIODevice::ReadOnly|QIODevice::Text)) {
-        mError = QString("Unable to open fragment shader file %1").arg(file.fileName());
-        return false;
+        if (!file.open(QIODevice::ReadOnly|QIODevice::Text)) {
+            mError = QString("Unable to open vertex shader file %1").arg(file.fileName());
+            return false;
+        }
+
+        QByteArray vertexShaderCode = file.readAll();
+        vertexShaderCode.append('\0');
+        file.close();
+
+        file.setFileName(fragmentShaderFile);
+        if (!file.open(QIODevice::ReadOnly|QIODevice::Text)) {
+            mError = QString("Unable to open fragment shader file %1").arg(file.fileName());
+            return false;
+        }
+
+        QByteArray fragmentShaderCode = file.readAll();
+        file.close();
+        fragmentShaderCode.append('\0');
+
+        return load(fragmentShaderCode, fragmentShaderCode);
     }
 
-    QByteArray fragmentShaderCode = file.readAll();
-    file.close();
-    fragmentShaderCode.append('\0');
+    bool GLSLProgram::load( const QByteArray &vertexShaderCode, const QByteArray &fragmentShaderCode )
+    {
 
-    return load(fragmentShaderCode.data(), fragmentShaderCode.data());
-}
+        release();
 
-bool GLSLProgram::load( const char *vertexShaderCode, const char *fragmentShaderCode )
-{
+        // TODO: Fix this mess
+        GLuint shader = glCreateShader(GL_VERTEX_SHADER);
 
-	release();               
+        const char *code = vertexShaderCode.constData();
+        glShaderSource(shader, 1, &code, 0);
+        HANDLE_GL_ERROR
+        vertexShader = shader;
 
-	HANDLE_GL_ERROR
+        glCompileShader(vertexShader);
+        HANDLE_GL_ERROR
+        shader = glCreateShader(GL_FRAGMENT_SHADER);
+        HANDLE_GL_ERROR
 
-	// TODO: Fix this mess
+        code = fragmentShaderCode.constData();
+        glShaderSource(shader, 1, &code, 0);
+        HANDLE_GL_ERROR
+        fragmentShader = shader;
 
-	GLuint shader = glCreateShader(GL_VERTEX_SHADER);
-	HANDLE_GL_ERROR		
+        glCompileShader(fragmentShader);
+        HANDLE_GL_ERROR
 
-	glShaderSource(shader, 1, &vertexShaderCode, 0);
-	HANDLE_GL_ERROR
-	vertexShader = shader;
+        shader = glCreateProgram();
+        HANDLE_GL_ERROR
 
-	glCompileShader(vertexShader);
-	HANDLE_GL_ERROR
+        glAttachShader(shader, vertexShader);
+        HANDLE_GL_ERROR
 
-	shader = glCreateShader(GL_FRAGMENT_SHADER);
-	HANDLE_GL_ERROR
-	
-	glShaderSource(shader, 1, &fragmentShaderCode, 0);
-	HANDLE_GL_ERROR
-	fragmentShader = shader;
+        glAttachShader(shader, fragmentShader);
+        HANDLE_GL_ERROR
 
-	glCompileShader(fragmentShader);
-	HANDLE_GL_ERROR
+        glLinkProgram(shader);
+        HANDLE_GL_ERROR
 
-	shader = glCreateProgram();
-	HANDLE_GL_ERROR
+        program = shader;
 
-	glAttachShader(shader, vertexShader);
-	HANDLE_GL_ERROR
+        return true;
+    }
 
-	glAttachShader(shader, fragmentShader);
-	HANDLE_GL_ERROR
+    void GLSLProgram::setUniformMatrix(const char *name, GLfloat *matrix)
+    {
+        GLint position = glGetUniformLocation(program, name);
+        glUniformMatrix4fv(position, 16, false, matrix);
+    }
 
-	glLinkProgram(shader);
-	HANDLE_GL_ERROR
+    GLint GLSLProgram::attributeLocation(const char *name)
+    {
+        return glGetAttribLocation(program, name);
+    }
 
-	program = shader;
+    void GLSLProgram::release()
+    {
+        glUseProgram(0); // Avoid flagging for deletion, instead delete *now*
 
-	return true;
-}
+        if (program) {
+            glDeleteProgram(program);
+            program = 0;
+        }
 
-void GLSLProgram::setUniformMatrix(const char *name, GLfloat *matrix)
-{
-	GLint position = glGetUniformLocation(program, name);
-	glUniformMatrix4fv(position, 16, false, matrix);
-}
+        if (vertexShader) {
+            glDeleteShader(vertexShader);
+            vertexShader = 0;
+        }
 
-GLint GLSLProgram::attributeLocation(const char *name)
-{
-	return glGetAttribLocation(program, name);
-}
+        if (fragmentShader) {
+            glDeleteShader(fragmentShader);
+            fragmentShader = 0;
+        }
+    }
 
-void GLSLProgram::release()
-{
-	if (program) {
-		glDeleteProgram(program);
-		program = 0;
-	}
-
-	if (vertexShader) {
-		glDeleteShader(vertexShader);
-		vertexShader = 0;
-	}
-
-	if (fragmentShader) {
-		glDeleteShader(fragmentShader);
-		fragmentShader = 0;
-	}
-}
-
-GLint GLSLProgram::uniformLocation( const char *name )
-{
-    GLint location;
-	SAFE_GL(location = glGetUniformLocation(program, name));
-    return location;
-}
+    GLint GLSLProgram::uniformLocation( const char *name )
+    {
+        GLint location;
+        SAFE_GL(location = glGetUniformLocation(program, name));
+        return location;
+    }
 
 }

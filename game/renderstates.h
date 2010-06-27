@@ -145,7 +145,7 @@ inline void RenderStates::setWorldMatrix(const Matrix4 &worldMatrix)
 inline void RenderStates::setViewMatrix(const Matrix4 &viewMatrix)
 {
     mViewMatrix = viewMatrix;
-    mViewInverseMatrix = viewMatrix.inverted();  // Should probably be deferred    
+    mViewInverseMatrix = viewMatrix.inverted();  // Should probably be deferred
     mWorldViewMatrix = viewMatrix * mWorldMatrix;
     mWorldViewInverseMatrix = mWorldViewMatrix.inverted();  // Should probably be deferred
     mWorldViewInverseTransposeMatrix = mWorldViewInverseMatrix.transposed();

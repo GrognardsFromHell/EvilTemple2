@@ -9,10 +9,10 @@
 
 namespace EvilTemple {
 
+static uint activeNavigationMeshes = 0;
+
 inline static bool westeast_intersect(float z, int left, int right, float xascent, const Vector4 &from, const Vector4 &to, uint minX, uint maxX, Vector4 &intersection)
 {
-    Q_ASSERT(from.y() == to.y());
-
     // Parallel to the axis -> reject
     if (from.z() == to.z())
         return false;
@@ -35,8 +35,6 @@ inline static bool westeast_intersect(float z, int left, int right, float xascen
 
 inline static bool northsouth_intersect(float x, int top, int bottom, float zascent, const Vector4 &from, const Vector4 &to, uint minZ, uint maxZ, Vector4 &intersection)
 {
-    Q_ASSERT(from.y() == to.y());
-
     // Parallel to the axis -> reject
     if (from.x() == to.x())
         return false;
@@ -58,10 +56,12 @@ inline static bool northsouth_intersect(float x, int top, int bottom, float zasc
 
 NavigationMesh::NavigationMesh()
 {
+    activeNavigationMeshes++;
 }
 
 NavigationMesh::~NavigationMesh()
 {
+    activeNavigationMeshes--;
 }
 
 inline Vector4 vectorFromPoint(uint x, uint y)
@@ -95,7 +95,7 @@ inline uint getTraversalCost(const NavMeshPortal *from, const NavMeshPortal *to)
 
 bool compareAStarNodes(const AStarNode *a, const AStarNode *b)
 {
-    return a->totalCost >= b->totalCost;
+    return a->totalCost < b->totalCost;
 }
 
 bool checkLos(const NavMeshRect *losStartRect, const Vector4 &start, const Vector4 &end)
@@ -178,7 +178,7 @@ QVector<Vector4> NavigationMesh::findPath(const Vector4 &start, const Vector4 &e
 
     int touchedNodes = 0;
 
-    std::vector<AStarNode*> openSet;
+    QList<AStarNode*> openSet;
     QHash<const NavMeshRect*, AStarNode*> rectState;
 
     NavMeshPortal fauxStartPortal;
@@ -199,15 +199,12 @@ QVector<Vector4> NavigationMesh::findPath(const Vector4 &start, const Vector4 &e
 
     // Map portal to node
     rectState[startRect] = startNode;
-    openSet.push_back(startNode);
-    std::make_heap(openSet.begin(), openSet.end(), compareAStarNodes);
+    openSet.append(startNode);
 
     AStarNode *lastNode = NULL;
 
-    while (openSet.size() > 0) {
-        std::pop_heap(openSet.begin(), openSet.end(), compareAStarNodes);
-        AStarNode *node = openSet[openSet.size() - 1];
-        openSet.pop_back();
+    while (!openSet.isEmpty()) {
+        AStarNode *node = openSet.takeFirst();
         node->inOpenSet = false;
 
         touchedNodes++;
@@ -253,8 +250,8 @@ QVector<Vector4> NavigationMesh::findPath(const Vector4 &start, const Vector4 &e
             otherNode->inOpenSet = true;
             otherNode->inClosedSet = false;
 
-            openSet.push_back(otherNode);
-            std::push_heap(openSet.begin(), openSet.end(), compareAStarNodes);
+            openSet.append(otherNode);
+            qSort(openSet.begin(), openSet.end(), compareAStarNodes);
         }
 
         node->inClosedSet = true;
@@ -383,6 +380,11 @@ QDataStream &operator >>(QDataStream &stream, TaggedRegion &region)
     stream >> region.topLeft >> region.bottomRight >> region.center >> region.tag;
 
     return stream;
+}
+
+uint getActiveNavigationMeshes()
+{
+    return activeNavigationMeshes;
 }
 
 }

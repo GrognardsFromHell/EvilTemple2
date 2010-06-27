@@ -1,6 +1,7 @@
-#include "clippinggeometry.h"
 
-#include <QtOpenGL/QGLBuffer>
+#include <GL/glew.h>
+
+#include "clippinggeometry.h"
 
 #include <gamemath.h>
 #include "renderstates.h"
@@ -25,10 +26,18 @@ namespace EvilTemple {
     A clipping geometry mesh is an untextured mesh that has no normals, and only
     consists of vertex positions and an index list.
   */
-class ClippingGeometryMesh {
+class ClippingGeometryMesh : public AlignedAllocation {
 public:
-    ClippingGeometryMesh() : mPositionBuffer(QGLBuffer::VertexBuffer), mIndexBuffer(QGLBuffer::IndexBuffer)
+    ClippingGeometryMesh()
     {
+        glGenBuffers(1, &mPositionBuffer);
+        glGenBuffers(1, &mIndexBuffer);
+    }
+
+    ~ClippingGeometryMesh()
+    {
+        glDeleteBuffers(1, &mPositionBuffer);
+        glDeleteBuffers(1, &mIndexBuffer);
     }
 
     /**
@@ -37,30 +46,18 @@ public:
     bool load(const QByteArray &vertexData, const QByteArray &faceData, uint faceCount) {
         mFaceCount = faceCount;
 
-        if (!mPositionBuffer.create()) {
-            return false;
-        }
+        glBindBuffer(GL_ARRAY_BUFFER, mPositionBuffer);
+        glBufferData(GL_ARRAY_BUFFER, vertexData.size(), vertexData.constData(), GL_STATIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-        if (!mPositionBuffer.bind()) {
-            return false;
-        }
-
-        mPositionBuffer.allocate(vertexData.data(), vertexData.size());
-
-        if (!mIndexBuffer.create()) {
-            return false;
-        }
-
-        if (!mIndexBuffer.bind()) {
-            return false;
-        }
-
-        mIndexBuffer.allocate(faceData.data(), faceData.size());
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mIndexBuffer);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, faceData.size(), faceData.constData(), GL_STATIC_DRAW);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
         return true;
     }
 
-    const QGLBuffer &positionBuffer() const {
+    GLuint positionBuffer() const {
         return mPositionBuffer;
     }
 
@@ -68,7 +65,7 @@ public:
         return mFaceCount;
     }
 
-    const QGLBuffer &indexBuffer() const {
+    GLuint indexBuffer() const {
         return mIndexBuffer;
     }
 
@@ -84,9 +81,11 @@ public:
 private:
     Box3d mBoundingBox;
     uint mFaceCount;
-    QGLBuffer mPositionBuffer;
-    QGLBuffer mIndexBuffer;
+    GLuint mPositionBuffer;
+    GLuint mIndexBuffer;
 };
+
+typedef QSharedPointer<ClippingGeometryMesh> SharedClippingGeometryMesh;
 
 class ClippingGeometryInstance : public Renderable, public BufferSource, public DrawStrategy {
 public:
@@ -102,12 +101,8 @@ public:
         return mMesh->boundingBox();
     }
 
-    void setMesh(const ClippingGeometryMesh *mesh) {
+    void setMesh(const SharedClippingGeometryMesh &mesh) {
         mMesh = mesh;
-    }
-
-    const ClippingGeometryMesh *mesh() const {
-        return mMesh;
     }
 
     void setMaterial(MaterialState *material)
@@ -117,7 +112,7 @@ public:
 
     void draw(const RenderStates &renderStates, MaterialPassState &state) const
     {
-        SAFE_GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mMesh->indexBuffer().bufferId()));
+        SAFE_GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mMesh->indexBuffer()));
         SAFE_GL(glDrawElements(GL_TRIANGLES, mMesh->faceCount(), GL_UNSIGNED_SHORT, 0));
         SAFE_GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
     }
@@ -126,7 +121,7 @@ public:
     {
         switch (attribute.bufferType) {
         case 0:
-            return mMesh->positionBuffer().bufferId();
+            return mMesh->positionBuffer();
         }
 
         return -1;
@@ -134,15 +129,14 @@ public:
 
 private:
     MaterialState *mMaterial;
-    const ClippingGeometryMesh *mMesh;
+    SharedClippingGeometryMesh mMesh;
 };
 
 class ClippingGeometryData
 {
 public:
 
-    ClippingGeometryData(RenderStates &renderStates)
-        : mMeshCount(0), mInstanceCount(0), mRenderStates(renderStates), mMeshes((ClippingGeometryMesh*)0) {
+    ClippingGeometryData(RenderStates &renderStates) : mRenderStates(renderStates) {
 
         QFile clippingMaterialFile(":/material/clipping_material.xml");
 
@@ -166,10 +160,6 @@ public:
 
     }
 
-    ~ClippingGeometryData() {
-        unload();
-    }
-
     bool load(const QString &filename, Scene *scene) {
         QFile clippingFile(filename);
 
@@ -181,12 +171,15 @@ public:
         stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
         stream.setByteOrder(QDataStream::LittleEndian);
 
-        stream >> mMeshCount >> mInstanceCount;
+        uint meshCount, instanceCount;
 
-        mMeshes.reset(new ClippingGeometryMesh[mMeshCount]);
+        stream >> meshCount >> instanceCount;
+
+        QList<SharedClippingGeometryMesh> meshes;
+        meshes.reserve(meshCount);
 
         // Read meshes
-        for (int i = 0; i < mMeshCount; ++i) {
+        for (int i = 0; i < meshCount; ++i) {
             uint vertexCount, faceCount;
 
             Box3d boundingBox;
@@ -197,12 +190,16 @@ public:
             QByteArray vertexData = clippingFile.read(vertexCount * sizeof(Vector4));
             QByteArray facesData = clippingFile.read(faceCount * sizeof(quint16));
 
-            if (!mMeshes[i].load(vertexData, facesData, faceCount)) {
+            SharedClippingGeometryMesh mesh(new ClippingGeometryMesh);
+
+            if (!mesh->load(vertexData, facesData, faceCount)) {
                 qWarning("Unable to load %d-th mesh in clipping file %s.", i, qPrintable(filename));
                 return false;
             }
 
-            mMeshes[i].setBoundingBox(boundingBox);
+            mesh->setBoundingBox(boundingBox);
+
+            meshes.append(mesh);
         }
 
         // Read instances
@@ -211,13 +208,13 @@ public:
         float rotation;
         int meshIndex;
 
-        for (int i = 0; i < mInstanceCount; ++i) {
+        for (int i = 0; i < instanceCount; ++i) {
             stream >> position >> rotation >> scale >> meshIndex;
 
-            Q_ASSERT(meshIndex >= 0 && meshIndex < mMeshCount);
+            Q_ASSERT(meshIndex >= 0 && meshIndex < meshCount);
 
             QSharedPointer<ClippingGeometryInstance> instance(new ClippingGeometryInstance);
-            instance->setMesh(mMeshes.data() + meshIndex);
+            instance->setMesh(meshes[meshIndex]);
             instance->setMaterial(&mClippingMaterial);
             instance->setRenderCategory(RenderQueue::ClippingGeometry);
 
@@ -233,20 +230,10 @@ public:
         return true;
     }
 
-    void unload() {
-    }
-
 private:
-
     RenderStates &mRenderStates;
 
     MaterialState mClippingMaterial;
-
-    uint mMeshCount;
-    uint mInstanceCount;
-
-    QScopedArrayPointer<ClippingGeometryMesh> mMeshes;
-
 };
 
 ClippingGeometry::ClippingGeometry(RenderStates &renderStates) : d(new ClippingGeometryData(renderStates))
@@ -264,7 +251,6 @@ bool ClippingGeometry::load(const QString &filename, Scene *scene)
 
 void ClippingGeometry::unload()
 {
-    d->unload();
 }
 
 }

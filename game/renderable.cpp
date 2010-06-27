@@ -4,13 +4,22 @@
 
 namespace EvilTemple {
 
+static uint activeRenderables = 0;
+
+uint getActiveRenderables()
+{
+    return activeRenderables;
+}
+
 Renderable::Renderable()
     : mParentNode(NULL), mRenderCategory(RenderQueue::Default), mDebugging(false)
 {
+    activeRenderables++;
 }
 
 Renderable::~Renderable()
 {
+    activeRenderables--;
 }
 
 void Renderable::elapseTime(float secondsElapsed)

@@ -94,12 +94,12 @@ inline void Texture::setWrapModeT(GLenum wrapMode)
 
 inline void Texture::bind()
 {
-	glBindTexture(GL_TEXTURE_2D, mHandle);
+        glBindTexture(GL_TEXTURE_2D, mHandle);
 }
 
 inline bool Texture::isValid() const
 {
-	return mHandle != -1;
+        return mHandle != -1;
 }
 
 // Holders of textures should use this pointer type instead of textures directly
@@ -144,6 +144,8 @@ private:
     GlobalTextureCacheCleanupThread *mThread;
     static GlobalTextureCache mInstance;
 };
+
+uint getActiveTextures();
 
 }
 

@@ -1,5 +1,7 @@
 
 #include <QVector2D>
+#include <QtScriptTools>
+#include <QElapsedTimer>
 
 #include "scriptengine.h"
 #include "game.h"
@@ -14,6 +16,8 @@
 // Fix this, audio engine header name clash
 #include "audioengine.h"
 #include "scripting.h"
+
+#include <parser.h>
 
 namespace EvilTemple {
 
@@ -36,7 +40,14 @@ namespace EvilTemple {
 
     void ScriptEngine::handleException(const QScriptValue &exception)
     {
+        QScriptValueIterator it(exception);
+
         qWarning("Unhandled scripting exception: %s.", qPrintable(exception.toString()));
+
+        while (it.hasNext()) {
+            it.next();
+            qWarning("  %s = %s", qPrintable(it.name()), qPrintable(it.value().toString()));
+        }
     }
 
     void ScriptEngine::callGlobalFunction(const QString &name)
@@ -106,7 +117,7 @@ namespace EvilTemple {
 
         proto = engine->newObject(); // Vector has no prototype
 
-        QScriptValue global = engine->globalObject();        
+        QScriptValue global = engine->globalObject();
         proto.setPrototype(global.property("Object").property("prototype"));
 
         ctor = engine->newFunction(construct, proto);
@@ -135,7 +146,7 @@ namespace EvilTemple {
             return QScriptValue();
         QScriptValue arg = ctx->argument(0);
         if (arg.instanceOf(ctx->callee()))
-            return cls->newInstance(qscriptvalue_cast<QVector2D>(arg));                
+            return cls->newInstance(qscriptvalue_cast<QVector2D>(arg));
         qsreal x = arg.toNumber();
         qsreal y = ctx->argument(1).toNumber();
         return cls->newInstance(x, y);
@@ -254,7 +265,14 @@ namespace EvilTemple {
             return engine->undefinedValue();
         }
 
-        return engine->newVariant(file.readAll());
+        return QScriptValue(QString::fromUtf8(file.readAll()));
+     }
+
+     static QScriptValue timerReference(QScriptContext *context, QScriptEngine *engine)
+     {
+        QElapsedTimer timer;
+        timer.start();
+        return QScriptValue((uint)timer.msecsSinceReference());
      }
 
      ScriptEngineData::ScriptEngineData(ScriptEngine *parent, Game *game)
@@ -283,6 +301,9 @@ namespace EvilTemple {
         // Add a function to read files
         QScriptValue readFileFn = engine->newFunction(readFile, 1);
         global.setProperty("readFile", readFileFn);
+
+        QScriptValue timerReferenceFn = engine->newFunction(timerReference, 0);
+        global.setProperty("timerReference", timerReferenceFn);
 
         // Register scriptable objects
         Vector4Scriptable::registerWith(engine);

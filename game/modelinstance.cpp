@@ -23,6 +23,15 @@ namespace EvilTemple {
 
     ModelInstance::~ModelInstance()
     {
+        foreach (QGLBuffer *buffer, mPositionBufferAddMeshes) {
+            buffer->destroy();
+        }
+        foreach (QGLBuffer *buffer, mNormalBufferAddMeshes) {
+            buffer->destroy();
+        }
+        mPositionBuffer.destroy();
+        mNormalBuffer.destroy();
+
         qDeleteAll(mTransformedNormalsAddMeshes);
         qDeleteAll(mTransformedPositionsAddMeshes);
         qDeleteAll(mNormalBufferAddMeshes);
@@ -422,9 +431,9 @@ namespace EvilTemple {
         }
 
         DrawHelper<ModelDrawStrategy, ModelBufferSource> drawHelper;
-        ModelBufferSource bufferSource(mCurrentAnimation ? mPositionBuffer.bufferId() : model->positionBuffer,
-                                       mCurrentAnimation ? mNormalBuffer.bufferId() : model->normalBuffer,
-                                       model->texcoordBuffer);
+        ModelBufferSource bufferSource(mCurrentAnimation ? mPositionBuffer.bufferId() : model->positionBuffer.bufferId(),
+                                       mCurrentAnimation ? mNormalBuffer.bufferId() : model->normalBuffer.bufferId(),
+                                       model->texcoordBuffer.bufferId());
 
         for (int faceGroupId = 0; faceGroupId < model->faces; ++faceGroupId) {
             const FaceGroup &faceGroup = model->faceGroups[faceGroupId];
@@ -437,7 +446,7 @@ namespace EvilTemple {
             }
 
             if (material) {
-                ModelDrawStrategy drawStrategy(faceGroup.buffer, faceGroup.elementCount);
+                ModelDrawStrategy drawStrategy(faceGroup.buffer.bufferId(), faceGroup.indices.size());
                 drawHelper.draw(renderStates, material, drawStrategy, bufferSource);
             }
         }
@@ -446,9 +455,9 @@ namespace EvilTemple {
         for (int i = 0; i < mAddMeshes.size(); ++i) {
             model = mAddMeshes[i].data();
 
-            ModelBufferSource bufferSource(mCurrentAnimation ? mPositionBufferAddMeshes[i]->bufferId() : model->positionBuffer,
-                mCurrentAnimation ? mNormalBufferAddMeshes[i]->bufferId() : model->normalBuffer,
-                model->texcoordBuffer);
+            ModelBufferSource bufferSource(mCurrentAnimation ? mPositionBufferAddMeshes[i]->bufferId() : model->positionBuffer.bufferId(),
+                mCurrentAnimation ? mNormalBufferAddMeshes[i]->bufferId() : model->normalBuffer.bufferId(),
+                model->texcoordBuffer.bufferId());
 
             for (int faceGroupId = 0; faceGroupId < model->faces; ++faceGroupId) {
                 const FaceGroup &faceGroup = model->faceGroups[faceGroupId];
@@ -456,106 +465,10 @@ namespace EvilTemple {
                 MaterialState *material = faceGroup.material;
 
                 if (material) {
-                    ModelDrawStrategy drawStrategy(faceGroup.buffer, faceGroup.elementCount);
+                    ModelDrawStrategy drawStrategy(faceGroup.buffer.bufferId(), faceGroup.indices.size());
                     drawHelper.draw(renderStates, material, drawStrategy, bufferSource);
                 }
             }
-        }
-    }
-
-    void ModelInstance::draw(const RenderStates &renderStates, MaterialState *overrideMaterial) const
-    {
-        Q_ASSERT(overrideMaterial);
-
-        const Model *model = mModel.data();
-
-        if (!model)
-            return;
-
-        for (int i = 0; i < overrideMaterial->passCount; ++i) {
-            MaterialPassState &pass = overrideMaterial->passes[i];
-
-            pass.program.bind();
-
-            // Bind texture samplers
-            for (int j = 0; j < pass.textureSamplers.size(); ++j) {
-                pass.textureSamplers[j].bind();
-            }
-
-            // Bind uniforms
-            for (int j = 0; j < pass.uniforms.size(); ++j) {
-                pass.uniforms[j].bind();
-            }
-
-            // Bind attributes
-            for (int j = 0; j < pass.attributes.size(); ++j) {
-                MaterialPassAttributeState &attribute = pass.attributes[j];
-
-                // Bind the correct buffer
-                switch (attribute.bufferType) {
-                case 0:
-                    if (!mCurrentAnimation) {
-                        SAFE_GL(glBindBuffer(GL_ARRAY_BUFFER, model->positionBuffer));
-                    } else {
-                        SAFE_GL(glBindBuffer(GL_ARRAY_BUFFER, mPositionBuffer.bufferId()));
-                    }
-                    break;
-                case 1:
-                    if (!mCurrentAnimation) {
-                        SAFE_GL(glBindBuffer(GL_ARRAY_BUFFER, model->normalBuffer));
-                    } else {
-                        SAFE_GL(glBindBuffer(GL_ARRAY_BUFFER, mNormalBuffer.bufferId()));
-                    }
-                    break;
-                case 2:
-                    SAFE_GL(glBindBuffer(GL_ARRAY_BUFFER, model->texcoordBuffer));
-                    break;
-                }
-
-                // Assign the attribute
-                SAFE_GL(glEnableVertexAttribArray(attribute.location));
-                SAFE_GL(glVertexAttribPointer(attribute.location,
-                                              attribute.binding.components(),
-                                              attribute.binding.type(),
-                                              attribute.binding.normalized(),
-                                              attribute.binding.stride(),
-                                              (GLvoid*)attribute.binding.offset()));
-
-            }
-            SAFE_GL(glBindBuffer(GL_ARRAY_BUFFER, 0)); // Unbind any previously bound buffers
-
-            // Set render states
-            foreach (const SharedMaterialRenderState &state, pass.renderStates) {
-                state->enable();
-            }
-
-            for (int faceGroupId = 0; faceGroupId < model->faces; ++faceGroupId) {
-                const FaceGroup &faceGroup = model->faceGroups[faceGroupId];
-
-                // Draw the actual model
-                SAFE_GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, faceGroup.buffer));
-                SAFE_GL(glDrawElements(GL_TRIANGLES, faceGroup.elementCount, GL_UNSIGNED_SHORT, 0));
-            }
-
-            SAFE_GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
-
-            // Reset render states to default
-            foreach (const SharedMaterialRenderState &state, pass.renderStates) {
-                state->disable();
-            }
-
-            // Unbind textures
-            for (int j = 0; j < pass.textureSamplers.size(); ++j) {
-                pass.textureSamplers[j].unbind();
-            }
-
-            // Unbind attributes
-            for (int j = 0; j < pass.attributes.size(); ++j) {
-                MaterialPassAttributeState &attribute = pass.attributes[j];
-                SAFE_GL(glDisableVertexAttribArray(attribute.location));
-            }
-
-            pass.program.unbind();
         }
     }
 
@@ -752,10 +665,9 @@ namespace EvilTemple {
         for (int i = 0; i < mModel->faces; ++i) {
             const FaceGroup &group = mModel->faceGroups[i];
 
-            glBindBuffer(GL_ARRAY_BUFFER, group.buffer);
-            ushort *indices = (ushort*)glMapBuffer(GL_ARRAY_BUFFER, GL_READ_ONLY);
+            const QVector<ushort> &indices = group.indices;
 
-            for (int j = 0; j < group.elementCount; j += 3) {
+            for (int j = 0; j < indices.size(); j += 3) {
                 const Vector4 &va = mTransformedPositions[indices[j]];
                 const Vector4 &vb = mTransformedPositions[indices[j+1]];
                 const Vector4 &vc = mTransformedPositions[indices[j+2]];
@@ -766,11 +678,7 @@ namespace EvilTemple {
                     result.intersects = true;
                 }
             }
-
-            glUnmapBuffer(GL_ARRAY_BUFFER);
         }
-
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
 
         return result;
     }
