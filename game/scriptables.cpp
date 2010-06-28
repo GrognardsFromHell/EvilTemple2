@@ -41,6 +41,39 @@ static const Quaternion nullRotation(0, 0, 0, 0);
 static const Box3d emptyBoundingBox(nullVector, nullVector);
 static const SharedModel nullSharedModel;
 
+struct Connection
+{
+    QObject *sender;
+    const char *signal;
+    QScriptValue receiver;
+    QScriptValue function;
+};
+
+static QList<Connection> activeConnections;
+
+static void addActiveConnection(QObject *sender, const char *signal, const QScriptValue &receiver,
+                                const QScriptValue &function)
+{
+    Connection connection;
+    connection.sender = sender;
+    connection.signal = signal;
+    connection.receiver = receiver;
+    connection.function = function;
+    activeConnections.append(connection);
+
+    qScriptConnect(sender, signal, receiver, function);
+}
+
+void clearAllActiveConnections()
+{
+    QList<Connection>::iterator it = activeConnections.begin();
+    while (it != activeConnections.end()) {
+        qScriptDisconnect(it->sender, it->signal, it->receiver, it->function);
+        it++;
+    }
+    activeConnections.clear();
+}
+
 template<typename T>
 QScriptValue valueToScriptValue(QScriptEngine *engine, T const &in)
 {
@@ -347,7 +380,7 @@ void ModelInstanceScriptable::setClickHandler(const QScriptValue &handler)
 {
     ModelInstance *modelInstance = data();
     if (modelInstance) {
-        qScriptConnect(modelInstance, SIGNAL(mousePressed()), QScriptValue(), handler);
+        addActiveConnection(modelInstance, SIGNAL(mousePressed()), QScriptValue(), handler);
     }
 }
 
@@ -355,7 +388,7 @@ void ModelInstanceScriptable::setAnimationEventHandler(const QScriptValue &handl
 {
     ModelInstance *modelInstance = data();
     if (modelInstance) {
-        qScriptConnect(modelInstance, SIGNAL(animationEvent(int,QString)), QScriptValue(), handler);
+        addActiveConnection(modelInstance, SIGNAL(animationEvent(int,QString)), QScriptValue(), handler);
     }
 }
 

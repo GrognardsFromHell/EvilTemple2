@@ -214,6 +214,8 @@ namespace EvilTemple {
         static void registerWith(QScriptEngine *engine);
     };
 
+    void clearAllActiveConnections();
+
 }
 
 #endif // SCRIPTABLES_H

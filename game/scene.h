@@ -16,7 +16,7 @@ class SceneData;
   */
 class Scene : public QObject {
 Q_OBJECT
-public:    
+public:
     Scene();
     ~Scene();
 
@@ -41,6 +41,8 @@ public slots:
     SharedSceneNode pickNode(const Ray3d &ray) const;
 
     SharedRenderable pickRenderable(const Ray3d &ray) const;
+
+
 
 private:
     QScopedPointer<SceneData> d;

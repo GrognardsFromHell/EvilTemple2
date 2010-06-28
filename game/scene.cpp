@@ -3,6 +3,8 @@
 #include <QFontMetrics>
 #include <QPainterPath>
 
+#include "scriptables.h"
+
 #include "renderqueue.h"
 #include "scene.h"
 #include "lighting.h"
@@ -255,14 +257,8 @@ SharedRenderable Scene::pickRenderable(const Ray3d &ray) const
 
 void Scene::clear()
 {
-    // Disconnect signals for everything
-    foreach (const SharedSceneNode &node, d->sceneNodes) {
-        foreach (const SharedRenderable &renderable, node->attachedObjects()) {
-            renderable->disconnect();
-        }
-    }
-
     d->sceneNodes.clear();
+    clearAllActiveConnections();
 }
 
 inline int roundToPowerOfTwo(int v)
