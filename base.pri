@@ -122,4 +122,5 @@ OTHER_FILES += \
     ../../MoneyDisplay.qml \
     ../../bin/data/scripts/animations.js \
     ../bin/data/scripts/walking.js \
-    ../bin/data/scripts/util.js
+    ../bin/data/scripts/util.js \
+    ../bin/data/scripts/debugBar.js

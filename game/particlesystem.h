@@ -51,7 +51,7 @@ namespace EvilTemple {
         Q_DISABLE_COPY(ParticleSystem);
     };
 
-    typedef QSharedPointer<ParticleSystem> SharedParticleSystem;
+    Q_DECLARE_METATYPE(ParticleSystem*);
 
     class ParticleSystems : public QObject
     {
@@ -67,9 +67,9 @@ namespace EvilTemple {
     public slots:
         /**
             Creates a particle system and returns it. The caller is responsible for updating, calling
-            and rendering the particle system.
+            and rendering the particle system, as well as deleting it.
         */
-        SharedParticleSystem instantiate(const QString &name);
+        ParticleSystem *instantiate(const QString &name);
 
     private:
 

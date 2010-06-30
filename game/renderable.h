@@ -3,7 +3,7 @@
 #define RENDERABLE_H
 
 #include <QObject>
-#include <QSharedPointer>
+#include <QMetaType>
 #include <QPair>
 #include <QVector>
 
@@ -20,11 +20,15 @@ class RenderStates;
 
 class Renderable : public QObject, public AlignedAllocation {
 Q_OBJECT
+Q_PROPERTY(Box3d boundingBox READ boundingBox)
+Q_PROPERTY(Matrix4 worldTransform READ worldTransform)
+Q_PROPERTY(SceneNode* parentNode READ parentNode)
+Q_PROPERTY(bool animated READ isAnimated WRITE setAnimated)
+// Q_PROPERTY(uint renderCategory READ renderCategory WRITE setRenderCategory)
+Q_PROPERTY(bool debugging READ isDebugging WRITE setDebugging)
 public:
     Renderable();
     virtual ~Renderable();
-
-    virtual void elapseTime(float secondsElapsed);
 
     virtual void render(RenderStates &renderStates) = 0;
 
@@ -51,6 +55,9 @@ public:
     void setDebugging(bool debugging);
     bool isDebugging() const;
 
+public slots:
+    virtual void elapseTime(float secondsElapsed);
+
 signals:
     void mousePressed();
     void mouseReleased();
@@ -66,6 +73,8 @@ protected:
 private:
     Q_DISABLE_COPY(Renderable)
 };
+
+Q_DECLARE_METATYPE(Renderable*)
 
 inline bool Renderable::isAnimated() const
 {
@@ -108,8 +117,6 @@ inline void Renderable::setRenderCategory(RenderQueue::Category category)
     Q_ASSERT(category >= RenderQueue::Default && category <= RenderQueue::Count);
     mRenderCategory = category;
 }
-
-typedef QSharedPointer<Renderable> SharedRenderable;
 
 /**
   A renderable that will draw a list of lines (in model space).

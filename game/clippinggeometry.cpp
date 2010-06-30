@@ -213,18 +213,17 @@ public:
 
             Q_ASSERT(meshIndex >= 0 && meshIndex < meshCount);
 
-            QSharedPointer<ClippingGeometryInstance> instance(new ClippingGeometryInstance);
+            ClippingGeometryInstance *instance = new ClippingGeometryInstance;
             instance->setMesh(meshes[meshIndex]);
             instance->setMaterial(&mClippingMaterial);
             instance->setRenderCategory(RenderQueue::ClippingGeometry);
 
-            SharedSceneNode node(new SceneNode);
+            SceneNode *node = scene->createNode();
+            instance->setParent(node);
             node->setPosition(position);
             node->setScale(Vector4(scale, scale, scale, 1));
             node->setRotation(Quaternion::fromAxisAndAngle(0, 1, 0, rotation));
             node->attachObject(instance);
-
-            scene->addNode(node);
         }
 
         return true;

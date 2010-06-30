@@ -15,7 +15,8 @@ OTHER_FILES += MainMenu.qml \
     MoneyDisplay.qml \
     Button.qml \
     ButtonBackdrop.png \
-    Animations.qml
+    Animations.qml \
+    DebugBar.qml
 
 SOURCES += \
     dummy.cpp

@@ -29,25 +29,19 @@ struct AddMesh {
 class ModelInstance : public Renderable
 {
 Q_OBJECT
+Q_PROPERTY(const SharedModel &model READ model WRITE setModel)
+Q_PROPERTY(bool idling READ isIdling)
+Q_PROPERTY(QString idleAnimation READ idleAnimation WRITE setIdleAnimation)
 public:
     ModelInstance();
     ~ModelInstance();
 
+    const SharedModel &model() const;
     void setModel(const SharedModel &model);
-
-    void elapseTime(float elapsedSeconds);
-    void elapseDistance(float distance);
-    void elapseRotation(float rotation);
 
     void drawNormals() const;
     void render(RenderStates &renderStates);
     void draw(const RenderStates &renderStates, MaterialState *overrideMaterial) const;
-
-    const SharedModel &model() const;
-
-    Matrix4 getBoneSpace(uint boneId);
-
-    void addMesh(const SharedModel &model);
 
     IntersectionResult intersect(const Ray3d &ray) const;
 
@@ -55,17 +49,26 @@ public:
 
     const Matrix4 &worldTransform() const;
 
-    bool overrideMaterial(const QString &name, const SharedMaterialState &state);
-    bool clearOverrideMaterial(const QString &name);
-    void clearOverrideMaterials();
-
     void setIdleAnimation(const QString &idleAnimation);
     const QString &idleAnimation() const;
 
     bool isIdling() const; // No animation is playing
 
+public slots:
+    Matrix4 getBoneSpace(uint boneId);
+
+    void addMesh(const SharedModel &model);
+
+    bool overrideMaterial(const QString &name, const SharedMaterialState &state);
+    bool clearOverrideMaterial(const QString &name);
+    void clearOverrideMaterials();
+
     bool playAnimation(const QString &name, bool loop = false);
     void stopAnimation();
+
+    void elapseTime(float elapsedSeconds);
+    void elapseDistance(float distance);
+    void elapseRotation(float rotation);
 
 signals:
     void animationFinished(const QString &name, bool canceled);

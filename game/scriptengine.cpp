@@ -1,5 +1,4 @@
 
-#include <QVector2D>
 #include <QtScriptTools>
 #include <QElapsedTimer>
 
@@ -13,6 +12,11 @@
 #include "particlesystem.h"
 #include "sectormap.h"
 #include "models.h"
+#include "scenenode.h"
+
+#include "renderable.h"
+#include "modelinstance.h"
+#include "lighting.h"
 
 // Fix this, audio engine header name clash
 #include "audioengine.h"
@@ -109,135 +113,6 @@ namespace EvilTemple {
         return true;
     }
 
-    QVector2DClass::QVector2DClass(QScriptEngine *engine) : QObject(engine), QScriptClass(engine)
-    {
-        qScriptRegisterMetaType<QVector2D>(engine, toScriptValue, fromScriptValue);
-
-        x = engine->toStringHandle(QLatin1String("x"));
-        y = engine->toStringHandle(QLatin1String("y"));
-
-        proto = engine->newObject(); // Vector has no prototype
-
-        QScriptValue global = engine->globalObject();
-        proto.setPrototype(global.property("Object").property("prototype"));
-
-        ctor = engine->newFunction(construct, proto);
-        ctor.setData(qScriptValueFromValue(engine, this));
-    }
-
-    QVector2DClass::~QVector2DClass()
-    {
-    }
-
-    QScriptValue QVector2DClass::newInstance(const QVector2D &vector)
-    {
-        QScriptValue data = engine()->newVariant(qVariantFromValue(vector));
-        return engine()->newObject(this, data);
-    }
-
-    QScriptValue QVector2DClass::newInstance(qreal x, qreal y)
-    {
-        return newInstance(QVector2D(x, y));
-    }
-
-    QScriptValue QVector2DClass::construct(QScriptContext *ctx, QScriptEngine *)
-    {
-        QVector2DClass *cls = qscriptvalue_cast<QVector2DClass*>(ctx->callee().data());
-        if (!cls)
-            return QScriptValue();
-        QScriptValue arg = ctx->argument(0);
-        if (arg.instanceOf(ctx->callee()))
-            return cls->newInstance(qscriptvalue_cast<QVector2D>(arg));
-        qsreal x = arg.toNumber();
-        qsreal y = ctx->argument(1).toNumber();
-        return cls->newInstance(x, y);
-    }
-
-    QScriptClass::QueryFlags QVector2DClass::queryProperty(const QScriptValue &object,
-                                                           const QScriptString &name,
-                                                           QueryFlags flags, uint *id)
-    {
-        Q_UNUSED(object)
-        Q_UNUSED(id)
-
-        if (name == x || name == y) {
-            return flags;
-        } else {
-            if (flags & HandlesReadAccess)
-                flags &= ~HandlesReadAccess;
-            return flags;
-        }
-    }
-
-    QScriptValue QVector2DClass::property(const QScriptValue &object, const QScriptString &name, QueryFlags flags,
-                                          uint *id)
-    {
-        Q_UNUSED(id)
-        Q_UNUSED(flags)
-
-        QVector2D vector = qscriptvalue_cast<QVector2D>(object.data());
-        if (name == x) {
-            return vector.x();
-        } else if (name == y) {
-            return vector.y();
-        }
-        return QScriptValue();
-    }
-
-    void QVector2DClass::setProperty(QScriptValue &object,
-                                     const QScriptString &name,
-                                     uint id, const QScriptValue &value)
-    {
-        QVector2D vector = qscriptvalue_cast<QVector2D>(object.data());
-
-        if (name == x) {
-            vector.setX(value.toNumber());
-        } else if (name == y) {
-            vector.setY(value.toNumber());
-        }
-
-        object.setData(engine()->newVariant(qVariantFromValue(vector)));
-    }
-
-    QScriptValue::PropertyFlags QVector2DClass::propertyFlags(
-            const QScriptValue &/*object*/, const QScriptString &name, uint /*id*/)
-    {
-        if (name == x || name == y) {
-            return QScriptValue::Undeletable
-                    | QScriptValue::SkipInEnumeration;
-        }
-        return QScriptValue::Undeletable;
-    }
-
-    QString QVector2DClass::name() const
-    {
-        return QLatin1String("QVector2D");
-    }
-
-    QScriptValue QVector2DClass::prototype() const
-    {
-        return proto;
-    }
-
-    QScriptValue QVector2DClass::constructor()
-    {
-        return ctor;
-    }
-
-    QScriptValue QVector2DClass::toScriptValue(QScriptEngine *eng, const QVector2D &ba)
-    {
-        QScriptValue ctor = eng->globalObject().property("QVector2D");
-        QVector2DClass *cls = qscriptvalue_cast<QVector2DClass*>(ctor.data());
-        if (!cls)
-            return eng->newVariant(qVariantFromValue(ba));
-        return cls->newInstance(ba);
-    }
-
-    void QVector2DClass::fromScriptValue(const QScriptValue &obj, QVector2D &ba)
-    {
-        ba = qvariant_cast<QVector2D>(obj.data().toVariant());
-    }
-
     template<typename T>
     QScriptValue qobjectToScriptValue(QScriptEngine *engine, T* const &in)
     {
@@ -269,11 +144,31 @@ namespace EvilTemple {
         return QScriptValue(QString::fromUtf8(file.readAll()));
      }
 
-     static QScriptValue timerReference(QScriptContext *context, QScriptEngine *engine)
+     static QScriptValue timerReference(QScriptContext*, QScriptEngine*)
      {
         QElapsedTimer timer;
         timer.start();
         return QScriptValue((uint)timer.msecsSinceReference());
+     }
+
+     template<typename T>
+     static QScriptValue renderableCtor(QScriptContext *context, QScriptEngine *engine)
+     {
+         if (!context->isCalledAsConstructor()) {
+             return context->throwError(QScriptContext::SyntaxError, "Please call this function as a "
+                                        "constructor using the 'new' keyword.");
+         }
+
+         Scene *scene = qobject_cast<Scene*>(context->argument(0).toQObject());
+
+         if (!scene) {
+             return context->throwError(QScriptContext::SyntaxError, "A renderable constructor requires the scene as "
+                                        "it's first argument");
+         }
+
+         T *result = new T;
+         result->setParent(scene);
+         return engine->newQObject(result);
      }
 
      ScriptEngineData::ScriptEngineData(ScriptEngine *parent, Game *game)
@@ -286,10 +181,6 @@ namespace EvilTemple {
         QScriptValue gameObject = engine->newQObject(game);
         global.setProperty("game", gameObject);
 
-        // Register conversion functions for frequently used data types
-        QVector2DClass *qv2Class = new QVector2DClass(engine);
-        global.setProperty("QVector2D", qv2Class->constructor());
-
         // Some standard meta types used as arguments throughout the code
         registerQObject<EvilTemple::Game>(engine, "Game*");
         registerQObject<EvilTemple::BackgroundMap>(engine, "BackgroundMap*");
@@ -299,6 +190,9 @@ namespace EvilTemple {
         registerQObject<EvilTemple::ParticleSystems>(engine, "ParticleSystems*");
         registerQObject<EvilTemple::SectorMap>(engine, "SectorMap*");
         registerQObject<EvilTemple::Models>(engine, "Models*");
+        registerQObject<EvilTemple::SceneNode>(engine, "SceneNode*");
+        registerQObject<EvilTemple::Renderable>(engine, "Renderable*");
+        registerQObject<EvilTemple::ParticleSystem>(engine, "ParticleSystem*");
 
         // Add a function to read files
         QScriptValue readFileFn = engine->newFunction(readFile, 1);
@@ -307,18 +201,15 @@ namespace EvilTemple {
         QScriptValue timerReferenceFn = engine->newFunction(timerReference, 0);
         global.setProperty("timerReference", timerReferenceFn);
 
+        global.setProperty("ModelInstance", engine->newFunction(renderableCtor<ModelInstance>));
+        global.setProperty("Light", engine->newFunction(renderableCtor<Light>));
+
         // Register scriptable objects
         Vector4Scriptable::registerWith(engine);
         Box3dScriptable::registerWith(engine);
         QuaternionScriptable::registerWith(engine);
-        SceneNodeScriptable::registerWith(engine);
         ModelScriptable::registerWith(engine);
-        ModelInstanceScriptable::registerWith(engine);
-        LightScriptable::registerWith(engine);
-        registerRenderableScriptable(engine);
         MaterialStateScriptable::registerWith(engine);
-        ParticleSystemScriptable::registerWith(engine);
-        LineRenderableScriptable::registerWith(engine);
 
         registerQObject<EvilTemple::AudioEngine>(engine, "AudioEngine*");
         registerAudioEngine(engine);

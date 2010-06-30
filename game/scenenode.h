@@ -1,6 +1,8 @@
 #ifndef SCENENODE_H
 #define SCENENODE_H
 
+#include <QtCore/QObject>
+#include <QtCore/QMetaType>
 #include <QtCore/QSharedPointer>
 
 #include <gamemath.h>
@@ -16,10 +18,19 @@ namespace EvilTemple {
 class RenderStates;
 class Scene;
 
-class SceneNode : public AlignedAllocation
+class SceneNode : public QObject, public AlignedAllocation
 {
+Q_OBJECT
+Q_PROPERTY(Vector4 position READ position WRITE setPosition)
+Q_PROPERTY(Vector4 scale READ scale WRITE setScale)
+Q_PROPERTY(Quaternion rotation READ rotation WRITE setRotation)
+Q_PROPERTY(bool interactive READ isInteractive WRITE setInteractive)
+Q_PROPERTY(Box3d boundingBox READ boundingBox)
+Q_PROPERTY(Box3d worldBoundingBox READ worldBoundingBox)
+Q_PROPERTY(SceneNode* parentNode READ parentNode WRITE setParentNode)
+Q_PROPERTY(QList<Renderable*> attachedObjects READ attachedObjects)
 public:
-    SceneNode();
+    SceneNode(Scene *scene);
     virtual ~SceneNode();
 
     const Vector4 &position() const;
@@ -35,7 +46,6 @@ public:
     void setScale(const Vector4 &scale);
     void setInteractive(bool interactive);
     void setAnimated(bool animated);
-    void setScene(Scene *scene);
 
     const Box3d &worldBoundingBox() const;
 
@@ -62,10 +72,30 @@ public:
      */
     const Matrix4 &fullTransform() const;
 
-    void attachObject(const SharedRenderable &sharedRenderable);
-    void detachObject(const Renderable *renderable);
+    const QList<Renderable*> &attachedObjects() const;
 
-    const QList<SharedRenderable> &attachedObjects() const;
+    /**
+      Changes the parent node of this scene node. This will also add this node
+      to the given node's list of children.
+      */
+    void setParentNode(SceneNode *node);
+
+    /**
+      Returns the parent node of this node, or NULL for root nodes.
+      */
+    SceneNode *parentNode() const;
+
+public slots:
+    /**
+      Attaches a renderable to this scene node for rendering. If the renderable is not already a child of the
+      scene this scene node is associated with, it will be made one.
+      */
+    void attachObject(Renderable *sharedRenderable);
+
+    /**
+      Detaches a renderable from this scene node.
+      */
+    void detachObject(Renderable *renderable);
 
 private:
     void updateFullTransform() const;
@@ -77,10 +107,10 @@ private:
     bool mInteractive;
     bool mAnimated; // requires time events
     Scene *mScene; // The scene that contains this node
-    QList<SceneNode*> mChildren; // List of children.
-    SceneNode *mParent; // Parent of this node
+    QList<SceneNode*> mChildNodes; // List of children.
+    SceneNode *mParentNode; // Parent of this node
 
-    QList<SharedRenderable> mAttachedObjects;
+    QList<Renderable*> mAttachedObjects;
 
     // Mutable since they're only used for caching. Always call worldMatrix() internally.
     mutable bool mWorldMatrixInvalid;
@@ -91,6 +121,8 @@ private:
     mutable Box3d mBoundingBox;
     mutable bool mFullTransformInvalid;
     mutable Matrix4 mFullTransform;
+
+    Q_DISABLE_COPY(SceneNode)
 };
 
 inline const Box3d &SceneNode::boundingBox() const
@@ -120,8 +152,6 @@ inline const Matrix4 &SceneNode::fullTransform() const
 
     return mFullTransform;
 }
-
-typedef QSharedPointer<SceneNode> SharedSceneNode;
 
 inline const Vector4 &SceneNode::position() const
 {
@@ -197,15 +227,26 @@ inline void SceneNode::setAnimated(bool animated)
     mAnimated = animated;
 }
 
-inline void SceneNode::setScene(Scene *scene)
-{
-    mScene = scene;
-}
-
-inline const QList<SharedRenderable> &SceneNode::attachedObjects() const
+inline const QList<Renderable*> &SceneNode::attachedObjects() const
 {
     return mAttachedObjects;
 }
+
+inline void SceneNode::setParentNode(SceneNode *node)
+{
+    if (mParentNode)
+        mParentNode->mChildNodes.removeOne(this);
+    mParentNode = node;
+    if (mParentNode)
+        mParentNode->mChildNodes.append(this);
+}
+
+inline SceneNode *SceneNode::parentNode() const
+{
+    return mParentNode;
+}
+
+Q_DECLARE_METATYPE(SceneNode*)
 
 }
 

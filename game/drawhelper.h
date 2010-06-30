@@ -143,19 +143,15 @@ struct ModelDrawStrategy : public DrawStrategy {
             int positionPos = state.program->uniformLocation("lightSourcePosition");
             int attenuationPos = state.program->uniformLocation("lightSourceAttenuation");
 
-            SAFE_GL(glUniform1i(typePos, 1));
+            /*SAFE_GL(glUniform1i(typePos, 1));
             //SAFE_GL(glUniform4f(colorPos, 0.662745f, 0.564706f, 0.905882f, 0));
             SAFE_GL(glUniform4f(colorPos, 0.962745f, 0.964706f, 0.965882f, 0));
             SAFE_GL(glUniform4f(positionPos, -0.632409f, -0.774634f, 0, 0));
 
-            SAFE_GL(glDrawElements(GL_TRIANGLES, mElementCount, GL_UNSIGNED_SHORT, 0));
+            SAFE_GL(glDrawElements(GL_TRIANGLES, mElementCount, GL_UNSIGNED_SHORT, 0));*/
 
-            SAFE_GL(glDepthFunc(GL_LEQUAL));
-            SAFE_GL(glEnable(GL_CULL_FACE));
-
-            if (renderStates.activeLights().size() > 0) {
-                SAFE_GL(glEnable(GL_BLEND));
-                SAFE_GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE));
+            if (!renderStates.activeLights().isEmpty()) {
+                bool first = true;
 
                 // Draw again for every light affecting this mesh
                 foreach (const Light *light, renderStates.activeLights()) {
@@ -165,6 +161,15 @@ struct ModelDrawStrategy : public DrawStrategy {
                     SAFE_GL(glUniform1f(attenuationPos, light->attenuation()));
 
                     SAFE_GL(glDrawElements(GL_TRIANGLES, mElementCount, GL_UNSIGNED_SHORT, 0));
+
+                    if (first) {
+                        SAFE_GL(glDepthFunc(GL_LEQUAL));
+                        SAFE_GL(glEnable(GL_CULL_FACE));
+
+                        SAFE_GL(glEnable(GL_BLEND));
+                        SAFE_GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE));
+                    }
+                    first = false;
                 }
 
                 SAFE_GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));

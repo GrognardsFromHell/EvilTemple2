@@ -1,8 +1,6 @@
 #ifndef LIGHTING_H
 #define LIGHTING_H
 
-#include <QSharedPointer>
-
 #include "renderable.h"
 
 #include <gamemath.h>
@@ -11,10 +9,17 @@ using namespace GameMath;
 namespace EvilTemple {
 
 class LightDebugRenderer;
-    
+
 class Light : public Renderable
 {
 Q_OBJECT
+Q_PROPERTY(Type type READ type WRITE setType)
+Q_PROPERTY(float range READ range WRITE setRange)
+Q_PROPERTY(Vector4 color READ color WRITE setColor)
+Q_PROPERTY(Vector4 direction READ direction WRITE setDirection)
+Q_PROPERTY(float attenuation READ attenuation WRITE setAttenuation)
+Q_PROPERTY(float phi READ phi WRITE setPhi)
+Q_PROPERTY(float theta READ theta WRITE setTheta)
 public:
     Light();
 
@@ -117,13 +122,11 @@ private:
     Q_DISABLE_COPY(Light)
 };
 
-typedef QSharedPointer<Light> SharedLight;
-
 inline Light::Light() : mColor(0,0,0,0), mDirection(0, 0, 0, 0)
 {
     setRenderCategory(RenderQueue::Lights);
 }
 
-} 
+}
 
 #endif // LIGHTING_H

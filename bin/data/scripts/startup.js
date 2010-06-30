@@ -59,7 +59,7 @@ var BaseObject = {
     interactive: true,
     registerHandlers: function(sceneNode, modelInstance) {
         var obj = this;
-        modelInstance.setClickHandler(function() {
+        modelInstance.mousePressed.connect(function() {
             currentSelection = {
                 sceneNode: sceneNode,
                 obj: obj,
@@ -217,7 +217,7 @@ var Portal = {
     },
     registerHandlers: function(sceneNode, renderable) {
         var obj = this;
-        renderable.setClickHandler(function() {
+        renderable.mousePressed.connect(function() {
             obj.onClicked(sceneNode, renderable);
         });
     }
@@ -233,7 +233,7 @@ var MapChanger = {
     },
     registerHandlers: function(sceneNode, modelInstance) {
         var obj = this;
-        modelInstance.setClickHandler(function() {
+        modelInstance.mousePressed.connect(function() {
             obj.onClicked();
         });
     }
@@ -250,14 +250,7 @@ function startup() {
     var mainMenu = gameView.showView("interface/MainMenu.qml");
     mainMenu.newGameClicked.connect(function() {
         mainMenu.deleteLater();
-        var loadMapUi = gameView.addGuiItem('interface/LoadMap.qml');
-        loadMapUi.setMapList(maps);
-        loadMapUi.mapSelected.connect(function(dir) {
-            loadMap('maps/' + dir + '/map.js');
-        });
-        loadMapUi.closeClicked.connect(function() {
-            loadMapUi.deleteLater();
-        });
+        showDebugBar();
     });
 
     print("Loading prototypes...");
@@ -285,10 +278,23 @@ function startup() {
     setupWorldClickHandler();
 }
 
+var worldClickCallback = null;
+
+function selectWorldTarget(callback) {
+    worldClickCallback = callback;
+}
+
 function setupWorldClickHandler() {
     var firstClick = undefined;
 
     gameView.worldClicked.connect(function(worldPosition) {
+        if (worldClickCallback != null) {
+            var callback = worldClickCallback;
+            worldClickCallback = null;
+            callback(worldPosition);
+            return;
+        }
+
         var color;
         var material = gameView.sectorMap.regionTag("groundMaterial", worldPosition);
 
@@ -315,7 +321,7 @@ function setupWorldClickHandler() {
 
             print("Found path of length: " + path.length);
 
-            var sceneNode = new SceneNode();
+            var sceneNode = gameView.scene.createNode();
 
             for (var i = 0; i < path.length; ++i) {
                 if (i + 1 < path.length) {
@@ -326,8 +332,6 @@ function setupWorldClickHandler() {
 
                 gameView.scene.addTextOverlay(path[i], 'X', [1, 0, 0], 1);
             }
-
-            gameView.scene.addNode(sceneNode);
 
             gameView.addVisualTimer(5000, function() {
                 print("Removing scene node.");
@@ -415,20 +419,19 @@ function handleAnimationEvent(sceneNode, modelInstance, obj, type, content)
 
 function createMapObject(scene, obj)
 {
-    var sceneNode = new SceneNode();
+    var sceneNode = gameView.scene.createNode();
     sceneNode.interactive = obj.interactive;
     sceneNode.position = obj.position;
     sceneNode.rotation = rotationFromDegrees(obj.rotation);
     var scale = obj.scale / 100.0;
     sceneNode.scale = [scale, scale, scale];
-    scene.addNode(sceneNode);
 
     var modelObj = models.load(obj.model);
 
-    var modelInstance = new ModelInstance();
+    var modelInstance = new ModelInstance(gameView.scene);
     modelInstance.model = modelObj;
     updateEquipment(obj, modelInstance);
-    modelInstance.setAnimationEventHandler(function(type, content) {
+    modelInstance.animationEvent.connect(function(type, content) {
         handleAnimationEvent(sceneNode, modelInstance, obj, type, content);
     });
     if (obj.interactive)
@@ -438,10 +441,10 @@ function createMapObject(scene, obj)
 
 function makeParticleSystemTestModel(particleSystem, sceneNode) {
     var testModel = models.load('meshes/scenery/misc/mirror.model');
-    var modelInstance = new ModelInstance();
+    var modelInstance = new ModelInstance(gameView.scene);
     modelInstance.model = testModel;
     sceneNode.interactive = true;
-    modelInstance.setClickHandler(function() {
+    modelInstance.mousePressed.connect(function() {
         print(particleSystem.name);
     });
     sceneNode.attachObject(modelInstance);
@@ -492,19 +495,17 @@ function loadMap(filename) {
     for (var i = 0; i < mapObj.lights.length; ++i) {
         obj = mapObj.lights[i];
 
-        var sceneNode = new SceneNode();
+        var sceneNode = gameView.scene.createNode();
         sceneNode.interactive = false;
         sceneNode.position = obj.position;
 
-        var light = new Light();
+        var light = new Light(gameView.scene);
         light.type = obj.type;
         light.range = obj.range;
         // Enable this to see the range of lights
         // light.debugging = true;
         light.color = obj.color;
         sceneNode.attachObject(light);
-
-        scene.addNode(sceneNode);
     }
 
     print("Creating " + mapObj.particleSystems.length + " particle systems.");
@@ -512,7 +513,7 @@ function loadMap(filename) {
     for (var i = 0; i < mapObj.particleSystems.length; ++i) {
         obj = mapObj.particleSystems[i];
 
-        var sceneNode = new SceneNode();
+        var sceneNode = gameView.scene.createNode();
         sceneNode.interactive = false;
         sceneNode.position = obj.position;
 
@@ -523,21 +524,19 @@ function loadMap(filename) {
             Debugging code
         */
         // makeParticleSystemTestModel(obj, sceneNode);
-
-        scene.addNode(sceneNode);
     }
 
     /*print("Creating debug objects for waypoints.");
     for (var waypointId in mapObj.waypoints) {
         var waypoint = mapObj.waypoints[waypointId];
 
-        var sceneNode = new SceneNode();
+        var sceneNode = gameView.scene.createNode();
         sceneNode.interactive = false;
         sceneNode.position = [waypoint.x, 0, waypoint.y];
 
         var testModel = models.load('meshes/items/Ale_stien.model');
 
-        var modelInstance = new ModelInstance();
+        var modelInstance = new ModelInstance(gameView.scene);
         modelInstance.model = testModel;
         sceneNode.attachObject(modelInstance);
 
@@ -553,8 +552,6 @@ function loadMap(filename) {
             line.addLine(origin, [diffX, 0, diffY]);
             sceneNode.attachObject(line);
         }
-
-        scene.addNode(sceneNode);
     }*/
 
     gameView.centerOnWorld(mapObj.startPosition[0], mapObj.startPosition[2]);

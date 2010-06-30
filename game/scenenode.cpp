@@ -1,24 +1,25 @@
 
 #include "scenenode.h"
 #include "renderqueue.h"
+#include "scene.h"
 
 #include <gamemath.h>
 using namespace GameMath;
 
 namespace EvilTemple {
 
-SceneNode::SceneNode()
-        : mInteractive(true), 
-        mPosition(0, 0, 0, 0), 
-        mScale(1, 1, 1, 1), 
-        mRotation(0, 0, 0, 1), 
+SceneNode::SceneNode(Scene *scene)
+        : QObject(scene), mInteractive(true),
+        mPosition(0, 0, 0, 0),
+        mScale(1, 1, 1, 1),
+        mRotation(0, 0, 0, 1),
         mWorldMatrixInvalid(true),
         mFullTransformInvalid(true),
         mBoundingBoxInvalid(true),
         mWorldBoundingBoxInvalid(true),
         mAnimated(false),
-        mParent(NULL),
-        mScene(NULL)
+        mParentNode(NULL),
+        mScene(scene)
 {
 }
 
@@ -47,13 +48,13 @@ void SceneNode::addVisibleObjects(const Frustum &viewFrustum, RenderQueue *rende
 
     if (viewFrustum.isVisible(worldBoundingBox())) {
         for (int i = 0; i < mAttachedObjects.size(); ++i) {
-            Renderable *renderable = mAttachedObjects[i].data();
+            Renderable *renderable = mAttachedObjects[i];
             renderQueue->addRenderable(renderable->renderCategory(), renderable);
         }
 
         if (addChildren) {
-            for (int i = 0; i < mChildren.size(); ++i) {
-                mChildren[i]->addVisibleObjects(viewFrustum, renderQueue, addChildren);
+            for (int i = 0; i < mChildNodes.size(); ++i) {
+                mChildNodes[i]->addVisibleObjects(viewFrustum, renderQueue, addChildren);
             }
         }
     }
@@ -62,10 +63,10 @@ void SceneNode::addVisibleObjects(const Frustum &viewFrustum, RenderQueue *rende
 
 void SceneNode::updateFullTransform() const
 {
-    if (!mParent) {
+    if (!mParentNode) {
         mFullTransform = worldMatrix();
     } else {
-        mFullTransform = mParent->fullTransform() * worldMatrix();
+        mFullTransform = mParentNode->fullTransform() * worldMatrix();
     }
     mFullTransformInvalid = false;
 }
@@ -87,26 +88,20 @@ void SceneNode::updateBoundingBox() const
     mBoundingBoxInvalid = false;
 }
 
-void SceneNode::attachObject(const SharedRenderable &sharedRenderable)
+void SceneNode::attachObject(Renderable *renderable)
 {
-    // TODO: Detach object from previous owner
-    sharedRenderable->setParentNode(this);
-    mAttachedObjects.append(sharedRenderable);
-    mBoundingBoxInvalid = true;
-    mWorldBoundingBoxInvalid = true;
+    if (!mAttachedObjects.contains(renderable)) {
+        // TODO: Detach object from previous owner
+        renderable->setParentNode(this);
+        mAttachedObjects.append(renderable);
+        mBoundingBoxInvalid = true;
+        mWorldBoundingBoxInvalid = true;
+    }
 }
 
-void SceneNode::detachObject(const Renderable *renderable)
+void SceneNode::detachObject(Renderable *renderable)
 {
-    QList<SharedRenderable>::iterator it = mAttachedObjects.begin();
-    while (it != mAttachedObjects.end()) {
-        const SharedRenderable &attachedObject = *it;
-        if (attachedObject.data() == renderable) {
-            mAttachedObjects.erase(it);
-            return;
-        }
-        ++it;
-    }
+    mAttachedObjects.removeOne(renderable);
 }
 
 };

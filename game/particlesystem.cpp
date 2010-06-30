@@ -1812,15 +1812,15 @@ namespace EvilTemple {
         return d->error;
     }
 
-    SharedParticleSystem ParticleSystems::instantiate(const QString &name)
+    ParticleSystem *ParticleSystems::instantiate(const QString &name)
     {
         QHash<QString,ParticleSystemTemplate>::const_iterator it = d->templates.find(name.toLower());
 
         if (it == d->templates.end()) {
             qWarning("Unknown particle systems: %s.", qPrintable(name));
-            return SharedParticleSystem(0);
+            return NULL;
         } else {
-            return SharedParticleSystem(d->instantiate(it.value()));
+            return d->instantiate(it.value());
         }
     }
 

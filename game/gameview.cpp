@@ -188,7 +188,7 @@ namespace EvilTemple {
             return pickingRayOrigin - t * pickingRayDirection;
         }
 
-        SharedRenderable pickObject(const QPoint &point)
+        Renderable *pickObject(const QPoint &point)
         {
             GLint viewport[4];
             glGetIntegerv(GL_VIEWPORT, viewport);
@@ -504,7 +504,7 @@ namespace EvilTemple {
     void GameView::mouseReleaseEvent(QMouseEvent *evt)
     {
         if (d->dragging && !d->mouseMovedDuringDrag) {
-            SharedRenderable renderable = d->pickObject(evt->pos());
+            Renderable *renderable = d->pickObject(evt->pos());
 
             if (renderable) {
                 renderable->mousePressEvent();

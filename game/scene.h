@@ -25,9 +25,16 @@ public:
     void render(RenderStates &renderStates);
 
 public slots:
-    void addNode(const SharedSceneNode &node);
+    /**
+      Creates a new scene node and adds it as a top-level node to the scene.
+      */
+    SceneNode *createNode();
 
-    void removeNode(const SharedSceneNode &node);
+    /**
+      Removes the given scene node from this scene. Please note that this will also
+      delete the scene node.
+      */
+    void removeNode(SceneNode *node);
 
     void clear();
 
@@ -38,11 +45,9 @@ public slots:
     */
     int objectsDrawn() const;
 
-    SharedSceneNode pickNode(const Ray3d &ray) const;
+    SceneNode *pickNode(const Ray3d &ray) const;
 
-    SharedRenderable pickRenderable(const Ray3d &ray) const;
-
-
+    Renderable *pickRenderable(const Ray3d &ray) const;
 
 private:
     QScopedPointer<SceneData> d;

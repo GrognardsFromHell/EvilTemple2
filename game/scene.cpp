@@ -44,7 +44,7 @@ public:
         qDeleteAll(activeOverlays);
     }
 
-    QList<SharedSceneNode> sceneNodes;
+    QList<SceneNode*> sceneNodes;
     int objectsDrawn;
     RenderQueue renderQueue;
     QList<TextOverlay*> activeOverlays;
@@ -61,16 +61,18 @@ Scene::~Scene()
 {
 }
 
-void Scene::addNode(const SharedSceneNode &node)
+SceneNode *Scene::createNode()
 {
+    SceneNode *node = new SceneNode(this);
     d->sceneNodes.append(node);
-    node->setScene(this);
+    return node;
 }
 
-void Scene::removeNode(const SharedSceneNode &node)
+void Scene::removeNode(SceneNode *node)
 {
-    d->sceneNodes.removeAll(node);
-    node->setScene(NULL);
+    d->sceneNodes.removeOne(node);
+    node->setParentNode(NULL);
+    node->deleteLater();
 }
 
 void Scene::elapseTime(float elapsedSeconds)
@@ -208,12 +210,12 @@ int Scene::objectsDrawn() const
     return d->objectsDrawn;
 }
 
-SharedSceneNode Scene::pickNode(const Ray3d &ray) const
+SceneNode *Scene::pickNode(const Ray3d &ray) const
 {
-    SharedSceneNode picked;
+    SceneNode *picked;
 
     for (int i = 0; i < d->sceneNodes.size(); ++i) {
-        const SharedSceneNode &node = d->sceneNodes.at(i);
+        SceneNode *node = d->sceneNodes.at(i);
 
         if (!node->isInteractive())
             continue;
@@ -228,13 +230,13 @@ SharedSceneNode Scene::pickNode(const Ray3d &ray) const
     return picked;
 }
 
-SharedRenderable Scene::pickRenderable(const Ray3d &ray) const
+Renderable *Scene::pickRenderable(const Ray3d &ray) const
 {
-    SharedRenderable picked;
+    Renderable *picked = NULL;
     float distance = std::numeric_limits<float>::infinity();
 
     for (int i = 0; i < d->sceneNodes.size(); ++i) {
-        const SharedSceneNode &node = d->sceneNodes.at(i);
+        SceneNode *node = d->sceneNodes.at(i);
 
         if (!node->isInteractive())
             continue;
@@ -242,7 +244,7 @@ SharedRenderable Scene::pickRenderable(const Ray3d &ray) const
         Ray3d localRay = node->fullTransform().inverted() * ray;
 
         if (localRay.intersects(node->boundingBox())) {
-            foreach (const SharedRenderable &renderable, node->attachedObjects()) {
+            foreach (Renderable *renderable, node->attachedObjects()) {
                 IntersectionResult intersection = renderable->intersect(localRay);
                 if (intersection.intersects && intersection.distance < distance) {
                     picked = renderable;
@@ -258,7 +260,9 @@ SharedRenderable Scene::pickRenderable(const Ray3d &ray) const
 void Scene::clear()
 {
     d->sceneNodes.clear();
-    clearAllActiveConnections();
+
+    // TODO: Delete all child objects
+    qDeleteAll(children());
 }
 
 inline int roundToPowerOfTwo(int v)
