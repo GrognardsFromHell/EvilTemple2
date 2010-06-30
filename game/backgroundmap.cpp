@@ -244,13 +244,13 @@ void BackgroundMap::render()
     for (int i = 0; i < material->passCount; ++i) {
         MaterialPassState &pass = material->passes[i];
 
-        pass.program.bind(); HANDLE_GL_ERROR
+        pass.program->bind(); HANDLE_GL_ERROR
 
         glActiveTexture(GL_TEXTURE0);
 
         // Bind uniforms
         for (int j = 0; j < pass.uniforms.size(); ++j) {
-            pass.uniforms[j].bind(); HANDLE_GL_ERROR
+            pass.uniforms[j]->bind(); HANDLE_GL_ERROR
         }
 
         // Bind attributes
@@ -277,7 +277,7 @@ void BackgroundMap::render()
 
         d->indexBuffer.bind(); HANDLE_GL_ERROR
 
-        int tileLocation = pass.program.uniformLocation("tilePos");
+        int tileLocation = pass.program->uniformLocation("tilePos");
 
         // Draw the actual model
         int tilePosition[2] = {0, 0};
@@ -325,7 +325,7 @@ void BackgroundMap::render()
 
         glBindTexture(GL_TEXTURE_2D, 0);
 
-        pass.program.unbind();
+        pass.program->unbind();
 
         // Clean the cache
         d->cleanCache(firstVisibleX, firstVisibleY, lastVisibleX, lastVisibleY);

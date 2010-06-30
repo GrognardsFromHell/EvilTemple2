@@ -20,7 +20,7 @@ var WalkJobs = {
         var dy = this.direction[1] * driven;
         var dz = this.direction[2] * driven;
 
-        this.sceneNode.position = new Vector4(pos.x + dx, pos.y + dy, pos.z + dz, 1);
+        this.sceneNode.position = [pos[0] + dx, pos[1] + dy, pos[2] + dz, 1];
 
         if (this.driven >= this.length) {
             this.currentPathNode += 1;
@@ -46,9 +46,9 @@ var WalkJobs = {
         });
     },
     init: function(from, to) {
-        var x = to.x - from.x;
-        var y = to.y - from.y;
-        var z = to.z - from.z;
+        var x = to[0] - from[0];
+        var y = to[1] - from[1];
+        var z = to[2] - from[2];
 
         var l = Math.sqrt((x * x) + (y * y) + (z * z));
 
@@ -70,7 +70,7 @@ var WalkJobs = {
         if (x > 0) {
             rot = - rot;
         }
-        this.sceneNode.rotation = new Quaternion(0, Math.sin(rot / 2), 0, Math.cos(rot / 2));
+        this.sceneNode.rotation = [0, Math.sin(rot / 2), 0, Math.cos(rot / 2)];
     }
 };
 

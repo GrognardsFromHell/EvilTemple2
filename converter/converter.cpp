@@ -427,7 +427,7 @@ public:
 
         Light globalLight = zoneTemplate->globalLight();
         QVariantMap globalLightMap;
-        globalLightMap["color"] = QVariantList() << globalLight.r << globalLight.g << globalLight.b;
+        globalLightMap["color"] = QVariantList() << globalLight.r / 255.0 << globalLight.g / 255.0 << globalLight.b / 255.0 << 0;
         globalLightMap["direction"] = QVariantList() << globalLight.dirX << globalLight.dirY << globalLight.dirZ;
         mapObject["globalLight"] = globalLightMap;
 
@@ -437,7 +437,7 @@ public:
 
             lightMap["day"] = light.day;
             lightMap["type"] = light.type; // 1 = Point, 2 = Spot, 3 = Directional
-            lightMap["color"] = QVariantList() << light.r << light.g << light.b;
+            lightMap["color"] = QVariantList() << light.r / 255.0 << light.g / 255.0 << light.b / 255.0 << 0;
             lightMap["position"] = QVariantList() << light.position.x() << light.position.y() << light.position.z();
             // 1 == PointLight
             if (light.type != 1)
@@ -915,7 +915,7 @@ public:
         if (!lifespan.isEmpty() && lifespan != "perm")
             particles.setAttribute("lifespan", lifespan);
         if (!sections[20].isEmpty())
-            particles.setAttribute("model", "particles/" + QString(sections[20]) + ".model");
+            particles.setAttribute("model", "meshes/particle/" + QString(sections[20]) + ".model");
 
         if (!sections[17].isEmpty() && sections[17].toLower() != "add")
             emitter.setAttribute("blendMode", QString(sections[17]));
@@ -1366,7 +1366,7 @@ public:
             int nextFrame = animStream->getNextFrameId();
             while (!animStream->atEnd()) {
                 animStream->readNextFrame();
-		Q_ASSERT(animStream->getNextFrameId() > nextFrame || animStream->atEnd());
+                Q_ASSERT(animStream->getNextFrameId() > nextFrame || animStream->atEnd());
                 nextFrame = animStream->getNextFrameId();
 
                 for (int i = 0; i < skeleton->bones().size(); ++i) {
@@ -1670,8 +1670,6 @@ public:
 
         convertMaps();
         sectionsDone += 25;
-
-        return true;
 
         if (cancel)
             return false;

@@ -18,6 +18,7 @@ class Materials;
 class ParticleSystems;
 class AudioEngine;
 class SectorMap;
+class Models;
 
 class GameView : public QGraphicsView
 {
@@ -29,6 +30,7 @@ class GameView : public QGraphicsView
     Q_PROPERTY(ParticleSystems* particleSystems READ particleSystems)
     Q_PROPERTY(AudioEngine* audioEngine READ audioEngine)
     Q_PROPERTY(SectorMap* sectorMap READ sectorMap)
+    Q_PROPERTY(Models* models READ models)
 
     Q_PROPERTY(int scrollBoxMinX READ scrollBoxMinX WRITE setScrollBoxMinX)
     Q_PROPERTY(int scrollBoxMinY READ scrollBoxMinY WRITE setScrollBoxMinY)
@@ -86,6 +88,8 @@ public:
 
     Translations *translations() const;
 
+    Models *models() const;
+
 signals:
 
     void viewportChanged();
@@ -103,8 +107,6 @@ public slots:
     QPoint screenCenter() const;
 
     int objectsDrawn() const;
-
-    SharedModel loadModel(const QString &filename);
 
     void addVisualTimer(uint elapseAfter, const QScriptValue &callback);
 

@@ -22,6 +22,8 @@ using namespace GameMath;
 
 namespace EvilTemple {
 
+    class Materials;
+
     /**
       Represents a group of faces, and the material used to draw them.
       */
@@ -478,11 +480,12 @@ namespace EvilTemple {
         Model();
         ~Model();
 
-        bool open(const QString &filename, const RenderStates &renderState);
-        void close();
+        bool load(const QString &filename,
+                  Materials *materials,
+                  const RenderStates &renderState);
 
-        const Vector4 *positions;
-        const Vector4 *normals;
+        Vector4 *positions;
+        Vector4 *normals;
         const BoneAttachment *attachments; // This CAN be null!
         const float *texCoords;
         int vertices;

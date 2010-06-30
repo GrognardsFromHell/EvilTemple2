@@ -24,6 +24,7 @@
 #include "translations.h"
 #include "audioengine.h"
 #include "sectormap.h"
+#include "models.h"
 
 #include <gamemath.h>
 using namespace GameMath;
@@ -103,8 +104,9 @@ namespace EvilTemple {
         GameViewData(GameView *view)
             : q(view), rootItem(0), backgroundMap(renderStates),
             clippingGeometry(renderStates), dragging(false), lightDebugger(renderStates),
-            materials(renderStates), particleSystems(&materials), sectorMap(&scene) {
-
+            materials(renderStates), sectorMap(&scene), models(&materials, renderStates),
+            particleSystems(&models, &materials)
+        {
             sceneTimer.invalidate();
 
             qDebug("Initializing glew...");
@@ -230,21 +232,21 @@ namespace EvilTemple {
         typedef QList<VisualTimer> VisualTimers;
         VisualTimers visualTimers;
 
-        QHash<QString, QWeakPointer<Model> > modelCache;
-
         LightDebugRenderer lightDebugger;
 
         BackgroundMap backgroundMap;
 
         ClippingGeometry clippingGeometry;
 
-        ParticleSystems particleSystems;
-
         Translations translations;
 
         AudioEngine audioEngine;
 
         SectorMap sectorMap;
+
+        Models models;
+
+        ParticleSystems particleSystems;
 
         QElapsedTimer sceneTimer;
         Scene scene;
@@ -562,28 +564,6 @@ namespace EvilTemple {
         return &d->particleSystems;
     }
 
-    SharedModel GameView::loadModel(const QString &filename)
-    {
-        SharedModel model;
-
-        if (d->modelCache.contains(filename)) {
-            model = d->modelCache[filename];
-        }
-
-        if (model)
-            return model;
-
-        model = SharedModel(new Model);
-        if (!model->open(filename, d->renderStates)) {
-            qWarning("UNABLE TO LOAD MODEL: %s (%s)", qPrintable(filename), qPrintable(model->error()));
-        }
-
-        // This assumes that repeatedly loading a model won't fix the error.
-        d->modelCache[filename] = model;
-
-        return model;
-    }
-
     const QSize &GameView::viewportSize() const
     {
         return d->viewportSize;
@@ -602,6 +582,11 @@ namespace EvilTemple {
     SectorMap *GameView::sectorMap() const
     {
         return &d->sectorMap;
+    }
+
+    Models *GameView::models() const
+    {
+        return &d->models;
     }
 
     void GameView::addVisualTimer(uint elapseAfter, const QScriptValue &callback)

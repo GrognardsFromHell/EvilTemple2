@@ -42,7 +42,7 @@ function updateEquipment(obj, modelInstance) {
 
                     if (record.meshes !== undefined) {
                             for (var i = 0; i < record.meshes.length; ++i) {
-                                    modelInstance.addMesh(gameView.loadModel(record.meshes[i]));
+                                    modelInstance.addMesh(models.load(record.meshes[i]));
                             }
                     }
             }
@@ -77,16 +77,16 @@ function updateEquipment(obj, modelInstance) {
                     var color = obj.hairColor;
 
                     var filename = 'meshes/hair/' + gender + '/s' + style + '/hu_' + genderShort + '_s' + style + '_c' + color + '_small.model';
-                    modelInstance.addMesh(gameView.loadModel(filename));
+                    modelInstance.addMesh(models.load(filename));
             }
 
-            // modelInstance.addMesh(gameView.loadModel('meshes/armor/fullplate_addmesh.model'));
+            // modelInstance.addMesh(models.load('meshes/armor/fullplate_addmesh.model'));
     }
 
     // also add explicitly requested addmeshes
     if (obj.addMeshes !== undefined) {
             for (var i = 0; i < obj.addMeshes.length; ++i) {
-                    modelInstance.addMesh(gameView.loadModel(obj.addMeshes[i]));
+                    modelInstance.addMesh(models.load(obj.addMeshes[i]));
             }
     }
 }

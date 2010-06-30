@@ -1,4 +1,6 @@
 
+var models; // Will be aliased to gameView.models
+
 //var startupMap = 'maps/Map12-temple-dungeon-level-1/map.js';
 // var startupMap = 'maps/Map-2-Hommlet-Exterior/map.js';
 // var startupMap = 'maps/Map-7-Moathouse_Interior/map.js';
@@ -241,6 +243,8 @@ var prototypes;
 var sounds;
 
 function startup() {
+    models = gameView.models;
+
     print("Showing main menu.");
 
     var mainMenu = gameView.showView("interface/MainMenu.qml");
@@ -419,7 +423,7 @@ function createMapObject(scene, obj)
     sceneNode.scale = [scale, scale, scale];
     scene.addNode(sceneNode);
 
-    var modelObj = gameView.loadModel(obj.model);
+    var modelObj = models.load(obj.model);
 
     var modelInstance = new ModelInstance();
     modelInstance.model = modelObj;
@@ -429,6 +433,17 @@ function createMapObject(scene, obj)
     });
     if (obj.interactive)
         obj.registerHandlers(sceneNode, modelInstance);
+    sceneNode.attachObject(modelInstance);
+}
+
+function makeParticleSystemTestModel(particleSystem, sceneNode) {
+    var testModel = models.load('meshes/scenery/misc/mirror.model');
+    var modelInstance = new ModelInstance();
+    modelInstance.model = testModel;
+    sceneNode.interactive = true;
+    modelInstance.setClickHandler(function() {
+        print(particleSystem.name);
+    });
     sceneNode.attachObject(modelInstance);
 }
 
@@ -486,7 +501,7 @@ function loadMap(filename) {
         light.range = obj.range;
         // Enable this to see the range of lights
         // light.debugging = true;
-        light.color = [obj.color[0] / 255, obj.color[1] / 255, obj.color[2] / 255, 1];
+        light.color = obj.color;
         sceneNode.attachObject(light);
 
         scene.addNode(sceneNode);
@@ -504,6 +519,11 @@ function loadMap(filename) {
         var particleSystem = gameView.particleSystems.instantiate(obj.name);
         sceneNode.attachObject(particleSystem);
 
+        /*
+            Debugging code
+        */
+        // makeParticleSystemTestModel(obj, sceneNode);
+
         scene.addNode(sceneNode);
     }
 
@@ -515,7 +535,7 @@ function loadMap(filename) {
         sceneNode.interactive = false;
         sceneNode.position = [waypoint.x, 0, waypoint.y];
 
-        var testModel = gameView.loadModel('meshes/items/Ale_stien.model');
+        var testModel = models.load('meshes/items/Ale_stien.model');
 
         var modelInstance = new ModelInstance();
         modelInstance.model = testModel;

@@ -12,6 +12,7 @@
 #include "materials.h"
 #include "particlesystem.h"
 #include "sectormap.h"
+#include "models.h"
 
 // Fix this, audio engine header name clash
 #include "audioengine.h"
@@ -297,6 +298,7 @@ namespace EvilTemple {
         registerQObject<EvilTemple::Materials>(engine, "Materials*");
         registerQObject<EvilTemple::ParticleSystems>(engine, "ParticleSystems*");
         registerQObject<EvilTemple::SectorMap>(engine, "SectorMap*");
+        registerQObject<EvilTemple::Models>(engine, "Models*");
 
         // Add a function to read files
         QScriptValue readFileFn = engine->newFunction(readFile, 1);

@@ -396,14 +396,108 @@ bool MaterialAttributeBinding::load(const QDomElement &element)
     return true;
 }
 
+inline static float attributeToFloat(const QDomElement &element, const QString &name)
+{
+    bool ok;
+    float result = element.attribute(name).toFloat(&ok);
+    if (!ok) {
+        qWarning("Attribute %s has invalid float value: %s", qPrintable(name), qPrintable(element.tagName()));
+    }
+    return result;
+}
+
+inline static float attributeToInt(const QDomElement &element, const QString &name)
+{
+    bool ok;
+    float result = element.attribute(name).toInt(&ok);
+    if (!ok) {
+        qWarning("Attribute %s has invalid integer value: %s", qPrintable(name), qPrintable(element.tagName()));
+    }
+    return result;
+}
+
 bool MaterialUniformBinding::load(const QDomElement &element)
 {
     Q_ASSERT(element.hasAttribute("name"));
-    Q_ASSERT(element.hasAttribute("semantic"));
 
     mOptional = element.attribute("optional", "true") == "true";
     mName = element.attribute("name");
-    mSemantic = element.attribute("semantic");
+    mSemantic = element.attribute("semantic", "Constant");
+
+    QDomElement constant = element.firstChildElement();
+
+    if (constant.isNull())
+        return true; // No constant value
+
+    // Retrieve the constant value
+    QString constantType = constant.nodeName();
+
+    if (constantType == "float4") {
+        QVector4D value;
+        if (constant.hasAttribute("x"))
+            value.setX(attributeToFloat(constant, "x"));
+        if (constant.hasAttribute("r"))
+            value.setX(attributeToFloat(constant, "r"));
+
+        if (constant.hasAttribute("y"))
+            value.setY(attributeToFloat(constant, "y"));
+        if (constant.hasAttribute("g"))
+            value.setY(attributeToFloat(constant, "g"));
+
+        if (constant.hasAttribute("z"))
+            value.setZ(attributeToFloat(constant, "z"));
+        if (constant.hasAttribute("b"))
+            value.setZ(attributeToFloat(constant, "b"));
+
+        if (constant.hasAttribute("w"))
+            value.setW(attributeToFloat(constant, "w"));
+        if (constant.hasAttribute("a"))
+            value.setW(attributeToFloat(constant, "a"));
+        mConstantValue = QVariant(value);
+    } else if (constantType == "float3") {
+        QVector3D value;
+        if (constant.hasAttribute("x"))
+            value.setX(attributeToFloat(constant, "x"));
+        if (constant.hasAttribute("r"))
+            value.setX(attributeToFloat(constant, "r"));
+
+        if (constant.hasAttribute("y"))
+            value.setY(attributeToFloat(constant, "y"));
+        if (constant.hasAttribute("g"))
+            value.setY(attributeToFloat(constant, "g"));
+
+        if (constant.hasAttribute("z"))
+            value.setZ(attributeToFloat(constant, "z"));
+        if (constant.hasAttribute("b"))
+            value.setZ(attributeToFloat(constant, "b"));
+
+        mConstantValue = QVariant(value);
+    } else if (constantType == "float2") {
+        QVector2D value;
+        if (constant.hasAttribute("x"))
+            value.setX(attributeToFloat(constant, "x"));
+        if (constant.hasAttribute("u"))
+            value.setX(attributeToFloat(constant, "r"));
+
+        if (constant.hasAttribute("y"))
+            value.setY(attributeToFloat(constant, "u"));
+        if (constant.hasAttribute("u"))
+            value.setY(attributeToFloat(constant, "v"));
+
+        mConstantValue = QVariant(value);
+    } else if (constantType == "float") {
+        float value = 0;
+        if (constant.hasAttribute("value")) {
+            value = attributeToFloat(constant, "value");
+        }
+        mConstantValue = QVariant(value);
+    } else if (constantType == "int") {
+        int value = 0;
+        if (constant.hasAttribute("value")) {
+            value = attributeToInt(constant, "value");
+        }
+        mConstantValue = QVariant(value);
+    }
 
     return true;
 }

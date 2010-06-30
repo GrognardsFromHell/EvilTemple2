@@ -59,8 +59,8 @@ void main() {
         <![CDATA[
 
 // Material properties
-const vec4 materialColor = vec4({{MATERIAL_DIFFUSE}});
-const int shininess = {{SPECULAR_POWER}};
+uniform vec4 materialColor;
+uniform int shininess;
 
 varying vec2 texCoord;
 
@@ -87,6 +87,12 @@ void main(void)
       {{/NORMALS_ON}}
       <attribute name="vertexTexCoord" buffer="texCoords" components="2" />
       <uniform name="worldViewProjectionMatrix" semantic="WorldViewProjection" />
+      <uniform name="materialColor">
+        <float4 r="{{MATERIAL_DIFFUSE_R}}" g="{{MATERIAL_DIFFUSE_G}}" b="{{MATERIAL_DIFFUSE_B}}" a="{{MATERIAL_DIFFUSE_A}}" />
+      </uniform>
+      <uniform name="shininess">
+        <int value="{{SPECULAR_POWER}}" />
+      </uniform>
       {{LIGHTING_ON}}
       <uniform name="viewMatrix" semantic="View" />
       <uniform name="worldViewMatrix" semantic="WorldView" />

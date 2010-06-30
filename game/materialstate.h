@@ -46,12 +46,32 @@ template<> inline void bindUniform<Matrix4>(GLint location, const Matrix4 &matri
     glUniformMatrix4fv(location, 1, false, matrix.data());
 }
 
+template<> inline void bindUniform<uint>(GLint location, const uint &value) {
+    glUniform1ui(location, value);
+}
+
 template<> inline void bindUniform<int>(GLint location, const int &value) {
     glUniform1i(location, value);
 }
 
 template<> inline void bindUniform<float>(GLint location, const float &value) {
     glUniform1f(location, value);
+}
+
+template<> inline void bindUniform<QVector2D>(GLint location, const QVector2D &value) {
+    glUniform2f(location, value.x(), value.y());
+}
+
+template<> inline void bindUniform<QVector3D>(GLint location, const QVector3D &value) {
+    glUniform3f(location, value.x(), value.y(), value.z());
+}
+
+template<> inline void bindUniform<QVector4D>(GLint location, const QVector4D &value) {
+    glUniform4f(location, value.x(), value.y(), value.z(), value.w());
+}
+
+template<> inline void bindUniform<Vector4>(GLint location, const Vector4 &value) {
+    glUniform4fv(location, 1, value.data());
 }
 
 /**
@@ -106,8 +126,14 @@ private:
 class MaterialPassUniformState
 {
 public:
-    MaterialPassUniformState() : mBinder(NULL), mLocation(-1)
+    MaterialPassUniformState() : mBinder(NULL), mLocation(-1), mDeleteBinder(false)
     {
+    }
+
+    ~MaterialPassUniformState()
+    {
+        if (mDeleteBinder)
+            delete mBinder;
     }
 
     inline void bind()
@@ -121,13 +147,27 @@ public:
         mLocation = location;
     }
 
-    void setBinder(const UniformBinder *binder)
+    void setImmutableBinder(const UniformBinder *binder)
     {
+        if (mDeleteBinder)
+            delete mBinder;
+        mBinder = const_cast<UniformBinder*>(binder);
+        mDeleteBinder = false;
+    }
+
+    void setBinder(UniformBinder *binder)
+    {
+        if (mDeleteBinder)
+            delete mBinder;
         mBinder = binder;
+        mDeleteBinder = true;
     }
 private:
     GLint mLocation;
-    const UniformBinder *mBinder;
+    bool mDeleteBinder;
+    UniformBinder *mBinder;
+
+    Q_DISABLE_COPY(MaterialPassUniformState);
 };
 
 class MaterialTextureSamplerState {
@@ -175,10 +215,11 @@ struct MaterialPassAttributeState
 class MaterialPassState {
 public:
     MaterialPassState();
+    ~MaterialPassState();
 
-    GLSLProgram program;
+    SharedGLSLProgram program;
     QVector<MaterialPassAttributeState> attributes;
-    QVector<MaterialPassUniformState> uniforms;
+    QVector<MaterialPassUniformState*> uniforms;
     QVector<MaterialTextureSamplerState> textureSamplers;
     QList<SharedMaterialRenderState> renderStates;
 private:

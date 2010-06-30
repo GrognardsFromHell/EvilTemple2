@@ -23,8 +23,10 @@
 #include "material.h"
 #include "materialstate.h"
 #include "materials.h"
+#include "models.h"
 #include "modelinstance.h"
 #include "scenenode.h"
+#include "drawhelper.h"
 
 #include <time.h>
 
@@ -63,10 +65,10 @@ namespace EvilTemple {
     const static uint ParticleLimit = 1000; // The maximum number of particles a single particle system may have
 
     enum ParticleType {
-        Sprite,
-        Disc,
-        Model,
-        Point
+        Type_Sprite,
+        Type_Disc,
+        Type_Model,
+        Type_Point
     };
 
     enum CoordinateType {
@@ -121,7 +123,9 @@ namespace EvilTemple {
 
         T operator()(const Emitter *emitter, uint randomSeed, float ratio) const
         {
-            Q_UNUSED(ratio)
+            Q_UNUSED(emitter);
+            Q_UNUSED(randomSeed);
+            Q_UNUSED(ratio);
             return mValue;
         }
 
@@ -143,6 +147,8 @@ namespace EvilTemple {
         T operator()(const Emitter *emitter, uint randomSeed, float ratio) const
         {
             Q_UNUSED(ratio);
+            Q_UNUSED(emitter);
+            Q_UNUSED(randomSeed);
             return 20;
         }
 
@@ -170,8 +176,10 @@ namespace EvilTemple {
 
         T operator()(const Emitter *emitter, uint randomSeed, float ratio) const
         {
-            Q_UNUSED(ratio)
-            // srand(randomSeed + mPropertyId);
+            Q_UNUSED(emitter);
+            Q_UNUSED(ratio);
+
+            //srand(randomSeed + mPropertyId);
             float result = mMinValue + (rand() / (float)RAND_MAX) * mSpan;
             //srand(time(NULL)); // TODO: This should probably be removed, and the PRNG polynom be used directly
             return result;
@@ -204,6 +212,9 @@ namespace EvilTemple {
                 return NULL;
             }
 
+            if (minValue > maxValue)
+                std::swap(minValue, maxValue);
+
             return new RandomParticleProperty<float>(minValue, maxValue);
         }
 
@@ -224,6 +235,9 @@ namespace EvilTemple {
         }
 
         T operator()(const Emitter *emitter, uint randomSeed, float ratio) const {
+            Q_UNUSED(emitter);
+            Q_UNUSED(randomSeed);
+
             if (mValues.size() == 1) {
                 return mValues[0];
             }
@@ -290,6 +304,9 @@ namespace EvilTemple {
         }
 
         inline T getValue(const Emitter *emitter, uint randomSeed, uint i) const {
+            Q_UNUSED(emitter);
+            Q_UNUSED(randomSeed);
+
             QPair<T,T> result = mValues[i];
 
             // If second element of pair is NAN, return the first
@@ -440,8 +457,8 @@ namespace EvilTemple {
         void elapseTime(float timeUnits);
 
         /**
-      Spawns a single particle
-      */
+          Spawns a single particle
+         */
         void spawnParticle(float atTime);
 
         void updateParticles(float elapsedTimeUnits);
@@ -449,6 +466,8 @@ namespace EvilTemple {
         void updateParticle(Particle &particle, float elapsedTimeUnits);
 
         void render(RenderStates &renderStates);
+
+        void renderModel(RenderStates &renderStates);
 
         /**
           Dead = No more particles will spawn and no particles are still active.
@@ -556,6 +575,12 @@ namespace EvilTemple {
             mMaterial = material;
         }
 
+        void setModel(const SharedModel &model)
+        {
+            mModel = model;
+            mRenderModel.setModel(model);
+        }
+
     private:
 
         QPointer<ModelInstance> mModelInstance;
@@ -591,6 +616,11 @@ namespace EvilTemple {
 
         // All particles of an emitter use the same material
         SharedTexture mTexture;
+
+        // They may also use a model
+        SharedModel mModel;
+
+        ModelInstance mRenderModel;
 
         ParticleBlendMode mBlendMode;
         bool mExpired; // More time elapsed than this emitter's lifetime
@@ -810,25 +840,26 @@ namespace EvilTemple {
         }
 
         if (mParticleVelocityType == Polar) {
-            float r = (particle.position - Vector4(0, 0, 0, 1)).length();
-            if (r != 0) {
+            Vector4 direction = particle.position;
+            direction.setW(0);
+            float r = direction.length();
+
+            if (!qFuzzyIsNull(r)) {
                 Vector4 rotAxis;
-                if (particle.position.x() != 0 || particle.position.z() == 0) {
+                if (particle.position.x() != 0 || particle.position.z() != 0) {
                     Vector4 rotNormal(0, 1, 0, 0);
-                    rotAxis = rotNormal.cross(particle.position).normalized();
+                    rotAxis = rotNormal.cross(direction).normalized();
                 } else {
                     // In case the point is above the origin (x=0,y=0), use the x axis as a rotation axis, doesn't matter.
                     rotAxis = Vector4(1, 0, 0, 0);
                 }
 
-                Quaternion rot1 = Quaternion::fromAxisAndAngle(rotAxis.x(), rotAxis.y(), rotAxis.z(), particle.velocityY * scalingFactor);
-                Quaternion rot2 = Quaternion::fromAxisAndAngle(0, 1, 0, particle.velocityX * scalingFactor);
-                particle.position = Matrix4::rotation(rot2) * Matrix4::rotation(rot1) * particle.position;
-
                 // Extrude the position outwards
-                Vector4 direction = particle.position;
-                direction.setW(0);
-                particle.position += ((particle.velocityZ * scalingFactor) / direction.length()) * direction;
+                particle.position += (particle.velocityZ * scalingFactor) * direction.normalized();
+
+                //Quaternion rot1 = Quaternion::fromAxisAndAngle(rotAxis.x(), rotAxis.y(), rotAxis.z(), particle.velocityY * elapsedTimeUnits);
+                Quaternion rot2 = Quaternion::fromAxisAndAngle(0, 1, 0, particle.velocityX * elapsedTimeUnits);
+                particle.position = Matrix4::rotation(rot2) * particle.position;
             }
         } else {
             particle.position += scalingFactor * Vector4(particle.velocityX, particle.velocityY, particle.velocityZ, 0);
@@ -911,16 +942,170 @@ namespace EvilTemple {
         updateParticles(timeUnits);
     }
 
+    void Emitter::renderModel(RenderStates &renderStates)
+    {
+        Q_ASSERT(mParticleType == Type_Model);
+
+        Matrix4 oldWorld = renderStates.worldMatrix();
+
+        ModelBufferSource bufferSource(mModel->positionBuffer.bufferId(),
+                                       mModel->normalBuffer.bufferId(),
+                                       mModel->texcoordBuffer.bufferId());
+
+        foreach (const Particle &particle, mParticles) {
+            Vector4 origin = oldWorld.mapPosition(particle.position);
+
+            Matrix4 translation = Matrix4::translation(origin.x(), origin.y(), origin.z());
+
+            Matrix4 rotation = Matrix4::rotation(Quaternion::fromAxisAndAngle(0, 1, 0, deg2rad(particle.rotationYaw)))
+                               * Matrix4::rotation(Quaternion::fromAxisAndAngle(1, 0, 0, deg2rad(particle.rotationPitch)))
+                               * Matrix4::rotation(Quaternion::fromAxisAndAngle(0, 0, 1, deg2rad(particle.rotationRoll)));
+
+            Matrix4 world = translation * rotation;
+
+            renderStates.setWorldMatrix(world);
+
+            Vector4 materialColor(particle.colorRed / 255.0f,
+                                  particle.colorGreen / 255.0f,
+                                  particle.colorBlue / 255.0f,
+                                  particle.colorAlpha / 255.0f);
+
+            for (int j = 0; j < mModel->faces; ++j) {
+                FaceGroup &faceGroup = mModel->faceGroups[j];
+
+                ModelDrawStrategy drawStrategy(faceGroup.buffer.bufferId(), faceGroup.indices.size());
+
+                MaterialState *material = faceGroup.material;
+
+                for (int i = 0; i < material->passCount; ++i) {
+                    MaterialPassState &pass = material->passes[i];
+
+                    pass.program->bind();
+
+                    // Bind texture samplers
+                    for (int j = 0; j < pass.textureSamplers.size(); ++j) {
+                        pass.textureSamplers[j].bind();
+                    }
+
+                    // Bind uniforms
+                    for (int j = 0; j < pass.uniforms.size(); ++j) {
+                        pass.uniforms[j]->bind();
+                    }
+
+                    GLint materialColorLocation = pass.program->uniformLocation("materialColor");
+                    if (materialColorLocation != -1) {
+                        glUniform4fv(materialColorLocation, 1, materialColor.data());
+                    }
+
+                    // Bind attributes
+                    for (int j = 0; j < pass.attributes.size(); ++j) {
+                        MaterialPassAttributeState &attribute = pass.attributes[j];
+
+                        GLint bufferId = bufferSource.buffer(attribute);
+
+                        SAFE_GL(glBindBuffer(GL_ARRAY_BUFFER, bufferId));
+
+                        // Assign the attribute
+                        SAFE_GL(glEnableVertexAttribArray(attribute.location));
+                        SAFE_GL(glVertexAttribPointer(attribute.location,
+                                                        attribute.binding.components(),
+                                                        attribute.binding.type(),
+                                                        attribute.binding.normalized(),
+                                                        attribute.binding.stride(),
+                                                        (GLvoid*)attribute.binding.offset()));
+
+                    }
+                    SAFE_GL(glBindBuffer(GL_ARRAY_BUFFER, 0)); // Unbind any previously bound buffers
+
+                    // Set render states
+                    foreach (const SharedMaterialRenderState &state, pass.renderStates) {
+                        state->enable();
+                    }
+
+                    // Draw the actual model
+                    drawStrategy.draw(renderStates, pass);
+
+                    // Reset render states to default
+                    foreach (const SharedMaterialRenderState &state, pass.renderStates) {
+                        state->disable();
+                    }
+
+                    // Unbind textures
+                    for (int j = 0; j < pass.textureSamplers.size(); ++j) {
+                        pass.textureSamplers[j].unbind();
+                    }
+
+                    // Unbind attributes
+                    for (int j = 0; j < pass.attributes.size(); ++j) {
+                        MaterialPassAttributeState &attribute = pass.attributes[j];
+                        SAFE_GL(glDisableVertexAttribArray(attribute.location));
+                    }
+
+                    pass.program->unbind();
+                }
+            }
+        }
+
+        renderStates.setWorldMatrix(oldWorld);
+    }
+
     void Emitter::render(RenderStates &renderStates)
     {
+        if (mParticleType == Type_Model) {
+            renderModel(renderStates);
+            return;
+        } else if (mParticleType == Type_Point) {
+            glMatrixMode(GL_PROJECTION);
+            glLoadMatrixf(renderStates.projectionMatrix().data());
+
+            glMatrixMode(GL_MODELVIEW);
+
+            glDepthMask(GL_FALSE);
+            glEnable(GL_BLEND);
+            switch (mBlendMode)
+            {
+            case Blend_Add:
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+                break;
+            case Blend_Blend:
+                glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE);
+                break;
+            case Blend_Subtract:
+                glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ZERO, GL_ONE);
+                glBlendEquation(GL_FUNC_REVERSE_SUBTRACT);
+                break;
+            }
+
+            Matrix4 oldWorld = renderStates.worldMatrix();
+
+            glBegin(GL_POINTS);
+            foreach (const Particle &particle, mParticles) {
+                Vector4 origin = oldWorld.mapPosition(particle.position);
+                renderStates.setWorldMatrix(Matrix4::translation(origin.x(), origin.y(), origin.z()));
+
+                glColor4f(particle.colorRed / 255.0f, particle.colorGreen / 255.0f, particle.colorBlue / 255.0f,
+                            particle.colorAlpha / 255.0f);
+                glVertex4fv(origin.data());
+            }
+            glEnd();
+
+            renderStates.setWorldMatrix(oldWorld);
+
+            glDepthMask(GL_TRUE);
+            glDisable(GL_BLEND);
+            glBlendEquation(GL_FUNC_ADD);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            return;
+        }
+
         MaterialPassState &pass = mMaterial->passes[0];
 
-        int posAttrib = pass.program.attributeLocation("vertexPosition");
-        int texAttrib = pass.program.attributeLocation("vertexTexCoord");
-        int rotationLoc = pass.program.uniformLocation("rotation");
-        int materialColorLoc = pass.program.uniformLocation("materialColor");
+        int posAttrib = pass.program->attributeLocation("vertexPosition");
+        int texAttrib = pass.program->attributeLocation("vertexTexCoord");
+        int rotationLoc = pass.program->uniformLocation("rotation");
+        int materialColorLoc = pass.program->uniformLocation("materialColor");
 
-        pass.program.bind();
+        pass.program->bind();
 
         glActiveTexture(GL_TEXTURE0);
         mTexture->bind();
@@ -948,7 +1133,7 @@ namespace EvilTemple {
 
             // Bind uniforms
             for (int j = 0; j < pass.uniforms.size(); ++j) {
-                pass.uniforms[j].bind();
+                pass.uniforms[j]->bind();
             }
 
             glUniform4f(materialColorLoc, particle.colorRed / 255.0f,
@@ -960,7 +1145,7 @@ namespace EvilTemple {
             float d = particle.scale / 100.0 * 128;
             glBegin(GL_QUADS);
             switch (mParticleType) {
-            case Sprite:
+            case Type_Sprite:
                 glVertexAttrib2f(texAttrib, 0, 0);
                 glVertexAttrib4fv(posAttrib, Vector4(d/2, d, -d/2, 1).data());
                 glVertexAttrib2f(texAttrib, 0, 1);
@@ -970,7 +1155,7 @@ namespace EvilTemple {
                 glVertexAttrib2f(texAttrib, 1, 0);
                 glVertexAttrib4fv(posAttrib, Vector4(-d/2, d, d/2, 1).data());
                 break;
-            case Disc:
+            case Type_Disc:
                 glVertexAttrib2f(texAttrib, 0, 0);
                 glVertexAttrib4fv(posAttrib, Vector4(d, 0, 0, 1).data());
                 glVertexAttrib2f(texAttrib, 0, 1);
@@ -991,14 +1176,14 @@ namespace EvilTemple {
         glBlendEquation(GL_FUNC_ADD);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        pass.program.unbind();
+        pass.program->unbind();
     }
 
     class ParticleSystemData : public AlignedAllocation
     {
     public:
         ParticleSystemData(const QString &_id, const QList<Emitter*> &_emitters)
-            : id(_id), emitters(_emitters)
+            : id(_id), emitters(_emitters), dead(false)
         {
         }
 
@@ -1009,6 +1194,7 @@ namespace EvilTemple {
         QString id;
         QList<Emitter*> emitters;
         Box3d boundingBox;
+        bool dead;
     };
 
     static QHash<QString, QWeakPointer<Texture> > spriteCache;
@@ -1062,11 +1248,32 @@ namespace EvilTemple {
 
     void ParticleSystem::elapseTime(float seconds)
     {
+        if (d->dead)
+            return;
+
         float timeUnits = seconds / ParticlesTimeUnit;
+
+        bool allEmittersDead = true;
 
         foreach (Emitter *emitter, d->emitters) {
             emitter->elapseTime(timeUnits);
+            allEmittersDead &= emitter->isDead();
         }
+
+        if (allEmittersDead) {
+            d->dead = true;
+            emit finished();
+
+            // TODO: Properly implement this. And/or check if the system is really deleted
+            if (mParentNode) {
+                mParentNode->detachObject(this);
+            }
+        }
+    }
+
+    bool ParticleSystem::isDead() const
+    {
+        return d->dead;
     }
 
     void ParticleSystem::render(RenderStates &renderStates) {
@@ -1118,6 +1325,7 @@ namespace EvilTemple {
         float mParticleSpawnRate;
         float mParticleLifespan;
         QString mParticleTexture;
+        QString mParticleModel;
 
         // A velocity is optional (each component is), but the values should be zero in case they're unused
         Property mParticleVelocityX;
@@ -1334,13 +1542,13 @@ namespace EvilTemple {
         QString type = element.attribute("type", "sprite").toLower();
 
         if (type == "sprite") {
-            mParticleType = Sprite;
+            mParticleType = Type_Sprite;
         } else if (type == "disc") {
-            mParticleType = Disc;
+            mParticleType = Type_Disc;
         } else if (type == "model") {
-            mParticleType = Model;
+            mParticleType = Type_Model;
         } else if (type == "point") {
-            mParticleType = Point;
+            mParticleType = Type_Point;
         } else {
             qWarning("Invalid particle type: %s.", qPrintable(type));
             return false;
@@ -1366,6 +1574,10 @@ namespace EvilTemple {
 
         if (element.hasAttribute("material")) {
             mParticleTexture = element.attribute("material");
+        }
+
+        if (element.hasAttribute("model")) {
+            mParticleModel = element.attribute("model");
         }
 
         mParticleVelocityType = Cartesian;
@@ -1472,9 +1684,10 @@ namespace EvilTemple {
 
     class ParticleSystemsData {
     public:
-        ParticleSystemsData(Materials *_materials) : materials(_materials)
+        ParticleSystemsData(Models *_models, Materials *_materials)
+            : models(_models), materials(_materials)
         {
-            spriteMaterial = materials->load(":/material/sprite_material.xml");
+            mSpriteMaterial = materials->load(":/material/sprite_material.xml");
         }
 
         bool loadTemplates()
@@ -1528,15 +1741,18 @@ namespace EvilTemple {
          */
         ParticleSystem *instantiate(const ParticleSystemTemplate &tpl) const;
 
+        Models *models;
+
         Materials *materials;
 
-        SharedMaterialState spriteMaterial;
+        SharedMaterialState mSpriteMaterial;
 
         QHash<QString,ParticleSystemTemplate> templates;
         QString error;
     };
 
-    ParticleSystems::ParticleSystems(Materials *materials) : d(new ParticleSystemsData(materials))
+    ParticleSystems::ParticleSystems(Models *models, Materials *materials)
+        : d(new ParticleSystemsData(models, materials))
     {
     }
 
@@ -1563,8 +1779,13 @@ namespace EvilTemple {
                                      tpl.mParticlePositionZ.data(), tpl.mParticlePositionType);
         emitter->setParticleType(tpl.mParticleType);
         emitter->setBlendMode(tpl.mBlendMode);
-        emitter->setMaterial(spriteMaterial);
         emitter->setBoneName(tpl.mBoneName);
+
+        if (tpl.mParticleType == Type_Model) {
+            emitter->setModel(models->load(tpl.mParticleModel));
+        } else {
+            emitter->setMaterial(mSpriteMaterial);
+        }
 
         return emitter;
     }
@@ -1575,9 +1796,6 @@ namespace EvilTemple {
         emitters.reserve(tpl.emitterTemplates().size());
 
         foreach (const EmitterTemplate &emitterTemplate, tpl.emitterTemplates()) {
-            if (emitterTemplate.mParticleType == Model)
-                continue;
-
             emitters.append(instantiate(emitterTemplate));
         }
 

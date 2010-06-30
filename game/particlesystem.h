@@ -19,6 +19,7 @@ namespace EvilTemple {
     class RenderStates;
     class ParticleSystemsData;
     class Emitter;
+    class Models;
     class MaterialState;
     class ModelInstance;
 
@@ -40,6 +41,11 @@ namespace EvilTemple {
 
         const Box3d &boundingBox();
 
+        bool isDead() const;
+
+    signals:
+        void finished();
+
     private:
         QScopedPointer<ParticleSystemData> d;
         Q_DISABLE_COPY(ParticleSystem);
@@ -51,7 +57,7 @@ namespace EvilTemple {
     {
     Q_OBJECT
     public:
-        ParticleSystems(Materials *materials);
+        ParticleSystems(Models *models, Materials *materials);
         ~ParticleSystems();
 
         bool loadTemplates();

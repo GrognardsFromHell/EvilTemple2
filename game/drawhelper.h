@@ -6,6 +6,8 @@
 #include "renderstates.h"
 #include "util.h"
 
+#include "lighting.h"
+
 namespace EvilTemple {
 
 struct DrawStrategy {
@@ -19,6 +21,7 @@ struct BufferSource {
 struct EmptyBufferSource : public BufferSource {
     GLint buffer(const MaterialPassAttributeState &attribute) const
     {
+        Q_UNUSED(attribute);
         return -1;
     }
 };
@@ -32,7 +35,7 @@ public:
         for (int i = 0; i < material->passCount; ++i) {
             MaterialPassState &pass = material->passes[i];
 
-            pass.program.bind();
+            pass.program->bind();
 
             // Bind texture samplers
             for (int j = 0; j < pass.textureSamplers.size(); ++j) {
@@ -41,7 +44,7 @@ public:
 
             // Bind uniforms
             for (int j = 0; j < pass.uniforms.size(); ++j) {
-                pass.uniforms[j].bind();
+                pass.uniforms[j]->bind();
             }
 
             // Bind attributes
@@ -51,7 +54,7 @@ public:
                 GLint bufferId = bufferSource.buffer(attribute);
 
                 SAFE_GL(glBindBuffer(GL_ARRAY_BUFFER, bufferId));
-            
+
                 // Assign the attribute
                 SAFE_GL(glEnableVertexAttribArray(attribute.location));
                 SAFE_GL(glVertexAttribPointer(attribute.location,
@@ -88,9 +91,97 @@ public:
                 SAFE_GL(glDisableVertexAttribArray(attribute.location));
             }
 
-            pass.program.unbind();
+            pass.program->unbind();
         }
     }
+};
+
+struct ModelBufferSource : public BufferSource {
+    inline ModelBufferSource(GLint positionBuffer, GLint normalBuffer, GLint texCoordBuffer)
+        : mPositionBuffer(positionBuffer), mNormalBuffer(normalBuffer), mTexCoordBuffer(texCoordBuffer)
+    {
+    }
+
+    inline GLint buffer(const MaterialPassAttributeState &attribute) const
+    {
+        switch (attribute.bufferType)
+        {
+        case 0:
+            return mPositionBuffer;
+        case 1:
+            return mNormalBuffer;
+        case 2:
+            return mTexCoordBuffer;
+        default:
+            qWarning("Unknown buffer id requested: %d.", attribute.bufferType);
+        }
+    }
+
+    GLint mPositionBuffer;
+    GLint mNormalBuffer;
+    GLint mTexCoordBuffer;
+};
+
+struct ModelDrawStrategy : public DrawStrategy {
+    ModelDrawStrategy(GLint bufferId, int elementCount)
+        : mBufferId(bufferId), mElementCount(elementCount)
+    {
+    }
+
+    inline void draw(const RenderStates &renderStates, MaterialPassState &state) const
+    {
+        Q_UNUSED(state);
+        Q_UNUSED(renderStates);
+
+        // Render once without diffuse/specular, then render again without ambient
+        int typePos = state.program->uniformLocation("lightSourceType");
+        if (typePos != -1) {
+            SAFE_GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mBufferId));
+
+            typePos = state.program->uniformLocation("lightSourceType");
+            int colorPos = state.program->uniformLocation("lightSourceColor");
+            int positionPos = state.program->uniformLocation("lightSourcePosition");
+            int attenuationPos = state.program->uniformLocation("lightSourceAttenuation");
+
+            SAFE_GL(glUniform1i(typePos, 1));
+            //SAFE_GL(glUniform4f(colorPos, 0.662745f, 0.564706f, 0.905882f, 0));
+            SAFE_GL(glUniform4f(colorPos, 0.962745f, 0.964706f, 0.965882f, 0));
+            SAFE_GL(glUniform4f(positionPos, -0.632409f, -0.774634f, 0, 0));
+
+            SAFE_GL(glDrawElements(GL_TRIANGLES, mElementCount, GL_UNSIGNED_SHORT, 0));
+
+            SAFE_GL(glDepthFunc(GL_LEQUAL));
+            SAFE_GL(glEnable(GL_CULL_FACE));
+
+            if (renderStates.activeLights().size() > 0) {
+                SAFE_GL(glEnable(GL_BLEND));
+                SAFE_GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE));
+
+                // Draw again for every light affecting this mesh
+                foreach (const Light *light, renderStates.activeLights()) {
+                    SAFE_GL(glUniform1i(typePos, light->type()));
+                    SAFE_GL(glUniform4fv(colorPos, 1, light->color().data()));
+                    SAFE_GL(glUniform4fv(positionPos, 1, light->position().data()));
+                    SAFE_GL(glUniform1f(attenuationPos, light->attenuation()));
+
+                    SAFE_GL(glDrawElements(GL_TRIANGLES, mElementCount, GL_UNSIGNED_SHORT, 0));
+                }
+
+                SAFE_GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+            }
+
+            SAFE_GL(glDepthFunc(GL_LESS));
+
+            SAFE_GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
+        } else {
+            SAFE_GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mBufferId));
+            SAFE_GL(glDrawElements(GL_TRIANGLES, mElementCount, GL_UNSIGNED_SHORT, 0));
+            SAFE_GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
+        }
+    }
+
+    GLint mBufferId;
+    int mElementCount;
 };
 
 }

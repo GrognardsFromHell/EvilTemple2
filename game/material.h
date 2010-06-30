@@ -11,6 +11,9 @@
 
 #include "util.h"
 
+#include <gamemath.h>
+using namespace GameMath;
+
 class QDomElement;
 
 namespace EvilTemple {
@@ -352,12 +355,20 @@ public:
     bool isOptional() const;
 
     /**
+      * If a constant value is associated with this uniform binding, this method will return it.
+      * Otherwise an invalid QVariant is returned.
+      */
+    const QVariant &constantValue() const;
+
+    /**
      * Loads this uniform binding from an XML element.
      */
     bool load( const QDomElement &element );
+
 private:
     QString mName;
     QString mSemantic;
+    QVariant mConstantValue;
     bool mOptional;
 };
 
@@ -374,6 +385,11 @@ inline bool MaterialUniformBinding::isOptional() const
 inline const QString &MaterialUniformBinding::semantic() const
 {
     return mSemantic;
+}
+
+inline const QVariant &MaterialUniformBinding::constantValue() const
+{
+    return mConstantValue;
 }
 
 /**

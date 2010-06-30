@@ -239,7 +239,10 @@ public:
         }
 
         QColor color = material->getColor();
-        materialFile.replace("{{MATERIAL_DIFFUSE}}", QString("%1, %2, %3, %4").arg(color.redF()).arg(color.greenF()).arg(color.blueF()).arg(color.alphaF()));
+        materialFile.replace("{{MATERIAL_DIFFUSE_R}}", QString("%1").arg(color.redF()));
+        materialFile.replace("{{MATERIAL_DIFFUSE_G}}", QString("%1").arg(color.greenF()));
+        materialFile.replace("{{MATERIAL_DIFFUSE_B}}", QString("%1").arg(color.blueF()));
+        materialFile.replace("{{MATERIAL_DIFFUSE_A}}", QString("%1").arg(color.alphaF()));
         materialFile.replace("{{PIXEL_TERM}}", pixelTerm);
         materialFile.replace("{{SAMPLERS}}", samplers);
         materialFile.replace("{{SAMPLER_UNIFORMS}}", samplerUniforms);
@@ -327,7 +330,7 @@ MaterialConverter::~MaterialConverter()
 }
 
 bool MaterialConverter::convert(const Material *material)
-{    
+{
     return d_ptr->convert(material);
 }
 

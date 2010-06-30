@@ -3,6 +3,7 @@
 #define GLSLPROGRAM_H
 
 #include <QtCore/QString>
+#include <QtCore/QSharedPointer>
 #include <GL/glew.h>
 
 namespace EvilTemple {
@@ -66,6 +67,8 @@ private:
 
     Q_DISABLE_COPY(GLSLProgram)
 };
+
+typedef QSharedPointer<GLSLProgram> SharedGLSLProgram;
 
 inline GLuint GLSLProgram::handle() const
 {

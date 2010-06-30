@@ -17,7 +17,7 @@ bool LightDebugRenderer::loadMaterial()
         return false;
     } else {
         return true;
-    }        
+    }
 }
 
 void LightDebugRenderer::render(const Light &light)
@@ -27,30 +27,30 @@ void LightDebugRenderer::render(const Light &light)
     basePoint.setW(0);
     basePoint.setY(0);
     mRenderStates.setWorldMatrix(Matrix4::translation(basePoint));
-        
+
     for (int i = 0; i < mMaterialState.passCount; ++i) {
         MaterialPassState &pass = mMaterialState.passes[i];
 
-        pass.program.bind();
+        pass.program->bind();
 
         for (int j = 0; j < pass.textureSamplers.size(); ++j) {
             pass.textureSamplers[i].bind();
         }
 
         for (int j = 0; j < pass.uniforms.size(); ++j) {
-            pass.uniforms[j].bind();
+            pass.uniforms[j]->bind();
         }
 
         for (int j = 0; j < pass.renderStates.size(); ++j) {
             pass.renderStates[j]->enable();
         }
 
-        int attribLocation = pass.program.attributeLocation("vertexPosition");
-        int texCoordLocation = pass.program.attributeLocation("vertexTexCoord");
-        int typeLocation = pass.program.uniformLocation("type");
-        int attenuationLocation = pass.program.uniformLocation("attenuation");
-        int centerLocation = pass.program.uniformLocation("center");
-        int rangeLocation = pass.program.uniformLocation("range");
+        int attribLocation = pass.program->attributeLocation("vertexPosition");
+        int texCoordLocation = pass.program->attributeLocation("vertexTexCoord");
+        int typeLocation = pass.program->uniformLocation("type");
+        int attenuationLocation = pass.program->uniformLocation("attenuation");
+        int centerLocation = pass.program->uniformLocation("center");
+        int rangeLocation = pass.program->uniformLocation("range");
         glUniform1i(typeLocation, 1);
 
         glBegin(GL_QUADS);
@@ -93,7 +93,7 @@ void LightDebugRenderer::render(const Light &light)
             pass.textureSamplers[i].unbind();
         }
 
-        pass.program.unbind();
+        pass.program->unbind();
     }
 
     mRenderStates.setWorldMatrix(Matrix4::identity());

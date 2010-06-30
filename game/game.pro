@@ -51,7 +51,8 @@ SOURCES += \
     materials.cpp \
     translations.cpp \
     sectormap.cpp \
-    navigationmesh.cpp
+    navigationmesh.cpp \
+    models.cpp
 HEADERS += \
     mainwindow.h \
     game.h \
@@ -89,7 +90,8 @@ HEADERS += \
     translations.h \
     sectormap.h \
     navigationmesh.h \
-    vertexbufferobject.h
+    vertexbufferobject.h \
+    models.h
 OTHER_FILES += \
     resources/schema/materialfile.xsd \
     resources/materials/map_material.xml \

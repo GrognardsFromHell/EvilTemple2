@@ -101,7 +101,7 @@ namespace EvilTemple {
         QVector<int> mTextureSizes;
     };
 
-    bool Model::open(const QString &filename, const RenderStates &renderState)
+    bool Model::load(const QString &filename, Materials *materials, const RenderStates &renderState)
     {
         mError.clear();
 
@@ -323,24 +323,6 @@ namespace EvilTemple {
         return true;
     }
 
-    void Model::close()
-    {
-        positionBuffer.clear();
-        normalBuffer.clear();
-        texcoordBuffer.clear();
-
-        faceGroups.reset();
-        faceData.reset();
-        vertexData.reset();
-        boneAttachmentData.reset();
-
-        attachments = NULL;
-        positions = NULL;
-        normals = NULL;
-        texCoords = NULL;
-        vertices = 0;
-    }
-
     struct VertexHeader {
         uint count;
         uint reserved1;
@@ -356,15 +338,25 @@ namespace EvilTemple {
 
         vertices = vertexHeader->count;
 
-        const char* vertexDataStart = vertexData.data() + sizeof(VertexHeader);
+        char* vertexDataStart = vertexData.data() + sizeof(VertexHeader);
 
-        positions = reinterpret_cast<const Vector4*>(vertexDataStart);
-        normals = reinterpret_cast<const Vector4*>(vertexDataStart + sizeof(Vector4) * vertices);
-        texCoords = reinterpret_cast<const float*>(vertexDataStart + sizeof(Vector4) * vertices * 2);
+        positions = reinterpret_cast<Vector4*>(vertexDataStart);
+        normals = reinterpret_cast<Vector4*>(vertexDataStart + sizeof(Vector4) * vertices);
+        texCoords = reinterpret_cast<float*>(vertexDataStart + sizeof(Vector4) * vertices * 2);
+
+        for (int i = 0; i < vertices; ++i) {
+            positions[i].setZ(positions[i].z() * -1);
+            normals[i].setZ(normals[i].z() * -1);
+        }
 
         positionBuffer.upload(positions, sizeof(Vector4) * vertices);
         normalBuffer.upload(normals, sizeof(Vector4) * vertices);
         texcoordBuffer.upload(texCoords, sizeof(float) * 2 * vertices);
+
+        for (int i = 0; i < vertices; ++i) {
+            positions[i].setZ(positions[i].z() * -1);
+            normals[i].setZ(normals[i].z() * -1);
+        }
     }
 
     struct FacesHeader
