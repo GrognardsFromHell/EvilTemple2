@@ -324,6 +324,8 @@ namespace EvilTemple {
 
     void ModelInstance::render(RenderStates &renderStates)
     {
+        ProfileScope<Profiler::ModelInstanceRender> profiler;
+
         const Model *model = mModel.data();
 
         if (!model)
@@ -378,6 +380,8 @@ namespace EvilTemple {
 
     void ModelInstance::elapseTime(float elapsedSeconds)
     {
+        ProfileScope<Profiler::ModelInstanceElapseTime> profile;
+
         if (!mModel || !mCurrentAnimation || mCurrentAnimation->driveType() != Animation::Time)
             return;
 

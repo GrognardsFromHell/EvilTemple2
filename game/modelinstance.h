@@ -122,6 +122,8 @@ private:
     Q_DISABLE_COPY(ModelInstance);
 };
 
+Q_DECLARE_METATYPE(ModelInstance*)
+
 inline const SharedModel &ModelInstance::model() const
 {
     return mModel;

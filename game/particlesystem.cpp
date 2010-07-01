@@ -27,6 +27,7 @@
 #include "modelinstance.h"
 #include "scenenode.h"
 #include "drawhelper.h"
+#include "profiler.h"
 
 #include <time.h>
 
@@ -1246,16 +1247,19 @@ namespace EvilTemple {
 
     void ParticleSystem::setModelInstance(ModelInstance *modelInstance)
     {
+        qDebug("Setting model instance on particlesystem to %d", (uint)modelInstance);
         d->modelInstance = modelInstance;
     }
 
     ModelInstance *ParticleSystem::modelInstance() const
     {
-        return d->modelInstance;
+        return d->modelInstance.data();
     }
 
     void ParticleSystem::elapseTime(float seconds)
     {
+        ProfileScope<Profiler::ParticleSystemElapseTime> profiler;
+
         if (d->dead)
             return;
 
@@ -1285,6 +1289,8 @@ namespace EvilTemple {
     }
 
     void ParticleSystem::render(RenderStates &renderStates) {
+        ProfileScope<Profiler::ParticleSystemRender> profiler;
+
         bool allDead = true;
 
         foreach (Emitter *emitter, d->emitters) {

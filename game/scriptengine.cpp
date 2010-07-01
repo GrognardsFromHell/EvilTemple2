@@ -193,6 +193,7 @@ namespace EvilTemple {
         registerQObject<EvilTemple::SceneNode>(engine, "SceneNode*");
         registerQObject<EvilTemple::Renderable>(engine, "Renderable*");
         registerQObject<EvilTemple::ParticleSystem>(engine, "ParticleSystem*");
+        registerQObject<EvilTemple::ModelInstance>(engine, "ModelInstance*");
 
         // Add a function to read files
         QScriptValue readFileFn = engine->newFunction(readFile, 1);

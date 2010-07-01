@@ -30,6 +30,7 @@ namespace EvilTemple {
     {
     Q_OBJECT
     Q_PROPERTY(ModelInstance* modelInstance READ modelInstance WRITE setModelInstance)
+    Q_PROPERTY(bool dead READ isDead)
     public:
         ParticleSystem(const QString &id);
         ~ParticleSystem();

@@ -359,14 +359,10 @@ namespace EvilTemple {
 
             d->renderStates.setTextureAnimationTime(texAnimTime);
 
-            Profiler::enter(Profiler::SceneElapseTime);
             d->scene.elapseTime(elapsedSeconds);
-            Profiler::leave();
         }
 
-        Profiler::enter(Profiler::SceneRender);
         d->scene.render(d->renderStates);
-        Profiler::leave();
 
         SAFE_GL(glDisable(GL_CULL_FACE));
         SAFE_GL(glDisable(GL_DEPTH_TEST));

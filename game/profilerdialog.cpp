@@ -58,6 +58,10 @@ void ProfilerDialog::updateData()
 
     const QString categoryNames[Profiler::Count] = {
         "SceneElapseTime",
+        "ModelInstanceElapseTime",
+        "ParticleSystemElapseTime",
+        "ModelInstanceRender",
+        "ParticleSystemRender",
         "SceneRender"
     };
 

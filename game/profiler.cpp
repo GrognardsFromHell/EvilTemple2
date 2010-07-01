@@ -8,10 +8,41 @@ namespace EvilTemple {
 
 struct Section {
     Profiler::Category category;
-    QElapsedTimer start;
+    double start;
 };
 
 static const uint TotalSamples = 1000;
+
+#ifdef Q_OS_WIN
+
+#include <windows.h>
+
+static double frequency = -1;
+
+static double getTicks()
+{
+    LARGE_INTEGER now;
+    QueryPerformanceCounter(&now);
+
+    if (frequency == -1) {
+        LARGE_INTEGER freq;
+        QueryPerformanceFrequency(&freq);
+        frequency = freq.QuadPart;
+    }
+
+    return now.QuadPart * 1000 / frequency;
+}
+
+#else
+
+static double getTicks()
+{
+    QElapsedTimer timer;
+    timer.start();
+    return timer.msecsSinceReference();
+}
+
+#endif
 
 class ProfilerData {
 public:
@@ -27,7 +58,7 @@ public:
     }
 
     QLinkedList<Section> activeSections;
-    
+
     double totalMsElapsed[Profiler::Count];
     uint totalSamplesTaken[Profiler::Count];
     double samples[Profiler::Count][TotalSamples];
@@ -37,16 +68,15 @@ void Profiler::enter(Category category)
 {
     Section section;
     section.category = category;
-    section.start.start();    
+    section.start = getTicks();
     d->activeSections.append(section);
 }
 
 void Profiler::leave()
 {
     Section section = d->activeSections.takeLast();
-    QElapsedTimer end;
-    end.start();
-    double milisecondsElapsed = end.msecsTo(section.start);
+
+    double milisecondsElapsed = getTicks() - section.start;
 
     uint i = (d->totalSamplesTaken[section.category]++) % TotalSamples;
     d->samples[section.category][i] = milisecondsElapsed;
@@ -60,7 +90,7 @@ Profiler::Report Profiler::report()
     for (int i = 0; i < Count; ++i) {
         report.totalSamples[i] = d->totalSamplesTaken[i];
         report.totalElapsedTime[i] = d->totalMsElapsed[i];
-        
+
         // Build a mean over the last X samples
         int count = qMin<int>(TotalSamples, d->totalSamplesTaken[i]);
         if (count > 0) {

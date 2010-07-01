@@ -12,6 +12,10 @@ class Profiler {
 public:
     enum Category {
         SceneElapseTime = 0,
+        ModelInstanceElapseTime,
+        ParticleSystemElapseTime,
+        ModelInstanceRender,
+        ParticleSystemRender,
         SceneRender,
         Count
     };
@@ -29,6 +33,20 @@ public:
 
 private:
     static QScopedPointer<ProfilerData> d;
+};
+
+template<Profiler::Category category>
+class ProfileScope {
+public:
+    inline ProfileScope()
+    {
+        Profiler::enter(category);
+    }
+
+    inline ~ProfileScope()
+    {
+        Profiler::leave();
+    }
 };
 
 }

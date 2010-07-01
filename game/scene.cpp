@@ -10,6 +10,7 @@
 #include "lighting.h"
 #include "renderable.h"
 #include "scenenode.h"
+#include "profiler.h"
 
 #include <gamemath.h>
 using namespace GameMath;
@@ -77,6 +78,8 @@ void Scene::removeNode(SceneNode *node)
 
 void Scene::elapseTime(float elapsedSeconds)
 {
+    ProfileScope<Profiler::SceneElapseTime> profiler;
+
     for (int i = 0; i < d->sceneNodes.size(); ++i) {
         d->sceneNodes[i]->elapseTime(elapsedSeconds);
     }
@@ -94,6 +97,8 @@ void Scene::elapseTime(float elapsedSeconds)
 
 void Scene::render(RenderStates &renderStates)
 {
+    ProfileScope<Profiler::SceneRender> profiler;
+
     d->objectsDrawn = 0;
 
     d->renderQueue.clear();
