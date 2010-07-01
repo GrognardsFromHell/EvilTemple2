@@ -10,37 +10,6 @@ Item
     x: (gameView.viewportSize.width - width) / 2
     y: gameView.viewportSize.height - height
 
-    Row {
-        id: buttonRow
-        x: 5
-        y: 5
-        height: 32
-        spacing: 5
-
-        MouseArea {
-            width: childrenRect.width
-            height: childrenRect.height
-            hoverEnabled: true
-            Text {
-                color: parent.containsMouse ? '#0000FF' : '#FFFFFF'
-                font.pointSize: 12
-                text: 'ParticleSystem'
-            }
-            onClicked: debugEvent('spawnParticleSystem')
-        }
-        MouseArea {
-            width: childrenRect.width
-            height: childrenRect.height
-            hoverEnabled: true
-            Text {
-                color: parent.containsMouse ? '#0000FF' : '#FFFFFF'
-                font.pointSize: 12
-                text: 'Load Map'
-            }
-            onClicked: debugEvent('loadMap')
-        }
-    }
-
     Rectangle {
         x: 0
         y: 0
@@ -49,4 +18,44 @@ Item
         opacity: 0.5
         color: '#333333'
     }
+
+    Row {
+        id: buttonRow
+        x: 5
+        y: 5
+        height: 32
+        spacing: 10
+
+        MouseArea {
+            width: childrenRect.width
+            height: childrenRect.height
+            anchors.verticalCenter: parent.verticalCenter
+            hoverEnabled: true
+            Text {
+                color: parent.containsMouse ? '#00a9f8' : '#FFFFFF'
+                text: "Spawn PartSys"
+                anchors.verticalCenter: parent.verticalCenter
+                font.pointSize: 12
+                font.bold: true
+                font.family: "Fontin"
+            }
+            onClicked: debugEvent('spawnParticleSystem')
+        }
+        MouseArea {
+            width: childrenRect.width
+            height: childrenRect.height
+            anchors.verticalCenter: parent.verticalCenter
+            hoverEnabled: true
+            Text {
+                color: parent.containsMouse ? '#00a9f8' : '#FFFFFF'
+                text: 'Load Map'
+                anchors.verticalCenter: parent.verticalCenter
+                font.pointSize: 12
+                font.bold: true
+                font.family: "Fontin"
+            }
+            onClicked: debugEvent('loadMap')
+        }
+    }
+
 }

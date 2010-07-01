@@ -130,6 +130,7 @@ public:
 
     const Box3d &boundingBox();
 
+public slots:
     void addLine(const Vector4 &start, const Vector4 &end);
 
 private:

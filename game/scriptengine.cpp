@@ -203,6 +203,7 @@ namespace EvilTemple {
 
         global.setProperty("ModelInstance", engine->newFunction(renderableCtor<ModelInstance>));
         global.setProperty("Light", engine->newFunction(renderableCtor<Light>));
+        global.setProperty("LineRenderable", engine->newFunction(renderableCtor<LineRenderable>));
 
         // Register scriptable objects
         Vector4Scriptable::registerWith(engine);

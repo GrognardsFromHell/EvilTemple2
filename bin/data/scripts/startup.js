@@ -325,7 +325,7 @@ function setupWorldClickHandler() {
 
             for (var i = 0; i < path.length; ++i) {
                 if (i + 1 < path.length) {
-                    var line = new LineRenderable();
+                    var line = new LineRenderable(gameView.scene);
                     line.addLine(path[i], path[i+1]);
                     sceneNode.attachObject(line);
                 }
@@ -492,6 +492,17 @@ function loadMap(filename) {
 
     print("Creating " + mapObj.lights.length + " lights.");
 
+    // Create global lighting in form of an infinite-range directional light
+    var globalLight = new Light(gameView.scene);
+    globalLight.range = 100000000;
+    globalLight.type = 1;
+    globalLight.color = [0.962745, 0.964706, 0.965882, 0];
+    globalLight.direction = [-0.632409, 0.774634, 0, 0];
+
+    var sceneNode = gameView.scene.createNode();
+    sceneNode.position = [480 * 28, 0, 480*28];
+    sceneNode.attachObject(globalLight);
+
     for (var i = 0; i < mapObj.lights.length; ++i) {
         obj = mapObj.lights[i];
 
@@ -548,7 +559,7 @@ function loadMap(filename) {
             var diffX = goal.x - waypoint.x;
             var diffY = goal.y - waypoint.y;
 
-            var line = new LineRenderable();
+            var line = new LineRenderable(gameView.scene);
             line.addLine(origin, [diffX, 0, diffY]);
             sceneNode.attachObject(line);
         }

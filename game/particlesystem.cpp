@@ -447,8 +447,8 @@ namespace EvilTemple {
 
         typedef const ParticleProperty<float> *Property;
 
-        Emitter(float spawnRate, float particleLifetime)
-            : mPartialSpawnedParticles(0), mElapsedTime(0), mExpired(false),
+        Emitter(ParticleSystem *particleSystem, float spawnRate, float particleLifetime)
+            : mParticleSystem(particleSystem), mPartialSpawnedParticles(0), mElapsedTime(0), mExpired(false),
             mSpawnRate(1/(spawnRate *ParticlesTimeUnit)), mParticleLifetime(particleLifetime), mLifetime(std::numeric_limits<float>::infinity()),
             mEmitterSpace(Space_World)
         {
@@ -538,11 +538,6 @@ namespace EvilTemple {
             mBlendMode = blendMode;
         }
 
-        void setModelInstance(ModelInstance *modelInstance)
-        {
-            mModelInstance = modelInstance;
-        }
-
         void setTexture(const SharedTexture &texture)
         {
             mTexture = texture;
@@ -578,12 +573,14 @@ namespace EvilTemple {
         void setModel(const SharedModel &model)
         {
             mModel = model;
-            mRenderModel.setModel(model);
+        }
+
+        ParticleSystem *particleSystem() const
+        {
+            return mParticleSystem;
         }
 
     private:
-
-        QPointer<ModelInstance> mModelInstance;
 
         SharedMaterialState mMaterial;
 
@@ -620,7 +617,7 @@ namespace EvilTemple {
         // They may also use a model
         SharedModel mModel;
 
-        ModelInstance mRenderModel;
+        ParticleSystem *mParticleSystem;
 
         ParticleBlendMode mBlendMode;
         bool mExpired; // More time elapsed than this emitter's lifetime
@@ -717,7 +714,8 @@ namespace EvilTemple {
         /*
          In case the emitter space is "Bones", a bone is randomly selected to spawn the particle
          */
-        if (!mModelInstance.isNull()) {
+        ModelInstance *modelInstance = mParticleSystem->modelInstance();
+        if (modelInstance) {
             Matrix4 flipZ;
             flipZ.setToIdentity();
             flipZ(2,2) *= -1;
@@ -725,7 +723,7 @@ namespace EvilTemple {
             if (mEmitterSpace == Space_RandomBone) {
                 while (true) {
                     // Choose a bone at random (?)
-                    const QVector<Bone> &bones = mModelInstance->model()->bones();
+                    const QVector<Bone> &bones = modelInstance->model()->bones();
                     Q_ASSERT(bones.size() > 1);
                     const Bone &bone = bones[1 + (rand() % (bones.size() - 1))];
 
@@ -738,17 +736,17 @@ namespace EvilTemple {
                         || bone.name() == "Origin" || bone.name() == "Footstep" || bone.name() == "Pony")
                         continue;
 
-                    Matrix4 boneSpace = flipZ * mModelInstance->getBoneSpace(bone.boneId()) * flipZ;
+                    Matrix4 boneSpace = flipZ * modelInstance->getBoneSpace(bone.boneId()) * flipZ;
                     Vector4 trans = boneSpace.column(3);
                     trans.setW(0);
                     particle.position += trans;
                     break;
                 }
             } else if (mEmitterSpace == Space_Bone) {
-                int boneId = mModelInstance->model()->bone(mBoneName);
+                int boneId = modelInstance->model()->bone(mBoneName);
 
                 if (boneId != -1) {
-                    Matrix4 boneSpace = flipZ * mModelInstance->getBoneSpace(boneId) * flipZ;
+                    Matrix4 boneSpace = flipZ * modelInstance->getBoneSpace(boneId) * flipZ;
                     Vector4 trans = boneSpace.column(3);
                     trans.setW(0);
                     particle.position += trans;
@@ -918,7 +916,9 @@ namespace EvilTemple {
         // Special case: If this emitter depends on a bone that doesn't exist,
         // don't do anything.
         if (mEmitterSpace == Space_Bone) {
-            if (!mModelInstance || !mModelInstance->model() || mModelInstance->model()->bone(mBoneName) == -1)
+            ModelInstance *modelInstance = mParticleSystem->modelInstance();
+
+            if (!modelInstance || !modelInstance->model() || modelInstance->model()->bone(mBoneName) == -1)
                 return;
         }
 
@@ -1182,8 +1182,7 @@ namespace EvilTemple {
     class ParticleSystemData : public AlignedAllocation
     {
     public:
-        ParticleSystemData(const QString &_id, const QList<Emitter*> &_emitters)
-            : id(_id), emitters(_emitters), dead(false)
+        ParticleSystemData(const QString &_id) : id(_id), dead(false)
         {
         }
 
@@ -1195,7 +1194,13 @@ namespace EvilTemple {
         QList<Emitter*> emitters;
         Box3d boundingBox;
         bool dead;
+        QPointer<ModelInstance> modelInstance;
     };
+
+    void ParticleSystem::addEmitter(Emitter *emitter)
+    {
+        d->emitters.append(emitter);
+    }
 
     static QHash<QString, QWeakPointer<Texture> > spriteCache;
 
@@ -1230,8 +1235,8 @@ namespace EvilTemple {
         return t;
     }
 
-    ParticleSystem::ParticleSystem(const QString &id, const QList<Emitter*> &emitters)
-        : d(new ParticleSystemData(id, emitters))
+    ParticleSystem::ParticleSystem(const QString &id)
+        : d(new ParticleSystemData(id))
     {
     }
 
@@ -1241,9 +1246,12 @@ namespace EvilTemple {
 
     void ParticleSystem::setModelInstance(ModelInstance *modelInstance)
     {
-        foreach (Emitter *emitter, d->emitters) {
-            emitter->setModelInstance(modelInstance);
-        }
+        d->modelInstance = modelInstance;
+    }
+
+    ModelInstance *ParticleSystem::modelInstance() const
+    {
+        return d->modelInstance;
     }
 
     void ParticleSystem::elapseTime(float seconds)
@@ -1734,7 +1742,7 @@ namespace EvilTemple {
         /**
          * Instantiates this template and creates an emitter.
          */
-        Emitter *instantiate(const EmitterTemplate &tpl) const;
+        Emitter *instantiate(ParticleSystem *particleSystem, const EmitterTemplate &tpl) const;
 
         /**
          * Creates a particle system from this template.
@@ -1760,9 +1768,9 @@ namespace EvilTemple {
     {
     }
 
-    Emitter *ParticleSystemsData::instantiate(const EmitterTemplate &tpl) const
+    Emitter *ParticleSystemsData::instantiate(ParticleSystem *particleSystem, const EmitterTemplate &tpl) const
     {
-        Emitter *emitter = new Emitter(tpl.mParticleSpawnRate, tpl.mParticleLifespan);
+        Emitter *emitter = new Emitter(particleSystem, tpl.mParticleSpawnRate, tpl.mParticleLifespan);
         emitter->setName(tpl.mName);
         emitter->setEmitterSpace(tpl.mEmitterSpace);
         emitter->setColor(tpl.mColorRed.data(), tpl.mColorGreen.data(), tpl.mColorBlue.data(), tpl.mColorAlpha.data());
@@ -1792,14 +1800,13 @@ namespace EvilTemple {
 
     ParticleSystem *ParticleSystemsData::instantiate(const ParticleSystemTemplate &tpl) const
     {
-        QList<Emitter*> emitters;
-        emitters.reserve(tpl.emitterTemplates().size());
+        ParticleSystem *result = new ParticleSystem(tpl.id());
 
         foreach (const EmitterTemplate &emitterTemplate, tpl.emitterTemplates()) {
-            emitters.append(instantiate(emitterTemplate));
+            result->addEmitter(instantiate(result, emitterTemplate));
         }
 
-        return new ParticleSystem(tpl.id(), emitters);
+        return result;
     }
 
     bool ParticleSystems::loadTemplates()

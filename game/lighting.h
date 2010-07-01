@@ -122,7 +122,7 @@ private:
     Q_DISABLE_COPY(Light)
 };
 
-inline Light::Light() : mColor(0,0,0,0), mDirection(0, 0, 0, 0)
+inline Light::Light() : mColor(0,0,0,0), mDirection(0, 0, 0, 0), mType(Directional)
 {
     setRenderCategory(RenderQueue::Lights);
 }
