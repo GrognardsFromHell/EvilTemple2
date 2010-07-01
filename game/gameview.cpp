@@ -327,6 +327,8 @@ namespace EvilTemple {
         Q_UNUSED(painter);
         Q_UNUSED(rect);
 
+        Profiler::newFrame();
+
         HANDLE_GL_ERROR
 
         // Evaluate visual script timers

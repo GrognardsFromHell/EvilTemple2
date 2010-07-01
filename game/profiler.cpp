@@ -48,21 +48,32 @@ class ProfilerData {
 public:
     ProfilerData()
     {
-        for (int i = 0; i < Profiler::Count; ++i) {
-            totalMsElapsed[i] = 0;
-            totalSamplesTaken[i] = 0;
-            for (int j = 0; j < TotalSamples; ++j) {
-                samples[i][j] = 0;
-            }
-        }
+        clear();
     }
+
+    void clear();
 
     QLinkedList<Section> activeSections;
 
     double totalMsElapsed[Profiler::Count];
     uint totalSamplesTaken[Profiler::Count];
     double samples[Profiler::Count][TotalSamples];
+
+    uint totalFrames;
 };
+
+void ProfilerData::clear()
+{
+    for (int i = 0; i < Profiler::Count; ++i) {
+        totalMsElapsed[i] = 0;
+        totalSamplesTaken[i] = 0;
+        for (int j = 0; j < TotalSamples; ++j) {
+            samples[i][j] = 0;
+        }
+    }
+
+    totalFrames = 0;
+}
 
 void Profiler::enter(Category category)
 {
@@ -87,6 +98,8 @@ Profiler::Report Profiler::report()
 {
     Report report;
 
+    report.totalFrames = d->totalFrames;
+
     for (int i = 0; i < Count; ++i) {
         report.totalSamples[i] = d->totalSamplesTaken[i];
         report.totalElapsedTime[i] = d->totalMsElapsed[i];
@@ -105,6 +118,16 @@ Profiler::Report Profiler::report()
     }
 
     return report;
+}
+
+void Profiler::clear()
+{
+    d->clear();
+}
+
+void Profiler::newFrame()
+{
+    d->totalFrames++;
 }
 
 QScopedPointer<ProfilerData> Profiler::d(new ProfilerData);

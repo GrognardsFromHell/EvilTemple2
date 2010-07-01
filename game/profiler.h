@@ -24,12 +24,18 @@ public:
         double totalElapsedTime[Count];
         uint totalSamples[Count];
         double meanTime[Count];
+        uint totalFrames;
     };
 
     static Report report();
 
     static void enter(Category category);
+
     static void leave();
+
+    static void clear();
+
+    static void newFrame();
 
 private:
     static QScopedPointer<ProfilerData> d;

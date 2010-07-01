@@ -28,6 +28,11 @@ protected:
 private:
     Ui::ProfilerDialog *ui;
     QStandardItemModel *model;
+
+    uint lastReportedFrame;
+
+private slots:
+    void on_pushButton_clicked();
 };
 
 }

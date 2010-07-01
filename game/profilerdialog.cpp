@@ -15,13 +15,14 @@ namespace EvilTemple {
 ProfilerDialog::ProfilerDialog(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::ProfilerDialog),
-    model(new QStandardItemModel(this))
+    model(new QStandardItemModel(this)),
+    lastReportedFrame(0)
 {
     ui->setupUi(this);
 
     // Category, Sample Count, Total Time, Mean Time
     QStringList columns;
-    columns << "Category" << "Sample Count" << "Total Time (ms)" << "Mean Time (ms)";
+    columns << "Category" << "Sample Count" << "Avg/Frame (ms)" << "Mean Time (ms)";
     model->setHorizontalHeaderLabels(columns);
 
     ui->tableView->setModel(model);
@@ -54,6 +55,9 @@ void ProfilerDialog::updateData()
 {
     Profiler::Report report = Profiler::report();
 
+    if (report.totalFrames == lastReportedFrame)
+        return;
+
     model->setRowCount(0);
 
     const QString categoryNames[Profiler::Count] = {
@@ -69,7 +73,7 @@ void ProfilerDialog::updateData()
         QList<QStandardItem*> row;
         row.append(new QStandardItem(categoryNames[i]));
         row.append(new QStandardItem(QString("%1").arg(report.totalSamples[i])));
-        row.append(new QStandardItem(QString("%1").arg(report.totalElapsedTime[i])));
+        row.append(new QStandardItem(QString("%1").arg(report.totalElapsedTime[i] / (float)report.totalFrames)));
         row.append(new QStandardItem(QString("%1").arg(report.meanTime[i])));
         model->appendRow(row);
     }
@@ -77,4 +81,9 @@ void ProfilerDialog::updateData()
     ui->tableView->update();
 }
 
+}
+
+void EvilTemple::ProfilerDialog::on_pushButton_clicked()
+{
+    Profiler::clear();
 }
