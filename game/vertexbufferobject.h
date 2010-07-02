@@ -21,18 +21,31 @@ public:
         glDeleteBuffers(1, &mBufferId);
     }
 
-    void upload(const QByteArray &data, GLenum usage = GL_STATIC_DRAW) const
+    void upload(const QByteArray &data, const GLenum usage = GL_STATIC_DRAW) const
     {
         bind();
         glBufferData(type, data.size(), data.constData(), usage);
         unbind();
     }
 
-    void upload(const void *data, uint size, GLenum usage = GL_STATIC_DRAW) const
+    void upload(const void *data, uint size, const GLenum usage = GL_STATIC_DRAW) const
     {
         bind();
         glBufferData(type, size, data, usage);
         unbind();
+    }
+
+    template<typename T>
+    T *map(const GLenum access = GL_WRITE_ONLY)
+    {
+        bind();
+        return reinterpret_cast<T*>(glMapBuffer(type, access));
+    }
+
+    void unmap()
+    {
+        bind();
+        glUnmapBuffer(type);
     }
 
     /**

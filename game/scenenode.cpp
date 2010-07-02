@@ -90,6 +90,11 @@ void SceneNode::updateBoundingBox() const
 
 void SceneNode::attachObject(Renderable *renderable)
 {
+    // TODO: Fix this mess
+    if (!renderable->parent()) {
+        renderable->setParent(mScene);
+    }
+
     if (!mAttachedObjects.contains(renderable)) {
         // TODO: Detach object from previous owner
         renderable->setParentNode(this);

@@ -9,16 +9,16 @@ extern "C" {
 #include "isound.h"
 #include "isoundsource.h"
 
-namespace {
-    class AvCodecRegistration {
-    public:
-        AvCodecRegistration() {
-            fprintf(stderr, "Registering AV Codecs.\n");
-            av_register_all();
-        }
-    };
+static bool avCodecsRegistered = false;
 
-    static AvCodecRegistration AV_CODEC_REGISTRATION;
+static void initializeCodecs()
+{
+    if (avCodecsRegistered)
+        return;
+
+    fprintf(stderr, "Registering AV Codecs.\n");
+    av_register_all();
+    avCodecsRegistered = true;
 }
 
 namespace EvilTemple {
@@ -55,6 +55,8 @@ MP3SoundSource::MP3SoundSource(const QString &filename)
     : mFilename(filename), formatCtx(NULL), codec(NULL), codecCtx(NULL), nextPacketValid(false),
     decodeBuffer(AVCODEC_MAX_AUDIO_FRAME_SIZE * 3 / 2, Qt::Uninitialized)
 {
+    initializeCodecs();
+
     int error = av_open_input_file(&formatCtx, qPrintable(filename), NULL, 0, NULL);
 
     if (error != 0) {

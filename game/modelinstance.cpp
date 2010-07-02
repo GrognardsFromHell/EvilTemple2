@@ -284,10 +284,12 @@ namespace EvilTemple {
                             &mAddMeshBoneMapping[i]);
         }
 
-        const Model *model = mModel.data();
 
         // This is extremely costly. Accurately recomputing the normals for each vertex
-        /*for (int i = 0; i < model->vertices; ++i) {
+        /*
+        const Model *model = mModel.data();
+
+        for (int i = 0; i < model->vertices; ++i) {
             QVector<Vector4> influences;
             Vector4 thisPos = mTransformedPositions[i];
 
@@ -337,6 +339,61 @@ namespace EvilTemple {
         }
 
         DrawHelper<ModelDrawStrategy, ModelBufferSource> drawHelper;
+        ModelBufferSource bufferSource(mCurrentAnimation ? mPositionBuffer.bufferId() : model->positionBuffer.bufferId(),
+                                       mCurrentAnimation ? mNormalBuffer.bufferId() : model->normalBuffer.bufferId(),
+                                       model->texcoordBuffer.bufferId());
+
+        for (int faceGroupId = 0; faceGroupId < model->faces; ++faceGroupId) {
+            const FaceGroup &faceGroup = model->faceGroups[faceGroupId];
+
+            MaterialState *material = faceGroup.material;
+
+            // This needs special handling (material replacement)
+            if (faceGroup.placeholderId >= 0) {
+                material = mReplacementMaterials[faceGroup.placeholderId].data();
+            }
+
+            if (material) {
+                ModelDrawStrategy drawStrategy(faceGroup.buffer.bufferId(), faceGroup.indices.size());
+                drawHelper.draw(renderStates, material, drawStrategy, bufferSource);
+            }
+        }
+
+        // Render all addmeshes
+        for (int i = 0; i < mAddMeshes.size(); ++i) {
+            model = mAddMeshes[i].data();
+
+            ModelBufferSource bufferSource(mCurrentAnimation ? mPositionBufferAddMeshes[i]->bufferId() : model->positionBuffer.bufferId(),
+                mCurrentAnimation ? mNormalBufferAddMeshes[i]->bufferId() : model->normalBuffer.bufferId(),
+                model->texcoordBuffer.bufferId());
+
+            for (int faceGroupId = 0; faceGroupId < model->faces; ++faceGroupId) {
+                const FaceGroup &faceGroup = model->faceGroups[faceGroupId];
+
+                MaterialState *material = faceGroup.material;
+
+                if (material) {
+                    ModelDrawStrategy drawStrategy(faceGroup.buffer.bufferId(), faceGroup.indices.size());
+                    drawHelper.draw(renderStates, material, drawStrategy, bufferSource);
+                }
+            }
+        }
+    }
+
+    void ModelInstance::draw(RenderStates &renderStates, const CustomDrawHelper<ModelDrawStrategy, ModelBufferSource> &drawHelper)
+    {
+        ProfileScope<Profiler::ModelInstanceRender> profiler;
+
+        const Model *model = mModel.data();
+
+        if (!model)
+            return;
+
+        if (mCurrentFrameChanged) {
+            updateBones();
+            mCurrentFrameChanged = false;
+        }
+
         ModelBufferSource bufferSource(mCurrentAnimation ? mPositionBuffer.bufferId() : model->positionBuffer.bufferId(),
                                        mCurrentAnimation ? mNormalBuffer.bufferId() : model->normalBuffer.bufferId(),
                                        model->texcoordBuffer.bufferId());

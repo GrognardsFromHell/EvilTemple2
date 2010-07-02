@@ -96,6 +96,16 @@ public:
     }
 };
 
+template<typename DrawStrategy, typename BufferSource = EmptyBufferSource>
+class CustomDrawHelper
+{
+public:
+    virtual void draw(const RenderStates &renderStates,
+                      MaterialState *material,
+                      const DrawStrategy &drawer,
+                      const BufferSource &bufferSource) const = 0;
+};
+
 struct ModelBufferSource : public BufferSource {
     inline ModelBufferSource(GLint positionBuffer, GLint normalBuffer, GLint texCoordBuffer)
         : mPositionBuffer(positionBuffer), mNormalBuffer(normalBuffer), mTexCoordBuffer(texCoordBuffer)
@@ -141,14 +151,8 @@ struct ModelDrawStrategy : public DrawStrategy {
             typePos = state.program->uniformLocation("lightSourceType");
             int colorPos = state.program->uniformLocation("lightSourceColor");
             int positionPos = state.program->uniformLocation("lightSourcePosition");
+            int directionPos = state.program->uniformLocation("lightSourceDirection");
             int attenuationPos = state.program->uniformLocation("lightSourceAttenuation");
-
-            /*SAFE_GL(glUniform1i(typePos, 1));
-            //SAFE_GL(glUniform4f(colorPos, 0.662745f, 0.564706f, 0.905882f, 0));
-            SAFE_GL(glUniform4f(colorPos, 0.962745f, 0.964706f, 0.965882f, 0));
-            SAFE_GL(glUniform4f(positionPos, -0.632409f, -0.774634f, 0, 0));
-
-            SAFE_GL(glDrawElements(GL_TRIANGLES, mElementCount, GL_UNSIGNED_SHORT, 0));*/
 
             if (!renderStates.activeLights().isEmpty()) {
                 bool first = true;
@@ -157,6 +161,7 @@ struct ModelDrawStrategy : public DrawStrategy {
                 foreach (const Light *light, renderStates.activeLights()) {
                     SAFE_GL(glUniform1i(typePos, light->type()));
                     SAFE_GL(glUniform4fv(colorPos, 1, light->color().data()));
+                    SAFE_GL(glUniform4fv(directionPos, 1, light->direction().data()));
                     SAFE_GL(glUniform4fv(positionPos, 1, light->position().data()));
                     SAFE_GL(glUniform1f(attenuationPos, light->attenuation()));
 

@@ -8,6 +8,7 @@
 
 #include "datafileengine.h"
 #include "unzip.h"
+#include <QMessageBox>
 
 namespace EvilTemple {
 
@@ -51,7 +52,7 @@ private:
     bool exists() const;
     QByteArray buffer;
     DataFileEngineHandlerData *fileEngine;
-    QString currentFilename;    
+    QString currentFilename;
     int offset;
 };
 
@@ -177,7 +178,7 @@ public:
             if (error == UNZ_OK) {
                 qWarning("Unable to read file from ZIP: %s.", qPrintable(filename));
                 return 0;
-            }                       
+            }
 
             return result;
         }
@@ -209,6 +210,14 @@ private:
         qDebug("Loading archives in %s.", qPrintable(dataDir.absolutePath()));
 
         QStringList zipEntries = dataDir.entryList(QStringList() << "*.zip", QDir::Files);
+
+        if (zipEntries.isEmpty()) {
+            QMessageBox::critical(NULL, "Error", "It seems like you didn't run the converter. No ZIP files could "
+                                     "be found in the data directory. Please run converter.exe in the same "
+                                     "directory as this file to convert existing Temple of Elemental Evil "
+                                     "data files to the format used by this application.");
+
+        }
 
         foreach (const QString &zipEntry, zipEntries) {
             QString archiveFilename = dataDir.absoluteFilePath(zipEntry);

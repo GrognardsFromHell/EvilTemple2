@@ -494,10 +494,10 @@ function loadMap(filename) {
 
     // Create global lighting in form of an infinite-range directional light
     var globalLight = new Light(gameView.scene);
-    globalLight.range = 100000000;
+    globalLight.range = 10000000000; // The light should be visible anywhere on the map
     globalLight.type = 1;
     globalLight.color = [0.962745, 0.964706, 0.965882, 0];
-    globalLight.direction = [-0.632409, 0.774634, 0, 0];
+    globalLight.direction = [-0.632409, -0.774634, 0, 0];
 
     var sceneNode = gameView.scene.createNode();
     sceneNode.position = [480 * 28, 0, 480*28];

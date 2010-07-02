@@ -174,7 +174,8 @@ bool MaterialState::createFrom(const Material &material, const RenderStates &sta
             } else if (binding.bufferName() == "texCoords") {
                 attribute.bufferType = 2;
             } else {
-                qFatal("Unknown buffer type: %s.", qPrintable(binding.bufferName()));
+                attribute.bufferType = -1;
+                qWarning("Unknown buffer type: %s.", qPrintable(binding.bufferName()));
             }
 
             // Find the corresponding attribute index in the shader

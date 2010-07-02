@@ -65,6 +65,34 @@ namespace EvilTemple {
 
     const static uint ParticleLimit = 1000; // The maximum number of particles a single particle system may have
 
+    static QVector3D particlePositions[ParticleLimit*4];
+    static float particleRotations[ParticleLimit*4] = {0, };
+    static float particleScales[ParticleLimit*4] = {0, };
+    static uint particleVertexTypes[ParticleLimit*4];
+    static uint particleColor[ParticleLimit*4];
+    static ushort particleIndices[ParticleLimit*4];
+    static bool defaultArraysInitialized = false;
+
+    static void initializeIndexArray()
+    {
+        if (defaultArraysInitialized)
+            return;
+
+        for (int i = 0; i < ParticleLimit * 4; i += 4) {
+            particleIndices[i] = i;
+            particleIndices[i+1] = i+1;
+            particleIndices[i+2] = i+2;
+            particleIndices[i+3] = i+3;
+
+            particleVertexTypes[i] = 0;
+            particleVertexTypes[i+1] = 1;
+            particleVertexTypes[i+2] = 2;
+            particleVertexTypes[i+3] = 3;
+        }
+
+        defaultArraysInitialized = true;
+    }
+
     enum ParticleType {
         Type_Sprite,
         Type_Disc,
@@ -451,8 +479,16 @@ namespace EvilTemple {
         Emitter(ParticleSystem *particleSystem, float spawnRate, float particleLifetime)
             : mParticleSystem(particleSystem), mPartialSpawnedParticles(0), mElapsedTime(0), mExpired(false),
             mSpawnRate(1/(spawnRate *ParticlesTimeUnit)), mParticleLifetime(particleLifetime), mLifetime(std::numeric_limits<float>::infinity()),
-            mEmitterSpace(Space_World)
+            mEmitterSpace(Space_World), mBuffersInvalid(true), mModelInstance(NULL), mSecondsSinceLastRender(0)
         {
+            initializeIndexArray();
+            mParticleIndexBuffer.upload(particleIndices, sizeof(particleIndices));
+            mParticleVertexTypes.upload(particleVertexTypes, sizeof(particleVertexTypes));
+        }
+
+        ~Emitter()
+        {
+            delete mModelInstance;
         }
 
         void elapseTime(float timeUnits);
@@ -469,6 +505,8 @@ namespace EvilTemple {
         void render(RenderStates &renderStates);
 
         void renderModel(RenderStates &renderStates);
+
+        void renderPoints(RenderStates &renderStates);
 
         /**
           Dead = No more particles will spawn and no particles are still active.
@@ -573,7 +611,9 @@ namespace EvilTemple {
 
         void setModel(const SharedModel &model)
         {
-            mModel = model;
+            if (!mModelInstance)
+                mModelInstance = new ModelInstance;
+            mModelInstance->setModel(model);
         }
 
         ParticleSystem *particleSystem() const
@@ -582,6 +622,7 @@ namespace EvilTemple {
         }
 
     private:
+        void updateBuffers();
 
         SharedMaterialState mMaterial;
 
@@ -616,9 +657,16 @@ namespace EvilTemple {
         SharedTexture mTexture;
 
         // They may also use a model
-        SharedModel mModel;
+        ModelInstance *mModelInstance;
 
         ParticleSystem *mParticleSystem;
+
+        IndexBufferObject mParticleIndexBuffer;
+        VertexBufferObject mParticleVertexTypes;
+        VertexBufferObject mParticlePositions;
+        VertexBufferObject mParticleRotation;
+        VertexBufferObject mParticleScale;
+        VertexBufferObject mParticleColor;
 
         ParticleBlendMode mBlendMode;
         bool mExpired; // More time elapsed than this emitter's lifetime
@@ -627,19 +675,58 @@ namespace EvilTemple {
         float mLifetime; // Number of time units until this emitter stops working. Can be Infinity.
         float mSpawnRate; // One particle per this many time units is spawned
         float mPartialSpawnedParticles; // If the elapsed time is not enough to spawn another particle, it is accumulated.
+        bool mBuffersInvalid;
+
+        float mSecondsSinceLastRender;
 
         Q_DISABLE_COPY(Emitter);
     };
 
     void Emitter::updateParticles(float elapsedTimeunits)
     {
+        Q_ASSERT(mParticles.size() <= ParticleLimit);
+
         for (int i = 0; i < mParticles.size(); ++i) {
             updateParticle(mParticles[i], elapsedTimeunits);
         }
+
+        mBuffersInvalid = true;
+    }
+
+    void Emitter::updateBuffers()
+    {
+        if (!mBuffersInvalid)
+            return;
+
+        for (int i = 0; i < mParticles.size(); ++i) {
+            float scale = mParticles[i].scale / 100.0 * 128;
+            QVector3D pos(mParticles[i].position.x(), mParticles[i].position.y(), mParticles[i].position.z());
+            float yaw = mParticles[i].rotationYaw;
+            uint color = qRgba(mParticles[i].colorBlue, mParticles[i].colorGreen, mParticles[i].colorRed, mParticles[i].colorAlpha);
+
+            for (int j = i * 4; j < i * 4 + 4; ++j) {
+                particlePositions[j] = pos;
+                particleRotations[j] = yaw;
+                particleScales[j] = scale;
+                particleColor[j] = color;
+            }
+        }
+
+        uint count = mParticles.size() * 4;
+        mParticlePositions.upload(particlePositions, sizeof(QVector3D) * count);
+        mParticleRotation.upload(particleRotations, sizeof(float) * count);
+        mParticleScale.upload(particleScales, sizeof(float) * count);
+        mParticleColor.upload(particleColor, sizeof(uint) * count);
+
+        mBuffersInvalid = true;
     }
 
     void Emitter::spawnParticle(float atTime)
     {
+        if (mParticles.size() >= ParticleLimit) {
+            return;
+        }
+
         Particle particle;
 
         if (mRotationYaw) {
@@ -904,6 +991,7 @@ namespace EvilTemple {
         Q_ASSERT(mSpawnRate > 0);
 
         mElapsedTime += timeUnits;
+        mSecondsSinceLastRender += timeUnits * ParticlesTimeUnit;
 
         // Check for expired particles
         QList<Particle>::iterator it = mParticles.begin();
@@ -943,11 +1031,130 @@ namespace EvilTemple {
         updateParticles(timeUnits);
     }
 
+    class ParticleModelDrawHelper : public CustomDrawHelper<ModelDrawStrategy, ModelBufferSource>
+    {
+    public:
+        void setMaterialColor(const Vector4 &materialColor)
+        {
+            mMaterialColor = materialColor;
+        }
+
+        void draw(const RenderStates &renderStates,
+                  MaterialState *material,
+                  const ModelDrawStrategy &drawer,
+                  const ModelBufferSource &bufferSource) const
+        {
+            for (int i = 0; i < material->passCount; ++i) {
+                MaterialPassState &pass = material->passes[i];
+
+                pass.program->bind();
+
+                // Bind texture samplers
+                for (int j = 0; j < pass.textureSamplers.size(); ++j) {
+                    pass.textureSamplers[j].bind();
+                }
+
+                // Bind uniforms
+                for (int j = 0; j < pass.uniforms.size(); ++j) {
+                    pass.uniforms[j]->bind();
+                }
+
+                int materialColorLoc = pass.program->uniformLocation("materialColor");
+                if (materialColorLoc != -1)
+                    glUniform4fv(materialColorLoc, 1, mMaterialColor.data());
+
+                // Bind attributes
+                for (int j = 0; j < pass.attributes.size(); ++j) {
+                    MaterialPassAttributeState &attribute = pass.attributes[j];
+
+                    GLint bufferId = bufferSource.buffer(attribute);
+
+                    SAFE_GL(glBindBuffer(GL_ARRAY_BUFFER, bufferId));
+
+                    // Assign the attribute
+                    SAFE_GL(glEnableVertexAttribArray(attribute.location));
+                    SAFE_GL(glVertexAttribPointer(attribute.location,
+                                                    attribute.binding.components(),
+                                                    attribute.binding.type(),
+                                                    attribute.binding.normalized(),
+                                                    attribute.binding.stride(),
+                                                    (GLvoid*)attribute.binding.offset()));
+
+                }
+                SAFE_GL(glBindBuffer(GL_ARRAY_BUFFER, 0)); // Unbind any previously bound buffers
+
+                // Set render states
+                foreach (const SharedMaterialRenderState &state, pass.renderStates) {
+                    state->enable();
+                }
+
+                // Draw the actual model
+                drawer.draw(renderStates, pass);
+
+                // Reset render states to default
+                foreach (const SharedMaterialRenderState &state, pass.renderStates) {
+                    state->disable();
+                }
+
+                // Unbind textures
+                for (int j = 0; j < pass.textureSamplers.size(); ++j) {
+                    pass.textureSamplers[j].unbind();
+                }
+
+                // Unbind attributes
+                for (int j = 0; j < pass.attributes.size(); ++j) {
+                    MaterialPassAttributeState &attribute = pass.attributes[j];
+                    SAFE_GL(glDisableVertexAttribArray(attribute.location));
+                }
+
+                pass.program->unbind();
+            }
+        }
+
+    private:
+        Vector4 mMaterialColor;
+    };
+
     void Emitter::renderModel(RenderStates &renderStates)
     {
         Q_ASSERT(mParticleType == Type_Model);
 
+        if (!mModelInstance)
+            return;
+
+        if (mSecondsSinceLastRender > 0)
+            mModelInstance->elapseTime(mSecondsSinceLastRender);
+
         Matrix4 oldWorld = renderStates.worldMatrix();
+
+        ParticleModelDrawHelper drawHelper;
+
+        foreach (const Particle &particle, mParticles) {
+            Vector4 origin = oldWorld.mapPosition(particle.position);
+
+            Matrix4 translation = Matrix4::translation(origin.x(), origin.y(), origin.z());
+
+            Matrix4 rotation = Matrix4::rotation(Quaternion::fromAxisAndAngle(0, 1, 0, deg2rad(particle.rotationYaw)))
+                               * Matrix4::rotation(Quaternion::fromAxisAndAngle(1, 0, 0, deg2rad(particle.rotationPitch)))
+                               * Matrix4::rotation(Quaternion::fromAxisAndAngle(0, 0, 1, deg2rad(particle.rotationRoll)));
+
+            Matrix4 world = translation * rotation;
+
+            renderStates.setWorldMatrix(world);
+
+            Vector4 materialColor(particle.colorRed / 255.0f,
+                                  particle.colorGreen / 255.0f,
+                                  particle.colorBlue / 255.0f,
+                                  particle.colorAlpha / 255.0f);
+
+            drawHelper.setMaterialColor(materialColor);
+
+            mModelInstance->draw(renderStates, drawHelper);
+        }
+
+        renderStates.setWorldMatrix(oldWorld);
+
+/*        Matrix4 oldWorld = renderStates.worldMatrix();
 
         ModelBufferSource bufferSource(mModel->positionBuffer.bufferId(),
                                        mModel->normalBuffer.bufferId(),
@@ -1047,69 +1254,16 @@ namespace EvilTemple {
             }
         }
 
-        renderStates.setWorldMatrix(oldWorld);
+        renderStates.setWorldMatrix(oldWorld);*/
     }
 
-    void Emitter::render(RenderStates &renderStates)
+    void Emitter::renderPoints(RenderStates &renderStates)
     {
-        if (mParticleType == Type_Model) {
-            renderModel(renderStates);
-            return;
-        } else if (mParticleType == Type_Point) {
-            glMatrixMode(GL_PROJECTION);
-            glLoadMatrixf(renderStates.projectionMatrix().data());
+        glMatrixMode(GL_PROJECTION);
+        glLoadMatrixf(renderStates.projectionMatrix().data());
 
-            glMatrixMode(GL_MODELVIEW);
+        glMatrixMode(GL_MODELVIEW);
 
-            glDepthMask(GL_FALSE);
-            glEnable(GL_BLEND);
-            switch (mBlendMode)
-            {
-            case Blend_Add:
-                glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-                break;
-            case Blend_Blend:
-                glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE);
-                break;
-            case Blend_Subtract:
-                glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ZERO, GL_ONE);
-                glBlendEquation(GL_FUNC_REVERSE_SUBTRACT);
-                break;
-            }
-
-            Matrix4 oldWorld = renderStates.worldMatrix();
-
-            glBegin(GL_POINTS);
-            foreach (const Particle &particle, mParticles) {
-                Vector4 origin = oldWorld.mapPosition(particle.position);
-                renderStates.setWorldMatrix(Matrix4::translation(origin.x(), origin.y(), origin.z()));
-
-                glColor4f(particle.colorRed / 255.0f, particle.colorGreen / 255.0f, particle.colorBlue / 255.0f,
-                            particle.colorAlpha / 255.0f);
-                glVertex4fv(origin.data());
-            }
-            glEnd();
-
-            renderStates.setWorldMatrix(oldWorld);
-
-            glDepthMask(GL_TRUE);
-            glDisable(GL_BLEND);
-            glBlendEquation(GL_FUNC_ADD);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-            return;
-        }
-
-        MaterialPassState &pass = mMaterial->passes[0];
-
-        int posAttrib = pass.program->attributeLocation("vertexPosition");
-        int texAttrib = pass.program->attributeLocation("vertexTexCoord");
-        int rotationLoc = pass.program->uniformLocation("rotation");
-        int materialColorLoc = pass.program->uniformLocation("materialColor");
-
-        pass.program->bind();
-
-        glActiveTexture(GL_TEXTURE0);
-        mTexture->bind();
         glDepthMask(GL_FALSE);
         glEnable(GL_BLEND);
         switch (mBlendMode)
@@ -1128,21 +1282,108 @@ namespace EvilTemple {
 
         Matrix4 oldWorld = renderStates.worldMatrix();
 
+        glBegin(GL_POINTS);
         foreach (const Particle &particle, mParticles) {
             Vector4 origin = oldWorld.mapPosition(particle.position);
             renderStates.setWorldMatrix(Matrix4::translation(origin.x(), origin.y(), origin.z()));
 
-            // Bind uniforms
-            for (int j = 0; j < pass.uniforms.size(); ++j) {
-                pass.uniforms[j]->bind();
+            glColor4f(particle.colorRed / 255.0f, particle.colorGreen / 255.0f, particle.colorBlue / 255.0f,
+                        particle.colorAlpha / 255.0f);
+            glVertex4fv(origin.data());
+        }
+        glEnd();
+
+        renderStates.setWorldMatrix(oldWorld);
+
+        glDepthMask(GL_TRUE);
+        glDisable(GL_BLEND);
+        glBlendEquation(GL_FUNC_ADD);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    }
+
+    void Emitter::render(RenderStates &renderStates)
+    {
+        if (mParticleType == Type_Model) {
+            renderModel(renderStates);
+            mSecondsSinceLastRender = 0;
+            return;
+        } else if (mParticleType == Type_Point) {
+            renderPoints(renderStates);
+            mSecondsSinceLastRender = 0;
+            return;
+        }
+
+        updateBuffers();
+
+        MaterialPassState &pass = mMaterial->passes[0];
+
+        pass.program->bind();
+
+        for (int i = 0; i < pass.attributes.size(); ++i) {
+            const MaterialPassAttributeState &attribute = pass.attributes[i];
+
+            QString bufferName = attribute.binding.bufferName();
+
+            if (bufferName == "positions") {
+                mParticlePositions.bind();
+            } else if (bufferName == "type") {
+                mParticleVertexTypes.bind();
+            } else if (bufferName == "scale") {
+                mParticleScale.bind();
+            } else if (bufferName == "rotation") {
+                mParticleRotation.bind();
+            } else if (bufferName == "color") {
+                mParticleColor.bind();
+            } else {
+                qFatal("Unknown buffer type: %s", qPrintable(bufferName));
             }
 
-            glUniform4f(materialColorLoc, particle.colorRed / 255.0f,
-                        particle.colorGreen / 255.0f,
-                        particle.colorBlue / 255.0f,
-                        particle.colorAlpha / 255.0f);
-            glUniform1f(rotationLoc, particle.rotationYaw);
+            SAFE_GL(glEnableVertexAttribArray(attribute.location));
+            SAFE_GL(glVertexAttribPointer(attribute.location,
+                                            attribute.binding.components(),
+                                            attribute.binding.type(),
+                                            attribute.binding.normalized(),
+                                            attribute.binding.stride(),
+                                            (GLvoid*)attribute.binding.offset()));
+        }
 
+        int displayModeLocation = pass.program->uniformLocation("displayMode");
+        if (displayModeLocation != -1) {
+            if (mParticleType == Type_Disc) {
+                glUniform1i(displayModeLocation, 1);
+            } else {
+                glUniform1i(displayModeLocation, 0);
+            }
+        }
+
+        glActiveTexture(GL_TEXTURE0);
+        mTexture->bind();
+
+        // Bind uniforms
+        for (int j = 0; j < pass.uniforms.size(); ++j) {
+            pass.uniforms[j]->bind();
+        }
+
+        glDepthMask(GL_FALSE);
+        glEnable(GL_BLEND);
+        switch (mBlendMode)
+        {
+        case Blend_Add:
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+            break;
+        case Blend_Blend:
+            glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE);
+            break;
+        case Blend_Subtract:
+            glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ZERO, GL_ONE);
+            glBlendEquation(GL_FUNC_REVERSE_SUBTRACT);
+            break;
+        }
+
+        mParticleIndexBuffer.bind();
+        SAFE_GL(glDrawElements(GL_QUADS, mParticles.size() * 4, GL_UNSIGNED_SHORT, 0));
+
+        /*foreach (const Particle &particle, mParticles) {
             float d = particle.scale / 100.0 * 128;
             glBegin(GL_QUADS);
             switch (mParticleType) {
@@ -1168,9 +1409,15 @@ namespace EvilTemple {
                 break;
             }
             glEnd();
-        }
+        }*/
 
-        renderStates.setWorldMatrix(oldWorld);
+        mParticleIndexBuffer.unbind();
+
+        // Unbind attributes
+        for (int j = 0; j < pass.attributes.size(); ++j) {
+            MaterialPassAttributeState &attribute = pass.attributes[j];
+            SAFE_GL(glDisableVertexAttribArray(attribute.location));
+        }
 
         glDepthMask(GL_TRUE);
         glDisable(GL_BLEND);
@@ -1178,6 +1425,7 @@ namespace EvilTemple {
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         pass.program->unbind();
+        mSecondsSinceLastRender = 0;
     }
 
     class ParticleSystemData : public AlignedAllocation
@@ -1247,7 +1495,6 @@ namespace EvilTemple {
 
     void ParticleSystem::setModelInstance(ModelInstance *modelInstance)
     {
-        qDebug("Setting model instance on particlesystem to %d", (uint)modelInstance);
         d->modelInstance = modelInstance;
     }
 
@@ -1279,6 +1526,7 @@ namespace EvilTemple {
             // TODO: Properly implement this. And/or check if the system is really deleted
             if (mParentNode) {
                 mParentNode->detachObject(this);
+                deleteLater();
             }
         }
     }

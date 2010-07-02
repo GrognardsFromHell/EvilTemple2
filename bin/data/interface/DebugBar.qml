@@ -28,7 +28,7 @@ Item
 
         MouseArea {
             width: childrenRect.width
-            height: childrenRect.height
+            height: parent.height
             anchors.verticalCenter: parent.verticalCenter
             hoverEnabled: true
             Text {
@@ -43,7 +43,7 @@ Item
         }
         MouseArea {
             width: childrenRect.width
-            height: childrenRect.height
+            height: parent.height
             anchors.verticalCenter: parent.verticalCenter
             hoverEnabled: true
             Text {

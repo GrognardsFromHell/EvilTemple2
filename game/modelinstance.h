@@ -7,6 +7,7 @@
 #include "modelfile.h"
 #include "materialstate.h"
 #include "renderable.h"
+#include "drawhelper.h"
 
 #include <QtOpenGL/QGLBuffer>
 
@@ -39,9 +40,14 @@ public:
     const SharedModel &model() const;
     void setModel(const SharedModel &model);
 
+    /**
+      This is just a temporary remedy. Instead, skeleton updates should be refactored out of this
+      class into a separate class, so other classes can also draw animated skeletons without the
+      overhead of this class.
+      */
+    void draw(RenderStates &renderStates, const CustomDrawHelper<ModelDrawStrategy, ModelBufferSource> &drawHelper);
     void drawNormals() const;
     void render(RenderStates &renderStates);
-    void draw(const RenderStates &renderStates, MaterialState *overrideMaterial) const;
 
     IntersectionResult intersect(const Ray3d &ray) const;
 
