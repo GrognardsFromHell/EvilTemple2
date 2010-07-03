@@ -17,7 +17,7 @@ uint getActiveNavigationMeshes();
 
 struct NavMeshPortal;
 
-struct Region {
+struct Region : public AlignedAllocation {
     Vector4 topLeft;
     Vector4 bottomRight;
     Vector4 center;
@@ -41,7 +41,7 @@ enum PortalAxis {
     WestEast
 };
 
-struct NavMeshPortal {
+struct NavMeshPortal : public AlignedAllocation {
     Vector4 center;
 
     NavMeshRect *sideA;

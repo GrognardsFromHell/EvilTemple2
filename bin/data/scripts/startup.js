@@ -255,6 +255,9 @@ function startup() {
 
     print("Loading prototypes...");
     prototypes = eval('(' + readFile('prototypes.js') + ')');
+    prototypes['StaticGeometry'] = {
+        interactive: false
+    };
     print("Loading jump points...");
     jumppoints = eval('(' + readFile('jumppoints.js') + ')');
     loadEquipment();
@@ -419,6 +422,14 @@ function handleAnimationEvent(sceneNode, modelInstance, obj, type, content)
 
 function createMapObject(scene, obj)
 {
+    // This is clumsy and needs preprocessing
+    if (obj.flags !== undefined) {
+        for (var i = 0; i < obj.flags.length; ++i) {
+            if (obj.flags[i] == 'ClickThrough')
+                obj.interactive = false;
+        }
+    }
+
     var sceneNode = gameView.scene.createNode();
     sceneNode.interactive = obj.interactive;
     sceneNode.position = obj.position;

@@ -287,10 +287,8 @@ namespace EvilTemple {
             sector->setNavigationMesh(d->mesh);
             sector->setLayer(d->regionLayers["groundMaterial"]);
 
-            SceneNode *node = new SceneNode;
-            node->attachObject(SharedRenderable(sector));
-
-            d->scene->addNode(SharedSceneNode(node));
+            SceneNode *node = d->scene->createNode();
+            node->attachObject(sector);
         }*/
 
         return true;

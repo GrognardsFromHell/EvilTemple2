@@ -110,7 +110,7 @@ public:
         mMaterial = material;
     }
 
-    void draw(const RenderStates &renderStates, MaterialPassState &state) const
+    void draw(const RenderStates&, MaterialPassState&) const
     {
         SAFE_GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mMesh->indexBuffer()));
         SAFE_GL(glDrawElements(GL_TRIANGLES, mMesh->faceCount(), GL_UNSIGNED_SHORT, 0));

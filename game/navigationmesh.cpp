@@ -117,8 +117,8 @@ bool checkLos(const NavMeshRect *losStartRect, const Vector4 &start, const Vecto
     // Check with each of the current rects portals, whether the line intersects
     forever {
         // If the end point lies in the current rectangle, we succeeded
-        if (end.x() >= currentRect->topLeft.x() && end.x() <= currentRect->bottomRight.z()
-            && end.z() >= currentRect->topLeft.x() && end.z() <= currentRect->bottomRight.z())
+        if (end.x() >= currentRect->topLeft.x() && end.x() <= currentRect->bottomRight.x()
+            && end.z() >= currentRect->topLeft.z() && end.z() <= currentRect->bottomRight.z())
         {
             // TODO: Take dynamic LOS into account?
             return true;

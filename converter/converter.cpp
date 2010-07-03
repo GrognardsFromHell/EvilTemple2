@@ -483,6 +483,7 @@ public:
         foreach (GeometryObject *object, zoneTemplate->staticGeometry()) {
             QVariantMap map;
 
+            map["prototype"] = "StaticGeometry";
             map["model"] = getNewModelFilename(object->mesh());
             map["position"] = vectorToList(object->position());
             if (object->rotation() != 0)
@@ -568,9 +569,11 @@ public:
         // Now we test if for any geometry object there are more than one scale versions
         for (int i = 0; i < clippingGeometryFiles.size(); ++i) {
             totalFileCount += scalingPerFile[i].size();
+#ifndef NDEBUG
             if (scalingPerFile[i].size() > 1) {
                 qDebug("Clipping geometry file %s is used in %d different scales:", qPrintable(clippingGeometryFiles[i]), scalingPerFile[i].size());
             }
+#endif
         }
 
         // File header

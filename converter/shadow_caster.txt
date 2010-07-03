@@ -21,5 +21,14 @@ art/meshes/scenery/portals
 -art/meshes/scenery/portals/stairs-up
 -art/meshes/scenery/portals/stairs-down
 
+# Fire-Node meshes are only used to spawn particles, and are thus fully transparent (no shadow)
+-art/meshes/scenery/misc/fire_node
+
+# The mill wheel has a precomputed shadow
+-art/meshes/scenery/mill_wheel
+
+# The main menu has no shadows either
+-art/meshes/scenery/misc/main menu
+
 # It's transparent -> no shadow
 -art/meshes/monsters/Gelatinous_cube

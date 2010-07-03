@@ -11,7 +11,7 @@
 
 #include "navigationmeshbuilder.h"
 
-GAMEMATH_ALIGNEDTYPE_PRE struct GAMEMATH_ALIGNEDTYPE_MID TaggedRegion {
+GAMEMATH_ALIGNEDTYPE_PRE struct GAMEMATH_ALIGNEDTYPE_MID TaggedRegion : public AlignedAllocation {
     Vector4 topLeft;
     Vector4 bottomRight;
     Vector4 center;
@@ -23,7 +23,7 @@ typedef QHash<QString, RegionLayer> RegionLayers;
 
 struct NavMeshPortal;
 
-GAMEMATH_ALIGNEDTYPE_PRE struct GAMEMATH_ALIGNEDTYPE_MID NavMeshRect {
+GAMEMATH_ALIGNEDTYPE_PRE struct GAMEMATH_ALIGNEDTYPE_MID NavMeshRect : public AlignedAllocation {
     Vector4 topLeft;
     Vector4 bottomRight;
     Vector4 center;
@@ -68,7 +68,7 @@ enum PortalAxis {
     WestEast
 };
 
-struct NavMeshPortal {
+struct NavMeshPortal : public AlignedAllocation {
     Vector4 center;
 
     NavMeshRect *sideA;
@@ -347,10 +347,12 @@ static void makeUnreachableTilesBlocking(QVector<ProcessedSector> &sectors)
       Marks a tile in a sector as walkable by analysing a bitfield.
       */
 template<const uint Flags>
-inline void markWalkable(int x, int y, QImage &debugTexture, ProcessedSector *sector, uint bitfield)
+inline void markWalkable(int x, int y, QImage *debugTexture, ProcessedSector *sector, uint bitfield)
 {
     if (bitfield & TILE_BLOCKS || bitfield & Flags) {
-        debugTexture.setPixel(x, y, 0xFFFF0000);
+#ifndef QT_NO_DEBUG
+        debugTexture->setPixel(x, y, 0xFFFF0000);
+#endif
         sector->walkable[x][y] = false;
     } else {
         sector->walkable[x][y] = true;
@@ -361,10 +363,12 @@ inline void markWalkable(int x, int y, QImage &debugTexture, ProcessedSector *se
       Marks a tile in a sector as flyable by analysing a bitfield.
       */
 template<const uint Flags>
-inline void markFlyable(int x, int y, QImage &debugTexture, ProcessedSector *sector, uint bitfield)
+inline void markFlyable(int x, int y, QImage *debugTexture, ProcessedSector *sector, uint bitfield)
 {
     if (bitfield & Flags) {
-        debugTexture.setPixel(x, y, 0xFF00FF00);
+#ifndef QT_NO_DEBUG
+        debugTexture->setPixel(x, y, 0xFF00FF00);
+#endif
         sector->flyable[x][y] = true;
         if (bitfield & TILE_FLYOVER_COVER) {
             sector->cover[x][y] = true;
@@ -374,13 +378,13 @@ inline void markFlyable(int x, int y, QImage &debugTexture, ProcessedSector *sec
     }
 }
 
-static void mergeRectangles(QList<QRect> &rectangles)
+static void mergeRectangles(QList<QRect> &rectangles, const uint maxIterations = 100)
 {
     bool madeChanges = true;
     int iteration = 0;
 
     // Second-pass tries to unify more sector polygons
-    for (iteration = 0; (iteration < 1000) && madeChanges; ++iteration) {
+    for (iteration = 0; (iteration < maxIterations) && madeChanges; ++iteration) {
         madeChanges = false;
 
         for (int i = 0; i < rectangles.size(); ++i) {
@@ -394,19 +398,22 @@ static void mergeRectangles(QList<QRect> &rectangles)
                 uint rightA = leftA + a.width();
                 uint bottomA = topA + a.height();
 
-                uint areaA = (rightA - leftA) * (bottomA - topA);
-
                 const QRect &b = rectangles[j];
                 uint leftB = b.x();
                 uint topB = b.y();
                 uint rightB = leftB + b.width();
                 uint bottomB = topB + b.height();
 
-                uint areaB = (rightB - leftB) * (bottomB - topB);
-
                 // Only consider merging, if the two polygons share an edge
                 SharedEdge edge = getSharedEdge(leftA, topA, rightA, bottomA,
                                                 leftB, topB, rightB, bottomB);
+
+                if (edge == Shared_None)
+                    continue;
+
+                uint areaA = (rightA - leftA) * (bottomA - topA);
+                uint areaB = (rightB - leftB) * (bottomB - topB);
+                uint maxArea = qMax(areaA, areaB);
 
                 uint t0, t1;
 
@@ -434,8 +441,6 @@ static void mergeRectangles(QList<QRect> &rectangles)
                 default:
                     continue;
                 }
-
-                uint maxArea = qMax(areaA, areaB);
 
                 if (resultingPrimitives == 1) {
                     leftA = qMin(leftA, leftB);
@@ -631,7 +636,7 @@ static void mergeRectangles(QList<QRect> &rectangles)
 
 struct WalkablePredicate
 {
-    static bool include(ProcessedSector *sector, int x, int y)
+    inline static bool include(ProcessedSector *sector, int x, int y)
     {
         return sector->walkable[x][y] && !sector->flyable[x][y];
     }
@@ -759,7 +764,7 @@ static void findRectangles(QVector<ProcessedSector> &sectors, QList<QRect> &rect
     }
 
     // 2nd merge on all rectangles
-    mergeRectangles(rectangles);
+    mergeRectangles(rectangles, 1);
 }
 
 static void findPortals(QList<NavMeshRect*> &rectangles, QList<NavMeshPortal*> &portals)
@@ -1003,6 +1008,9 @@ static void writeRegionLayer(QDataStream &stream, const QString &layerName, cons
 
 QByteArray NavigationMeshBuilder::build(const Troika::ZoneTemplate *tpl, const QVector<Vector4> &startPositions)
 {
+    QElapsedTimer timer;
+    timer.start();
+
     QVector<ProcessedSector> sectors;
     sectors.resize(tpl->tileSectors().size());
 
@@ -1015,8 +1023,8 @@ QByteArray NavigationMeshBuilder::build(const Troika::ZoneTemplate *tpl, const Q
 
         sector->origin = QPoint(troikaSector.x * SectorSideLength, troikaSector.y * SectorSideLength);
 
-        QImage image(256, 256, QImage::Format_RGB32);
-        image.fill(0);
+        QImage *image = NULL; // new QImage(256, 256, QImage::Format_RGB32);
+        // image.fill(0);
 
         uchar footstepSound;
         uint bitfield;
