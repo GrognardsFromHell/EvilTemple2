@@ -3,6 +3,7 @@
 #include <QApplication>
 #include <QLabel>
 #include <QVBoxLayout>
+#include <QAbstractButton>
 
 #include "converter.h"
 #include "converterwizard.h"

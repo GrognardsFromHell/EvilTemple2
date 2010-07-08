@@ -56,7 +56,7 @@ SharedModel Models::load(const QString &filename)
     SharedModel result(new Model);
 
     if (!result->load(cleanedFilename, d->materials, d->renderStates)) {
-        qWarning("Unable to load model %s: %s.", qPrintable(cleanedFilename), result->error());
+        qWarning("Unable to load model %s: %s.", qPrintable(cleanedFilename), qPrintable(result->error()));
 
         // TODO: Fall back to a default model.
     }

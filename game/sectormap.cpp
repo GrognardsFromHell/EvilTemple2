@@ -282,14 +282,14 @@ namespace EvilTemple {
         qDebug("Using mesh with %d rectangles and %d portals.", d->mesh->rectangles().size(),
                d->mesh->portals().size());
 
-        /*if (d->scene) {
+        if (d->scene) {
             Sector *sector = new Sector;
             sector->setNavigationMesh(d->mesh);
             sector->setLayer(d->regionLayers["groundMaterial"]);
 
             SceneNode *node = d->scene->createNode();
             node->attachObject(sector);
-        }*/
+        }
 
         return true;
     }

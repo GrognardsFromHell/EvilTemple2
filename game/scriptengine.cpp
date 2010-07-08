@@ -13,6 +13,7 @@
 #include "sectormap.h"
 #include "models.h"
 #include "scenenode.h"
+#include "imageuploader.h"
 
 #include "renderable.h"
 #include "modelinstance.h"

@@ -101,9 +101,15 @@ void printEventTypes() {
 
 // We convert the streams to non-interleaved data, which makes it easier to read them into vectors
 struct Streams {
-    QMap<uint, QQuaternion> rotationFrames;
-    QMap<uint, QVector3D> scaleFrames;
-    QMap<uint, QVector3D> translationFrames;
+    QHash<uint, QQuaternion> rotationFrames;
+    QHash<uint, QVector3D> scaleFrames;
+    QHash<uint, QVector3D> translationFrames;
+
+    void reserve(uint frames) {
+        rotationFrames.reserve(frames);
+        scaleFrames.reserve(frames);
+        translationFrames.reserve(frames);
+    }
 
     void appendCurrentState(const AnimationBoneState *state) {
         rotationFrames[state->rotationFrame] = state->rotation;
@@ -126,12 +132,12 @@ void ModelWriter::writeAnimations(const Troika::MeshModel *model)
 
     stream << (uint)skeleton->animations().size() << RESERVED << RESERVED << RESERVED;
 
-    QMap<uint, QString> animDataStartMap;
+    QHash<uint, QString> animDataStartMap;
+    animDataStartMap.reserve(skeleton->animations().size());
 
     foreach (const Troika::Animation &animation, skeleton->animations()) {
 
         if (animDataStartMap.contains(animation.keyFramesDataStart())) {
-            // qWarning("%s reuses %s.", qPrintable(animation.name()), qPrintable(animDataStartMap[animation.keyFramesDataStart()]));
             continue;
         }
 
@@ -158,20 +164,23 @@ void ModelWriter::writeAnimations(const Troika::MeshModel *model)
 
         AnimationStream *animStream = animation.openStream(skeleton);
 
-        QMap<uint,Streams> streams;
+        QHash<uint, Streams> streams;
+        streams.reserve(skeleton->bones().size());
 
         // Write out the state of the first bones
         for (int i = 0; i < skeleton->bones().size(); ++i) {
             const AnimationBoneState *boneState = animStream->getBoneState(i);
 
             if (boneState) {
-                streams[i].appendCurrentState(boneState);
+                Streams &boneStreams = streams[i];
+                boneStreams.reserve(animation.frames());
+                boneStreams.appendCurrentState(boneState);
             }
         }
         int nextFrame = animStream->getNextFrameId();
         while (!animStream->atEnd()) {
             animStream->readNextFrame();
-	    Q_ASSERT(animStream->getNextFrameId() > nextFrame || animStream->atEnd());
+            Q_ASSERT(animStream->getNextFrameId() > nextFrame || animStream->atEnd());
 
             nextFrame = animStream->getNextFrameId();
 

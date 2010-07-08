@@ -5,6 +5,8 @@
 #include "zonebackgroundmap.h"
 #include "turbojpeg.h"
 #include "util.h"
+#include "conversiontask.h"
+#include "virtualfilesystem.h"
 
 static tjhandle jpegHandle = 0;
 
@@ -26,18 +28,22 @@ template <int T> bool checkBlack(unsigned char *pixels, int width, int height) {
     return true;
 }
 
-class MapConverterData
+static bool isTileBlack(const QImage &image)
 {
-public:
-    MapConverterData(VirtualFileSystem *vfs, ZipWriter *zip) : mVfs(vfs), mZip(zip)
-    {        
+    for (int y = 0; y < image.height(); ++y) {
+        for (int x = 0; x < image.width(); ++x) {
+            QRgb pixel = image.pixel(x, y);
+            if (qRed(pixel) > 2 || qBlue(pixel) > 2 || qGreen(pixel) > 2) {
+                return false;
+            }
+        }
     }
 
-    ~MapConverterData()
-    {
-    }
+    return true;
+}
 
-    void decompressJpeg(const QByteArray &input, QByteArray &output, int &width, int &height, int &components) {
+
+    static void decompressJpeg(const QByteArray &input, QByteArray &output, int &width, int &height, int &components) {
         if (!jpegHandle) {
             jpegHandle = tjInitDecompress();
         }
@@ -63,7 +69,7 @@ public:
     /**
       Converts a background map and returns the new entry point file for it.
       */
-    QString convertGroundMap(const ZoneBackgroundMap *background) {
+    QString MapConverter::convertGroundMap(const ZoneBackgroundMap *background) {
 
         QString directory = background->directory().toLower();
 
@@ -107,7 +113,7 @@ public:
 
             tilesPresent.append(QPoint(x, y));
 
-            mZip->addFile(QString("%1%2-%3.jpg").arg(newFolder).arg(y).arg(x), tileContent, 0);
+            mWriter->addFile(QString("%1%2-%3.jpg").arg(newFolder).arg(y).arg(x), tileContent, 0);
         }
 
         QByteArray tileIndex;
@@ -122,38 +128,15 @@ public:
             stream << (short)point.x() << (short)point.y();
         }
 
-        mZip->addFile(QString("%1index.dat").arg(newFolder), tileIndex, 9);
+        mWriter->addFile(QString("%1index.dat").arg(newFolder), tileIndex, 9);
 
         convertedGroundMaps[directory] = newFolder;
 
         return newFolder;
     }
 
-    bool isTileBlack(const QImage &image)
-    {
-        for (int y = 0; y < image.height(); ++y) {
-            for (int x = 0; x < image.width(); ++x) {
-                QRgb pixel = image.pixel(x, y);
-                if (qRed(pixel) > 2 || qBlue(pixel) > 2 || qGreen(pixel) > 2) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
-    }
-
-private:
-    VirtualFileSystem *mVfs;
-    ZipWriter *mZip;
-    QHash<QString,QString> convertedGroundMaps;
-};
-
-MapConverter::MapConverter(VirtualFileSystem *vfs, ZipWriter *writer) : d_ptr(new MapConverterData(vfs, writer))
-{
-}
-
-MapConverter::~MapConverter()
+MapConverter::MapConverter(IConversionService *service, IFileWriter *writer)
+    : mService(service), mWriter(writer), mVfs(service->virtualFileSystem())
 {
 }
 
@@ -161,11 +144,11 @@ bool MapConverter::convert(const ZoneTemplate *zoneTemplate)
 {
 
     if (zoneTemplate->dayBackground()) {
-        d_ptr->convertGroundMap(zoneTemplate->dayBackground());
+        convertGroundMap(zoneTemplate->dayBackground());
     }
 
     if (zoneTemplate->nightBackground()) {
-        d_ptr->convertGroundMap(zoneTemplate->nightBackground());
+        convertGroundMap(zoneTemplate->nightBackground());
     }
 
     return true;

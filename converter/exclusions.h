@@ -6,7 +6,7 @@
 class Exclusions
 {
 public:
-    bool load();
+    bool load(const QString &filename);
 
     bool isExcluded(const QString &filename) const;
 

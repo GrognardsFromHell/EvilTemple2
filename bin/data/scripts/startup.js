@@ -303,6 +303,7 @@ function setupWorldClickHandler() {
 
         if (currentSelection != null) {
             walkTo(currentSelection.obj, currentSelection.sceneNode, currentSelection.modelInstance, worldPosition);
+            return;
         }
 
         if (firstClick === undefined) {

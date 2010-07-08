@@ -5,9 +5,9 @@
 
 #include "exclusions.h"
 
-bool Exclusions::load()
+bool Exclusions::load(const QString &filename)
 {
-    QFile exclusionText(":/exclusions.txt");
+    QFile exclusionText(filename);
 
     if (!exclusionText.open(QIODevice::ReadOnly|QIODevice::Text)) {
         qWarning("Cannot open exclusions.txt. This file should've been included in this binary as a resource.");

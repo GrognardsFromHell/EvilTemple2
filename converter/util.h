@@ -10,6 +10,7 @@ using namespace GameMath;
 #include <QRegExp>
 #include <QXmlStreamWriter>
 #include <QVariant>
+#include <QVector3D>
 
 /**
   Converts radians to degree.
@@ -50,6 +51,22 @@ inline uint ELFHash(const QByteArray &string)
     }
 
     return result;
+}
+
+inline QString getNewModelFilename(const QString &modelFilename) {
+    QString newFilename = QDir::toNativeSeparators(modelFilename);
+    if (newFilename.startsWith(QString("art") + QDir::separator(), Qt::CaseInsensitive)) {
+        newFilename = newFilename.right(newFilename.length() - 4);
+    }
+
+    if (newFilename.endsWith(".skm", Qt::CaseInsensitive) || newFilename.endsWith(".ska", Qt::CaseInsensitive))
+    {
+        newFilename = newFilename.left(newFilename.length() - 4);
+    }
+
+    newFilename.append(".model");
+
+    return newFilename;
 }
 
 inline QString getNewMaterialFilename(const QString &mdfFilename) {
@@ -120,7 +137,7 @@ private:
 template<typename T>
 inline void JsonPropertyWriter::write(const QString &name, T value)
 {
-	mMap[name] = QVariant(value);
+        mMap[name] = QVariant(value);
 }
 
 template<>
@@ -187,6 +204,14 @@ inline QDataStream &operator <<(QDataStream &stream, const Vector4 &vector)
 {
     stream << vector.x() << vector.y() << vector.z() << vector.w();
     return stream;
+}
+
+inline QVariantList vectorToList(const QVector3D &vector) {
+    QVariantList result;
+    result.append(vector.x());
+    result.append(vector.y());
+    result.append(vector.z());
+    return result;
 }
 
 #endif // UTIL_H

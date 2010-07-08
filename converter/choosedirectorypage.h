@@ -29,7 +29,7 @@ private:
 
 private slots:
     void on_choosePath_clicked();
-    void updateStatus();    
+    void updateStatus();
 };
 
 #endif // CHOOSEDIRECTORYPAGE_H

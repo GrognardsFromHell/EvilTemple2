@@ -64,7 +64,7 @@ bool ZipWriter::addFile(const QString &filename, const QByteArray &data, int com
         return false;
     }
 
-    err = zipWriteInFileInZip(d_ptr->zFile, data, data.size());
+    err = zipWriteInFileInZip(d_ptr->zFile, data.constData(), data.size());
 
     if (err != ZIP_OK) {
         qWarning("Unable to write to %s in zip file. Error code: %d.", qPrintable(filename), err);

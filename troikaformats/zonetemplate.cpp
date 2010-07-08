@@ -36,7 +36,7 @@ namespace Troika
         QList<Light> lights;
         QList<TileSector> tileSectors;
 
-        QVector3D startPosition;
+        QPoint startPosition;
         quint32 movie; // Movie to play when entering
 
         bool tutorialMap;
@@ -49,7 +49,7 @@ namespace Troika
         QBox3D scrollBox;
         QString directory;
         QString name;
-		Light globalLight;
+                Light globalLight;
     };
 
     ZoneTemplate::ZoneTemplate(quint32 id, QObject *parent) :
@@ -109,7 +109,7 @@ namespace Troika
         d_ptr->clippingGeometry.append(object);
     }
 
-    const QVector3D ZoneTemplate::startPosition() const
+    const QPoint &ZoneTemplate::startPosition() const
     {
         return d_ptr->startPosition;
     }
@@ -149,7 +149,7 @@ namespace Troika
         return d_ptr->bedrest;
     }
 
-    void ZoneTemplate::setStartPosition(const QVector3D &startPosition)
+    void ZoneTemplate::setStartPosition(const QPoint &startPosition)
     {
         d_ptr->startPosition = startPosition;
     }
@@ -239,15 +239,15 @@ namespace Troika
         return d_ptr->particleSystems;
     }
 
-	const Light &ZoneTemplate::globalLight() const
-	{
-		return d_ptr->globalLight;
-	}
+        const Light &ZoneTemplate::globalLight() const
+        {
+                return d_ptr->globalLight;
+        }
 
-	void ZoneTemplate::setGlobalLight(const Light &light)
-	{
-		d_ptr->globalLight = light;
-	}
+        void ZoneTemplate::setGlobalLight(const Light &light)
+        {
+                d_ptr->globalLight = light;
+        }
 
         const QList<GameObject*> &ZoneTemplate::staticObjects() const
         {

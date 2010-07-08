@@ -159,11 +159,9 @@ namespace Troika {
             else if (!type.compare("add", Qt::CaseInsensitive))
             {
                 stage.blendType = TextureStageInfo::Add;
-                qWarning("Unsupported type: %s", qPrintable(type));
             }
             else if (!type.compare("texturealpha", Qt::CaseInsensitive))
             {
-                qWarning("Unsupported type: %s", qPrintable(type));
                 stage.blendType = TextureStageInfo::TextureAlpha;
             }
             else if (!type.compare("currentalpha", Qt::CaseInsensitive))

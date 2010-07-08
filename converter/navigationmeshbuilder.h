@@ -12,7 +12,7 @@ using namespace GameMath;
 class NavigationMeshBuilder
 {
 public:
-    static QByteArray build(const Troika::ZoneTemplate *tpl, const QVector<Vector4> &startPositions);
+    static QByteArray build(const Troika::ZoneTemplate *tpl, const QVector<QPoint> &startPositions);
 };
 
 #endif // NAVIGATIONMESHBUILDER_H

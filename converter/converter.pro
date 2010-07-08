@@ -13,7 +13,6 @@ win32:RC_FILE = icon.rc
 SOURCES += converter.cpp \
     collada.cpp \
     materialconverter.cpp \
-    interfaceconverter.cpp \
     modelwriter.cpp \
     exclusions.cpp \
     mapconverter.cpp \
@@ -22,14 +21,21 @@ SOURCES += converter.cpp \
     choosedirectorypage.cpp \
     conversionpage.cpp \
     pathnodeconverter.cpp \
-    navigationmeshbuilder.cpp
+    navigationmeshbuilder.cpp \
+    conversiontask.cpp \
+    convertmapstask.cpp \
+    convertscriptstask.cpp \
+    converttranslationstask.cpp \
+    convertparticlesystemstask.cpp \
+    convertinterfacetask.cpp \
+    convertsoundstask.cpp \
+    convertmodelstask.cpp
 
 HEADERS += \
     util.h \
     collada.h \
     converter.h \
     materialconverter.h \
-    interfaceconverter.h \
     modelwriter.h \
     exclusions.h \
     mapconverter.h \
@@ -40,7 +46,15 @@ HEADERS += \
     choosedirectorypage.h \
     conversionpage.h \
     pathnodeconverter.h \
-    navigationmeshbuilder.h
+    navigationmeshbuilder.h \
+    conversiontask.h \
+    convertmapstask.h \
+    convertscriptstask.h \
+    converttranslationstask.h \
+    convertparticlesystemstask.h \
+    convertinterfacetask.h \
+    convertsoundstask.h \
+    convertmodelstask.h
 
 win32:SOURCES += basepathfinder_win32.cpp
 else:SOURCES += basepathfinder.cpp
@@ -58,7 +72,8 @@ OTHER_FILES += exclusions.txt \
     shadow_caster.txt \
     particlefiles.txt \
     scripts/converter.js \
-    icon.rc
+    icon.rc \
+    map_exclusions.txt
 
 PRECOMPILED_HEADER = stable.h
 

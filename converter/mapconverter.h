@@ -2,26 +2,28 @@
 #define MAPCONVERTER_H
 
 #include <QHash>
-#include <QScopedPointer>
+#include <QString>
 
-#include "virtualfilesystem.h"
+#include "conversiontask.h"
+
 #include "zonetemplate.h"
-#include "zipwriter.h"
-
 using namespace Troika;
-
-class MapConverterData;
 
 class MapConverter
 {
 public:
-    MapConverter(VirtualFileSystem *vfs, ZipWriter *writer);
-    ~MapConverter();
+    MapConverter(IConversionService *service, IFileWriter *writer);
 
     bool convert(const ZoneTemplate *zoneTemplate);
 
 private:
-    QScopedPointer<MapConverterData> d_ptr;
+    QString convertGroundMap(const ZoneBackgroundMap *background);
+
+    IConversionService *mService;
+    IFileWriter *mWriter;
+    QHash<QString,QString> convertedGroundMaps;
+
+    Troika::VirtualFileSystem *mVfs;
 };
 
 #endif // MAPCONVERTER_H

@@ -25,7 +25,7 @@ namespace Troika
 
     class ZoneTemplateData;
     class ZoneBackgroundMap;
-	
+
     class TROIKAFORMATS_EXPORT GeometryObject {
     public:
         GeometryObject(const QVector3D &position, float rotation, const QString &mesh) :
@@ -87,7 +87,7 @@ namespace Troika
     };
 
     class TROIKAFORMATS_EXPORT ZoneTemplate : public QObject
-    {        
+    {
         Q_OBJECT
     public:
         explicit ZoneTemplate(quint32 id, QObject *parent = 0);
@@ -103,7 +103,7 @@ namespace Troika
 
         const QString &directory() const;
 
-        const QVector3D startPosition() const; // Camera start position
+        const QPoint &startPosition() const; // Camera start position
         quint32 movie(); // Movie to play when entering
         bool isTutorialMap() const;
         bool isMenuMap() const; // This denotes the first map played in the background of the menu
@@ -160,7 +160,7 @@ namespace Troika
 
         void setName(const QString &name);
         void setDirectory(const QString &directory);
-        void setStartPosition(const QVector3D &startPosition);
+        void setStartPosition(const QPoint &startPosition);
         void setMovie(quint32 movie);
         void setTutorialMap(bool enabled);
         void setMenuMap(bool enabled);
@@ -169,7 +169,7 @@ namespace Troika
         void setDayNightTransfer(bool enabled);
         void setBedrest(bool enabled);
         void setScrollBox(const QBox3D &scrollBox);
-		void setGlobalLight(const Light &light);
+                void setGlobalLight(const Light &light);
 
         void addStaticObject(GameObject *gameObject);
         void addMobile(GameObject *gameObject);

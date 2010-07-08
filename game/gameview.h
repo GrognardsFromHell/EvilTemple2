@@ -110,6 +110,10 @@ public slots:
 
     void addVisualTimer(uint elapseAfter, const QScriptValue &callback);
 
+    QUrl takeScreenshot();
+
+    QString readBase64(const QUrl &file);
+
 protected:
     void resizeEvent(QResizeEvent *event);
     void mouseMoveEvent(QMouseEvent *event);

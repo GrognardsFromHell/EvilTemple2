@@ -17,8 +17,6 @@ public:
 
     void cancel();
 
-    bool isCancelled() const;
-
 public slots:
     bool convert();
 

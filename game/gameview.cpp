@@ -25,6 +25,7 @@
 #include "audioengine.h"
 #include "sectormap.h"
 #include "models.h"
+#include "imageuploader.h"
 
 #include <gamemath.h>
 using namespace GameMath;
@@ -314,6 +315,7 @@ namespace EvilTemple {
 
         d->uiEngine.rootContext()->setContextProperty("gameView", this);
         d->uiEngine.rootContext()->setContextProperty("translations", &d->translations);
+        d->uiEngine.rootContext()->setContextProperty("imageUploader", new ImageUploader);
 
         setMouseTracking(true);
     }
@@ -591,6 +593,50 @@ namespace EvilTemple {
     {
         // qDebug("Adding visual timer that'll elapse after %d ms.", elapseAfter);
         d->visualTimers.append(VisualTimer(callback, elapseAfter));
+    }
+
+    QUrl GameView::takeScreenshot()
+    {
+        QGLWidget *widget = qobject_cast<QGLWidget*>(viewport());
+        Q_ASSERT(widget);
+
+        QImage screenshot = widget->grabFrameBuffer();
+
+        QDir currentDir = QDir::current();
+        if (!currentDir.exists("screenshots"))
+            currentDir.mkdir("screenshots");
+
+        QDateTime now = QDateTime::currentDateTime();
+
+        QString currentDateTime = "screenshot-" + now.toString("yyyy-MM-dd-hh-mm-ss");
+        uint suffix = 0;
+        QString currentFilename = "screenshots/" + currentDateTime + ".jpg";
+
+        while (currentDir.exists(currentFilename)) {
+            suffix++;
+            currentFilename = QString("screenshots/%1-%2.jpg").arg(currentDateTime).arg(suffix);
+        }
+
+        screenshot.save(currentFilename, "jpg", 85);
+
+        return QUrl::fromLocalFile(currentDir.absoluteFilePath(currentFilename));
+    }
+
+    QString GameView::readBase64(const QUrl &filename)
+    {
+        QFile file(filename.toLocalFile());
+
+        if (!file.open(QIODevice::ReadOnly)) {
+            return QByteArray();
+        }
+
+        QByteArray content = file.readAll();
+
+        file.close();
+
+        QString result = QString::fromLatin1(content.toBase64());
+
+        return result;
     }
 
 }

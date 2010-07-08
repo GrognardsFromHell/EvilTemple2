@@ -71,6 +71,9 @@ SceneNode *Scene::createNode()
 
 void Scene::removeNode(SceneNode *node)
 {
+    if (!node)
+        return;
+
     d->sceneNodes.removeOne(node);
     node->setParentNode(NULL);
     node->deleteLater();

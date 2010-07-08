@@ -228,7 +228,7 @@ namespace Troika
             // Transform to world coordinate
             float y = (mapListEntry.startY + 0.5f) * PixelPerWorldTile;
             float x = (mapListEntry.startX + 0.5f) * PixelPerWorldTile;
-            result->setStartPosition(QVector3D(x, 0, y));
+            result->setStartPosition(QPoint(x, y));
             result->setMovie(mapListEntry.movie);
             result->setBedrest(mapListEntry.bedrest);
             result->setMenuMap(mapListEntry.shoppingMap);
@@ -249,7 +249,7 @@ namespace Troika
 
     ZoneTemplates::ZoneTemplates(VirtualFileSystem *vfs, Prototypes *prototypes) :
         d_ptr(new ZoneTemplatesData(vfs, prototypes))
-    {        
+    {
     }
 
     ZoneTemplates::~ZoneTemplates()

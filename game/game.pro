@@ -52,7 +52,8 @@ SOURCES += \
     translations.cpp \
     sectormap.cpp \
     navigationmesh.cpp \
-    models.cpp
+    models.cpp \
+    imageuploader.cpp
 HEADERS += \
     mainwindow.h \
     game.h \
@@ -91,7 +92,8 @@ HEADERS += \
     sectormap.h \
     navigationmesh.h \
     vertexbufferobject.h \
-    models.h
+    models.h \
+    imageuploader.h
 OTHER_FILES += \
     resources/schema/materialfile.xsd \
     resources/materials/map_material.xml \

@@ -90,6 +90,17 @@ inline void ConversionThread::setOutputPath(const QString &outputPath)
     mOutputPath = outputPath;
 }
 
+void ConversionThread::run()
+{
+    delete mConverter;
+    mConverter = new Converter(mDataPath, mOutputPath);
+    connect(mConverter, SIGNAL(progressUpdate(int,int,QString)), mPage, SLOT(updateProgress(int,int,QString)),
+            Qt::QueuedConnection);
+    if (!mConverter->convert()) {
+        qWarning("Conversion was NOT successful.");
+    }
+}
+
 ConversionPage::ConversionPage(QWidget *parent) :
     QWizardPage(parent),
     ui(new Ui::ConversionPage),
@@ -124,11 +135,12 @@ void ConversionPage::updateProgress(int value, int max, const QString &operation
 {
     ui->progressBar->setMaximum(max);
     ui->progressBar->setValue(value);
+    setSubTitle(operation);
 
 #ifdef Q_OS_WIN32
     if (mDontUseTaskbarList)
         return;
-    
+
     static ITaskbarList3 *taskbarList = NULL;
 
     if (!mTaskbarList) {
@@ -187,8 +199,10 @@ void ConversionPage::threadStopped()
 
 void ConversionPage::cleanupPage()
 {
-    if (conversionThread->isRunning())
+    if (conversionThread->isRunning()) {
+        conversionThread->cancel();
         conversionThread->wait();
+    }
 
     qInstallMsgHandler(oldMsgHandler);
     logBrowser = NULL;
@@ -203,14 +217,4 @@ void ConversionPage::addLogMessage(const QString &message)
 bool ConversionPage::isComplete() const
 {
     return conversionThread->isFinished();
-}
-
-void ConversionThread::run()
-{
-    Converter converter(mDataPath, mOutputPath);
-    connect(&converter, SIGNAL(progressUpdate(int,int,QString)), mPage, SLOT(updateProgress(int,int,QString)),
-            Qt::QueuedConnection);
-    if (!converter.convert()) {
-        qWarning("Conversion was NOT successful.");
-    }
 }

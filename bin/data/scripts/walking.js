@@ -74,6 +74,24 @@ var WalkJobs = {
     }
 };
 
+function showPath(path)
+{
+    var sceneNode = gameView.scene.createNode();
+
+    var line = new LineRenderable(gameView.scene);
+    for (var i = 0; i < path.length; ++i) {
+        if (i + 1 < path.length) {
+            line.addLine(path[i], path[i+1]);
+        }
+    }
+    sceneNode.attachObject(line);
+
+    gameView.addVisualTimer(5000, function() {
+        print("Removing scene node.");
+        gameView.scene.removeNode(sceneNode);
+    });
+}
+
 /*
     Implements walking between two points.
  */
@@ -91,6 +109,8 @@ function walkTo(obj, sceneNode, modelInstance, to) {
 
     if (path.length == 0)
         return false;
+
+    showPath(path); // Debugging
 
     var job = {
         obj: obj,

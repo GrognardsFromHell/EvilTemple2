@@ -89,7 +89,7 @@ contains(TEMPLE_LIBS,audioengine) {
 }
 
 contains(TEMPLE_LIBS,qjson) {
-    INCLUDEPATH += $${PWD}/3rdparty/qjson/src/    
+    INCLUDEPATH += $${PWD}/3rdparty/qjson/src/
     LIBS += -lqjson
 }
 
@@ -103,7 +103,7 @@ contains(TEMPLE_LIBS,binkplayer) {
     }
 }
 
-contains(TEMPLE_LIBS,openal) {    
+contains(TEMPLE_LIBS,openal) {
     win32 {
         INCLUDEPATH += ../3rdparty/openal-1.1/include ../3rdparty/freealut-1.1.0/include/
         LIBS += ../3rdparty/openal-1.1/libs/Win32/OpenAL32.lib
@@ -118,9 +118,6 @@ contains(TEMPLE_LIBS,openal) {
     }
 }
 
-OTHER_FILES += \
-    ../../MoneyDisplay.qml \
-    ../../bin/data/scripts/animations.js \
-    ../bin/data/scripts/walking.js \
-    ../bin/data/scripts/util.js \
-    ../bin/data/scripts/debugBar.js
+# Enable to get PDB for release builds
+#win32:QMAKE_CXXFLAGS_RELEASE += -Zi
+#win32:QMAKE_LFLAGS_RELEASE += /DEBUG /INCREMENTAL:NO /OPT:REF /OPT:ICF

@@ -42,9 +42,8 @@ namespace Troika
             timer.start();
 
             QByteArray skmData = vfs->openFile(filename);
-			
+
             if (skmData.isNull()) {
-                qWarning("Unknown model file: %s", qPrintable(filename));
                 return NULL;
             }
 
@@ -65,14 +64,14 @@ namespace Troika
             QList< QSharedPointer<FaceGroup> > faceGroups;
             for (quint32 i = 0; i < header.materialCount; ++i) {
                 QVector<Face> faces = QVector<Face>::fromList(faceGroupLists[i]);
-                                
+
                 QSharedPointer<FaceGroup> faceGroup(new FaceGroup(faces, modelMaterials[i]));
                 faceGroups.append(faceGroup);
             }
 
             MeshModel *result(new MeshModel(faceGroups, vertices, skeleton.take()));
 
-            qDebug("Loaded %s in %d ms.", qPrintable(filename), timer.elapsed());
+            // qDebug("Loaded %s in %d ms.", qPrintable(filename), timer.elapsed());
 
             return result;
         }
@@ -110,7 +109,7 @@ namespace Troika
                         stream >> fullWorldInverse(row, col);
                     }
                 }
-                
+
                 bone.name = QString::fromLatin1(rawName);
             }
         }

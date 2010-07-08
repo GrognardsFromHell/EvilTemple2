@@ -23,39 +23,6 @@ namespace EvilTemple {
 static const Vector4 nullVector(0, 0, 0, 0);
 static const Box3d emptyBoundingBox(nullVector, nullVector);
 
-struct Connection
-{
-    QObject *sender;
-    const char *signal;
-    QScriptValue receiver;
-    QScriptValue function;
-};
-
-static QList<Connection> activeConnections;
-
-static void addActiveConnection(QObject *sender, const char *signal, const QScriptValue &receiver,
-                                const QScriptValue &function)
-{
-    Connection connection;
-    connection.sender = sender;
-    connection.signal = signal;
-    connection.receiver = receiver;
-    connection.function = function;
-    activeConnections.append(connection);
-
-    qScriptConnect(sender, signal, receiver, function);
-}
-
-void clearAllActiveConnections()
-{
-    QList<Connection>::iterator it = activeConnections.begin();
-    while (it != activeConnections.end()) {
-        qScriptDisconnect(it->sender, it->signal, it->receiver, it->function);
-        it++;
-    }
-    activeConnections.clear();
-}
-
 template<typename T>
 QScriptValue valueToScriptValue(QScriptEngine *engine, T const &in)
 {
@@ -74,38 +41,6 @@ void registerValueType(QScriptEngine *engine, const char *name)
 {
     qRegisterMetaType<T>(name);
     qScriptRegisterMetaType<T>(engine, valueToScriptValue<T>, valueFromScriptValue<T>);
-}
-
-template<typename T>
-QScriptValue vectorToScriptValue(QScriptEngine *engine, QVector<T> const &in)
-{
-    QScriptValue result = engine->newArray(in.size());
-
-    for (size_t i = 0; i < in.size(); ++i) {
-        result.setProperty(i, engine->newVariant(qVariantFromValue(in[i])));
-    }
-
-    return result;
-}
-
-template<typename T>
-void vectorFromScriptValue(const QScriptValue &object, QVector<T> &out)
-{
-    out.clear();
-
-    QScriptValueIterator it(object);
-
-    while (it.hasNext()) {
-        it.next();
-        out.append(qvariant_cast<T>(it.value().toVariant()));
-    }
-}
-
-template<typename T>
-void registerVectorType(QScriptEngine *engine, const char *name)
-{
-    qRegisterMetaType< QVector<T> >(name);
-    qScriptRegisterMetaType< QVector<T> >(engine, vectorToScriptValue<T>, vectorFromScriptValue<T>);
 }
 
 const Box3d &ModelScriptable::boundingBox() const
@@ -203,7 +138,7 @@ void float4FromScriptValue(const QScriptValue &object, T &out)
     if (object.isArray()) {
         QScriptValue element = object.property(0);
 
-        if (!element.isUndefined()) {
+        if (element.isNumber()) {
             out.setX(element.toNumber());
         } else {
             out.setX(0);
@@ -215,7 +150,7 @@ void float4FromScriptValue(const QScriptValue &object, T &out)
 
         element = object.property(1);
 
-        if (!element.isUndefined()) {
+        if (element.isNumber()) {
             out.setY(element.toNumber());
         } else {
             out.setY(0);
@@ -226,7 +161,7 @@ void float4FromScriptValue(const QScriptValue &object, T &out)
 
         element = object.property(2);
 
-        if (!element.isUndefined()) {
+        if (element.isNumber()) {
             out.setZ(element.toNumber());
         } else {
             out.setZ(0);
@@ -236,7 +171,7 @@ void float4FromScriptValue(const QScriptValue &object, T &out)
 
         element = object.property(3);
 
-        if (!element.isUndefined()) {
+        if (element.isNumber()) {
             out.setW(element.toNumber());
         } else {
             out.setW(1);

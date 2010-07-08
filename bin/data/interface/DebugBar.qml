@@ -56,6 +56,25 @@ Item
             }
             onClicked: debugEvent('loadMap')
         }
+        MouseArea {
+            width: childrenRect.width
+            height: parent.height
+            anchors.verticalCenter: parent.verticalCenter
+            hoverEnabled: true
+            Text {
+                color: parent.containsMouse ? '#00a9f8' : '#FFFFFF'
+                text: 'Screenshot'
+                anchors.verticalCenter: parent.verticalCenter
+                font.pointSize: 12
+                font.bold: true
+                font.family: "Fontin"
+            }
+            onClicked: {
+                var screenshot = gameView.takeScreenshot();
+                var uploadDialog = gameView.addGuiItem("interface/UploadScreenshot.qml");
+                uploadDialog.screenshot = screenshot;
+            }
+        }
     }
 
 }

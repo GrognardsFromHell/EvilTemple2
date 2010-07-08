@@ -49,6 +49,8 @@ namespace Troika
 
             // Process bone remapping
             if (!remappedBones.isEmpty()) {
+                qWarning("Model %s has different set of bones from skeleton.", qPrintable(filename));
+
                 // For all vertices, re-wire bone attachments from the skmBoneId to our bone id
                 for (int i = 0; i < vertexCount; ++i) {
                     for (int j = 0; j < vertices[i].attachmentCount; ++j) {
@@ -111,9 +113,6 @@ namespace Troika
                     bones[boneId].fullWorldInverse = skmBones[skmBoneId].fullWorldInverse;
 
                     remappedBones[skmBoneId] = boneId;
-
-                    qWarning("SKA bone has different name than SKM bone, remapping %d (SKM) to %d (SKA).",
-                             skmBoneId, boneId);
                 }
             } else {
                 bones[boneId].skmOnly = false;

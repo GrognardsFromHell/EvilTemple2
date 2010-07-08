@@ -8,6 +8,3 @@ art/meshes/scenery/foliage/tree1.*
 
 # The name says it all, uses variations (unsupported)
 art\meshes\particle\test.skm
-
-# This is the milestone map
-5050

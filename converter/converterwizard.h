@@ -9,9 +9,6 @@ class ConverterWizard : public QWizard
 public:
     explicit ConverterWizard(QWidget *parent = 0);
 
-signals:
-
-public slots:
 
 };
 

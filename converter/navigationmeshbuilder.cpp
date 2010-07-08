@@ -221,18 +221,15 @@ struct ReachabilityWorkItem {
     QPoint pos;
 };
 
-static void findReachableTiles(const Vector4 &startPosition, QVector<ProcessedSector> &sectors)
+static void findReachableTiles(const QPoint &startPosition, QVector<ProcessedSector> &sectors)
 {
-    // Find the sector corresponding to start Position
-    QPoint pos = vectorToPoint(startPosition);
-
-    ProcessedSector *sector = findSector(sectors, pos);
+    ProcessedSector *sector = findSector(sectors, startPosition);
     if (!sector)
         return;
 
     ReachabilityWorkItem wi;
     wi.sector = sector;
-    wi.pos = pos - sector->origin;
+    wi.pos = startPosition - sector->origin;
 
     QList<ReachabilityWorkItem> queue;
     queue << wi;
@@ -1006,7 +1003,7 @@ static void writeRegionLayer(QDataStream &stream, const QString &layerName, cons
     }
 }
 
-QByteArray NavigationMeshBuilder::build(const Troika::ZoneTemplate *tpl, const QVector<Vector4> &startPositions)
+QByteArray NavigationMeshBuilder::build(const Troika::ZoneTemplate *tpl, const QVector<QPoint> &startPositions)
 {
     QElapsedTimer timer;
     timer.start();
@@ -1093,7 +1090,7 @@ QByteArray NavigationMeshBuilder::build(const Troika::ZoneTemplate *tpl, const Q
         }
     }
 
-    foreach (const Vector4 &startPosition, startPositions) {
+    foreach (const QPoint &startPosition, startPositions) {
         findReachableTiles(startPosition, sectors);
     }
 
