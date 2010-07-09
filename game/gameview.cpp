@@ -27,6 +27,8 @@
 #include "models.h"
 #include "imageuploader.h"
 
+#include <QPointer>
+
 #include <gamemath.h>
 using namespace GameMath;
 
@@ -232,6 +234,8 @@ namespace EvilTemple {
 
         typedef QList<VisualTimer> VisualTimers;
         VisualTimers visualTimers;
+
+        QPointer<Renderable> lastMouseOverRenderable;
 
         LightDebugRenderer lightDebugger;
 
@@ -484,6 +488,17 @@ namespace EvilTemple {
             Matrix4 viewMatrix = d->renderStates.viewMatrix();
             d->renderStates.setViewMatrix(viewMatrix * transform);
             evt->accept();
+        } else {
+            Renderable *renderable = d->pickObject(evt->pos());
+            Renderable *lastMouseOver = d->lastMouseOverRenderable;
+
+            if (renderable != lastMouseOver) {
+                if (lastMouseOver)
+                    lastMouseOver->mouseLeaveEvent();
+                if (renderable)
+                    renderable->mouseEnterEvent();
+                d->lastMouseOverRenderable = renderable;
+            }
         }
 
         d->lastPoint = evt->pos();

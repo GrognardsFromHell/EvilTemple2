@@ -23,7 +23,7 @@ bool Material::loadFromFile(const QString &filename)
     QFile file(filename);
 
     if (!file.open(QIODevice::ReadOnly)) {
-        mError = file.error();
+        mError = file.errorString();
         return false;
     }
 
@@ -502,11 +502,29 @@ bool MaterialUniformBinding::load(const QDomElement &element)
     return true;
 }
 
+static MaterialTextureSampler::WrapMode parseWrapMode(const QString &text) {
+    if (text == "repeat")
+        return MaterialTextureSampler::Repeat;
+    else if (text == "wrap")
+        return MaterialTextureSampler::Wrap;
+    else if (text == "clamp")
+        return MaterialTextureSampler::Clamp;
+
+    qWarning("Unknown texture sampler wrap mode: %s", qPrintable(text));
+    return MaterialTextureSampler::Repeat;
+}
+
 bool MaterialTextureSampler::load(const QDomElement &element)
 {
     Q_ASSERT(element.hasAttribute("texture"));
 
     mTexture = element.attribute("texture");
+
+    if (element.hasAttribute("wrapU"))
+        mWrapU = parseWrapMode(element.attribute("wrapU"));
+
+    if (element.hasAttribute("wrapV"))
+        mWrapV = parseWrapMode(element.attribute("wrapV"));
 
     return true;
 }

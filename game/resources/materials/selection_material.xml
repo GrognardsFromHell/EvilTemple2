@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<material xmlns="http://hartte.de/eviltemple/material.xsd">
+
+  <pass>
+    <shader>
+      <vertexShader>
+        <code>
+          <![CDATA[
+#version 120
+
+uniform mat4 worldViewProjection;
+
+uniform float rotation = 0;
+
+attribute vec4 vertexPosition;
+attribute vec2 vertexTexCoord;
+
+varying vec2 texCoord;
+
+void main() {
+
+  float cosTheta = cos(rotation);
+  float sinTheta = sin(rotation);
+
+  mat3 rotMatrix = mat3(
+    cosTheta, 0, sinTheta,
+    0, 1, 0,
+    -sinTheta, 0, cosTheta
+  );
+
+  vec4 rotPos = vec4(rotMatrix * vertexPosition.xyz, 1);
+
+  gl_Position = worldViewProjection * rotPos;
+  texCoord = vertexTexCoord;
+}
+]]>
+        </code>
+      </vertexShader>
+
+      <fragmentShader>
+        <code>
+          <![CDATA[
+#version 120
+
+uniform vec4 color = vec4(1,1,1,1);
+uniform int type = 0;
+
+uniform sampler2D mouseDownSampler;
+uniform sampler2D mouseOverSampler;
+uniform sampler2D selectionSampler;
+
+varying vec2 texCoord;
+
+void main() {
+  if (type == 0)
+    gl_FragColor = texture2D(mouseDownSampler, texCoord);
+  else
+    gl_FragColor = texture2D(selectionSampler, texCoord);
+  gl_FragColor.rgb *= color.rgb;
+}
+]]>
+        </code>
+      </fragmentShader>
+
+      <attribute name="vertexPosition" buffer="positions" />
+      <attribute name="vertexTexCoord" buffer="texCoords" components="2" />
+
+      <uniform name="mouseDownSampler" semantic="Texture0" />
+      <uniform name="mouseOverSampler" semantic="Texture1" />
+      <uniform name="selectionSampler" semantic="Texture2" />
+      <uniform name="worldViewProjection" semantic="WorldViewProjection" />
+    </shader>
+
+    <textureSampler texture=":/material/mousedown.tga" wrapU="wrap" wrapV="wrap" />
+    <textureSampler texture=":/material/mouseover.tga" wrapU="wrap" wrapV="wrap" />
+    <textureSampler texture=":/material/selection.tga" wrapU="wrap" wrapV="wrap" />
+
+    <cullFace>false</cullFace>
+    <depthTest>false</depthTest>
+    <depthWrite>false</depthWrite>
+  </pass>
+
+</material>

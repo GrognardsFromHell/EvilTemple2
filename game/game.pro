@@ -53,7 +53,8 @@ SOURCES += \
     sectormap.cpp \
     navigationmesh.cpp \
     models.cpp \
-    imageuploader.cpp
+    imageuploader.cpp \
+    selectioncircle.cpp
 HEADERS += \
     mainwindow.h \
     game.h \
@@ -93,7 +94,8 @@ HEADERS += \
     navigationmesh.h \
     vertexbufferobject.h \
     models.h \
-    imageuploader.h
+    imageuploader.h \
+    selectioncircle.h
 OTHER_FILES += \
     resources/schema/materialfile.xsd \
     resources/materials/map_material.xml \
@@ -119,7 +121,8 @@ OTHER_FILES += \
     resources/materials/spheremap.frag \
     resources/materials/lighting.frag \
     resources/materials/lighting.vert \
-    resources/materials/textureanim.frag
+    resources/materials/textureanim.frag \
+    resources/materials/selection_material.xml
 
 INCLUDEPATH += .
 

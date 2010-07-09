@@ -397,6 +397,8 @@ inline const QVariant &MaterialUniformBinding::constantValue() const
 */
 class MaterialTextureSampler {
 public:
+    MaterialTextureSampler();
+
     /**
      * The filename of the texture that will be bound to this texturing stage.
      * The special filename #<name> can be used to reference textures within the same file.
@@ -407,13 +409,41 @@ public:
      * Loads this material texture from an XML element.
      */
     bool load(const QDomElement &element);
+
+    enum WrapMode {
+        Clamp,
+        Wrap,
+        Repeat
+    };
+
+    WrapMode wrapU() const;
+
+    WrapMode wrapV() const;
+
 private:
     QString mTexture;
+    WrapMode mWrapU;
+    WrapMode mWrapV;
 };
+
+inline MaterialTextureSampler::MaterialTextureSampler()
+    : mWrapU(Repeat), mWrapV(Repeat)
+{
+}
 
 inline const QString &MaterialTextureSampler::texture() const
 {
     return mTexture;
+}
+
+inline MaterialTextureSampler::WrapMode MaterialTextureSampler::wrapU() const
+{
+    return mWrapU;
+}
+
+inline MaterialTextureSampler::WrapMode MaterialTextureSampler::wrapV() const
+{
+    return mWrapV;
 }
 
 class MaterialPass {

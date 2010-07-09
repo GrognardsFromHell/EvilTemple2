@@ -295,6 +295,8 @@ namespace EvilTemple {
             SceneNode *node = d->scene->createNode();
             node->attachObject(sector);
         }
+
+        return true;
     }
 
     QVariant SectorMap::regionTag(const QString &layerName, const Vector4 &at) const

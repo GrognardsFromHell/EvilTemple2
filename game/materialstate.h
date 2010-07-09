@@ -177,21 +177,37 @@ public:
 
         void setSamplerId(int samplerId);
         void setTexture(const SharedTexture &texture);
+        void setWrapMode(GLenum wrapU, GLenum wrapV);
 private:
         int mSamplerId;
         SharedTexture mTexture;
+        GLenum mWrapU, mWrapV;
 };
+
+inline void MaterialTextureSamplerState::setWrapMode(GLenum wrapU, GLenum wrapV)
+{
+    mWrapU = wrapU;
+    mWrapV = wrapV;
+}
 
 inline void MaterialTextureSamplerState::bind()
 {
         glActiveTexture(GL_TEXTURE0 + mSamplerId);
-    mTexture->bind();
+        mTexture->bind();
+        if (mWrapU != GL_REPEAT)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, mWrapU);
+        if (mWrapV != GL_REPEAT)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, mWrapV);
         // TODO: Set sampler states (wrap+clam+filtering+etc)
 }
 
 inline void MaterialTextureSamplerState::unbind()
 {
         glActiveTexture(GL_TEXTURE0 + mSamplerId);
+        if (mWrapU != GL_REPEAT)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        if (mWrapV != GL_REPEAT)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         glBindTexture(GL_TEXTURE_2D, 0);
 }
 

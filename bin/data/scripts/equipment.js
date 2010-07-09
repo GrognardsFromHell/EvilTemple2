@@ -4,6 +4,8 @@ var equipment = {
 
 var modelToTypeMapping = {
         "meshes/pcs/pc_human_male/pc_human_male.model": 'human-male',
+        "meshes/npcs/elmo/npc_elmo.model": 'human-male',
+        "meshes/npcs/brother_smith/npc_brother_smith.model": 'human-male',
         "meshes/pcs/pc_human_female/pc_human_female.model": 'human-female',
         "meshes/pcs/pc_halforc_male/pc_halforc_male.model": 'halforc-male',
         "meshes/pcs/pc_halforc_female/pc_halforc_female.model": 'halforc-female'

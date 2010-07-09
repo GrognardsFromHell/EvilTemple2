@@ -21,7 +21,7 @@ class RenderStates;
 class Renderable : public QObject, public AlignedAllocation {
 Q_OBJECT
 Q_PROPERTY(Box3d boundingBox READ boundingBox)
-Q_PROPERTY(Matrix4 worldTransform READ worldTransform)
+// Q_PROPERTY(Matrix4 worldTransform READ worldTransform)
 Q_PROPERTY(SceneNode* parentNode READ parentNode)
 Q_PROPERTY(bool animated READ isAnimated WRITE setAnimated)
 // Q_PROPERTY(uint renderCategory READ renderCategory WRITE setRenderCategory)

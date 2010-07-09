@@ -118,6 +118,19 @@ static UniformBinder *createConstantBinder(const MaterialUniformBinding &binding
     return NULL;
 }
 
+static GLenum getSamplerWrapMode(MaterialTextureSampler::WrapMode mode)
+{
+    switch (mode) {
+    default:
+    case MaterialTextureSampler::Repeat:
+        return GL_REPEAT;
+    case MaterialTextureSampler::Clamp:
+        return GL_CLAMP;
+    case MaterialTextureSampler::Wrap:
+        return GL_MIRRORED_REPEAT;
+    }
+}
+
 bool MaterialState::createFrom(const Material &material, const RenderStates &states, TextureSource *textureSource)
 {
     passCount = material.passes().size();
@@ -157,6 +170,10 @@ bool MaterialState::createFrom(const Material &material, const RenderStates &sta
             MaterialTextureSamplerState &state = passState.textureSamplers[j];
 
             state.setSamplerId(j);
+
+            GLenum wrapU = getSamplerWrapMode(sampler.wrapU());
+            GLenum wrapV = getSamplerWrapMode(sampler.wrapV());
+            state.setWrapMode(wrapU, wrapV);
 
             state.setTexture(textureSource->loadTexture(sampler.texture()));
         }

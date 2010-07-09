@@ -33,6 +33,9 @@ vec2 textureSwirl(vec2 texCoordsIn, float t, float speed) {
 
     vec2 result = rotMatrix * vec2(texCoordsIn.x - 0.5, texCoordsIn.y - 0.5);
 
+    result.x += 0.5;
+    result.y += 0.5;
+
     return result;
 }
 

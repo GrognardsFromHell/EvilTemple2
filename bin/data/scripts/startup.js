@@ -60,11 +60,15 @@ var BaseObject = {
     registerHandlers: function(sceneNode, modelInstance) {
         var obj = this;
         modelInstance.mousePressed.connect(function() {
+            if (currentSelection != null)
+                currentSelection.obj.selectionCircle.selected = false;
+
             currentSelection = {
                 sceneNode: sceneNode,
                 obj: obj,
                 modelInstance: modelInstance
             };
+            obj.selectionCircle.selected = true;
 
             var mobileInfoDialog = gameView.addGuiItem("interface/MobileInfo.qml");
             var items = [];
@@ -446,8 +450,19 @@ function createMapObject(scene, obj)
     modelInstance.animationEvent.connect(function(type, content) {
         handleAnimationEvent(sceneNode, modelInstance, obj, type, content);
     });
-    if (obj.interactive)
+    if (obj.interactive) {
+        var selectionCircle = new SelectionCircle(scene, gameView.materials);
+
+        if (obj.radius !== undefined)
+            selectionCircle.radius = obj.radius;
+
+        selectionCircle.color = [0, 1, 0];
+
+        sceneNode.attachObject(selectionCircle);
+        obj.selectionCircle = selectionCircle;
+
         obj.registerHandlers(sceneNode, modelInstance);
+    }
     sceneNode.attachObject(modelInstance);
 }
 
@@ -484,7 +499,7 @@ function loadMap(filename) {
 
     gameView.sectorMap.load(filename.replace('map.js', '') + 'regions.dat');
 
-    gameView.sectorMap.createDebugView();
+    // gameView.sectorMap.createDebugView();
 
     print("Creating " + mapObj.staticObjects.length + " static objects.");
 

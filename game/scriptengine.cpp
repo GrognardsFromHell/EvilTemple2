@@ -13,6 +13,7 @@
 #include "sectormap.h"
 #include "models.h"
 #include "scenenode.h"
+#include "selectioncircle.h"
 #include "imageuploader.h"
 
 #include "renderable.h"
@@ -172,6 +173,26 @@ namespace EvilTemple {
          return engine->newQObject(result);
      }
 
+     static QScriptValue selectionCircleCtor(QScriptContext *context, QScriptEngine *engine)
+     {
+         if (!context->isCalledAsConstructor()) {
+             return context->throwError(QScriptContext::SyntaxError, "Please call this function as a "
+                                        "constructor using the 'new' keyword.");
+         }
+
+         Scene *scene = qobject_cast<Scene*>(context->argument(0).toQObject());
+         Materials *materials = qobject_cast<Materials*>(context->argument(1).toQObject());
+
+         if (!scene || !materials) {
+             return context->throwError(QScriptContext::SyntaxError, "A selectioncircle constructor requires the "
+                                        "scene as its first argument and materials as its second");
+         }
+
+         SelectionCircle *result = new SelectionCircle(materials);
+         result->setParent(scene);
+         return engine->newQObject(result);
+     }
+
      ScriptEngineData::ScriptEngineData(ScriptEngine *parent, Game *game)
      {
         engine = new QScriptEngine(parent);
@@ -194,6 +215,7 @@ namespace EvilTemple {
         registerQObject<EvilTemple::SceneNode>(engine, "SceneNode*");
         registerQObject<EvilTemple::Renderable>(engine, "Renderable*");
         registerQObject<EvilTemple::ParticleSystem>(engine, "ParticleSystem*");
+        registerQObject<EvilTemple::SelectionCircle>(engine, "SelectionCircle*");
         registerQObject<EvilTemple::ModelInstance>(engine, "ModelInstance*");
 
         // Add a function to read files
@@ -206,6 +228,7 @@ namespace EvilTemple {
         global.setProperty("ModelInstance", engine->newFunction(renderableCtor<ModelInstance>));
         global.setProperty("Light", engine->newFunction(renderableCtor<Light>));
         global.setProperty("LineRenderable", engine->newFunction(renderableCtor<LineRenderable>));
+        global.setProperty("SelectionCircle", engine->newFunction(selectionCircleCtor));
 
         // Register scriptable objects
         Vector4Scriptable::registerWith(engine);
