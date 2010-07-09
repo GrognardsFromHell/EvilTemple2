@@ -46,4 +46,6 @@ void ConvertTranslationsTask::run()
     }
 
     writer->addFile("translation.dat", result);
+
+    writer->close();
 }

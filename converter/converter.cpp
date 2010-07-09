@@ -34,24 +34,42 @@
 class ZipWriterHolder : public IFileWriter
 {
 public:
-    ZipWriterHolder(ZipWriter *writer) : mWriter(writer)
+    ZipWriterHolder(const QString &filename, ZipWriter *writer) : mWriter(writer), mClosed(false), mFilename(filename)
     {
     }
 
     ~ZipWriterHolder()
     {
         delete mWriter;
+        if (!mClosed) {
+            QFile::remove(mFilename);
+        }
     }
 
     void addFile(const QString &filename, const QByteArray &content, bool compressable);
 
+    void close();
+
 private:
     ZipWriter *mWriter;
+    bool mClosed;
+    QString mFilename;
 };
 
 void ZipWriterHolder::addFile(const QString &filename, const QByteArray &content, bool compressable)
 {
     mWriter->addFile(filename, content, compressable ? 9 : 0);
+}
+
+void ZipWriterHolder::close()
+{
+    mWriter->close();
+    mClosed = true;
+
+    QString newName = mFilename.left(mFilename.length() - 3) + "zip";
+
+    QFile::remove(newName);
+    QFile::rename(mFilename, newName);
 }
 
 class ConverterData : public QObject, public IConversionService {
@@ -105,7 +123,7 @@ public:
 
     IFileWriter *createOutput(const QString &groupName)
     {
-        return new ZipWriterHolder(new ZipWriter(mOutputPath + groupName + ".zip"));
+        return new ZipWriterHolder(mOutputPath + groupName + ".new", new ZipWriter(mOutputPath + groupName + ".new"));
     }
 
     Troika::VirtualFileSystem *virtualFileSystem()

@@ -8,7 +8,7 @@
 
 namespace Troika
 {
-    const QString PrototypesFile = "rules/protos.tab";   
+    const QString PrototypesFile = "rules/protos.tab";
 
     class PrototypesData
     {
@@ -16,8 +16,36 @@ namespace Troika
         VirtualFileSystem *vfs;
         QMap<uint,Prototype*> prototypes;
 
-        void load(QObject *parent)                
+        QHash<QString,QStringList> extraFlags;
+
+        void loadExtraFlags()
         {
+            QFile f(":/prototypes_flags.txt");
+
+            if (!f.open(QIODevice::Text|QIODevice::ReadOnly)) {
+                qWarning("Unable to open extra flags for prototypes.");
+                return;
+            }
+
+            while (!f.atEnd()) {
+                QString line = f.readLine().trimmed();
+
+                if (line.isEmpty())
+                    continue;
+                QStringList lineParts = line.split(' ');
+                if (lineParts.size() != 2) {
+                    qWarning("Invalid line: %s", qPrintable(line));
+                    continue;
+                }
+
+                extraFlags[lineParts[0]] = lineParts[1].split(';');
+            }
+        }
+
+        void load(QObject *parent)
+        {
+            loadExtraFlags();
+
             QByteArray data = vfs->openFile(PrototypesFile);
             QList<QByteArray> lines = data.split('\n');
 
@@ -48,6 +76,10 @@ namespace Troika
 
                 Prototype *prototype = new Prototype(id, parent);
                 prototype->parse(parts);
+
+                if (extraFlags.contains(QString("%1").arg(id)) && prototype->objectFlags.isEmpty()) {
+                    prototype->objectFlags = extraFlags[QString("%1").arg(id)];
+                }
 
                 prototypes[id] = prototype;
             }
@@ -230,7 +262,7 @@ namespace Troika
     }
 
     void Prototype::parse(const QStringList &parts)
-    {        
+    {
         bool ok;
 
         Q_ASSERT(isPartDefined(parts[1]));
@@ -244,6 +276,8 @@ namespace Troika
         }
 
         readFlagList(parts, 20, objectFlags, translateObjectFlag);
+        if (objectFlags.removeAll("DontDraw") > 0)
+            dontDraw.setValue(true);
 
         // 21: Spell Flags -> Unused
 

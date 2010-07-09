@@ -12,7 +12,11 @@ var npcAddMeshes = {}; // Maps npc addmesh ids to the actual addmeshes.
   */
 function teleportIcon(proto) {
 	proto.type = 'MapChanger';
-	proto.flags = [ "SeeThrough", "ShootThrough", "NoBlock", "ProvidesCover", "Invulnerable" ];
+	proto.flags = ["SeeThrough", "ShootThrough", "NoBlock", "ProvidesCover", "Invulnerable"];
+}
+
+function money(proto) {
+    proto.flags = ["Flat", "SeeThrough", "ShootThrough", "NoBlock"];
 }
 
 var processors = {};
@@ -21,7 +25,8 @@ processors.register = function(func, ids) {
 		this[ids[i]] = func;
 };
 
-processors.register(teleportIcon, ['2011', '2012', '2013', '2014', '2015', '2035', '2036', '2037', '2038', '2039']);	
+processors.register(money, ['7000', '7001', '7002', '7003']);
+processors.register(teleportIcon, ['2011', '2012', '2013', '2014', '2015', '2035', '2036', '2037', '2038', '2039']);
 
 var hairTypes = {
 	"Longhair (m/f)": 0,

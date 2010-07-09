@@ -134,10 +134,14 @@ void ModelWriter::writeAnimations(const Troika::MeshModel *model)
 
     QHash<uint, QString> animDataStartMap;
     animDataStartMap.reserve(skeleton->animations().size());
+    QHash<QString, QString> animAliasMap;
+
+    QHash<QByteArray, QString> animationHashes;
 
     foreach (const Troika::Animation &animation, skeleton->animations()) {
 
         if (animDataStartMap.contains(animation.keyFramesDataStart())) {
+            animAliasMap[animation.name()] = animDataStartMap[animation.keyFramesDataStart()];
             continue;
         }
 
@@ -163,6 +167,17 @@ void ModelWriter::writeAnimations(const Troika::MeshModel *model)
         }
 
         AnimationStream *animStream = animation.openStream(skeleton);
+
+        QByteArray hash = animStream->calculateHash();
+
+        if (animationHashes.contains(hash)) {
+            qDebug("Animation %s has same content as anim: %s", qPrintable(animation.name()),
+                   qPrintable(animationHashes[hash]));
+            animAliasMap[animation.name()] = animationHashes[hash];
+            continue;
+        } else {
+            animationHashes[hash] = animation.name();
+        }
 
         QHash<uint, Streams> streams;
         streams.reserve(skeleton->bones().size());
@@ -231,6 +246,9 @@ void ModelWriter::writeAnimations(const Troika::MeshModel *model)
     }
 
     finishChunk();
+
+    // Write the alias map
+    writeAnimationAliases(animAliasMap);
 }
 
 void ModelWriter::writeMaterialReferences(const QStringList &materials)
@@ -406,6 +424,15 @@ void ModelWriter::finishChunk()
     stream.device()->seek(endOfChunk);
 
     lastChunkStart = -1;
+}
+
+void ModelWriter::writeAnimationAliases(const QHash<QString, QString> &aliases)
+{
+    startChunk(AnimationAliases, false);
+
+    stream << aliases;
+
+    finishChunk();
 }
 
 void ModelWriter::finish()

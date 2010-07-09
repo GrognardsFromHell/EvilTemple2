@@ -24,6 +24,8 @@ public:
     virtual ~IFileWriter();
 
     virtual void addFile(const QString &filename, const QByteArray &content, bool compressable = true) = 0;
+
+    virtual void close() = 0;
 };
 
 inline IFileWriter::~IFileWriter()

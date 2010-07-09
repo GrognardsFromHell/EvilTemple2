@@ -1020,8 +1020,11 @@ QByteArray NavigationMeshBuilder::build(const Troika::ZoneTemplate *tpl, const Q
 
         sector->origin = QPoint(troikaSector.x * SectorSideLength, troikaSector.y * SectorSideLength);
 
-        QImage *image = NULL; // new QImage(256, 256, QImage::Format_RGB32);
-        // image.fill(0);
+        QImage *image = NULL;
+#ifndef QT_NO_DEBUG
+        image = new QImage(256, 256, QImage::Format_RGB32);
+        image->fill(0);
+#endif
 
         uchar footstepSound;
         uint bitfield;

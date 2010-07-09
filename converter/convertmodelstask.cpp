@@ -171,6 +171,8 @@ void ConvertModelsTask::convertReferencedMeshes()
     }
 
     convertMaterials(output.data());
+
+    output->close();
 }
 
 void ConvertModelsTask::convertMaterials(IFileWriter *output)

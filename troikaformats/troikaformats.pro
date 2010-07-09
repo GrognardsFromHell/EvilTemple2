@@ -52,3 +52,9 @@ include(../3rdparty/game-math/game-math.pri)
 PRECOMPILED_HEADER = stable.h
 
 include(../base.pri)
+
+RESOURCES += \
+    resources.qrc
+
+OTHER_FILES += \
+    prototypes_flags.txt

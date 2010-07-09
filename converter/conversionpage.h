@@ -2,6 +2,7 @@
 #define CONVERSIONPAGE_H
 
 #include <QWizardPage>
+#include <QFile>
 
 class QAxObject;
 
@@ -36,6 +37,7 @@ protected:
 private:
     Ui::ConversionPage *ui;
     ConversionThread *conversionThread;
+    QFile logFile;
 #ifdef Q_OS_WIN32
     QAxObject *mTaskbarList;
     bool mDontUseTaskbarList;

@@ -125,9 +125,9 @@ namespace Troika
     };
 
     static const QString ObjectFlagNames[32] = {
-        "Destroyed",
-        "Off",
-        "Flat",
+        "Destroyed", // Not used
+        "Off", // Used
+        "Flat", // Isn't this better handled by the prototype?
         "Text",
         "SeeThrough",
         "ShootThrough",
@@ -137,7 +137,7 @@ namespace Troika
         "Invisible",
         "NoBlock",
         "ClickThrough",
-        "Inventory",
+        "", // Inventory. Now induced implicitly
         "Dynamic",
         "ProvidesCover",
         "RandomSize",
@@ -146,7 +146,7 @@ namespace Troika
         "Unknown18",
         "Stoned",
         "DontLight",
-        "TextFloater",
+        "", // TextFloater, purpose unknown
         "Invulnerable",
         "Extinct",
         "TrapPc",
@@ -196,18 +196,18 @@ namespace Troika
 
     static const QString ContainerFlagNames[32] = {
         "Locked",
-        "Jammed",
-        "MagicallyHeld",
+        "Jammed", // Unused
+        "MagicallyHeld", // Unused
         "NeverLocked",
-        "AlwaysLocked",
-        "LockedDay",
-        "LockedNight",
-        "Busted",
-        "NotSticky",
-        "InvenSpaceOnce",
-        "InvenSpaceIndependent",
-        "Open",
-        "HasBeenOpened",
+        "AlwaysLocked", // Unused
+        "LockedDay", // Unused
+        "LockedNight", // Unused
+        "Busted", // Unused
+        "NotSticky", // Unused
+        "InvenSpaceOnce", // Unused
+        "InvenSpaceIndependent", // Unused
+        "Open", // Unused
+        "HasBeenOpened", // Unused
         "Unknown13",
         "Unknown14",
         "Unknown15",
@@ -509,6 +509,24 @@ namespace Troika
         "Extraplanar"
     };
 
+    static bool equalFlags(const QStringList &a, const QStringList &b)
+    {
+        if (a.size() != b.size())
+            return false;
+
+        foreach (const QString &elem, a) {
+            if (!b.contains(elem))
+                return false;
+        }
+
+        return true;
+    }
+
+    static QVector3D getPosition(uint x, uint y, float xOffset, float yOffset)
+    {
+        return QVector3D((x + 0.5f) * PixelPerWorldTile + xOffset, 0, (y + 0.5f) * PixelPerWorldTile + yOffset);
+    }
+
     GameObject::GameObject() : prototype(0)
     {
     }
@@ -735,7 +753,9 @@ namespace Troika
             case Flags:
                 stream >> flags;
                 convertFlags(ObjectFlagNames, flags, object.flags);
-                if (object.flags == object.prototype->objectFlags)
+                if (object.flags.removeAll("DontDraw") > 0 && !object.prototype->dontDraw.isDefined())
+                    object.dontDraw.setValue(true);
+                if (object.flags.toSet() == object.prototype->objectFlags.toSet())
                     object.flags.clear();
                 break;
             case Radius:
@@ -819,6 +839,8 @@ namespace Troika
                 break;
             case Dispatcher:
                 stream >> object.dispatcher;
+                if (object.dispatcher.value() == -1)
+                    object.dispatcher.clear();
                 break;
             case SecretDoorEffectName:
                 stream >> object.secretDoorEffect; // Hashed particle system name?
@@ -832,6 +854,12 @@ namespace Troika
             case ContainerFlags:
                 stream >> flags;
                 convertFlags(ContainerFlagNames, flags, object.containerFlags);
+                if (object.containerFlags.contains("Locked"))
+                    object.locked.setValue(true);
+                else if (object.containerFlags.contains("NeverLocked"))
+                    object.locked.setValue(false);
+                if (object.locked.value() == qobject_cast<ContainerProperties*>(object.prototype->additionalProperties)->locked)
+                    object.locked.clear();
                 break;
             case ContainerLockDc:
                 stream >> object.containerLockDc;
@@ -851,6 +879,8 @@ namespace Troika
             case ItemFlags:
                 stream >> flags;
                 convertFlags(ItemFlagNames, flags, object.itemFlags);
+                if (object.itemFlags.toSet() == qobject_cast<ItemProperties*>(object.prototype->additionalProperties)->flags.toSet())
+                    object.itemFlags.clear();
                 break;
             case ItemWeight:
                 stream >> object.itemWeight;
@@ -864,6 +894,8 @@ namespace Troika
             case WeaponFlags:
                 stream >> flags;
                 convertFlags(WeaponFlagNames, flags, object.weaponFlags);
+                if (object.weaponFlags.toSet() == qobject_cast<WeaponProperties*>(object.prototype->additionalProperties)->flags.toSet())
+                    object.weaponFlags.clear();
                 break;
             case AmmoQuantity:
                 stream >> object.ammoQuantity;
@@ -871,6 +903,8 @@ namespace Troika
             case ArmorFlags:
                 stream >> flags;
                 convertFlags(ArmorFlagNames, flags, object.armorFlags);
+                if (object.armorFlags.toSet() == qobject_cast<ArmorProperties*>(object.prototype->additionalProperties)->flags.toSet())
+                    object.armorFlags.clear();
                 break;
             case ArmoryACAdjustment:
                 stream >> object.armorAcAdjustment;
@@ -890,6 +924,8 @@ namespace Troika
             case CritterFlags:
                 stream >> flags;
                 convertFlags(CritterFlagNames, flags, object.critterFlags);
+                if (object.critterFlags.toSet() == qobject_cast<CritterProperties*>(object.prototype->additionalProperties)->flags.toSet())
+                    object.critterFlags.clear();
                 break;
             case CritterFlags2:
                 stream >> flags;
@@ -902,7 +938,8 @@ namespace Troika
                 stream >> object.critterGender;
                 break;
             case CritterMoneyIndex:
-                stream >> object.critterMoneyIndex;
+                //stream >> object.critterMoneyIndex;
+                skipPropertyArray();
                 break;
             case CritterInventoryNum:
                 stream >> object.critterInventoryNum;
@@ -926,6 +963,8 @@ namespace Troika
             case NpcFlags:
                 stream >> flags;
                 convertFlags(NpcFlagNames, flags, object.npcFlags);
+                if (object.npcFlags.toSet() == qobject_cast<NonPlayerCharacterProperties*>(object.prototype->additionalProperties)->flags.toSet())
+                    object.npcFlags.clear();
                 break;
             case NpcStandpointDayInternal:
                 stream.skipRawData(9);
@@ -937,14 +976,13 @@ namespace Troika
                 stream >> object.blitAlpha;
                 break;
             case NpcWaypoints:
-                // LoadWaypoints(reader);
-                skipPropertyArray();
+                readWaypoints();
                 break;
             case NpcStandpoints:
                 readStandpoints();
                 break;
             case NpcFaction:
-                skipPropertyArray();
+                readFactions();
                 break;
             case CritterInventoryListIndex:
                 skipPropertyArray();
@@ -959,13 +997,15 @@ namespace Troika
                 // reader.ReadUInt32();
                 break;
             case CritterAbilitiesIndex:
-                skipPropertyArray();
+                                readAbilities();
                 break;
             case NpcGeneratorData:
                 stream >> object.npcGeneratorData; // This information is packed.
                 break;
             case CritterAlignment:
                 stream >> object.critterAlignment; // Format unknown
+                // Used for only 2 NPCs overall, ignore it for now
+                // qDebug("Critter-Alignment: %d", object.critterAlignment.value());
                 break;
             case ItemPadWielderArgumentArray:
                 skipPropertyArray();
@@ -1004,6 +1044,110 @@ namespace Troika
             }
         }
 
+        void readAbilities()
+        {
+            uchar version;
+            uint recordSize, recordCount, structureId;
+
+            stream >> version >> recordSize >> recordCount >> structureId;
+
+            Q_ASSERT(version == 1);
+            Q_ASSERT(recordSize == 4);
+
+            stream >> object.strength >> object.dexterity >> object.constitution >> object.intelligence
+                    >> object.wisdom >> object.charisma;
+
+            /*
+             To use as little data as possible per map, reset every value that corresponds with the prototype.
+             */
+            CritterProperties *critterProps = qobject_cast<CritterProperties*>(object.prototype->additionalProperties);
+            Q_ASSERT(critterProps);
+            if (object.strength.value() == critterProps->strength)
+                object.strength.clear();
+            if (object.dexterity.value() == critterProps->dexterity)
+                object.dexterity.clear();
+            if (object.constitution.value() == critterProps->constitution)
+                object.constitution.clear();
+            if (object.intelligence.value() == critterProps->intelligence)
+                object.intelligence.clear();
+            if (object.wisdom.value() == critterProps->wisdom)
+                object.wisdom.clear();
+            if (object.charisma.value() == critterProps->charisma)
+                object.charisma.clear();
+
+            uint trailingNumberCount;
+            stream >> trailingNumberCount;
+            stream.skipRawData(sizeof(uint) * trailingNumberCount);
+        }
+
+        void readWaypoints()
+        {
+            uchar version;
+            uint recordSize, recordCount, structureId, waypointCount;
+
+            stream >> version;
+            Q_ASSERT(version == 1);
+            stream >> recordSize >> recordCount >> structureId >> waypointCount;
+
+            stream.skipRawData(12); // Unused
+
+            for (uint i = 0; i < waypointCount; ++i) {
+                GameObject::Waypoint waypoint;
+
+                uint flags, x, y, delay;
+                uchar animation;
+                float rotation, xOffset, yOffset;
+
+                stream >> flags >> x >> y >> xOffset >> yOffset >> rotation;
+
+                waypoint.position = getPosition(x, y, xOffset, yOffset);
+                if (flags & 1)
+                    waypoint.rotation.setValue(rotation);
+                for (int i = 0; i < 8; ++i) {
+                    stream >> animation;
+                    if (flags & 4 && animation > 0)
+                        waypoint.animations.append(animation);
+                }
+
+                stream >> delay;
+                stream.skipRawData(sizeof(uint) * 7);
+
+                if (flags & 2)
+                    waypoint.delay.setValue(delay);
+
+                object.waypoints.append(waypoint);
+            }
+
+            // The structure seems to be padded, skip rest
+            stream.skipRawData(qMax<int>(0, recordSize * recordCount - waypointCount * 64 - 16));
+
+            uint trailingNumberCount;
+            stream >> trailingNumberCount;
+            stream.skipRawData(sizeof(uint) * trailingNumberCount);
+        }
+
+        void readFactions()
+        {
+            uchar version;
+            uint recordSize, recordCount, structureId;
+
+            stream >> version >> recordSize >> recordCount >> structureId;
+
+            Q_ASSERT(version == 1);
+            Q_ASSERT(recordSize == 4);
+
+            uint faction;
+
+            for (uint i = 0; i < recordCount; ++i) {
+                stream >> faction;
+                object.factions.append(faction);
+            }
+
+            uint trailingNumberCount;
+            stream >> trailingNumberCount;
+            stream.skipRawData(sizeof(uint) * trailingNumberCount);
+        }
+
         void readStandpoints()
         {
             quint32 SAR_POS_STN, dayMap, dayFlags, dayX, dayY, dayJP, nightMap, nightFlags, nightX, nightY, nightJP;
@@ -1015,8 +1159,8 @@ namespace Troika
 
             // Skip the pre-struct
             stream.skipRawData(1 + 4);
-            quint32 type;
-            stream >> type;
+            stream >> object.standpointFlags;
+            quint32 type = object.standpointFlags.value();
 
             // Load the SARC thingie
             stream >> SAR_POS_STN; // SAR_POS_STN
@@ -1024,14 +1168,33 @@ namespace Troika
             // Load standpoints
             stream >> dayMap >> dayFlags >> dayX >> dayY >> dayXOffset >> dayYOffset >> dayJP;
             stream.skipRawData(52);
+            if (type & 0x14) {
+                object.dayStandpoint.defined = true;
+                object.dayStandpoint.flags = dayFlags;
+                object.dayStandpoint.jumpPoint = dayJP;
+                object.dayStandpoint.map = dayMap;
+                object.dayStandpoint.position = getPosition(dayX, dayY, dayXOffset, dayYOffset);
+            }
 
             stream >> nightMap >> nightFlags >> nightX >> nightY >> nightXOffset >> nightYOffset >> nightJP;
             stream.skipRawData(52);
+            if (type & 0x14) {
+                object.nightStandpoint.defined = true;
+                object.nightStandpoint.flags = nightFlags;
+                object.nightStandpoint.jumpPoint = nightJP;
+                object.nightStandpoint.map = nightMap;
+                object.nightStandpoint.position = getPosition(nightX, nightY, nightXOffset, nightYOffset);
+            }
 
             if (type == 0x1E)
             {
                 stream >> scoutMap >> scoutFlags >> scoutX >> scoutY >> scoutXOffset >> scoutYOffset >> scoutJP;
                 stream.skipRawData(52);
+                object.scoutStandpoint.defined = true;
+                object.scoutStandpoint.flags = scoutFlags;
+                object.scoutStandpoint.jumpPoint = scoutJP;
+                object.scoutStandpoint.map = scoutMap;
+                object.scoutStandpoint.position = getPosition(scoutX, scoutY, scoutXOffset, scoutYOffset);
             }
 
             // Skip the post-struct

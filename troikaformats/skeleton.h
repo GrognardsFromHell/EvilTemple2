@@ -70,14 +70,16 @@ namespace Troika
 
         const AnimationBoneState *getBoneState(quint16 boneId) const;
 
+        QByteArray calculateHash();
+
         bool atEnd() const;
         void readNextFrame();
         void seek(int frame);
         void rewind();
 
-		int getNextFrameId() const {
-			return nextFrameId;
-		}
+        int getNextFrameId() const {
+            return nextFrameId;
+        }
 
     private:
         QHash<uint,uint> _remappedBones;
@@ -99,14 +101,14 @@ namespace Troika
         float translationFactor; // ToEE stores translation components as shorts and multiplies with this factor
         static const float rotationFactor; // ToEE uses a static factor for rotations
         qint16 nextFrameId; // Id of next key frame
-		int frameCount;
+                int frameCount;
 
         int countBones();
     };
 
     inline bool AnimationStream::atEnd() const
     {
-		return nextFrameId == -1 || stream.atEnd();
+        return nextFrameId == -1 || stream.atEnd();
     }
 
     inline const AnimationBoneState *AnimationStream::getBoneState(quint16 boneId) const
@@ -180,7 +182,7 @@ namespace Troika
 
         float dps() const
         {
-            return _dps;            
+            return _dps;
         }
 
         void setDps(float dps)
@@ -204,9 +206,9 @@ namespace Troika
             _keyFramesDataStart = dataStart;
         }
 
-		uint keyFramesDataStart() const {
-			return _keyFramesDataStart;
-		}
+                uint keyFramesDataStart() const {
+                        return _keyFramesDataStart;
+                }
 
         /**
           Opens a stream for the key frames of this animation.
@@ -225,8 +227,8 @@ namespace Troika
         float _dps; // Distance per second (both rotation & distance)
         quint32 _keyFramesDataStart; // The offset in the stream where the key frame data starts
         QByteArray _keyFramesData; // Animation data. Only used for reading key frames @ _keyFramesDataStart
-        QVector<AnimationEvent> _events; // Events that are triggered by reaching a certain frame        
-    };    
+        QVector<AnimationEvent> _events; // Events that are triggered by reaching a certain frame
+    };
 
     class TROIKAFORMATS_EXPORT Skeleton
     {
@@ -252,7 +254,7 @@ namespace Troika
           @returns Null if no animation with the given name could be found.
           */
         const Animation *findAnimation(const QString &name) const;
-		
+
     private:
         QScopedPointer<SkeletonData> d_ptr;
         Q_DISABLE_COPY(Skeleton);

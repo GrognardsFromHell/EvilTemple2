@@ -1,5 +1,6 @@
 
 #include <QThread>
+#include <QTextStream>
 #include <QUuid>
 #include <QDir>
 
@@ -17,26 +18,32 @@ static QtMsgHandler oldMsgHandler = NULL;
 
 static QTextBrowser *logBrowser = NULL;
 
+static QTextStream *logStream = NULL;
+
 static void handleQtMessage(QtMsgType type, const char *msg)
 {
+    QString text = QString::fromLocal8Bit(msg);
+
+    switch (type) {
+    case QtDebugMsg:
+        text.prepend("[DEBUG] ");
+        break;
+    case QtWarningMsg:
+        text.prepend("[WARN] ");
+        break;
+    case QtCriticalMsg:
+        text.prepend("[CRITICAL] ");
+        break;
+    case QtFatalMsg:
+        text.prepend("[FATAL] ");
+        break;
+    }
+
+    if (logStream) {
+        (*logStream) << text << endl;
+    }
+
     if (logBrowser) {
-        QString text = QString::fromLocal8Bit(msg);
-
-        switch (type) {
-        case QtDebugMsg:
-            text.prepend("[DEBUG] ");
-            break;
-        case QtWarningMsg:
-            text.prepend("[WARN] ");
-            break;
-        case QtCriticalMsg:
-            text.prepend("[CRITICAL] ");
-            break;
-        case QtFatalMsg:
-            text.prepend("[FATAL] ");
-            break;
-        }
-
         // Appending cannot be done in the same thread
         QMetaObject::invokeMethod(logBrowser, "append", Qt::QueuedConnection, Q_ARG(QString, text));
     }
@@ -175,6 +182,15 @@ void ConversionPage::initializePage()
 
     logBrowser = ui->textBrowser;
     oldMsgHandler = qInstallMsgHandler(handleQtMessage);
+
+    logFile.setFileName("converter.log");
+
+    if (logFile.open(QIODevice::Truncate|QIODevice::WriteOnly|QIODevice::Text)) {
+        delete logStream;
+        logStream = new QTextStream(&logFile);
+    } else {
+        qWarning("Unable to create conversion logfile converter.log: %s", qPrintable(logFile.errorString()));
+    }
 
     connect(conversionThread, SIGNAL(started()), SLOT(threadStarted()));
     connect(conversionThread, SIGNAL(finished()), SLOT(threadStopped()));

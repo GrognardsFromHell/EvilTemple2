@@ -30,6 +30,52 @@ static QVariantMap convertPathNodes(const QString &directory, IConversionService
     return converter.convert();
 }
 
+static QVariantMap waypointToMap(const GameObject::Waypoint &waypoint)
+{
+    QVariantMap result;
+
+    result["position"] = vectorToList(waypoint.position);
+    if (waypoint.rotation.isDefined())
+        result["rotation"] = waypoint.rotation.value();
+    if (waypoint.delay.isDefined())
+        result["delay"] = waypoint.delay.value();
+
+    if (!waypoint.animations.isEmpty()) {
+        QVariantList animations;
+        foreach (uint anim, waypoint.animations)
+            animations.append(anim);
+        result["animations"] = animations;
+    }
+
+    return result;
+}
+
+static QVariantMap standpointToMap(const GameObject::Standpoint &standpoint)
+{
+    QVariantMap result;
+
+    if (standpoint.defined) {
+        if (standpoint.jumpPoint != -1) {
+            result["jumpPoint"] = standpoint.jumpPoint;
+        } else {
+            result["map"] = standpoint.map;
+            result["position"] = vectorToList(standpoint.position);
+        }
+    }
+
+    return result;
+}
+
+static QVariantList factionsToList(const QList<uint> &factions)
+{
+    QVariantList result;
+
+    foreach (uint faction, factions)
+        result.append(faction);
+
+    return result;
+}
+
 static QVariant toVariant(IConversionService *service, GameObject *object)
 {
     QVariantMap objectMap;
@@ -74,7 +120,8 @@ static QVariant toVariant(IConversionService *service, GameObject *object)
     props.write("dispatcher", object->dispatcher);
     props.write("secretDoorEffect", object->secretDoorEffect);
     props.write("notifyNpc", object->notifyNpc);
-    props.write("containerFlags", object->containerFlags);
+    props.write("dontDraw", object->dontDraw);
+    // props.write("containerFlags", object->containerFlags);
     props.write("containerLockDc", object->containerLockDc);
     props.write("containerKeyId", object->containerKeyId);
     props.write("containerInventoryId", object->containerInventoryId);
@@ -100,6 +147,31 @@ static QVariant toVariant(IConversionService *service, GameObject *object)
     props.write("critterInventoryNum", object->critterInventoryNum);
     props.write("critterInventorySource", object->critterInventorySource);
     props.write("npcFlags", object->npcFlags);
+    props.write("factions", factionsToList(object->factions));
+    props.write("locked", object->locked);
+
+    props.write("strength", object->strength);
+    props.write("dexterity", object->dexterity);
+    props.write("constitution", object->constitution);
+    props.write("intelligence", object->intelligence);
+    props.write("wisdom", object->wisdom);
+    props.write("charisma", object->charisma);
+
+    // Standpoints
+    props.write("standpointFlags", object->standpointFlags);
+    props.write("standpointDay", standpointToMap(object->dayStandpoint));
+    props.write("standpointNight", standpointToMap(object->nightStandpoint));
+    props.write("standpointScout", standpointToMap(object->scoutStandpoint));
+
+    if (!object->waypoints.isEmpty()) {
+        QVariantList waypoints;
+
+        foreach (const GameObject::Waypoint &waypoint, object->waypoints) {
+            waypoints.append(waypointToMap(waypoint));
+        }
+
+        props.write("waypoints", waypoints);
+    }
 
     if (!object->content.isEmpty()) {
         QVariantList content;
@@ -114,13 +186,13 @@ static QVariant toVariant(IConversionService *service, GameObject *object)
 
 void ConvertMapsTask::convertStaticObjects(ZoneTemplate *zoneTemplate, IFileWriter *writer)
 {
-    QHash<uint,QString> descriptions = MessageFile::parse(service()->virtualFileSystem()->openFile("mes/description.mes"));
+    QHash<uint, QString> descriptions = service()->openMessageFile("mes/description.mes");
 
     QVariantMap mapObject;
 
     mapObject["name"] = zoneTemplate->name();
 
-    mapObject["waypoints"] = convertPathNodes(zoneTemplate->directory(), service());
+    //mapObject["pathNodes"] = convertPathNodes(zoneTemplate->directory(), service());
 
     mapObject["scrollBox"] = QVariantList() << zoneTemplate->scrollBox().minimum().x()
                              << zoneTemplate->scrollBox().minimum().y()
@@ -431,8 +503,9 @@ QString ConvertMapsTask::description() const
 
 void ConvertMapsTask::run()
 {
-    QScopedPointer<IFileWriter> writer(service()->createOutput("maps"));
-    MapConverter converter(service(), writer.data());
+    QScopedPointer<IFileWriter> backgroundOutput(service()->createOutput("backgrounds"));
+    QScopedPointer<IFileWriter> mapsOutput(service()->createOutput("maps"));
+    MapConverter converter(service(), backgroundOutput.data());
 
     ZoneTemplates *zoneTemplates = service()->zoneTemplates();
 
@@ -466,18 +539,21 @@ void ConvertMapsTask::run()
                 service()->addMeshReference(object->mesh());
             }
 
-            convertStaticObjects(zoneTemplate.data(), writer.data());
+            convertStaticObjects(zoneTemplate.data(), mapsOutput.data());
 
-            convertClippingMeshes(service(), zoneTemplate.data(), writer.data());
+            convertClippingMeshes(service(), zoneTemplate.data(), mapsOutput.data());
 
             QVector<QPoint> startPositions;
             startPositions.append(zoneTemplate->startPosition());
             QByteArray navmeshes = NavigationMeshBuilder::build(zoneTemplate.data(), startPositions);
-            writer->addFile(zoneTemplate->directory() + "regions.dat", navmeshes);
+            mapsOutput->addFile(zoneTemplate->directory() + "regions.dat", navmeshes);
         } else {
             qWarning("Unable to load zone template for map id %d.", mapId);
         }
 
         emit progress(workDone, totalWork);
     }
+
+    backgroundOutput->close();
+    mapsOutput->close();
 }

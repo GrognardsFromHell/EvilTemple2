@@ -2,6 +2,7 @@
 #include "skeleton.h"
 #include "model.h"
 
+#include <QCryptographicHash>
 #include <QDataStream>
 
 namespace Troika
@@ -342,6 +343,32 @@ namespace Troika
         }
 
         return bones;
+    }
+
+    QByteArray AnimationStream::calculateHash()
+    {
+        QCryptographicHash hash(QCryptographicHash::Md5);
+
+        qint64 start = _dataStart + 2 * sizeof(float);
+
+        rewind();
+
+        while (nextFrameId != -1)
+            readNextFrame();
+
+        qint64 end = stream.device()->pos();
+
+        rewind();
+
+        QBuffer *buffer = qobject_cast<QBuffer*>(stream.device());
+
+        Q_ASSERT(buffer);
+
+        const char *hashStart = buffer->data().constData() + start;
+
+        hash.addData(hashStart, end - start);
+
+        return hash.result();
     }
 
     void AnimationStream::readNextFrame()

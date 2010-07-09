@@ -57,6 +57,8 @@ void ConvertSoundsTask::run()
     // Create a mapping
     QJson::Serializer serializer;
     writer->addFile("sound/sounds.js", serializer.serialize(soundMapping));
+
+    writer->close();
 }
 
 uint ConvertSoundsTask::cost() const

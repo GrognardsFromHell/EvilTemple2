@@ -335,4 +335,6 @@ void ConvertParticleSystemsTask::run()
             qWarning("Missing file: %s", qPrintable(particleFile));
         }
     }
+
+    writer->close();
 }

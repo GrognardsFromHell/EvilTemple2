@@ -139,4 +139,6 @@ void ConvertScriptsTask::run()
     engine.evaluate(scriptCode, "scripts/converter.js");
 
     convertPrototypes(writer.data(), &engine);
+
+    writer->close();
 }

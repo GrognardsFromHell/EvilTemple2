@@ -33,6 +33,15 @@ namespace Troika
         GameObject();
         ~GameObject();
 
+        Integer strength;
+        Integer dexterity;
+        Integer constitution;
+        Integer intelligence;
+        Integer wisdom;
+        Integer charisma;
+
+        Bool dontDraw;
+
         Prototype *prototype;
         QString id; // object guid
         ObjectType objectType; // Must match prototype type
@@ -87,8 +96,10 @@ namespace Troika
         Integer critterMoneyIndex;
         Integer critterInventoryNum;
         Integer critterInventorySource;
+        Bool locked;
 
-        struct TeleportDestination {
+        struct TeleportDestination
+        {
             TeleportDestination() : defined(false) {}
             bool defined;
             uchar unknown;
@@ -104,6 +115,34 @@ namespace Troika
         Integer npcGeneratorData;
         Integer critterAlignment;
 
+        QList<uint> factions;
+
+        Integer standpointFlags;
+        struct Standpoint
+        {
+            Standpoint() : defined(false) {}
+
+            bool defined;
+            uint map;
+            uint flags;
+            QVector3D position;
+            int jumpPoint;
+        };
+
+        Standpoint dayStandpoint;
+        Standpoint nightStandpoint;
+        Standpoint scoutStandpoint;
+
+        struct Waypoint
+        {
+            uint flags;
+            QVector3D position;
+            Float rotation;
+            Integer delay;
+            QList<uint> animations;
+        };
+
+        QList<Waypoint> waypoints;
 
         QList<GameObject*> content; // Based on parentitemid relation
 

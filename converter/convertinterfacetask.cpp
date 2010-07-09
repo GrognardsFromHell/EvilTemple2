@@ -16,6 +16,8 @@ void ConvertInterfaceTask::run()
 
     convertImages(writer.data());
     convertTextures(writer.data());
+
+    writer->close();
 }
 
 uint ConvertInterfaceTask::cost() const

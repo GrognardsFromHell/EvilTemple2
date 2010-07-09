@@ -43,6 +43,7 @@ namespace Troika
 
     class Float : public Property<float> {};
     class Integer : public Property<int> {};
+    class Bool : public Property<bool> {};
 
     enum ObjectType
     {
@@ -431,7 +432,7 @@ namespace Troika
     class TROIKAFORMATS_EXPORT Prototype : public QObject
     {
     Q_OBJECT
-    public:        
+    public:
         explicit Prototype(int id, QObject *parent = 0);
 
         void parse(const QStringList &parts);
@@ -453,6 +454,7 @@ namespace Troika
         quint16 modelId;
         Float radius;
         Float renderHeight;
+        Bool dontDraw;
 
         AdditionalProperties *additionalProperties;
 
