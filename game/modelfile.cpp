@@ -19,6 +19,7 @@ namespace EvilTemple {
         Chunk_BoneAttachments = 7, // Assigns vertices to bones
         Chunk_BoundingVolumes = 8, // Bounding volumes,
         Chunk_Animations = 9, // Animations
+        Chunk_AnimationAliases = 10, // Aliases for animations
         Chunk_Metadata = 0xFFFF,  // Last chunk is always metadata
     };
 
@@ -137,7 +138,7 @@ namespace EvilTemple {
                 return false;
             }
 
-            if (chunkHeader.type < Chunk_Textures || chunkHeader.type > Chunk_Animations) {
+            if (chunkHeader.type < Chunk_Textures || chunkHeader.type > Chunk_AnimationAliases) {
                 // Skip, unknown chunk
                 mError.append(QString("WARN: Unknown chunk type %1 in model file %2.").arg(chunkHeader.type).arg(filename));
                 file.seek(file.pos() + chunkHeader.size);
@@ -314,7 +315,23 @@ namespace EvilTemple {
                     stream >> animation;
                     mAnimationMap[animation.name()] = &animation;
                 }
+            } else if (chunkHeader.type == Chunk_AnimationAliases) {
+                QDataStream stream(QByteArray::fromRawData(chunkData.data(), chunkHeader.size));
+                stream.setByteOrder(QDataStream::LittleEndian);
+                stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
 
+                QHash<QString, QString> animationMap;
+                stream >> animationMap;
+
+                foreach (const QString &anim, animationMap.keys()) {
+                    QString mapTo = animationMap[anim];
+                    if (!mAnimationMap.contains(mapTo)) {
+                        qWarning("Animation %s in animation map maps to unknown animation %s.",
+                                 qPrintable(anim), qPrintable(mapTo));
+                    } else {
+                        mAnimationMap[anim] = mAnimationMap[mapTo];
+                    }
+                }
             } else {
                 qFatal("Unknown chunk type encountered, although asserted before!");
             }

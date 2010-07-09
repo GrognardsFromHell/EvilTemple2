@@ -145,6 +145,20 @@ void ModelWriter::writeAnimations(const Troika::MeshModel *model)
             continue;
         }
 
+        AnimationStream *animStream = animation.openStream(skeleton);
+
+        QByteArray hash = animStream->calculateHash();
+
+        if (animationHashes.contains(hash)) {
+            qDebug("Animation %s has same content as anim: %s", qPrintable(animation.name()),
+                   qPrintable(animationHashes[hash]));
+            animAliasMap[animation.name()] = animationHashes[hash];
+            animDataStartMap[animation.keyFramesDataStart()] = animationHashes[hash];
+            continue;
+        } else {
+            animationHashes[hash] = animation.name();
+        }
+
         animDataStartMap[animation.keyFramesDataStart()] = animation.name();
 
         // How do we ensure padding if the animations have variable length names?
@@ -164,19 +178,6 @@ void ModelWriter::writeAnimations(const Troika::MeshModel *model)
                 qFatal("Unknown event type: %s.", qPrintable(event.type));
 
             stream << event.action.toUtf8();
-        }
-
-        AnimationStream *animStream = animation.openStream(skeleton);
-
-        QByteArray hash = animStream->calculateHash();
-
-        if (animationHashes.contains(hash)) {
-            qDebug("Animation %s has same content as anim: %s", qPrintable(animation.name()),
-                   qPrintable(animationHashes[hash]));
-            animAliasMap[animation.name()] = animationHashes[hash];
-            continue;
-        } else {
-            animationHashes[hash] = animation.name();
         }
 
         QHash<uint, Streams> streams;
