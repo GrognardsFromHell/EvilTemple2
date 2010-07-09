@@ -14,12 +14,12 @@ CONFIG(debug, debug|release) {
     CONFIG += console
 }
 
-
 CONFIG += console
 
 win32:RC_FILE = icon.rc
 
 include(../base.pri)
+include(../3rdparty/google-breakpad.pri)
 
 OTHER_FILES += \
     icon.rc \

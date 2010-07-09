@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?><?xml-stylesheet type='text/xsl' href='_UpgradeReport_Files/UpgradeReport.xslt'?><UpgradeLog>
+<Properties><Property Name="Solution" Value="ms_symbol_server_converter">
+</Property><Property Name="Solution File" Value="C:\Users\Sebastian\Code\EvilTemple\3rdparty\google-breakpad\src\tools\windows\converter\ms_symbol_server_converter.sln">
+</Property><Property Name="Date" Value="Freitag, 9. Juli 2010">
+</Property><Property Name="Time" Value="20:25:06">
+</Property></Properties><Event ErrorLevel="0" Project="ms_symbol_server_converter" Source="ms_symbol_server_converter.vcproj" Description="Converting project file 'C:\Users\Sebastian\Code\EvilTemple\3rdparty\google-breakpad\src\tools\windows\converter\ms_symbol_server_converter.vcproj'.">
+</Event><Event ErrorLevel="1" Project="ms_symbol_server_converter" Source="ms_symbol_server_converter.vcproj" Description="This application has been updated to include settings related to the User Account Control (UAC) feature of Windows Vista. By default, when run on Windows Vista with UAC enabled, this application is marked to run with the same privileges as the process that launched it. This marking also disables the application from running with virtualization. You can change UAC related settings from the Property Pages of the project.">
+</Event><Event ErrorLevel="1" Project="ms_symbol_server_converter" Source="ms_symbol_server_converter.vcproj" Description="VCWebServiceProxyGeneratorTool is no longer supported. The tool has been removed from your project settings.">
+</Event><Event ErrorLevel="1" Project="ms_symbol_server_converter" Source="ms_symbol_server_converter.vcproj" Description="Attribute 'Detect64BitPortabilityProblems' of 'VCCLCompilerTool' is not supported in this version and has been removed during conversion.">
+</Event><Event ErrorLevel="1" Project="ms_symbol_server_converter" Source="ms_symbol_server_converter.vcproj" Description="Attribute 'Detect64BitPortabilityProblems' of 'VCCLCompilerTool' is not supported in this version and has been removed during conversion.">
+</Event><Event ErrorLevel="1" Project="ms_symbol_server_converter" Source="ms_symbol_server_converter.vcproj" Description="Attribute 'Detect64BitPortabilityProblems' of 'VCCLCompilerTool' is not supported in this version and has been removed during conversion.">
+</Event><Event ErrorLevel="1" Project="ms_symbol_server_converter" Source="ms_symbol_server_converter.vcproj" Description="Attribute 'Detect64BitPortabilityProblems' of 'VCCLCompilerTool' is not supported in this version and has been removed during conversion.">
+</Event><Event ErrorLevel="0" Project="ms_symbol_server_converter" Source="ms_symbol_server_converter.vcproj" Description="Done converting to new project file 'C:\Users\Sebastian\Code\EvilTemple\3rdparty\google-breakpad\src\tools\windows\converter\ms_symbol_server_converter.vcxproj'.">
+</Event><Event ErrorLevel="3" Project="ms_symbol_server_converter" Source="ms_symbol_server_converter.vcproj" Description="Converted">
+</Event></UpgradeLog>
