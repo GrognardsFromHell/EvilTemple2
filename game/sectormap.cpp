@@ -282,7 +282,12 @@ namespace EvilTemple {
         qDebug("Using mesh with %d rectangles and %d portals.", d->mesh->rectangles().size(),
                d->mesh->portals().size());
 
-        if (d->scene) {
+        return true;
+    }
+
+    bool SectorMap::createDebugView() const
+    {
+        if (d->scene && d->mesh) {
             Sector *sector = new Sector;
             sector->setNavigationMesh(d->mesh);
             sector->setLayer(d->regionLayers["groundMaterial"]);
@@ -290,8 +295,6 @@ namespace EvilTemple {
             SceneNode *node = d->scene->createNode();
             node->attachObject(sector);
         }
-
-        return true;
     }
 
     QVariant SectorMap::regionTag(const QString &layerName, const Vector4 &at) const

@@ -1,4 +1,6 @@
 
+#include "../game/tga.h"
+
 #include <QImage>
 
 #include "convertinterfacetask.h"
@@ -50,25 +52,44 @@ void ConvertInterfaceTask::convertImage(IFileWriter *writer, const QString &base
         for (int x = 0; x < xTiles; ++x) {
             QString imagePath = QString("%1_%2_%3.tga").arg(baseName).arg(x).arg(y);
             QByteArray tgaData = service()->virtualFileSystem()->openFile(imagePath);
-            QImage tile;
 
-            if (!tile.loadFromData(tgaData, "tga")) {
+            EvilTemple::TargaImage tgaImage(tgaData);
+
+            if (!tgaImage.load()) {
                 qWarning("Unable to load tile %s (TGA) of combined image.", qPrintable(imagePath));
                 continue;
             }
 
             mExcludePaths.append(imagePath); // Make sure it doesnt get converted twice
 
-            for (int sy = 0; sy < tile.height(); ++sy) {
-                uchar *destScanline = image.scanLine(destY - tile.height() + sy);
-                destScanline += destX * sizeof(QRgb);
-                uchar *srcScanline = tile.scanLine(sy);
+            uint pixelSize;
+            if (tgaImage.format() == GL_BGRA) {
+                pixelSize = 4;
+            } else {
+                pixelSize = 3;
+            }
 
-                qMemCopy(destScanline, srcScanline, sizeof(QRgb) * tile.width());
+            for (int sy = 0; sy < tgaImage.height(); ++sy) {
+                uchar *destScanline = image.scanLine(destY - tgaImage.height() + sy);
+                destScanline += destX * sizeof(QRgb);
+                uchar *srcScanline = (uchar*)tgaImage.data() + (tgaImage.height() - 1 - sy) * tgaImage.width() * pixelSize;
+
+                if (pixelSize == sizeof(QRgb)) {
+                    qMemCopy(destScanline, srcScanline, pixelSize * tgaImage.width());
+                } else {
+                    Q_ASSERT(pixelSize == 3);
+
+                    for (uint i = 0; i < pixelSize * tgaImage.width(); i += pixelSize) {
+                        *(destScanline++) = *(srcScanline++);
+                        *(destScanline++) = *(srcScanline++);
+                        *(destScanline++) = *(srcScanline++);
+                        *(destScanline++) = 0xFF;
+                    }
+                }
             }
 
             destX += tileWidth;
-            lastTileHeight = tile.height();
+            lastTileHeight = tgaImage.height();
         }
 
         destY -= tileHeight; // We're counting down
@@ -128,9 +149,10 @@ void ConvertInterfaceTask::convertTextures(IFileWriter *writer)
             continue;
 
         QByteArray tgaData = service()->virtualFileSystem()->openFile(imagePath);
-        QImage image;
 
-        if (!image.loadFromData(tgaData, "tga")) {
+        EvilTemple::TargaImage tgaImage(tgaData);
+
+        if (!tgaImage.load()) {
             qWarning("Unable to load image %s (TGA).", qPrintable(imagePath));
             continue;
         }
@@ -140,6 +162,34 @@ void ConvertInterfaceTask::convertTextures(IFileWriter *writer)
 
         QByteArray pngData;
         QBuffer pngBuffer(&pngData);
+
+        QImage image(tgaImage.width(), tgaImage.height(), QImage::Format_ARGB32);
+
+        uint pixelSize;
+
+        if (tgaImage.format() == GL_BGRA) {
+            pixelSize = 4;
+        } else {
+            pixelSize = 3;
+        }
+
+        for (int sy = 0; sy < tgaImage.height(); ++sy) {
+            uchar *destScanline = image.scanLine(sy);
+            uchar *srcScanline = (uchar*)tgaImage.data() + (tgaImage.height() - 1 - sy) * tgaImage.width() * pixelSize;
+
+            if (pixelSize == sizeof(QRgb)) {
+                qMemCopy(destScanline, srcScanline, pixelSize * tgaImage.width());
+            } else {
+                Q_ASSERT(pixelSize == 3);
+
+                for (uint i = 0; i < pixelSize * tgaImage.width(); i += pixelSize) {
+                    *(destScanline++) = 0xFF;
+                    *(destScanline++) = *(srcScanline++);
+                    *(destScanline++) = *(srcScanline++);
+                    *(destScanline++) = *(srcScanline++);
+                }
+            }
+        }
 
         if (!image.save(&pngBuffer, "png")) {
             qWarning("Unable to save image %s (PNG).", qPrintable(imagePath));

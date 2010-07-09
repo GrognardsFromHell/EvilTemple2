@@ -484,6 +484,8 @@ function loadMap(filename) {
 
     gameView.sectorMap.load(filename.replace('map.js', '') + 'regions.dat');
 
+    gameView.sectorMap.createDebugView();
+
     print("Creating " + mapObj.staticObjects.length + " static objects.");
 
     var obj;

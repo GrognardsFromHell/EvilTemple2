@@ -1,3 +1,14 @@
 
 # This is the milestone map
 5050
+
+# Demo maps
+5089
+5090
+5107
+5108
+5109
+5110
+
+# Clipping test
+5111

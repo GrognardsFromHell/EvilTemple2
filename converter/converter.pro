@@ -6,7 +6,7 @@ TARGET = converter
 QT += xml opengl xmlpatterns script
 CONFIG += qaxcontainer
 
-TEMPLE_LIBS += troikaformats qt3d minizip jpeg qjson
+TEMPLE_LIBS += troikaformats qt3d minizip jpeg qjson glew
 
 win32:RC_FILE = icon.rc
 
@@ -29,7 +29,8 @@ SOURCES += converter.cpp \
     convertparticlesystemstask.cpp \
     convertinterfacetask.cpp \
     convertsoundstask.cpp \
-    convertmodelstask.cpp
+    convertmodelstask.cpp \
+    ../game/tga.cpp
 
 HEADERS += \
     util.h \
@@ -54,7 +55,8 @@ HEADERS += \
     convertparticlesystemstask.h \
     convertinterfacetask.h \
     convertsoundstask.h \
-    convertmodelstask.h
+    convertmodelstask.h \
+    ../game/tga.h
 
 win32:SOURCES += basepathfinder_win32.cpp
 else:SOURCES += basepathfinder.cpp

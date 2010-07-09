@@ -118,7 +118,7 @@ void ConvertModelsTask::addMeshesMesReferences()
 
 void ConvertModelsTask::addAddMeshesMesReferences()
 {
-    QHash<uint, QString> meshesIndex = service()->openMessageFile("art/meshes/addmesh.mes");
+    QHash<uint, QString> meshesIndex = service()->openMessageFile("rules/addmesh.mes");
 
     foreach (quint32 meshId, meshesIndex.keys()) {
         QString filename = meshesIndex[meshId].trimmed();
@@ -195,8 +195,6 @@ void ConvertModelsTask::convertMaterials(IFileWriter *output)
         MaterialConverter converter(service()->virtualFileSystem());
         converter.setExternal(true);
         converter.convert(Troika::Material::create(service()->virtualFileSystem(), mdfFilename));
-
-        HashedData converted = converter.materialScripts().values().at(0);
 
         foreach (const QString &textureFilename, converter.textures().keys()) {
             if (writtenTextures.contains(textureFilename))

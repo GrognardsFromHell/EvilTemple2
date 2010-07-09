@@ -197,10 +197,10 @@ inline static SharedEdge getSharedEdge(uint leftA, uint topA, uint rightA, uint 
     }
 }
 
-inline static QPoint vectorToPoint(const Vector4 &vector)
+inline static QPoint transStartPos(const QPoint &vector)
 {
     static const float factor = 1 / (PixelPerWorldTile / 3.0f);
-    return QPoint(vector.x() * factor, vector.z() * factor);
+    return QPoint(vector.x() * factor, vector.y() * factor);
 }
 
 inline static ProcessedSector *findSector(QVector<ProcessedSector> &sectors, const QPoint &pos)
@@ -1094,7 +1094,9 @@ QByteArray NavigationMeshBuilder::build(const Troika::ZoneTemplate *tpl, const Q
     }
 
     foreach (const QPoint &startPosition, startPositions) {
-        findReachableTiles(startPosition, sectors);
+        QPoint realStartPos = transStartPos(startPosition);
+
+        findReachableTiles(realStartPos, sectors);
     }
 
     makeUnreachableTilesBlocking(sectors);
