@@ -9,6 +9,5 @@
         <file>application.ico</file>
         <file>64x64.png</file>
         <file>map_exclusions.txt</file>
-        <file>prototypes_flags.txt</file>
     </qresource>
 </RCC>

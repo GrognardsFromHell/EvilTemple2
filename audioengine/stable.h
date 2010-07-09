@@ -1,4 +1,4 @@
 
 #include <QtCore>
 
-#include <AL/alut.h>
+#include <AL/al.h>

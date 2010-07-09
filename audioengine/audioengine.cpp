@@ -4,13 +4,14 @@
 #include "wavereader.h"
 #include "mp3reader.h"
 
-#include <AL/alut.h>
-
 #include <QFile>
 #include <QMutex>
 #include <QVector>
 #include <QThread>
 #include <QVarLengthArray>
+
+#include <AL/al.h>
+#include <AL/alc.h>
 
 namespace EvilTemple {
 

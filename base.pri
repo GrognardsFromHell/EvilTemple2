@@ -31,6 +31,12 @@ contains(TEMPLE_LIBS,game) {
     }
 }
 
+contains(TEMPLE_LIBS,sfmt) {
+    INCLUDEPATH += $${PWD}/3rdparty/SFMT-src-1.3.3
+    SOURCES += $${PWD}/3rdparty/SFMT-src-1.3.3/SFMT.c
+}
+
+
 # It's possible we should instead use the system libjpeg here on unix
 contains(TEMPLE_LIBS,jpeg) {
     INCLUDEPATH += $${PWD}/3rdparty/libjpeg-turbo/include
@@ -105,16 +111,10 @@ contains(TEMPLE_LIBS,binkplayer) {
 
 contains(TEMPLE_LIBS,openal) {
     win32 {
-        INCLUDEPATH += ../3rdparty/openal-1.1/include ../3rdparty/freealut-1.1.0/include/
+        INCLUDEPATH += ../3rdparty/openal-1.1/include
         LIBS += ../3rdparty/openal-1.1/libs/Win32/OpenAL32.lib
-
-        CONFIG(debug, debug|release) {
-            LIBS += -lfreealut_d
-        } else {
-            LIBS += -lfreealut
-        }
     } else {
-        LIBS += -lopenal -lalut
+        LIBS += -lopenal
     }
 }
 
