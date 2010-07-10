@@ -100,7 +100,7 @@ AudioEngineHandle::~AudioEngineHandle()
     alDeleteBuffers(buffers.size(), buffers.data());
 
     if (queuedBuffers > processedBuffers) {
-        qWarning("Stopped source, but still has queued data.");
+        qDebug("Stopped source, but still has queued data.");
     }
 
     alDeleteSources(1, &sourceId);
@@ -424,7 +424,6 @@ void AudioEngineThread::run()
 
             switch (sourceState) {
             case AL_INITIAL:
-                qDebug("Got new source %d. Queuing data and starting playback.", handle->sourceId);
                 handlePlayingSource(handle);
                 alSourcePlay(handle->sourceId);
                 break;
@@ -522,7 +521,6 @@ void AudioEngineThread::handlePlayingSource(const SharedAudioEngineHandle &handl
 
     // We can't do anything if the data ended anyway (TODO: Do looping in here?)
     if (handle->source->atEnd()) {
-        qDebug("Got a source that has no more data, stopping the source.");
         alSourceStop(handle->sourceId);
         return;
     }
