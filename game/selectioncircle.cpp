@@ -92,26 +92,28 @@ const Box3d &SelectionCircle::boundingBox()
     return mBoundingBox;
 }
 
-void SelectionCircle::mousePressEvent()
+void SelectionCircle::mousePressEvent(QMouseEvent *evt)
 {
     mMouseDown = true;
-    Renderable::mousePressEvent();
+    Renderable::mousePressEvent(evt);
 }
 
-void SelectionCircle::mouseReleaseEvent()
+void SelectionCircle::mouseReleaseEvent(QMouseEvent *evt)
 {
     mMouseDown = false;
-    Renderable::mouseReleaseEvent();
+    Renderable::mouseReleaseEvent(evt);
 }
 
-void SelectionCircle::mouseEnterEvent()
+void SelectionCircle::mouseEnterEvent(QMouseEvent *evt)
 {
     mHovering = true;
+    Renderable::mouseEnterEvent(evt);
 }
 
-void SelectionCircle::mouseLeaveEvent()
+void SelectionCircle::mouseLeaveEvent(QMouseEvent *evt)
 {
     mHovering = false;
+    Renderable::mouseLeaveEvent(evt);
 }
 
 void SelectionCircle::elapseTime(float secondsElapsed)

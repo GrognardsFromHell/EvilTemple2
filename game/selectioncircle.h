@@ -23,10 +23,10 @@ public:
 
     const Box3d &boundingBox();
 
-    void mousePressEvent();
-    void mouseReleaseEvent();
-    void mouseEnterEvent();
-    void mouseLeaveEvent();
+    void mousePressEvent(QMouseEvent *evt);
+    void mouseReleaseEvent(QMouseEvent *evt);
+    void mouseEnterEvent(QMouseEvent *evt);
+    void mouseLeaveEvent(QMouseEvent *evt);
 
     const Vector4 &color() const;
     void setColor(const Vector4 &color);

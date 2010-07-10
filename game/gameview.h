@@ -94,9 +94,9 @@ signals:
 
     void viewportChanged();
 
-    void worldClicked(const Vector4 &position);
+    void worldClicked(int button, int buttons, const Vector4 &position);
 
-    void worldDoubleClicked(const Vector4 &position);
+    void worldDoubleClicked(int button, int buttons, const Vector4 &position);
 
 public slots:
 

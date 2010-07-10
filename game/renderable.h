@@ -6,6 +6,7 @@
 #include <QMetaType>
 #include <QPair>
 #include <QVector>
+#include <QMouseEvent>
 
 #include "renderstates.h"
 #include "renderqueue.h"
@@ -45,11 +46,11 @@ public:
     bool isAnimated() const;
     void setAnimated(bool animated);
 
-    virtual void mousePressEvent();
-    virtual void mouseReleaseEvent();
-    virtual void mouseEnterEvent();
-    virtual void mouseLeaveEvent();
-    virtual void mouseDoubleClickEvent();
+    virtual void mousePressEvent(QMouseEvent *mouseEvent);
+    virtual void mouseReleaseEvent(QMouseEvent *mouseEvent);
+    virtual void mouseEnterEvent(QMouseEvent *mouseEvent);
+    virtual void mouseLeaveEvent(QMouseEvent *mouseEvent);
+    virtual void mouseDoubleClickEvent(QMouseEvent *mouseEvent);
 
     RenderQueue::Category renderCategory() const;
     void setRenderCategory(RenderQueue::Category category);
@@ -61,11 +62,11 @@ public slots:
     virtual void elapseTime(float secondsElapsed);
 
 signals:
-    void mousePressed();
-    void mouseReleased();
-    void mouseDoubleClicked();
-    void mouseEnter();
-    void mouseLeave();
+    void mousePressed(int button, int buttons);
+    void mouseReleased(int button, int buttons);
+    void mouseDoubleClicked(int button, int buttons);
+    void mouseEnter(int buttons);
+    void mouseLeave(int buttons);
 
 protected:
     SceneNode *mParentNode;

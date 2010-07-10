@@ -1,6 +1,16 @@
 
 var models; // Will be aliased to gameView.models
 
+// Constants for mouse buttons
+var Mouse = {
+    NoButton: 0,
+    LeftButton: 1,
+    RightButton: 2,
+    MidButton: 4,
+    XButton1: 8,
+    XButton2: 16
+};
+
 var maps = [
     { name: 'Temple Level 1', dir: 'Map12-temple-dungeon-level-1' },
     { name: "Temple Level 1 (Room)", dir: 'Map12-temple-dungeon-level-1-room-131' },
@@ -57,7 +67,7 @@ var BaseObject = {
         this.renderState.selectionCircle.selected = selected;
     },
 
-    clicked: function() {
+    clicked: function(button, buttons) {
         if (currentSelection != null)
             currentSelection.setSelected(false);
 
@@ -183,7 +193,7 @@ function selectWorldTarget(callback) {
 function setupWorldClickHandler() {
     var firstClick = undefined;
 
-    gameView.worldClicked.connect(function(worldPosition) {
+    gameView.worldClicked.connect(function(button, buttons, worldPosition) {
         if (worldClickCallback != null) {
             var callback = worldClickCallback;
             worldClickCallback = null;
@@ -240,8 +250,8 @@ function setupWorldClickHandler() {
         }
     });
 
-    gameView.worldDoubleClicked.connect(function(worldPosition) {
-        print("Doubleclicked");
+    gameView.worldDoubleClicked.connect(function(button, buttons, worldPosition) {
+        print("Doubleclicked: " + button);
         gameView.centerOnWorld(worldPosition[0], worldPosition[2]);
     });
 }

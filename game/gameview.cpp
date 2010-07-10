@@ -498,9 +498,9 @@ namespace EvilTemple {
 
             if (renderable != lastMouseOver) {
                 if (lastMouseOver)
-                    lastMouseOver->mouseLeaveEvent();
+                    lastMouseOver->mouseLeaveEvent(evt);
                 if (renderable)
-                    renderable->mouseEnterEvent();
+                    renderable->mouseEnterEvent(evt);
                 d->lastMouseOverRenderable = renderable;
             }
         }
@@ -526,10 +526,10 @@ namespace EvilTemple {
             Renderable *renderable = d->pickObject(evt->pos());
 
             if (renderable) {
-                renderable->mousePressEvent();
+                renderable->mousePressEvent(evt);
             } else {
                 Vector4 worldPosition = d->worldPositionFromScreen(evt->pos());
-                emit worldClicked(worldPosition);
+                emit worldClicked(evt->button(), evt->buttons(), worldPosition);
             }
         }
         d->dragging = false;
@@ -549,10 +549,10 @@ namespace EvilTemple {
             Renderable *renderable = d->pickObject(evt->pos());
 
             if (renderable) {
-                renderable->mouseDoubleClickEvent();
+                renderable->mouseDoubleClickEvent(evt);
             } else {
                 Vector4 worldPosition = d->worldPositionFromScreen(evt->pos());
-                emit worldDoubleClicked(worldPosition);
+                emit worldDoubleClicked(evt->button(), evt->buttons(), worldPosition);
             }
         }
     }
