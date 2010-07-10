@@ -517,7 +517,7 @@ namespace EvilTemple {
             Renderable *renderable = d->pickObject(evt->pos());
 
             if (renderable) {
-                renderable->mousePressEvent(evt);
+                renderable->mouseReleaseEvent(evt);
             } else {
                 Vector4 worldPosition = d->worldPositionFromScreen(evt->pos());
                 emit worldClicked(evt->button(), evt->buttons(), worldPosition);
