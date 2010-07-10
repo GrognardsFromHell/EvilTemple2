@@ -233,6 +233,7 @@ public:
     MaterialPassState();
     ~MaterialPassState();
 
+    uint id;
     SharedGLSLProgram program;
     QVector<MaterialPassAttributeState> attributes;
     QVector<MaterialPassUniformState*> uniforms;

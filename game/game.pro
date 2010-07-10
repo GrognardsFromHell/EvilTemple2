@@ -122,7 +122,8 @@ OTHER_FILES += \
     resources/materials/lighting.frag \
     resources/materials/lighting.vert \
     resources/materials/textureanim.frag \
-    resources/materials/selection_material.xml
+    resources/materials/selection_material.xml \
+    resources/materials/behindwalls_material.xml
 
 INCLUDEPATH += .
 

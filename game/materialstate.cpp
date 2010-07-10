@@ -138,6 +138,7 @@ bool MaterialState::createFrom(const Material &material, const RenderStates &sta
 
     for (int i = 0; i < passCount; ++i) {
         MaterialPassState &passState = passes[i];
+        passState.id = i;
         const MaterialPass *pass = material.passes()[i];
 
         passState.renderStates = pass->renderStates();

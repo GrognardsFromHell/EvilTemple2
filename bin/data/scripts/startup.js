@@ -198,6 +198,9 @@ var BaseObject = {
                 }
             });
         });
+    },
+    getReactionColor: function() {
+        return [1, 1, 0]; // Neutral color
     }
 };
 
@@ -243,6 +246,17 @@ var MapChanger = {
     }
 };
 
+var Critter = {
+    __proto__: BaseObject,
+    getReactionColor: function() {
+        return [0.33, 1, 0]; // Friendly
+    }
+};
+
+var NonPlayerCharacter = {
+    __proto__: Critter
+};
+
 var prototypes;
 var sounds;
 
@@ -277,6 +291,8 @@ function startup() {
             prototypes[i].__proto__ = MapChanger;
         else if (type == 'Portal')
             prototypes[i].__proto__ = Portal;
+        else if (type == 'NonPlayerCharacter')
+            prototypes[i].__proto__ = NonPlayerCharacter;
         else
             prototypes[i].__proto__ = BaseObject;
     }
@@ -456,7 +472,7 @@ function createMapObject(scene, obj)
         if (obj.radius !== undefined)
             selectionCircle.radius = obj.radius;
 
-        selectionCircle.color = [0, 1, 0];
+        selectionCircle.color = obj.getReactionColor();
 
         sceneNode.attachObject(selectionCircle);
         obj.selectionCircle = selectionCircle;

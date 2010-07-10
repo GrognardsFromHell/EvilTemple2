@@ -109,8 +109,8 @@ void main() {
       <uniform name="worldViewMatrix" semantic="WorldView" />
       <uniform name="projectionMatrix" semantic="Projection" />
       <uniform name="texSampler" semantic="Texture0" />
-      <cullFace>false</cullFace>
     </shader>
+    <cullFace>false</cullFace>
   </pass>
 
 </material>

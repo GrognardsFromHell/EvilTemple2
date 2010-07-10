@@ -90,10 +90,10 @@ typedef QSharedPointer<ClippingGeometryMesh> SharedClippingGeometryMesh;
 class ClippingGeometryInstance : public Renderable, public BufferSource, public DrawStrategy {
 public:
 
-    void render(RenderStates &renderStates)
+    void render(RenderStates &renderStates, MaterialState *overrideMaterial = NULL)
     {
         DrawHelper<ClippingGeometryInstance,ClippingGeometryInstance> drawHelper;
-        drawHelper.draw(renderStates, mMaterial, *this, *this);
+        drawHelper.draw(renderStates, overrideMaterial ? overrideMaterial : mMaterial, *this, *this);
     }
 
     const Box3d &boundingBox()

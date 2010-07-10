@@ -60,7 +60,7 @@ void Renderable::mouseLeaveEvent()
     emit mouseLeave();
 }
 
-void LineRenderable::render(RenderStates &renderStates)
+void LineRenderable::render(RenderStates &renderStates, MaterialState *overrideMaterial)
 {
     glDisable(GL_DEPTH_TEST);
     glColor4f(255, 255, 255, 255);

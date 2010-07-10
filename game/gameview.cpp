@@ -108,7 +108,7 @@ namespace EvilTemple {
             : q(view), rootItem(0), backgroundMap(renderStates),
             clippingGeometry(renderStates), dragging(false), lightDebugger(renderStates),
             materials(renderStates), sectorMap(&scene), models(&materials, renderStates),
-            particleSystems(&models, &materials)
+            particleSystems(&models, &materials), scene(&materials)
         {
             sceneTimer.invalidate();
 

@@ -64,7 +64,7 @@ namespace EvilTemple {
         mNavigationMesh = navigationMesh;
     }
 
-    void Sector::render(RenderStates &renderStates)
+    void Sector::render(RenderStates &renderStates, MaterialState *overrideMaterial)
     {
         if (!mNavigationMesh)
             return;

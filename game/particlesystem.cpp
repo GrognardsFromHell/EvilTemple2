@@ -1536,7 +1536,7 @@ namespace EvilTemple {
         return d->dead;
     }
 
-    void ParticleSystem::render(RenderStates &renderStates) {
+    void ParticleSystem::render(RenderStates &renderStates, MaterialState *overrideMaterial) {
         ProfileScope<Profiler::ParticleSystemRender> profiler;
 
         bool allDead = true;

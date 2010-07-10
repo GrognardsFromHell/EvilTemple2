@@ -17,7 +17,7 @@ Vector4 Light::position() const
     }
 }
 
-void Light::render(RenderStates &renderStates)
+void Light::render(RenderStates &renderStates, MaterialState *overrideMaterial = NULL)
 {
     if (!mDebugging || !mDebugRenderer)
         return;

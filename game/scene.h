@@ -10,6 +10,7 @@
 namespace EvilTemple {
 
 class SceneData;
+class Materials;
 
 /**
   Models a scene that can be drawn by the engine.
@@ -17,7 +18,7 @@ class SceneData;
 class Scene : public QObject {
 Q_OBJECT
 public:
-    Scene();
+    Scene(Materials *materials);
     ~Scene();
 
     void elapseTime(float elapsedSeconds);

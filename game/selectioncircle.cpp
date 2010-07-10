@@ -45,7 +45,7 @@ SelectionCircle::SelectionCircle(Materials *materials)
     updateBoundingBox();
 }
 
-void SelectionCircle::render(RenderStates &renderStates)
+void SelectionCircle::render(RenderStates &renderStates, MaterialState *overrideMaterial)
 {
 
     if (!mHovering && !mSelected)
@@ -96,14 +96,12 @@ void SelectionCircle::mouseReleaseEvent()
 
 void SelectionCircle::mouseEnterEvent()
 {
-    qDebug("Mouse entered");
     mHovering = true;
 }
 
 void SelectionCircle::mouseLeaveEvent()
 {
     mHovering = false;
-    qDebug("Mouse left");
 }
 
 void SelectionCircle::elapseTime(float secondsElapsed)

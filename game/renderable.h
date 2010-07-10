@@ -17,6 +17,7 @@ namespace EvilTemple {
 
 class SceneNode;
 class RenderStates;
+class MaterialState;
 
 class Renderable : public QObject, public AlignedAllocation {
 Q_OBJECT
@@ -30,7 +31,7 @@ public:
     Renderable();
     virtual ~Renderable();
 
-    virtual void render(RenderStates &renderStates) = 0;
+    virtual void render(RenderStates &renderStates, MaterialState *overrideMaterial = NULL) = 0;
 
     virtual const Box3d &boundingBox() = 0;
 
@@ -126,7 +127,7 @@ class LineRenderable : public Renderable
 {
 Q_OBJECT
 public:
-    void render(RenderStates &renderStates);
+    void render(RenderStates &renderStates, MaterialState *overrideMaterial = NULL);
 
     const Box3d &boundingBox();
 

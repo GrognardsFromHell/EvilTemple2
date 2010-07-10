@@ -42,7 +42,7 @@ namespace EvilTemple {
 
         void elapseTime(float seconds);
 
-        void render(RenderStates &renderStates);
+        void render(RenderStates &renderStates, MaterialState *overrideMaterial = NULL);
 
         const Box3d &boundingBox();
 

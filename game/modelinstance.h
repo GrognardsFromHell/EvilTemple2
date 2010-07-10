@@ -33,6 +33,8 @@ Q_OBJECT
 Q_PROPERTY(const SharedModel &model READ model WRITE setModel)
 Q_PROPERTY(bool idling READ isIdling)
 Q_PROPERTY(QString idleAnimation READ idleAnimation WRITE setIdleAnimation)
+Q_PROPERTY(bool drawBehindWalls READ drawsBehindWalls WRITE setDrawsBehindWalls)
+Q_PROPERTY(bool castsShadows READ castsShadows WRITE setCastsShadows)
 public:
     ModelInstance();
     ~ModelInstance();
@@ -47,7 +49,7 @@ public:
       */
     void draw(RenderStates &renderStates, const CustomDrawHelper<ModelDrawStrategy, ModelBufferSource> &drawHelper);
     void drawNormals() const;
-    void render(RenderStates &renderStates);
+    void render(RenderStates &renderStates, MaterialState *overrideMaterial = NULL);
 
     IntersectionResult intersect(const Ray3d &ray) const;
 
@@ -59,6 +61,12 @@ public:
     const QString &idleAnimation() const;
 
     bool isIdling() const; // No animation is playing
+
+    bool drawsBehindWalls() const;
+    void setDrawsBehindWalls(bool drawsBehindWalls);
+
+    bool castsShadows() const;
+    void setCastsShadows(bool castsShadows);
 
 public slots:
     Matrix4 getBoneSpace(uint boneId);
@@ -89,6 +97,9 @@ private:
 
     void playIdleAnimation();
     void updateBones();
+
+    bool mDrawsBehindWalls;
+    bool mCastsShadows;
 
     Matrix4 *mFullWorld;
     Matrix4 *mFullTransform;
@@ -140,6 +151,25 @@ inline bool ModelInstance::isIdling() const
     return mIdling;
 }
 
+inline bool ModelInstance::drawsBehindWalls() const
+{
+    return mDrawsBehindWalls;
+}
+
+inline void ModelInstance::setDrawsBehindWalls(bool drawsBehindWalls)
+{
+    mDrawsBehindWalls = drawsBehindWalls;
+}
+
+inline bool ModelInstance::castsShadows() const
+{
+    return mCastsShadows;
+}
+
+inline void ModelInstance::setCastsShadows(bool castsShadows)
+{
+    mCastsShadows = castsShadows;
+}
 }
 
 #endif // MODELINSTANCE_H

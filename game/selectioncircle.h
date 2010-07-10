@@ -18,7 +18,7 @@ Q_PROPERTY(bool selected READ isSelected WRITE setSelected)
 public:
     SelectionCircle(Materials *materials);
 
-    void render(RenderStates &renderStates);
+    void render(RenderStates &renderStates, MaterialState *overrideMaterial = NULL);
 
     const Box3d &boundingBox();
 

@@ -11,6 +11,7 @@
 #include "renderable.h"
 #include "scenenode.h"
 #include "profiler.h"
+#include "materials.h"
 
 #include <gamemath.h>
 using namespace GameMath;
@@ -32,7 +33,8 @@ struct TextOverlay : public AlignedAllocation {
 class SceneData {
 public:
 
-    SceneData() : objectsDrawn(0)
+    SceneData(Materials *materials)
+        : objectsDrawn(0), behindWallsMaterial(materials->load(":/material/behindwalls_material.xml"))
     {
         font.setFamily("Fontin");
         font.setPointSize(12);
@@ -45,6 +47,7 @@ public:
         qDeleteAll(activeOverlays);
     }
 
+    SharedMaterialState behindWallsMaterial;
     QList<SceneNode*> sceneNodes;
     int objectsDrawn;
     RenderQueue renderQueue;
@@ -54,7 +57,7 @@ public:
     int textureWidth, textureHeight;
 };
 
-Scene::Scene() : d(new SceneData)
+Scene::Scene(Materials *materials) : d(new SceneData(materials))
 {
 }
 
@@ -164,6 +167,38 @@ void Scene::render(RenderStates &renderStates)
     }
 
     renderStates.setActiveLights(QList<const Light*>());
+
+    // Now, render the behind-walls sections
+    glClear(GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_DEPTH_TEST);
+
+    const QList<Renderable*> &clippingRenderables = d->renderQueue.queuedObjects(RenderQueue::ClippingGeometry);
+
+    for (int i = 0; i < clippingRenderables.size(); ++i) {
+        Renderable *renderable = clippingRenderables.at(i);
+
+        renderStates.setWorldMatrix(renderable->worldTransform());
+        renderable->render(renderStates);
+
+        d->objectsDrawn++;
+    }
+
+    glDepthFunc(GL_GEQUAL); // Flip depth-test so primitives are drawn when depth-test fails
+    glDepthMask(GL_FALSE); // But don't actually modify the depth-buffer
+
+    const QList<Renderable*> &defaultRenderables = d->renderQueue.queuedObjects(RenderQueue::Default);
+
+    for (int i = 0; i < defaultRenderables.size(); ++i) {
+        ModelInstance *renderable = qobject_cast<ModelInstance*>(defaultRenderables.at(i));
+        if (!renderable || !renderable->drawsBehindWalls())
+            continue;
+
+        renderStates.setWorldMatrix(renderable->worldTransform());
+        renderable->render(renderStates, d->behindWallsMaterial.data());
+    }
+
+    glDepthFunc(GL_LESS);
+    glDepthMask(GL_TRUE);
 
     glDisable(GL_CULL_FACE);
     glDisable(GL_DEPTH_TEST);

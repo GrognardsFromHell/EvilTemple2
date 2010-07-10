@@ -22,7 +22,7 @@ Q_OBJECT
 public:
     Sector();
 
-    void render(RenderStates &renderStates);
+    void render(RenderStates &renderStates, MaterialState *overrideMaterial = NULL);
 
     const Box3d &boundingBox();
 

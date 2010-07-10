@@ -16,7 +16,8 @@ namespace EvilTemple {
         : mPositionBuffer(QGLBuffer::VertexBuffer), mNormalBuffer(QGLBuffer::VertexBuffer),
         mCurrentAnimation(NULL), mPartialFrameTime(0), mCurrentFrame(0),
         mTransformedPositions(NULL), mTransformedNormals(NULL), mFullTransform(NULL),
-        mFullWorld(NULL), mCurrentFrameChanged(true), mIdling(true), mLooping(false)
+        mFullWorld(NULL), mCurrentFrameChanged(true), mIdling(true), mLooping(false),
+        mDrawsBehindWalls(true), mCastsShadows(true)
     {
         mPositionBuffer.setUsagePattern(QGLBuffer::StreamDraw);
         mNormalBuffer.setUsagePattern(QGLBuffer::StreamDraw);
@@ -324,7 +325,24 @@ namespace EvilTemple {
         }*/
     }
 
-    void ModelInstance::render(RenderStates &renderStates)
+    struct ModelInstanceDrawStrategy : public ModelDrawStrategy {
+        ModelInstanceDrawStrategy(GLint bufferId, int elementCount, bool drawShadows)
+            : ModelDrawStrategy(bufferId, elementCount), mDrawShadows(drawShadows)
+        {
+        }
+
+        inline void draw(const RenderStates &renderStates, MaterialPassState &state) const
+        {
+            if (state.id > 0 && !mDrawShadows)
+                return;
+
+            ModelDrawStrategy::draw(renderStates, state);
+        }
+
+        bool mDrawShadows;
+    };
+
+    void ModelInstance::render(RenderStates &renderStates, MaterialState *overrideMaterial)
     {
         ProfileScope<Profiler::ModelInstanceRender> profiler;
 
@@ -338,7 +356,7 @@ namespace EvilTemple {
             mCurrentFrameChanged = false;
         }
 
-        DrawHelper<ModelDrawStrategy, ModelBufferSource> drawHelper;
+        DrawHelper<ModelInstanceDrawStrategy, ModelBufferSource> drawHelper;
         ModelBufferSource bufferSource(mCurrentAnimation ? mPositionBuffer.bufferId() : model->positionBuffer.bufferId(),
                                        mCurrentAnimation ? mNormalBuffer.bufferId() : model->normalBuffer.bufferId(),
                                        model->texcoordBuffer.bufferId());
@@ -353,8 +371,12 @@ namespace EvilTemple {
                 material = mReplacementMaterials[faceGroup.placeholderId].data();
             }
 
+            if (overrideMaterial)
+                material = overrideMaterial;
+
             if (material) {
-                ModelDrawStrategy drawStrategy(faceGroup.buffer.bufferId(), faceGroup.indices.size());
+                ModelInstanceDrawStrategy drawStrategy(faceGroup.buffer.bufferId(), faceGroup.indices.size(),
+                                                       mCastsShadows);
                 drawHelper.draw(renderStates, material, drawStrategy, bufferSource);
             }
         }
@@ -372,8 +394,12 @@ namespace EvilTemple {
 
                 MaterialState *material = faceGroup.material;
 
+                if (overrideMaterial)
+                    material = overrideMaterial;
+
                 if (material) {
-                    ModelDrawStrategy drawStrategy(faceGroup.buffer.bufferId(), faceGroup.indices.size());
+                    ModelInstanceDrawStrategy drawStrategy(faceGroup.buffer.bufferId(), faceGroup.indices.size(),
+                                                           mCastsShadows);
                     drawHelper.draw(renderStates, material, drawStrategy, bufferSource);
                 }
             }

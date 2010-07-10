@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<material xmlns="http://hartte.de/eviltemple/material.xsd">
+
+  <pass>
+    <shader>
+      <vertexShader>
+        <code>
+          <![CDATA[
+          #version 120
+
+          uniform mat4 worldViewProjectionMatrix;
+          uniform mat4 worldViewMatrix;
+
+          attribute vec4 vertexPosition;
+          attribute vec4 vertexNormal;
+
+          varying vec3 N;
+
+          void main() {
+              N = (worldViewMatrix * vertexNormal).xyz;
+              gl_Position = worldViewProjectionMatrix * vertexPosition;
+          }
+]]>
+        </code>
+      </vertexShader>
+
+      <fragmentShader>
+        <code>
+          <![CDATA[
+  #version 120
+
+  varying vec3 N;
+
+  uniform sampler2D texSampler;
+
+  void main(void)
+  {
+     float rim_width = 0.6;
+
+     vec3 eye = vec3(0, 0, 1);
+
+     vec3 nl = faceforward(N, eye, N);
+     float dot = 1 - dot(nl,normalize(-eye));
+     float diffusecolor = smoothstep(1.0 - rim_width, 1.0, dot);
+
+     gl_FragColor = vec4(1, 1, 1, diffusecolor) * vec4(1, 1, 1, 0.5);
+  }
+]]>
+        </code>
+      </fragmentShader>
+
+      <attribute name="vertexPosition" buffer="positions" />
+      <attribute name="vertexNormal" buffer="normals" />
+
+      <uniform name="worldViewProjectionMatrix" semantic="WorldViewProjection" />
+      <uniform name="worldViewMatrix" semantic="WorldView" />
+    </shader>
+
+    <blend>true</blend>
+    <blendFunc src="srcAlpha" dest="oneMinusSrcAlpha" />
+    <cullFace>false</cullFace>
+  </pass>
+
+</material>

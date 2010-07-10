@@ -98,7 +98,7 @@ public:
         mDirection = direction;
     }
 
-    void render(RenderStates &renderStates);
+    void render(RenderStates &renderStates, MaterialState *overrideMaterial);
 
     const Box3d &boundingBox()
     {

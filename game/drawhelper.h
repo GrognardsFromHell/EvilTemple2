@@ -145,7 +145,7 @@ struct ModelDrawStrategy : public DrawStrategy {
 
         // Render once without diffuse/specular, then render again without ambient
         int typePos = state.program->uniformLocation("lightSourceType");
-        if (typePos != -1) {
+        if (!renderStates.activeLights().isEmpty() && typePos != -1) {
             SAFE_GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mBufferId));
 
             typePos = state.program->uniformLocation("lightSourceType");
@@ -154,31 +154,29 @@ struct ModelDrawStrategy : public DrawStrategy {
             int directionPos = state.program->uniformLocation("lightSourceDirection");
             int attenuationPos = state.program->uniformLocation("lightSourceAttenuation");
 
-            if (!renderStates.activeLights().isEmpty()) {
-                bool first = true;
+            bool first = true;
 
-                // Draw again for every light affecting this mesh
-                foreach (const Light *light, renderStates.activeLights()) {
-                    SAFE_GL(glUniform1i(typePos, light->type()));
-                    SAFE_GL(glUniform4fv(colorPos, 1, light->color().data()));
-                    SAFE_GL(glUniform4fv(directionPos, 1, light->direction().data()));
-                    SAFE_GL(glUniform4fv(positionPos, 1, light->position().data()));
-                    SAFE_GL(glUniform1f(attenuationPos, light->attenuation()));
+            // Draw again for every light affecting this mesh
+            foreach (const Light *light, renderStates.activeLights()) {
+                SAFE_GL(glUniform1i(typePos, light->type()));
+                SAFE_GL(glUniform4fv(colorPos, 1, light->color().data()));
+                SAFE_GL(glUniform4fv(directionPos, 1, light->direction().data()));
+                SAFE_GL(glUniform4fv(positionPos, 1, light->position().data()));
+                SAFE_GL(glUniform1f(attenuationPos, light->attenuation()));
 
-                    SAFE_GL(glDrawElements(GL_TRIANGLES, mElementCount, GL_UNSIGNED_SHORT, 0));
+                SAFE_GL(glDrawElements(GL_TRIANGLES, mElementCount, GL_UNSIGNED_SHORT, 0));
 
-                    if (first) {
-                        SAFE_GL(glDepthFunc(GL_LEQUAL));
-                        SAFE_GL(glEnable(GL_CULL_FACE));
+                if (first) {
+                    SAFE_GL(glDepthFunc(GL_LEQUAL));
+                    SAFE_GL(glEnable(GL_CULL_FACE));
 
-                        SAFE_GL(glEnable(GL_BLEND));
-                        SAFE_GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE));
-                    }
-                    first = false;
+                    SAFE_GL(glEnable(GL_BLEND));
+                    SAFE_GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE));
                 }
-
-                SAFE_GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+                first = false;
             }
+
+            SAFE_GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 
             SAFE_GL(glDepthFunc(GL_LESS));
 
