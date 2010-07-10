@@ -214,6 +214,8 @@ void Scene::render(RenderStates &renderStates)
     glUseProgram(0);
     glActiveTexture(GL_TEXTURE0);
 
+    glDisable(GL_MULTISAMPLE);
+
     foreach (TextOverlay *overlay, d->activeOverlays) {
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
@@ -246,6 +248,8 @@ void Scene::render(RenderStates &renderStates)
         glVertex2i(0, overlay->texture.height());
         glEnd();
     }
+
+    glEnable(GL_MULTISAMPLE);
 }
 
 int Scene::objectsDrawn() const

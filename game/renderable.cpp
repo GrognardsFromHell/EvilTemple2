@@ -40,6 +40,11 @@ IntersectionResult Renderable::intersect(const Ray3d &ray) const
     return result;
 }
 
+void Renderable::mouseDoubleClickEvent()
+{
+    emit mouseDoubleClicked();
+}
+
 void Renderable::mousePressEvent()
 {
     emit mousePressed();

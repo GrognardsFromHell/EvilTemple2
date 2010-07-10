@@ -124,7 +124,8 @@ OTHER_FILES += \
     resources/materials/textureanim.frag \
     resources/materials/selection_material.xml \
     resources/materials/behindwalls_material.xml \
-    ../bin/data/scripts/walking.js
+    ../bin/data/scripts/walking.js \
+    ../bin/data/scripts/mobileInfo.js
 
 INCLUDEPATH += .
 

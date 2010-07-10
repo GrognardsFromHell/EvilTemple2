@@ -96,6 +96,8 @@ signals:
 
     void worldClicked(const Vector4 &position);
 
+    void worldDoubleClicked(const Vector4 &position);
+
 public slots:
 
     QObject *showView(const QString &url);
@@ -117,6 +119,7 @@ public slots:
 protected:
     void resizeEvent(QResizeEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
+    void mouseDoubleClickEvent(QMouseEvent *event);
     void mousePressEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
 

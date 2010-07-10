@@ -49,6 +49,7 @@ public:
     virtual void mouseReleaseEvent();
     virtual void mouseEnterEvent();
     virtual void mouseLeaveEvent();
+    virtual void mouseDoubleClickEvent();
 
     RenderQueue::Category renderCategory() const;
     void setRenderCategory(RenderQueue::Category category);
@@ -62,6 +63,7 @@ public slots:
 signals:
     void mousePressed();
     void mouseReleased();
+    void mouseDoubleClicked();
     void mouseEnter();
     void mouseLeave();
 

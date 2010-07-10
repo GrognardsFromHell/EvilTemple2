@@ -536,6 +536,27 @@ namespace EvilTemple {
         QGraphicsView::mouseReleaseEvent(evt);
     }
 
+    void GameView::mouseDoubleClickEvent(QMouseEvent *evt)
+    {
+        // Sadly it's not really possible to detect, whether the double click was
+        // really accepted by the scene. Instead we will simply check if there
+        // is a QGraphicsItem at the clicked position.
+        if (d->uiScene.itemAt(evt->posF())) {
+            QGraphicsView::mouseDoubleClickEvent(evt);
+        } else {
+            qDebug("Mouse double click event.");
+
+            Renderable *renderable = d->pickObject(evt->pos());
+
+            if (renderable) {
+                renderable->mouseDoubleClickEvent();
+            } else {
+                Vector4 worldPosition = d->worldPositionFromScreen(evt->pos());
+                emit worldDoubleClicked(worldPosition);
+            }
+        }
+    }
+
     QPoint GameView::screenCenter() const
     {
         Vector4 viewCenter(0,0,0,1);
@@ -543,7 +564,7 @@ namespace EvilTemple {
         viewCenter = d->renderStates.viewMatrix().inverted() * viewCenter;
         viewDirection = d->renderStates.viewMatrix().inverted() * viewDirection;
 
-        viewCenter *= 1/ viewCenter.w();
+        viewCenter *= 1 / viewCenter.w();
 
         return QPoint(viewCenter.x(), viewCenter.z());
     }

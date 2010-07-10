@@ -1,4 +1,15 @@
 
+function objectToString(value) {
+    var result = '{';
+    for (var sk in value) {
+        if (result != '{')
+            result += ', ';
+        result += sk + ': ' + value[sk];
+    }
+    result += '}';
+    return result;
+}
+
 function addObjProps(obj, items)
 {
     var proto = obj.__proto__;

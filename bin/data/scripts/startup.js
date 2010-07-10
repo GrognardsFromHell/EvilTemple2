@@ -1,11 +1,6 @@
 
 var models; // Will be aliased to gameView.models
 
-//var startupMap = 'maps/Map12-temple-dungeon-level-1/map.js';
-// var startupMap = 'maps/Map-2-Hommlet-Exterior/map.js';
-// var startupMap = 'maps/Map-7-Moathouse_Interior/map.js';
-var startupMap = 'maps/Map-9-Nulb-Exterior/map.js';
-
 var maps = [
     { name: 'Temple Level 1', dir: 'Map12-temple-dungeon-level-1' },
     { name: "Temple Level 1 (Room)", dir: 'Map12-temple-dungeon-level-1-room-131' },
@@ -39,17 +34,6 @@ var maps = [
 
 var jumppoints = {};
 
-function objectToString(value) {
-    var result = '{';
-    for (var sk in value) {
-        if (result != '{')
-            result += ', ';
-        result += sk + ': ' + value[sk];
-    }
-    result += '}';
-    return result;
-}
-
 var currentSelection = null;
 
 // Base object for all prototypes
@@ -62,9 +46,11 @@ var BaseObject = {
     registerHandlers: function(sceneNode, modelInstance) {
         if (this.selectionCircle !== undefined) {
             this.selectionCircle.mousePressed.connect(this, this.clicked);
+            this.selectionCircle.mouseDoubleClicked.connect(this, this.doubleClicked);
         }
 
-        modelInstance.mousePressed.connect(this, this.clicked);
+        modelInstance.mouseReleased.connect(this, this.clicked);
+        modelInstance.mouseDoubleClicked.connect(this, this.doubleClicked);
     },
 
     setSelected: function(selected) {
@@ -78,7 +64,9 @@ var BaseObject = {
         currentSelection = this;
 
         this.setSelected(true);
+    },
 
+    doubleClicked: function() {
         showMobileInfo(this, this.renderState.modelInstance);
     },
 
@@ -107,7 +95,7 @@ var Portal = {
     },
     registerHandlers: function(sceneNode, renderable) {
         var obj = this;
-        renderable.mousePressed.connect(function() {
+        renderable.mouseReleased.connect(function() {
             obj.onClicked(sceneNode, renderable);
         });
     }
@@ -123,7 +111,7 @@ var MapChanger = {
     },
     registerHandlers: function(sceneNode, modelInstance) {
         var obj = this;
-        modelInstance.mousePressed.connect(function() {
+        modelInstance.mouseReleased.connect(function() {
             obj.onClicked();
         });
     }
@@ -211,8 +199,9 @@ function setupWorldClickHandler() {
             return;
         }
 
+        var text;
         if (firstClick === undefined) {
-            var text = "1st @ " + Math.floor(worldPosition[0]) + "," + Math.floor(worldPosition[2]) + " (" + material + ")";
+            text = "1st @ " + Math.floor(worldPosition[0]) + "," + Math.floor(worldPosition[2]) + " (" + material + ")";
             gameView.scene.addTextOverlay(worldPosition, text, [0.9, 0.9, 0.9, 0.9]);
             firstClick = worldPosition;
         } else {
@@ -223,7 +212,7 @@ function setupWorldClickHandler() {
                 color = [0.9, 0.2, 0.2, 0.9];
             }
 
-            var text = "2nd @ " + Math.floor(worldPosition[0]) + "," + Math.floor(worldPosition[2]) + " (" + material + ")";
+            text = "2nd @ " + Math.floor(worldPosition[0]) + "," + Math.floor(worldPosition[2]) + " (" + material + ")";
             gameView.scene.addTextOverlay(worldPosition, text, color);
 
             var path = gameView.sectorMap.findPath(firstClick, worldPosition);
@@ -249,6 +238,11 @@ function setupWorldClickHandler() {
 
             firstClick = undefined;
         }
+    });
+
+    gameView.worldDoubleClicked.connect(function(worldPosition) {
+        print("Doubleclicked");
+        gameView.centerOnWorld(worldPosition[0], worldPosition[2]);
     });
 }
 
