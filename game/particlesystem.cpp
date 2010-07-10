@@ -2030,7 +2030,8 @@ namespace EvilTemple {
         emitter->setColor(tpl.mColorRed.data(), tpl.mColorGreen.data(), tpl.mColorBlue.data(), tpl.mColorAlpha.data());
         emitter->setScale(tpl.mScale.data());
         emitter->setLifetime(tpl.mLifespan);
-        emitter->setTexture(loadTexture(tpl.mParticleTexture));
+        if (!tpl.mParticleTexture.isEmpty())
+            emitter->setTexture(loadTexture(tpl.mParticleTexture));
         emitter->setPosition(tpl.mPositionX.data(), tpl.mPositionY.data(), tpl.mPositionZ.data());
         emitter->setRotation(tpl.mRotationYaw.data(), tpl.mRotationPitch.data(), tpl.mRotationRoll.data());
         emitter->setAcceleration(tpl.mParticleAccelerationX.data(), tpl.mParticleAccelerationY.data(),
