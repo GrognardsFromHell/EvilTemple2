@@ -34,7 +34,6 @@ Q_PROPERTY(const SharedModel &model READ model WRITE setModel)
 Q_PROPERTY(bool idling READ isIdling)
 Q_PROPERTY(QString idleAnimation READ idleAnimation WRITE setIdleAnimation)
 Q_PROPERTY(bool drawBehindWalls READ drawsBehindWalls WRITE setDrawsBehindWalls)
-Q_PROPERTY(bool castsShadows READ castsShadows WRITE setCastsShadows)
 public:
     ModelInstance();
     ~ModelInstance();
@@ -64,9 +63,6 @@ public:
 
     bool drawsBehindWalls() const;
     void setDrawsBehindWalls(bool drawsBehindWalls);
-
-    bool castsShadows() const;
-    void setCastsShadows(bool castsShadows);
 
 public slots:
     Matrix4 getBoneSpace(uint boneId);
@@ -99,7 +95,6 @@ private:
     void updateBones();
 
     bool mDrawsBehindWalls;
-    bool mCastsShadows;
 
     Matrix4 *mFullWorld;
     Matrix4 *mFullTransform;
@@ -161,15 +156,6 @@ inline void ModelInstance::setDrawsBehindWalls(bool drawsBehindWalls)
     mDrawsBehindWalls = drawsBehindWalls;
 }
 
-inline bool ModelInstance::castsShadows() const
-{
-    return mCastsShadows;
-}
-
-inline void ModelInstance::setCastsShadows(bool castsShadows)
-{
-    mCastsShadows = castsShadows;
-}
 }
 
 #endif // MODELINSTANCE_H

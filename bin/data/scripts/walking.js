@@ -95,10 +95,13 @@ function showPath(path)
 /*
     Implements walking between two points.
  */
-function walkTo(obj, sceneNode, modelInstance, to) {
+function walkTo(obj, to) {
+    var sceneNode = obj.renderState.sceneNode;
+    var modelInstance = obj.renderState.modelInstance;
 
     for (var i = 0; i < walkJobs.length; ++i) {
         if (walkJobs[i].obj === obj) {
+            modelInstance.stopAnimation();
             walkJobs[i].canceled = true;
             walkJobs.splice(i, 1);
             --i;

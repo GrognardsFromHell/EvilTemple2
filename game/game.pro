@@ -123,7 +123,8 @@ OTHER_FILES += \
     resources/materials/lighting.vert \
     resources/materials/textureanim.frag \
     resources/materials/selection_material.xml \
-    resources/materials/behindwalls_material.xml
+    resources/materials/behindwalls_material.xml \
+    ../bin/data/scripts/walking.js
 
 INCLUDEPATH += .
 

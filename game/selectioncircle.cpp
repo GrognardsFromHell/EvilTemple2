@@ -40,6 +40,8 @@ SelectionCircle::SelectionCircle(Materials *materials)
     mBuffersInvalid(true),
     mSelected(false),
     mHovering(false),
+    mHeight(1),
+    mMouseDown(false),
     mMaterial(materials->load(":/material/selection_material.xml"))
 {
     updateBoundingBox();
@@ -73,7 +75,13 @@ void SelectionCircle::render(RenderStates &renderStates, MaterialState *override
     }
 
     ModelBufferSource bufferSource(mVertices.bufferId(), 0, mTexCoords.bufferId());
-    SelectionDrawStrategy drawer(mColor, mRotation, mSelected ? 1 : 0);
+
+    int type = mMouseDown ? 1 : 0;
+
+    if (mSelected)
+        type = 2;
+
+    SelectionDrawStrategy drawer(mColor, mRotation, type);
 
     DrawHelper<SelectionDrawStrategy, ModelBufferSource> drawHelper;
     drawHelper.draw(renderStates, mMaterial.data(), drawer, bufferSource);
@@ -86,12 +94,14 @@ const Box3d &SelectionCircle::boundingBox()
 
 void SelectionCircle::mousePressEvent()
 {
-
+    mMouseDown = true;
+    Renderable::mousePressEvent();
 }
 
 void SelectionCircle::mouseReleaseEvent()
 {
-
+    mMouseDown = false;
+    Renderable::mouseReleaseEvent();
 }
 
 void SelectionCircle::mouseEnterEvent()
@@ -111,9 +121,9 @@ void SelectionCircle::elapseTime(float secondsElapsed)
 
 void SelectionCircle::updateBoundingBox()
 {
-    Vector4 extent(mRadius, 1, mRadius, 0);
+    Vector4 extent(mRadius, 0, mRadius, 0);
     mBoundingBox.setMinimum(-extent);
-    mBoundingBox.setMaximum(extent);
+    mBoundingBox.setMaximum(extent + Vector4(0, mHeight, 0, 0));
 }
 
 IntersectionResult SelectionCircle::intersect(const Ray3d &ray) const

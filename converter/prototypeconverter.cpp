@@ -108,7 +108,8 @@ QVariantMap PrototypeConverter::convertPrototype(Prototype *prototype)
     ContainerProperties *containerProps = qobject_cast<ContainerProperties*>(prototype->additionalProperties);
 
     if (containerProps) {
-        writer.write("locked", containerProps->locked);
+        if (containerProps->locked)
+            writer.write("locked", containerProps->locked);
         writer.write("lockDc", containerProps->lockDc);
         writer.write("keyId", containerProps->keyId);
         writer.write("inventorySource", containerProps->inventorySource);
@@ -197,6 +198,9 @@ QVariantMap PrototypeConverter::convertPrototype(Prototype *prototype)
     CritterProperties *critterProps = qobject_cast<CritterProperties*>(prototype->additionalProperties);
 
     if (critterProps) {
+        if (critterProps->flags.removeAll("IsConcealed") > 0) {
+            writer.write("concealed", true);
+        }
         writer.write("critterFlags", critterProps->flags);
         writer.write("strength", critterProps->strength);
         writer.write("dexterity", critterProps->dexterity);
@@ -210,9 +214,7 @@ QVariantMap PrototypeConverter::convertPrototype(Prototype *prototype)
         writer.write("alignment", critterProps->alignment);
         writer.write("deity", critterProps->deity);
         writer.write("alignmentChoice", critterProps->alignmentChoice);
-        // Should probably be an array
-        writer.write("domain1", critterProps->domain1);
-        writer.write("domain2", critterProps->domain2);
+        writer.write("domains", critterProps->domains);
         writer.write("portraitId", critterProps->portraitId);
         writer.write("unknownDescriptionId", critterProps->unknownDescription);
         writer.write("reach", critterProps->reach);
@@ -264,6 +266,12 @@ QVariantMap PrototypeConverter::convertPrototype(Prototype *prototype)
                                              (prototype->additionalProperties);
 
     if (npcProps) {
+        if (npcProps->flags.removeAll("KillOnSight"))
+            writer.write("killsOnSight", true);
+        if (npcProps->flags.removeAll("Wanders"))
+            writer.write("wanders", true);
+        if (npcProps->flags.removeAll("WandersInDark"))
+            writer.write("wandersInDark", true);
         writer.write("npcFlags", npcProps->flags);
         writer.write("aiData", npcProps->aiData);
 
@@ -278,7 +286,7 @@ QVariantMap PrototypeConverter::convertPrototype(Prototype *prototype)
         writer.write("acBonus", npcProps->acBonus);
         writer.write("hitDice", npcProps->hitDice);
         writer.write("npcType", npcProps->type);
-        writer.write("npcSubtype", npcProps->subType);
+        writer.write("npcSubtypes", npcProps->subTypes);
         writer.write("lootSharing", npcProps->lootShareAmount);
         writer.write("addMeshId", npcProps->additionalMeshId);
     }
@@ -304,6 +312,9 @@ PrototypeConverter::PrototypeConverter(VirtualFileSystem *vfs) : mVfs(vfs)
     mModelFiles = MessageFile::parse(mVfs->openFile("art/meshes/meshes.mes"));
 
     foreach (uint key, mModelFiles.keys()) {
-        mModelFiles[key] = "meshes/" + mModelFiles[key] + ".model";
+        QString filename = QDir::toNativeSeparators(mModelFiles[key]);
+        filename.replace(QDir::separator(), "/");
+
+        mModelFiles[key] = "meshes/" + filename + ".model";
     }
 }

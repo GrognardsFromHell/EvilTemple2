@@ -121,3 +121,6 @@ contains(TEMPLE_LIBS,openal) {
 # Enable to get PDB for release builds
 win32:QMAKE_CXXFLAGS_RELEASE += -Zi
 win32:QMAKE_LFLAGS_RELEASE += /DEBUG /INCREMENTAL:NO /OPT:REF /OPT:ICF
+
+OTHER_FILES += \
+    ../bin/data/scripts/mobileInfo.js

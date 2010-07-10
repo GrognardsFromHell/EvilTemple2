@@ -13,6 +13,7 @@ class SelectionCircle : public Renderable
 {
 Q_OBJECT
 Q_PROPERTY(float radius READ radius WRITE setRadius)
+Q_PROPERTY(float height READ height WRITE setHeight)
 Q_PROPERTY(Vector4 color READ color WRITE setColor)
 Q_PROPERTY(bool selected READ isSelected WRITE setSelected)
 public:
@@ -33,6 +34,9 @@ public:
     float radius() const;
     void setRadius(float radius);
 
+    float height() const;
+    void setHeight(float height);
+
     bool isSelected() const;
     void setSelected(bool selected);
 
@@ -50,8 +54,10 @@ private:
     bool mBuffersInvalid;
     bool mSelected;
     bool mHovering;
+    bool mMouseDown;
     Vector4 mColor;
     float mRadius;
+    float mHeight;
     float mRotation;
     Box3d mBoundingBox;
     SharedMaterialState mMaterial;
@@ -87,6 +93,16 @@ inline bool SelectionCircle::isSelected() const
 inline void SelectionCircle::setSelected(bool selected)
 {
     mSelected = selected;
+}
+
+inline void SelectionCircle::setHeight(float height)
+{
+    mHeight = height;
+}
+
+inline float SelectionCircle::height() const
+{
+    return mHeight;
 }
 
 Q_DECLARE_METATYPE(SelectionCircle*)

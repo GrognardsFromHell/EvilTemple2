@@ -741,14 +741,15 @@ namespace Troika
                 stream >> object.secretDoorDc;
                 break;
             case PortalLockDc:
-                stream >> object.portalLockDc;
-                if (object.portalLockDc == qobject_cast<PortalProperties*>(object.prototype->additionalProperties)->lockDc)
-                    object.portalLockDc.clear();
+                stream >> object.lockDc;
+                if (object.lockDc == qobject_cast<PortalProperties*>(object.prototype->additionalProperties)->lockDc)
+                    object.lockDc.clear();
                 break;
             case PortalKeyId:
-                stream >> object.portalKeyId;
-                if (object.portalKeyId == qobject_cast<PortalProperties*>(object.prototype->additionalProperties)->keyId)
-                    object.portalKeyId.clear();
+                Q_ASSERT(!object.keyId.isDefined());
+                stream >> object.keyId;
+                if (object.keyId == qobject_cast<PortalProperties*>(object.prototype->additionalProperties)->keyId)
+                    object.keyId.clear();
                 break;
             case Flags:
                 stream >> flags;
@@ -817,6 +818,9 @@ namespace Troika
                 break;
             case HpDamage:
                 stream >> object.hitPointsDamage;
+                // No damage is the default anyway.
+                if (object.hitPointsDamage.value() == 0)
+                    object.hitPointsDamage.clear();
                 break;
             case HpAdj:
                 stream >> object.hitPointsAdjustment;
@@ -862,10 +866,11 @@ namespace Troika
                     object.locked.clear();
                 break;
             case ContainerLockDc:
-                stream >> object.containerLockDc;
+                stream >> object.lockDc;
                 break;
             case ContainerKeyId:
-                stream >> object.containerKeyId;
+                Q_ASSERT(!object.keyId.isDefined());
+                stream >> object.keyId;
                 break;
             case ContainerInventoryNum:
                 stream >> object.containerInventoryId;
@@ -889,7 +894,8 @@ namespace Troika
                 stream >> object.itemWorth;
                 break;
             case ItemQuantity:
-                stream >> object.itemQuantity;
+                Q_ASSERT(!object.quantity.isDefined());
+                stream >> object.quantity;
                 break;
             case WeaponFlags:
                 stream >> flags;
@@ -898,7 +904,8 @@ namespace Troika
                     object.weaponFlags.clear();
                 break;
             case AmmoQuantity:
-                stream >> object.ammoQuantity;
+                Q_ASSERT(!object.quantity.isDefined());
+                stream >> object.quantity;
                 break;
             case ArmorFlags:
                 stream >> flags;
@@ -916,7 +923,8 @@ namespace Troika
                 stream >> object.armorCheckPenalty;
                 break;
             case MoneyQuantity:
-                stream >> object.moneyQuantity;
+                Q_ASSERT(!object.quantity.isDefined());
+                stream >> object.quantity;
                 break;
             case KeyKeyId:
                 stream >> object.keyId;
@@ -1131,7 +1139,13 @@ namespace Troika
             uchar version;
             uint recordSize, recordCount, structureId;
 
-            stream >> version >> recordSize >> recordCount >> structureId;
+            stream >> version;
+            
+            // The array can be empty for some reason
+            if (version == 0)
+                return;
+            
+            stream >> recordSize >> recordCount >> structureId;
 
             Q_ASSERT(version == 1);
             Q_ASSERT(recordSize == 4);
@@ -1150,7 +1164,7 @@ namespace Troika
 
         void readStandpoints()
         {
-            quint32 SAR_POS_STN, dayMap, dayFlags, dayX, dayY, dayJP, nightMap, nightFlags, nightX, nightY, nightJP;
+            qint32 SAR_POS_STN, dayMap, dayFlags, dayX, dayY, dayJP, nightMap, nightFlags, nightX, nightY, nightJP;
             float dayXOffset, dayYOffset, nightXOffset, nightYOffset;
 
             // Optional scout standpoint
@@ -1179,11 +1193,15 @@ namespace Troika
             stream >> nightMap >> nightFlags >> nightX >> nightY >> nightXOffset >> nightYOffset >> nightJP;
             stream.skipRawData(52);
             if (type & 0x14) {
-                object.nightStandpoint.defined = true;
-                object.nightStandpoint.flags = nightFlags;
-                object.nightStandpoint.jumpPoint = nightJP;
-                object.nightStandpoint.map = nightMap;
-                object.nightStandpoint.position = getPosition(nightX, nightY, nightXOffset, nightYOffset);
+                // Only define a night standpoint if the standpoint is actually different from the day standpoint
+                if (nightFlags != dayFlags || nightX != dayX || nightY != dayY || nightXOffset != dayXOffset
+                    || nightYOffset != dayYOffset || dayJP != nightJP) {
+                    object.nightStandpoint.defined = true;
+                    object.nightStandpoint.flags = nightFlags;
+                    object.nightStandpoint.jumpPoint = nightJP;
+                    object.nightStandpoint.map = nightMap;
+                    object.nightStandpoint.position = getPosition(nightX, nightY, nightXOffset, nightYOffset);
+                }
             }
 
             if (type == 0x1E)

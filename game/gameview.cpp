@@ -340,6 +340,8 @@ namespace EvilTemple {
         // Evaluate visual script timers
         d->pollVisualTimers();
 
+        SAFE_GL(glEnable(GL_MULTISAMPLE));
+
         SAFE_GL(glEnable(GL_DEPTH_TEST));
         SAFE_GL(glEnable(GL_CULL_FACE));
         SAFE_GL(glEnable(GL_BLEND));
@@ -405,6 +407,8 @@ namespace EvilTemple {
 
         glUseProgram(0);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+        SAFE_GL(glDisable(GL_MULTISAMPLE));
     }
 
     QObject *GameView::showView(const QString &url)

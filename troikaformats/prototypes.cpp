@@ -604,7 +604,7 @@ namespace Troika
             type = parts[163];
 
         if (isPartDefined(parts[164]))
-            subType = parts[164];
+            subTypes = parts[164].split('\x00b');
 
         if (isPartDefined(parts[165]))
             lootShareAmount = parts[165];
@@ -726,16 +726,16 @@ namespace Troika
         if (isPartDefined(parts[108]))
             race = parts[108];
         if (isPartDefined(parts[109]))
-            race = parts[109];
+            gender = parts[109];
         optionalPart(parts, 110, age);
         if (isPartDefined(parts[113]))
-            race = parts[113];
+            alignment = parts[113];
         if (isPartDefined(parts[114]))
             deity = parts[114];
         if (isPartDefined(parts[115]))
-            domain1 = parts[115];
+            domains.append(parts[115]);
         if (isPartDefined(parts[116]))
-            domain2 = parts[116];
+            domains.append(parts[116]);
         if (isPartDefined(parts[117]))
             alignmentChoice = parts[117];
         optionalPart(parts, 123, portraitId);

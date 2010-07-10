@@ -53,8 +53,10 @@ varying vec2 texCoord;
 
 void main() {
   if (type == 0)
+    gl_FragColor = texture2D(mouseOverSampler, texCoord);
+  else if (type == 1)
     gl_FragColor = texture2D(mouseDownSampler, texCoord);
-  else
+  else if (type == 2)
     gl_FragColor = texture2D(selectionSampler, texCoord);
   gl_FragColor.rgb *= color.rgb;
 }

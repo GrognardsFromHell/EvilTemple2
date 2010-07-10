@@ -17,7 +17,7 @@ namespace EvilTemple {
         mCurrentAnimation(NULL), mPartialFrameTime(0), mCurrentFrame(0),
         mTransformedPositions(NULL), mTransformedNormals(NULL), mFullTransform(NULL),
         mFullWorld(NULL), mCurrentFrameChanged(true), mIdling(true), mLooping(false),
-        mDrawsBehindWalls(true), mCastsShadows(true)
+        mDrawsBehindWalls(false)
     {
         mPositionBuffer.setUsagePattern(QGLBuffer::StreamDraw);
         mNormalBuffer.setUsagePattern(QGLBuffer::StreamDraw);
@@ -356,7 +356,7 @@ namespace EvilTemple {
             mCurrentFrameChanged = false;
         }
 
-        DrawHelper<ModelInstanceDrawStrategy, ModelBufferSource> drawHelper;
+        DrawHelper<ModelDrawStrategy, ModelBufferSource> drawHelper;
         ModelBufferSource bufferSource(mCurrentAnimation ? mPositionBuffer.bufferId() : model->positionBuffer.bufferId(),
                                        mCurrentAnimation ? mNormalBuffer.bufferId() : model->normalBuffer.bufferId(),
                                        model->texcoordBuffer.bufferId());
@@ -375,8 +375,7 @@ namespace EvilTemple {
                 material = overrideMaterial;
 
             if (material) {
-                ModelInstanceDrawStrategy drawStrategy(faceGroup.buffer.bufferId(), faceGroup.indices.size(),
-                                                       mCastsShadows);
+                ModelDrawStrategy drawStrategy(faceGroup.buffer.bufferId(), faceGroup.indices.size());
                 drawHelper.draw(renderStates, material, drawStrategy, bufferSource);
             }
         }
@@ -398,8 +397,7 @@ namespace EvilTemple {
                     material = overrideMaterial;
 
                 if (material) {
-                    ModelInstanceDrawStrategy drawStrategy(faceGroup.buffer.bufferId(), faceGroup.indices.size(),
-                                                           mCastsShadows);
+                    ModelDrawStrategy drawStrategy(faceGroup.buffer.bufferId(), faceGroup.indices.size());
                     drawHelper.draw(renderStates, material, drawStrategy, bufferSource);
                 }
             }

@@ -369,7 +369,7 @@ namespace Troika
         // Weight: unused
         QString alignment;
         QString deity;
-        QString domain1, domain2;
+        QStringList domains;
         QString alignmentChoice;
         Integer portraitId;
         Integer unknownDescription; // If not yet talked to the npc
@@ -406,7 +406,7 @@ namespace Troika
         Integer acBonus;
         QString hitDice;
         QString type;
-        QString subType;
+        QStringList subTypes;
         QString lootShareAmount;
         Integer additionalMeshId; // An addmesh that should always be present (used for bugbear equipment)
     };

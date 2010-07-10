@@ -70,8 +70,11 @@ static QVariantList factionsToList(const QList<uint> &factions)
 {
     QVariantList result;
 
-    foreach (uint faction, factions)
-        result.append(faction);
+    foreach (uint faction, factions) {
+        // I think including the 0 faction is pointless
+        if (faction != 0)
+            result.append(faction);
+    }
 
     return result;
 }
@@ -95,6 +98,8 @@ static QVariant toVariant(IConversionService *service, GameObject *object)
     vector.append(object->position.z());
     objectMap["position"] = QVariant(vector);
 
+    NonPlayerCharacterProperties *npcProperties = qobject_cast<NonPlayerCharacterProperties*>(object->prototype->additionalProperties);
+
     JsonPropertyWriter props(objectMap);
     if (object->name.isDefined())
         props.write("internalDescription", service->getInternalName(object->name.value()));
@@ -107,7 +112,7 @@ static QVariant toVariant(IConversionService *service, GameObject *object)
     props.write("descriptionId", object->descriptionId);
     props.write("secretDoorFlags", object->secretDoorFlags);
     props.write("portalFlags", object->portalFlags);
-    props.write("portalLockDc", object->portalLockDc);
+    props.write("lockDc", object->lockDc);
     props.write("teleportTarget", object->teleportTarget);
     // props.write("parentItemId", object->parentItemId);
     props.write("substituteInventoryId", object->substituteInventoryId);
@@ -122,30 +127,34 @@ static QVariant toVariant(IConversionService *service, GameObject *object)
     props.write("notifyNpc", object->notifyNpc);
     props.write("dontDraw", object->dontDraw);
     // props.write("containerFlags", object->containerFlags);
-    props.write("containerLockDc", object->containerLockDc);
-    props.write("containerKeyId", object->containerKeyId);
     props.write("containerInventoryId", object->containerInventoryId);
     props.write("containerInventoryListIndex", object->containerInventoryListIndex);
     props.write("containerInventorySource", object->containerInventorySource);
     props.write("itemFlags", object->itemFlags);
-    props.write("itemWeight", object->itemWeight);
-    props.write("itemWorth", object->itemWorth);
-    props.write("itemQuantity", object->itemQuantity);
+    props.write("weight", object->itemWeight);
+    props.write("worth", object->itemWorth);
+    props.write("quantity", object->quantity);
     props.write("weaponFlags", object->weaponFlags);
-    props.write("ammoQuantity", object->ammoQuantity);
     props.write("armorFlags", object->armorFlags);
     props.write("armorAcAdjustment", object->armorAcAdjustment);
     props.write("armorMaxDexBonus", object->armorMaxDexBonus);
     props.write("armorCheckPenalty", object->armorCheckPenalty);
-    props.write("moneyQuantity", object->moneyQuantity);
     props.write("keyId", object->keyId);
+    if (object->critterFlags.removeAll("IsConcealed"))
+        props.write("concealed", true);
     props.write("critterFlags", object->critterFlags);
-    props.write("critterFlags2", object->critterFlags2);
-    props.write("critterRace", object->critterRace);
-    props.write("critterGender", object->critterGender);
+
+    // They're used only on the tutorial map, thus we ignore them here.
+    // props.write("critterFlags2", object->critterFlags2);
+    // There are some mobs on temple level 1 that have this property, but it's always 0.
+    // props.write("critterRace", object->critterRace);
+    // Same as above, only this time its value is 1
+    // props.write("gender", object->critterGender);
     props.write("critterMoneyIndex", object->critterMoneyIndex);
     props.write("critterInventoryNum", object->critterInventoryNum);
     props.write("critterInventorySource", object->critterInventorySource);
+    if (object->npcFlags.removeAll("KillOnSight") && (!npcProperties || npcProperties->flags.contains("KillOnSight")))
+        props.write("killsOnSight", true);
     props.write("npcFlags", object->npcFlags);
     props.write("factions", factionsToList(object->factions));
     props.write("locked", object->locked);
@@ -158,7 +167,6 @@ static QVariant toVariant(IConversionService *service, GameObject *object)
     props.write("charisma", object->charisma);
 
     // Standpoints
-    props.write("standpointFlags", object->standpointFlags);
     props.write("standpointDay", standpointToMap(object->dayStandpoint));
     props.write("standpointNight", standpointToMap(object->nightStandpoint));
     props.write("standpointScout", standpointToMap(object->scoutStandpoint));
