@@ -8,6 +8,7 @@
 #include <QtCore/QWeakPointer>
 #include <QtCore/QThread>
 #include <QtCore/QMutex>
+#include <QtCore/QWaitCondition>
 #include <QtCore/QHash>
 #include <QtGui/QImage>
 
@@ -116,7 +117,7 @@ class GlobalTextureCacheCleanupThread;
 class GlobalTextureCache {
 friend class GlobalTextureCacheCleanupThread;
 public:
-    static GlobalTextureCache &instance() {
+    static GlobalTextureCache *instance() {
         return mInstance;
     }
 
@@ -131,6 +132,16 @@ public:
       */
     void insert(const Md5Hash &hash, const SharedTexture &texture);
 
+    /**
+      Starts the global texture cache if it's not started yet.
+      */
+    static void start();
+
+    /**
+      Stops the global texture cache and clears existing data.
+      */
+    static void stop();
+
 private:
     GlobalTextureCache();
     ~GlobalTextureCache();
@@ -142,8 +153,9 @@ private:
     CacheContainer mTextures;
 
     QMutex mCleanupMutex;
+    QWaitCondition mWaitCondition;
     GlobalTextureCacheCleanupThread *mThread;
-    static GlobalTextureCache mInstance;
+    static GlobalTextureCache *mInstance;
 };
 
 uint getActiveTextures();

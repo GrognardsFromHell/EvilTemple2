@@ -238,21 +238,20 @@ public:
     const static uint TexturePruneInterval = 2500; // Milliseconds
 
     GlobalTextureCacheCleanupThread(GlobalTextureCache &cache)
-        : mCache(cache)
+        : mCache(cache), mCancel(false)
     {
     }
 
     void cancel()
     {
-        QMutexLocker locker(&mWaitMutex);
-        mWaitCondition.wakeAll();
+        mCancel = true;
     }
 
 protected:
     void run()
     {
-        QMutexLocker locker(&mWaitMutex);
-        while (!mWaitCondition.wait(&mWaitMutex, TexturePruneInterval)) {
+        QMutexLocker locker(&mCache.mCleanupMutex);
+        while (!mCache.mWaitCondition.wait(&mCache.mCleanupMutex, TexturePruneInterval) && !mCancel) {
             pruneTextures();
         }
     }
@@ -261,8 +260,6 @@ private:
 
     void pruneTextures()
     {
-        QMutexLocker locker(&mCache.mCleanupMutex);
-
         GlobalTextureCache::iterator it = mCache.mTextures.begin();
 
         while (it != mCache.mTextures.end()) {
@@ -274,9 +271,9 @@ private:
         }
     }
 
+    volatile bool mCancel;
+
     GlobalTextureCache &mCache;
-    QMutex mWaitMutex;
-    QWaitCondition mWaitCondition;
 };
 
 GlobalTextureCache::GlobalTextureCache() : mThread(new GlobalTextureCacheCleanupThread(*this))
@@ -286,7 +283,9 @@ GlobalTextureCache::GlobalTextureCache() : mThread(new GlobalTextureCacheCleanup
 
 GlobalTextureCache::~GlobalTextureCache()
 {
+    qDebug("Shutting down the global texture cache cleanup thread.");
     mThread->cancel();
+    mWaitCondition.wakeAll();
     mThread->wait();
     delete mThread;
 }
@@ -311,6 +310,17 @@ void GlobalTextureCache::insert(const Md5Hash &hash, const SharedTexture &textur
     mTextures[hash] = QWeakPointer<Texture>(texture);
 }
 
-GlobalTextureCache GlobalTextureCache::mInstance;
+void GlobalTextureCache::start()
+{
+    Q_ASSERT(!mInstance);
+    mInstance = new GlobalTextureCache;
+}
+
+void GlobalTextureCache::stop()
+{
+    delete mInstance;
+}
+
+GlobalTextureCache *GlobalTextureCache::mInstance = NULL;
 
 }

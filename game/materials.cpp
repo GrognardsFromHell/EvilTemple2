@@ -23,13 +23,7 @@ public:
     }
 
 protected:
-    void run()
-    {
-        QMutexLocker locker(&mWaitMutex);
-        while (!mWaitCondition.wait(&mWaitMutex, MaterialPruneInterval) && !mCancelled) {
-            pruneMaterials();
-        }
-    }
+    void run();
 
 private:
 
@@ -37,8 +31,6 @@ private:
 
     volatile bool mCancelled;
     MaterialsData *d;
-    QMutex mWaitMutex;
-    QWaitCondition mWaitCondition;
 };
 
 class MaterialsData
@@ -46,6 +38,7 @@ class MaterialsData
 public:
     MaterialsData(RenderStates &_renderStates)
         : renderStates(_renderStates), thread(this) {}
+    ~MaterialsData();
 
     typedef QHash<QString, QWeakPointer<MaterialState> > CacheContainer;
     typedef CacheContainer::iterator iterator;
@@ -56,10 +49,27 @@ public:
 
     QWaitCondition waitCondition;
     QMutex cleanupMutex;
-    QMutex waitMutex; // Used to wait for cancellation
     MaterialsCleanupThread thread;
     RenderStates &renderStates;
 };
+
+MaterialsData::~MaterialsData()
+{
+    // Shut down the material cleanup thread
+    qDebug("Shutting down the material cache cleanup thread.");
+
+    thread.cancel(); // Signal to cancel
+    waitCondition.wakeAll(); // Cause it to stop waiting
+    thread.wait();
+}
+
+void MaterialsCleanupThread::run()
+{
+    QMutexLocker locker(&d->cleanupMutex);
+    while (!d->waitCondition.wait(&d->cleanupMutex, MaterialPruneInterval) && !mCancelled) {
+        pruneMaterials();
+    }
+}
 
 void MaterialsCleanupThread::pruneMaterials()
 {
@@ -90,11 +100,6 @@ Materials::Materials(RenderStates &renderStates, QObject *parent) :
 
 Materials::~Materials()
 {
-    qDebug("Shutting down cleanup thread for materials cache.");
-    QMutexLocker locker(&d->waitMutex);
-    d->thread.cancel();
-    d->waitCondition.wakeAll();
-    d->thread.wait();
 }
 
 bool Materials::load()

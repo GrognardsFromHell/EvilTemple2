@@ -74,7 +74,7 @@ namespace EvilTemple {
                 uint textureId = name.right(name.length() - 1).toUInt(&ok);
                 if (ok && textureId < mTextures.size()) {
                     // Check if there already is a texture in the cache
-                    SharedTexture texture = GlobalTextureCache::instance().get(mMd5Hashes[textureId]);
+                    SharedTexture texture = GlobalTextureCache::instance()->get(mMd5Hashes[textureId]);
 
                     if (!texture) {
                         QByteArray textureData = QByteArray::fromRawData((char*)mTextures[textureId],
@@ -85,7 +85,7 @@ namespace EvilTemple {
                             qWarning("Unable to load model texture.");
                         }
 
-                        GlobalTextureCache::instance().insert(mMd5Hashes[textureId], texture);
+                        GlobalTextureCache::instance()->insert(mMd5Hashes[textureId], texture);
                     }
 
                     return texture;

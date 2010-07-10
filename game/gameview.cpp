@@ -34,22 +34,6 @@ using namespace GameMath;
 
 namespace EvilTemple {
 
-#define HANDLE_GL_ERROR handleGlError(__FILE__, __LINE__);
-    inline static void handleGlError(const char *file, int line) {
-        QString error;
-
-        GLenum glErr = glGetError();
-        while (glErr != GL_NO_ERROR) {
-            error.append(QString::fromLatin1((char*)gluErrorString(glErr)));
-            error.append('\n');
-            glErr = glGetError();
-        }
-
-        if (error.length() > 0) {
-            qWarning("OpenGL error @ %s:%d: %s", file, line, qPrintable(error));
-        }
-    }
-
     class VisualTimer {
     public:
 
@@ -118,6 +102,8 @@ namespace EvilTemple {
                 qWarning("Unable to initialize GLEW.");
             }
 
+            GlobalTextureCache::start();
+
             if (!particleSystems.loadTemplates()) {
                 qWarning("Unable to load particle system templates: %s.", qPrintable(particleSystems.error()));
             }
@@ -153,6 +139,11 @@ namespace EvilTemple {
 
             lightDebugger.loadMaterial();
             Light::setDebugRenderer(&lightDebugger);
+        }
+
+        ~GameViewData()
+        {
+            GlobalTextureCache::stop();
         }
 
         void centerOnWorld(float worldX, float worldY)
@@ -335,7 +326,7 @@ namespace EvilTemple {
 
         Profiler::newFrame();
 
-        HANDLE_GL_ERROR
+        SAFE_GL(;); // Clears existing OpenGL errors
 
         // Evaluate visual script timers
         d->pollVisualTimers();
