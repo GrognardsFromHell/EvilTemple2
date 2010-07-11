@@ -54,31 +54,35 @@ using namespace EvilTemple;
 
 static QFile logFile("eviltemple.log");
 
+static bool outputToConsole = false;
+
 static void messageHandler(QtMsgType type, const char *message)
 {
-    bool flush = false;
+    const char *prefix = NULL;
 
     switch (type) {
     case QtDebugMsg:
-        logFile.write("[DEBUG] ");
+        prefix = "[DEBUG]";
         break;
     case QtWarningMsg:
-        logFile.write("[WARN] ");
+        prefix = "[WARN]";
         break;
     case QtCriticalMsg:
-        logFile.write("[CRITICAL] ");
-        flush = true;
+        prefix = "[ERROR]";
         break;
     case QtFatalMsg:
-        logFile.write("[FATAL] ");
-        flush = true;
+        prefix = "[FATAL]";
         break;
     }
 
+    logFile.write(prefix);
+    logFile.write(" ");
     logFile.write(message);
     logFile.write("\n");
-    if (flush)
-       logFile.flush();
+    logFile.flush();
+
+    if (outputToConsole)
+        printf("%s %s\n", prefix, message);
 
     if (type == QtFatalMsg)
         abort();
@@ -89,6 +93,13 @@ int main(int argc, char *argv[])
 #if defined(GOOGLE_BREAKPAD_ENABLED)
     install_google_breakpad();
 #endif
+
+    for (int i = 0; i < argc; ++i) {
+        if (!strcmp(argv[i], "-console")) {
+            outputToConsole = true;
+            printf("Logging to console enabled.\n");
+        }
+    }
 
     if (!logFile.open(QIODevice::Text|QIODevice::Truncate|QIODevice::WriteOnly)) {
         qFatal("Unable to open logfile eviltemple.log for writing, please make sure "
@@ -109,7 +120,7 @@ int main(int argc, char *argv[])
     Game game;
 
     if (!game.start()) {
-        return -1;
+        return EXIT_FAILURE;
     }
 
     MainWindow mainWindow(game);
