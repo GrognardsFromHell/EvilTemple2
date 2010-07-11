@@ -455,6 +455,9 @@ namespace Troika
         Float radius;
         Float renderHeight;
         Bool dontDraw;
+        Bool disabled;
+        Bool interactive;
+        Bool unlit;
 
         AdditionalProperties *additionalProperties;
 

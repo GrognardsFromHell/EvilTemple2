@@ -41,6 +41,9 @@ namespace Troika
         Integer charisma;
 
         Bool dontDraw;
+        Bool disabled;
+        Bool interactive;
+        Bool unlit;
 
         Prototype *prototype;
         QString id; // object guid

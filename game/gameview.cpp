@@ -535,8 +535,6 @@ namespace EvilTemple {
         if (d->uiScene.itemAt(evt->posF())) {
             QGraphicsView::mouseDoubleClickEvent(evt);
         } else {
-            qDebug("Mouse double click event.");
-
             Renderable *renderable = d->pickObject(evt->pos());
 
             if (renderable) {

@@ -46,6 +46,10 @@ var jumppoints = {};
 
 var currentSelection = null;
 
+// Registry for render states.
+var renderStates = {};
+var globalRenderStateId = 0;
+
 // Base object for all prototypes
 var BaseObject = {
     scale: 100,
@@ -53,18 +57,54 @@ var BaseObject = {
     interactive: true,
     drawBehindWalls: false,
 
-    registerHandlers: function(sceneNode, modelInstance) {
-        if (this.selectionCircle !== undefined) {
-            this.selectionCircle.mousePressed.connect(this, this.clicked);
-            this.selectionCircle.mouseDoubleClicked.connect(this, this.doubleClicked);
+    getRenderState: function() {
+        if (this.renderStateId === undefined)
+            return null;
+
+        return renderStates[this.renderStateId];
+    },
+
+    setRenderState: function(renderState) {
+        if (this.renderStateId === undefined) {
+            this.renderStateId = globalRenderStateId++;
         }
+
+        renderStates[this.renderStateId] = renderState;
+    },
+
+    registerHandlers: function() {
+        var renderState = this.getRenderState();
+
+        var selectionCircle = renderState.selectionCircle;
+        selectionCircle.mouseReleased.connect(this, this.clicked);
+        selectionCircle.mouseDoubleClicked.connect(this, this.doubleClicked);
+        selectionCircle.mouseEnter.connect(this, this.mouseEnter);
+        selectionCircle.mouseLeave.connect(this, this.mouseLeave);
+
+        var modelInstance = renderState.modelInstance;
 
         modelInstance.mouseReleased.connect(this, this.clicked);
         modelInstance.mouseDoubleClicked.connect(this, this.doubleClicked);
+        modelInstance.mouseEnter.connect(this, this.mouseEnter);
+        modelInstance.mouseLeave.connect(this, this.mouseLeave);
+    },
+
+    mouseEnter: function(buttons) {
+        var renderState = this.getRenderState();
+        if (renderState)
+            renderState.selectionCircle.hovering = true;
+    },
+
+    mouseLeave: function(buttons) {
+        var renderState = this.getRenderState();
+        if (renderState)
+            renderState.selectionCircle.hovering = false;
     },
 
     setSelected: function(selected) {
-        this.renderState.selectionCircle.selected = selected;
+        var renderState = this.getRenderState();
+        if (renderState)
+            renderState.selectionCircle.selected = selected;
     },
 
     clicked: function(button, buttons) {
@@ -77,7 +117,9 @@ var BaseObject = {
     },
 
     doubleClicked: function() {
-        showMobileInfo(this, this.renderState.modelInstance);
+        var renderState = this.getRenderState();
+        if (renderState)
+            showMobileInfo(this, renderState.modelInstance);
     },
 
     getReactionColor: function() {
@@ -89,41 +131,31 @@ var Portal = {
     __proto__: BaseObject,
     interactive: true,
     open: false, // All doors are shut by default
-    onClicked: function(sceneNode, renderable) {
+    clicked: function() {
+        var renderState = this.getRenderState();
+
         if (this.open) {
             print("Closing door.");
-            renderable.playAnimation('close', false);
-            renderable.idleAnimation = 'item_idle';
+            renderState.modelInstance.playAnimation('close', false);
+            renderState.modelInstance.idleAnimation = 'item_idle';
         } else {
             print("Opening door.");
-            if (!renderable.playAnimation('open', false)) {
+            if (!renderState.modelInstance.playAnimation('open', false)) {
                 print("Unable to play open animation for door.");
             }
-            renderable.idleAnimation = 'open_idle';
+            renderState.modelInstance.idleAnimation = 'open_idle';
         }
         this.open = !this.open;
-    },
-    registerHandlers: function(sceneNode, renderable) {
-        var obj = this;
-        renderable.mouseReleased.connect(function() {
-            obj.onClicked(sceneNode, renderable);
-        });
     }
 };
 
 var MapChanger = {
     __proto__: BaseObject,
     interactive: true,
-    onClicked: function() {
+    clicked: function() {
         var jumpPoint = jumppoints[this.teleportTarget];
         loadMap('maps/' + jumpPoint.map + '/map.js');
         gameView.centerOnWorld(jumpPoint.x, jumpPoint.z);
-    },
-    registerHandlers: function(sceneNode, modelInstance) {
-        var obj = this;
-        modelInstance.mouseReleased.connect(function() {
-            obj.onClicked();
-        });
     }
 };
 
@@ -131,9 +163,14 @@ var Critter = {
     __proto__: BaseObject,
     concealed: false,
     getReactionColor: function() {
-        return [0.33, 1, 0]; // Friendly
+        if (this.killsOnSight) {
+            return [1, 0, 0]; // Friendly
+        } else {
+            return [0.33, 1, 0]; // Friendly
+        }
     },
-    drawBehindWalls: true
+    drawBehindWalls: true,
+    killsOnSight: false    
 };
 
 var NonPlayerCharacter = {
@@ -271,7 +308,7 @@ var animEventGameFacade = {
             return;
         }
 
-        print("Playing sound " + filename)
+        print("Playing sound " + filename);
         gameView.audioEngine.playSoundOnce(filename, SoundCategory_Effect);
     },
     shake: function(a, b) {
@@ -332,14 +369,6 @@ function handleAnimationEvent(sceneNode, modelInstance, obj, type, content)
 
 function createMapObject(scene, obj)
 {
-    // This is clumsy and needs preprocessing
-    if (obj.flags !== undefined) {
-        for (var i = 0; i < obj.flags.length; ++i) {
-            if (obj.flags[i] == 'ClickThrough')
-                obj.interactive = false;
-        }
-    }
-
     var sceneNode = gameView.scene.createNode();
     sceneNode.interactive = obj.interactive;
     sceneNode.position = obj.position;
@@ -358,14 +387,15 @@ function createMapObject(scene, obj)
     });
 
     // Store render state with the object
-    obj.renderState = {
+    var renderState = {
         modelInstance: modelInstance,
         sceneNode: sceneNode
     };
+    obj.setRenderState(renderState);
 
     if (obj.interactive) {
         var selectionCircle = new SelectionCircle(scene, gameView.materials);
-        obj.renderState.selectionCircle = selectionCircle;
+        renderState.selectionCircle = selectionCircle;
 
         if (obj.radius !== undefined)
             selectionCircle.radius = obj.radius;
@@ -373,7 +403,6 @@ function createMapObject(scene, obj)
         selectionCircle.color = obj.getReactionColor();
 
         sceneNode.attachObject(selectionCircle);
-        obj.selectionCircle = selectionCircle;
 
         obj.registerHandlers(sceneNode, modelInstance);
     }
@@ -391,12 +420,22 @@ function makeParticleSystemTestModel(particleSystem, sceneNode) {
     sceneNode.attachObject(modelInstance);
 }
 
+/**
+ * Unloads the current map. Also clears the render states and the current selection.
+ */
+function unloadMap() {
+    if (currentSelection != null) {
+        currentSelection.setSelected(false);
+    }
+    gameView.scene.clear();
+    renderStates = {}; // Clear render states
+    gc();
+}
+
 function loadMap(filename) {
     var start = timerReference();
 
-    currentSelection = null;
-    gameView.scene.clear();
-    gc();
+    unloadMap();
 
     var mapObj = readJson(filename);
 
@@ -449,7 +488,7 @@ function loadMap(filename) {
     for (var i = 0; i < mapObj.lights.length; ++i) {
         obj = mapObj.lights[i];
 
-        var sceneNode = gameView.scene.createNode();
+        sceneNode = gameView.scene.createNode();
         sceneNode.interactive = false;
         sceneNode.position = obj.position;
 
@@ -479,34 +518,6 @@ function loadMap(filename) {
         */
         // makeParticleSystemTestModel(obj, sceneNode);
     }
-
-    /*print("Creating debug objects for waypoints.");
-    for (var waypointId in mapObj.waypoints) {
-        var waypoint = mapObj.waypoints[waypointId];
-
-        var sceneNode = gameView.scene.createNode();
-        sceneNode.interactive = false;
-        sceneNode.position = [waypoint.x, 0, waypoint.y];
-
-        var testModel = models.load('meshes/items/Ale_stien.model');
-
-        var modelInstance = new ModelInstance(gameView.scene);
-        modelInstance.model = testModel;
-        sceneNode.attachObject(modelInstance);
-
-        var origin = [];
-
-        // Connect with targets
-        for (var i = 0; i < waypoint.goals.length; ++i) {
-            var goal = mapObj.waypoints[waypoint.goals[i]];
-            var diffX = goal.x - waypoint.x;
-            var diffY = goal.y - waypoint.y;
-
-            var line = new LineRenderable(gameView.scene);
-            line.addLine(origin, [diffX, 0, diffY]);
-            sceneNode.attachObject(line);
-        }
-    }*/
 
     gameView.centerOnWorld(mapObj.startPosition[0], mapObj.startPosition[2]);
 

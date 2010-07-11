@@ -126,17 +126,17 @@ namespace Troika
 
     static const QString ObjectFlagNames[32] = {
         "Destroyed", // Not used
-        "Off", // Used
+        "Off", // Used, Converted to field
         "Flat", // Isn't this better handled by the prototype?
         "Text",
         "SeeThrough",
         "ShootThrough",
         "Translucent",
         "Shrunk",
-        "DontDraw",
+        "DontDraw", // Used, Converted to field
         "Invisible",
         "NoBlock",
-        "ClickThrough",
+        "ClickThrough", // Used, Converted to field
         "", // Inventory. Now induced implicitly
         "Dynamic",
         "ProvidesCover",
@@ -145,7 +145,7 @@ namespace Troika
         "Wading",
         "Unknown18",
         "Stoned",
-        "DontLight",
+        "DontLight", // Used, Converted to field
         "", // TextFloater, purpose unknown
         "Invulnerable",
         "Extinct",
@@ -756,6 +756,12 @@ namespace Troika
                 convertFlags(ObjectFlagNames, flags, object.flags);
                 if (object.flags.removeAll("DontDraw") > 0 && !object.prototype->dontDraw.isDefined())
                     object.dontDraw.setValue(true);
+                if (object.flags.removeAll("Off") > 0 && !object.prototype->disabled.isDefined())
+                    object.disabled.setValue(true);
+                if (object.flags.removeAll("ClickThrough") > 0 && !object.prototype->disabled.isDefined())
+                    object.interactive.setValue(false);
+                if (object.flags.removeAll("DontLight") > 0 && !object.prototype->unlit.isDefined())
+                    object.unlit.setValue(true);
                 if (object.flags.toSet() == object.prototype->objectFlags.toSet())
                     object.flags.clear();
                 break;
@@ -1140,11 +1146,11 @@ namespace Troika
             uint recordSize, recordCount, structureId;
 
             stream >> version;
-            
+
             // The array can be empty for some reason
             if (version == 0)
                 return;
-            
+
             stream >> recordSize >> recordCount >> structureId;
 
             Q_ASSERT(version == 1);

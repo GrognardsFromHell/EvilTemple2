@@ -42,6 +42,9 @@ QVariantMap PrototypeConverter::convertPrototype(Prototype *prototype)
 
     writer.write("flags", prototype->objectFlags);
     writer.write("dontDraw", prototype->dontDraw);
+    writer.write("disabled", prototype->disabled);
+    writer.write("interactive", prototype->interactive);
+    writer.write("unlit", prototype->unlit);
     writer.write("scale", prototype->scale);
     // writer.write("internalDescriptionId", prototype->internalDescriptionId);
     writer.write("descriptionId", prototype->descriptionId);

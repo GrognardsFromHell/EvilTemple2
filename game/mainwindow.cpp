@@ -47,24 +47,12 @@ namespace EvilTemple {
 
     class MainWindowData {
     public:
-        MainWindowData(const Game &_game) : game(_game), gameView(0), consoleWidget(0), profilerDialog(0) {}
+        MainWindowData(const Game &_game) : game(_game), gameView(0), profilerDialog(0) {}
 
         const Game &game;
         GameView *gameView;
-        QDeclarativeItem *consoleWidget;
         ProfilerDialog *profilerDialog;
     };
-
-    MainWindow *currentMainWindow;
-
-    void consoleMessageHandler(QtMsgType type, const char *message) {
-        if (currentMainWindow) {
-            currentMainWindow->consoleMessage(type, message);
-        }
-
-        fprintf(stderr, "%s\n", message);
-        fflush(stderr);
-    }
 
     MainWindow::MainWindow(const Game &game, QWidget *parent)
         : QMainWindow(parent),
@@ -117,33 +105,10 @@ namespace EvilTemple {
         timer->setSingleShot(false);
         connect(timer, SIGNAL(timeout()), SLOT(updateTitle()));
         timer->start();
-
-        // Create the console
-        QDeclarativeComponent *component = new QDeclarativeComponent(d_ptr->gameView->uiEngine(), this);
-        component->loadUrl(QUrl::fromLocalFile("interface/Console.qml")); // This is asynchronous
-
-        QEventLoop eventLoop;
-        while (!component->isReady()) {
-            if (component->isError()) {
-                qFatal("Error creating console: %s.", qPrintable(component->errorString()));
-                break;
-            }
-            eventLoop.processEvents();
-        }
-
-        d_ptr->consoleWidget = qobject_cast<QDeclarativeItem*>(component->create());
-        if (!d_ptr->consoleWidget) {
-            qFatal("Console widget doesn't inherit from QDeclarativeItem.");
-        } else {
-            connect(this, SIGNAL(consoleToggled()), d_ptr->consoleWidget, SLOT(toggle()));
-            connect(this, SIGNAL(logMessage(QVariant,QVariant)), d_ptr->consoleWidget, SLOT(addMessage(QVariant,QVariant)));
-        }
     }
 
     MainWindow::~MainWindow()
     {
-        currentMainWindow = NULL;
-        qInstallMsgHandler(NULL);
     }
 
     void MainWindow::viewStatusChanged(QDeclarativeView::Status status)
@@ -153,29 +118,6 @@ namespace EvilTemple {
                 qWarning("QML Error: %s", qPrintable(error.description()));
             }
         }*/
-    }
-
-    void MainWindow::consoleMessage(QtMsgType type, const char *message)
-    {
-        QVariant varType;
-        switch (type) {
-        case QtDebugMsg:
-            varType = QString("debug");
-            break;
-        case QtWarningMsg:
-            varType = QString("warning");
-            break;
-        case QtCriticalMsg:
-            varType = QString("critical");
-            break;
-        case QtFatalMsg:
-            varType = QString("fatal");
-            break;
-        }
-
-        QVariant varMessage(QString::fromLocal8Bit(message));
-
-        emit logMessage(varMessage, varType);
     }
 
     void MainWindow::updateTitle()
@@ -257,16 +199,6 @@ namespace EvilTemple {
         d_ptr->game.scriptEngine()->callGlobalFunction("startup");
 
         glBindBuffer(GL_ARRAY_BUFFER, 0); // TODO: necessity?
-
-        //d_ptr->guiView->setSource(QUrl("interface/Startup.qml"));
-
-        // TODO: Wait for the loading state here
-
-        // Is it safe to assume that root object is a declarative item?
-        //QDeclarativeItem *root = qobject_cast<QDeclarativeItem*>(d_ptr->guiView->rootObject());
-        //if (root) {
-        //    d_ptr->consoleWidget->setParentItem(root);
-        //}
     }
 
     void MainWindow::keyPressEvent(QKeyEvent *e) {
@@ -289,8 +221,6 @@ namespace EvilTemple {
                 d_ptr->profilerDialog->show();
             }
 
-        } else if (e->key() == Qt::Key_F12) {
-            emit consoleToggled();
         }
     }
 

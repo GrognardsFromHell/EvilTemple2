@@ -278,6 +278,12 @@ namespace Troika
         readFlagList(parts, 20, objectFlags, translateObjectFlag);
         if (objectFlags.removeAll("DontDraw") > 0)
             dontDraw.setValue(true);
+        if (objectFlags.removeAll("Off") > 0)
+            disabled.setValue(true);
+        if (objectFlags.removeAll("ClickThrough") > 0)
+            interactive.setValue(false);
+        if (objectFlags.removeAll("DontLight") > 0)
+            unlit.setValue(false);
 
         // 21: Spell Flags -> Unused
 
@@ -600,11 +606,19 @@ namespace Troika
         if (isPartDefined(parts[162]))
             hitDice = parts[162];
 
-        if (isPartDefined(parts[163]))
+        if (isPartDefined(parts[163])) {
             type = parts[163];
+            if (type.startsWith("mc_type_"))
+                type = type.right(type.length() - 8);
+        }
 
-        if (isPartDefined(parts[164]))
+        if (isPartDefined(parts[164])) {
             subTypes = parts[164].split('\x00b');
+            for (int i = 0; i < subTypes.size(); ++i) {
+                if (subTypes[i].startsWith("mc_subtype_"))
+                    subTypes[i] = subTypes[i].right(subTypes[i].length() - 11);
+            }
+        }
 
         if (isPartDefined(parts[165]))
             lootShareAmount = parts[165];
@@ -723,8 +737,11 @@ namespace Troika
         Q_ASSERT(ok);
         charisma = parts[106].toInt(&ok);
         Q_ASSERT(ok);
-        if (isPartDefined(parts[108]))
+        if (isPartDefined(parts[108])) {
             race = parts[108];
+            if (race.startsWith("race_"))
+                race = race.right(race.length() - 5);
+        }
         if (isPartDefined(parts[109]))
             gender = parts[109];
         optionalPart(parts, 110, age);

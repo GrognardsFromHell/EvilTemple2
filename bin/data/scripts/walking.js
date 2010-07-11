@@ -96,8 +96,13 @@ function showPath(path)
     Implements walking between two points.
  */
 function walkTo(obj, to) {
-    var sceneNode = obj.renderState.sceneNode;
-    var modelInstance = obj.renderState.modelInstance;
+    var renderState = obj.getRenderState();
+
+    if (!renderState)
+        return false;
+
+    var sceneNode = renderState.sceneNode;
+    var modelInstance = renderState.modelInstance;
 
     for (var i = 0; i < walkJobs.length; ++i) {
         if (walkJobs[i].obj === obj) {
@@ -120,7 +125,7 @@ function walkTo(obj, to) {
         sceneNode: sceneNode,
         modelInstance: modelInstance,
         path: path,
-        speed: modelInstance.model.animationDps('unarmed_unarmed_run'), // Pixel per second
+        speed: modelInstance.model.animationDps('unarmed_unarmed_run') // Pixel per second
     };
     job.__proto__ = WalkJobs;
     job.init(path[0], path[1]);

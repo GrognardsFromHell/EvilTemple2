@@ -1,6 +1,7 @@
 
 #include <QString>
 #include <QScopedArrayPointer>
+#include <QFile>
 
 #if defined(GOOGLE_BREAKPAD_ENABLED)
 #include "client/windows/handler/exception_handler.h"
@@ -51,11 +52,50 @@ static void install_google_breakpad()
 
 using namespace EvilTemple;
 
+static QFile logFile("eviltemple.log");
+
+static void messageHandler(QtMsgType type, const char *message)
+{
+    bool flush = false;
+
+    switch (type) {
+    case QtDebugMsg:
+        logFile.write("[DEBUG] ");
+        break;
+    case QtWarningMsg:
+        logFile.write("[WARN] ");
+        break;
+    case QtCriticalMsg:
+        logFile.write("[CRITICAL] ");
+        flush = true;
+        break;
+    case QtFatalMsg:
+        logFile.write("[FATAL] ");
+        flush = true;
+        break;
+    }
+
+    logFile.write(message);
+    logFile.write("\n");
+    if (flush)
+       logFile.flush();
+
+    if (type == QtFatalMsg)
+        abort();
+}
+
 int main(int argc, char *argv[])
 {
 #if defined(GOOGLE_BREAKPAD_ENABLED)
     install_google_breakpad();
 #endif
+
+    if (!logFile.open(QIODevice::Text|QIODevice::Truncate|QIODevice::WriteOnly)) {
+        qFatal("Unable to open logfile eviltemple.log for writing, please make sure "
+               "that the current directory is writeable.");
+    }
+
+    qInstallMsgHandler(messageHandler);
 
     QApplication a(argc, argv);
 

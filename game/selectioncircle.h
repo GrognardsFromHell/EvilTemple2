@@ -16,6 +16,7 @@ Q_PROPERTY(float radius READ radius WRITE setRadius)
 Q_PROPERTY(float height READ height WRITE setHeight)
 Q_PROPERTY(Vector4 color READ color WRITE setColor)
 Q_PROPERTY(bool selected READ isSelected WRITE setSelected)
+Q_PROPERTY(bool hovering READ isHovering WRITE setHovering)
 public:
     SelectionCircle(Materials *materials);
 
@@ -39,6 +40,9 @@ public:
 
     bool isSelected() const;
     void setSelected(bool selected);
+
+    bool isHovering() const;
+    void setHovering(bool hovering);
 
     IntersectionResult intersect(const Ray3d &ray) const;
 
@@ -103,6 +107,16 @@ inline void SelectionCircle::setHeight(float height)
 inline float SelectionCircle::height() const
 {
     return mHeight;
+}
+
+inline bool SelectionCircle::isHovering() const
+{
+    return mHovering;
+}
+
+inline void SelectionCircle::setHovering(bool hovering)
+{
+    mHovering = hovering;
 }
 
 Q_DECLARE_METATYPE(SelectionCircle*)

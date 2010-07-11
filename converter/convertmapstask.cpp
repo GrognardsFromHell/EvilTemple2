@@ -126,6 +126,9 @@ static QVariant toVariant(IConversionService *service, GameObject *object)
     props.write("secretDoorEffect", object->secretDoorEffect);
     props.write("notifyNpc", object->notifyNpc);
     props.write("dontDraw", object->dontDraw);
+    props.write("disabled", object->disabled);
+    props.write("unlit", object->unlit);
+    props.write("interactive", object->interactive);
     // props.write("containerFlags", object->containerFlags);
     props.write("containerInventoryId", object->containerInventoryId);
     props.write("containerInventoryListIndex", object->containerInventoryListIndex);

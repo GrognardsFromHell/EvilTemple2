@@ -23,10 +23,6 @@ public:
     MainWindow(const Game &game, QWidget *parent = 0);
     ~MainWindow();
 
-signals:
-    void consoleToggled();
-    void logMessage(QVariant message, QVariant type);
-
 public slots:
     void readSettings();
     void writeSettings();
@@ -34,13 +30,12 @@ public slots:
 
     void updateTitle();
     void viewStatusChanged(QDeclarativeView::Status status);
-    void consoleMessage(QtMsgType type, const char *message);
 
 protected:
     void closeEvent(QCloseEvent *);
     void keyPressEvent(QKeyEvent *);
 
-private:        
+private:
     QScopedPointer<MainWindowData> d_ptr;
 };
 
