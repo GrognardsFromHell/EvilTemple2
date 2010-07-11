@@ -9,5 +9,6 @@
         <file>application.ico</file>
         <file>64x64.png</file>
         <file>map_exclusions.txt</file>
+        <file>scripts/converter.js</file>
     </qresource>
 </RCC>

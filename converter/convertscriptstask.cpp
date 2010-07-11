@@ -128,7 +128,7 @@ void ConvertScriptsTask::run()
     QScriptValue addFileFn = engine.newFunction((QScriptEngine::FunctionWithArgSignature)addFile, writer.data());
     engine.globalObject().setProperty("addFile", addFileFn);
 
-    QFile scriptFile("scripts/converter.js");
+    QFile scriptFile(":/scripts/converter.js");
 
     if (!scriptFile.open(QIODevice::ReadOnly|QIODevice::Text)) {
         qFatal("Unable to open converter script: scripts/converter.js");
