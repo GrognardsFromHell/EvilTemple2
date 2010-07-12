@@ -39,6 +39,15 @@ void ISoundHandlePrototype::setLooping(bool looping)
         handle->setLooping(looping);
 }
 
+void ISoundHandlePrototype::stop()
+{
+    SharedSoundHandle handle = qscriptvalue_cast<SharedSoundHandle>(thisObject());
+    if (handle)
+        handle->stop();
+    else
+        qWarning("Unable to stop sound handle. Handle is null.");
+}
+
 qreal ISoundHandlePrototype::volume() const
 {
     SharedSoundHandle handle = qscriptvalue_cast<SharedSoundHandle>(thisObject());

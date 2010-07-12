@@ -16,6 +16,7 @@ void ConvertSoundsTask::run()
     QScopedPointer<IFileWriter> writer(service()->createOutput("sounds"));
 
     QSet<QString> soundFiles;
+    QSet<QString> mp3Files;
     QVariantMap soundMapping;
 
     QStringList soundIndexFiles = QStringList() << "sound/snd_critter.mes"
@@ -39,9 +40,15 @@ void ConvertSoundsTask::run()
         }
     }
 
+    // Copy all MP3 files
+    foreach (const QString &filename, service()->virtualFileSystem()->listAllFiles("*.mp3")) {
+        mp3Files.insert(filename);
+    }
+
     qDebug("Copying %d sound files.", soundFiles.size());
 
     uint workDone = 0;
+    uint totalWork = soundFiles.size() + mp3Files.size();
 
     // Copy all sound files into the zip file
     foreach (const QString &filename, soundFiles) {
@@ -50,7 +57,17 @@ void ConvertSoundsTask::run()
         writer->addFile(filename, service()->virtualFileSystem()->openFile(filename));
 
         if (++workDone % 10 == 0) {
-            emit progress(workDone, soundFiles.size());
+            emit progress(workDone, totalWork);
+        }
+    }
+
+    foreach (const QString &filename, mp3Files) {
+        assertNotAborted();
+
+        writer->addFile(filename, service()->virtualFileSystem()->openFile(filename), false);
+
+        if (++workDone % 10 == 0) {
+            emit progress(workDone, totalWork);
         }
     }
 

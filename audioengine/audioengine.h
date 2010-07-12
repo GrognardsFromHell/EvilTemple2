@@ -126,7 +126,7 @@ public slots:
       user-defined volume settings.
       @returns True if the sound was sucessfully loaded.
       */
-    bool playSoundOnce(const QString &filename, SoundCategory category);
+    SharedSoundHandle playSoundOnce(const QString &filename, SoundCategory category);
 
 private:
     QScopedPointer<AudioEngineData> d_ptr;

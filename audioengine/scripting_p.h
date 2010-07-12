@@ -30,6 +30,7 @@ public slots:
     void setVolume(qreal);
     SoundCategory category() const;
     void setCategory(SoundCategory);
+    void stop();
 };
 
 }

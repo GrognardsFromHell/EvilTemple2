@@ -15,6 +15,22 @@ function readJson(filename)
 }
 
 /**
+ * Calculates a random integral number between a lower and an upper bound.
+ *
+ * @param min The lower bound (inclusive).
+ * @param max The upper bound (inclusive).
+ * @returns A random number x (integral), with x >= min && x <= max.
+ */
+function randomRange(min, max) {
+    // TODO: Replace this with code that uses mersenne twister
+    var result = Math.floor(Math.random() * (max - min + 1)) + min;
+
+    print("random: " + min + "-" + max + ' = ' + result);
+
+    return result;
+}
+
+/**
     Creates a quaternion that rotates around the Y axis by the given amount (in degrees).
  */
 function rotationFromDegrees(degrees) {

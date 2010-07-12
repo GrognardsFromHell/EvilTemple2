@@ -62,7 +62,7 @@ static QVariantMap convertDialogScript(const QByteArray &rawScript, const QStrin
         entry["text"] = text;
         if (!femaleText.isEmpty() && femaleText != text)
             entry["femaleText"] = femaleText;
-        if (intelligence != 0)
+        if (intelligence != 0 && intelligence != 1)
             entry["intelligence"] = intelligence;
         if (!guard.isEmpty()) {
             entry["guard"] = converter.convertDialogGuard(guard.toUtf8(), filename);

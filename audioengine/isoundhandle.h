@@ -16,6 +16,11 @@ public:
     virtual ~ISoundHandle();
 
     /**
+      Stops playing this sound. The audio engine will free this handle afterwards.
+      */
+    virtual void stop() = 0;
+
+    /**
       Marks this sound as looping, it will continue playing at the beginning of the sound,
       even if the end is reached.
       */

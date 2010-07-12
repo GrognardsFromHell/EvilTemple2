@@ -81,7 +81,9 @@ var LegacyScripts = {};
         var guard = answer.guard;
         if (guard !== undefined) {
             var script = getScript(npc.obj.OnDialog.script);
-            return script.checkGuard(npc, pc, guard);
+            var result = script.checkGuard(npc, pc, guard);
+            print("Checking guard: " + guard + " Result: " + result);
+            return result;
         }
         return true;
     }
@@ -142,12 +144,34 @@ var LegacyScripts = {};
     };
 
     /**
+     * Changes the wealth of the party.
+     * @param delta The amount of money to adjust. This may be negative or positive.
+     */
+    ObjectWrapper.prototype.money_adj = function(delta) {
+        if (delta < 0)
+            print("Taking " + delta + " money from the player.");
+        else
+            print("Giving " + delta + " money to the player.");
+    };
+
+    /**
+     * Returns the effective rank of a skill (including bonuses) given a target.
+     *
+     * @param against Against who is the skill check made.
+     * @param skill The skill identifier.
+     */
+    ObjectWrapper.prototype.skill_level_get = function(against, skill) {
+        return 5;
+    };
+
+    /**
      * Opens the dialog interface and pauses the game.
-     * @param talkingTo The character that is talking to the NPC.
+     * @param pc The player character that is talking to the NPC.
      * @param line The dialog line to start on.
      */
-    ObjectWrapper.prototype.begin_dialog = function(talkingTo, line) {
-        print("Starting conversation with " + talkingTo + " on line " + line);
+    ObjectWrapper.prototype.begin_dialog = function(pc, line) {
+        var npc = this; // Used by the val scripts
+        print("Starting conversation with " + pc + " on line " + line);
 
         var dialogId = this.obj.OnDialog.script;
 
@@ -160,16 +184,13 @@ var LegacyScripts = {};
 
         line = parseInt(line); // Ensure line is an integer
 
-        print("First answer: " + (line + 1));
         var lastLine = Math.floor(line / 10) * 10 + 10;
-        print("Last answer: " + lastLine);
-
         var answers = [];
         for (var i = line + 1; i < lastLine; ++i) {
             var answerLine = dialog[i];
             if (answerLine) {
                 // Check the guard
-                if (!checkGuards(this, talkingTo, answerLine))
+                if (!checkGuards(this, pc, answerLine))
                     continue;
 
                 answers.push({
@@ -181,8 +202,31 @@ var LegacyScripts = {};
 
         var npcLine = dialog[line];
 
-        if (npcLine.action)
-            print("Perform action: " + npcLine.action);
+        if (npcLine.action) {
+            print("Performing action: " + npcLine.action);
+            eval(npcLine.action);
+        }
+
+        var voiceOver = null;
+
+        /**
+         * Guards on NPC lines are actually sound-ids
+         */
+        if (npcLine.guard) {
+            var filename = 'sound/speech/';
+            if (dialogId < 10000)
+                filename += '0';
+            if (dialogId < 1000)
+                filename += '0';
+            if (dialogId < 100)
+                filename += '0';
+            if (dialogId < 10)
+                filename += '0';
+            filename += dialogId + '/v' + npcLine.guard + '_m.mp3';
+
+            print("Playing sound: " + filename);
+            voiceOver = gameView.audioEngine.playSoundOnce(filename, SoundCategory_Effect);
+        }
 
         var conversationDialog = gameView.addGuiItem("interface/Conversation.qml");
         conversationDialog.text = npcLine.text;
@@ -192,17 +236,23 @@ var LegacyScripts = {};
         conversationDialog.answered.connect(this, function(line) {
             conversationDialog.deleteLater();
 
+            if (voiceOver) {
+                print("Stopping previous voice over.");
+                voiceOver.stop();
+            }
+
             var action = dialog[line].action;
 
             if (action) {
                 print("Performing action: " + action);
+                eval(action);
             }
 
             var nextId = dialog[line].nextId;
 
             if (nextId) {
                 print("Showing dialog for next id: " + nextId);
-                obj.begin_dialog(talkingTo, nextId);
+                obj.begin_dialog(pc, nextId);
             }
         });
     };

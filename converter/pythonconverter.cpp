@@ -1313,6 +1313,27 @@ static void processQuestId(QString &questId) {
     questId = "'quest-' + " + questId; // Treat as identifier
 }
 
+static bool isAreasField(expr_ty expression, QString *mapId, Environment *environment)
+{
+    if (expression->kind != Subscript_kind)
+        return false;
+
+    expr_ty value = expression->v.Subscript.value;
+
+    if (value->kind != Attribute_kind
+        || getIdentifier(value->v.Attribute.attr) != "areas"
+        || !isGameObject(value->v.Attribute.value))
+        return false;
+
+    slice_ty slice = expression->v.Subscript.slice;
+
+    if (slice->kind != Index_kind)
+        return false;
+
+    convertExpression(slice->v.Index.value, *mapId, 0, environment, true);
+    return true;
+}
+
 /*
    These are pre-processing functions that operate on the AST level to convert several commonly used
    idioms from ToEE to a more modern version.
@@ -1320,14 +1341,25 @@ static void processQuestId(QString &questId) {
 static bool process(expr_ty expression, QString &result, int indent, Environment *environment)
 {
     if (expression->kind == Call_kind) {
-        expr_ty func = expression->v.Call.func;
+        QString func;
+        convertExpression(expression->v.Call.func, func, 0, environment, false);
+
         asdl_seq *args = expression->v.Call.args;
 
         /*
          Convert calls to "dice_new" into constructor calls for Dice.
          */
-        if (func->kind == Name_kind && getIdentifier(func->v.Name.id) == "dice_new") {
+        if (func == "dice_new") {
             result.append("new Dice(");
+            for (int i = 0; i < asdl_seq_LEN(args); ++i) {
+                if (i != 0)
+                    result.append(", ");
+                convertExpression((expr_ty)asdl_seq_GET(args, i), result, indent, environment, true);
+            }
+            result.append(")");
+            return true;
+        } else if (func == "game.random_range") {
+            result.append("randomRange(");
             for (int i = 0; i < asdl_seq_LEN(args); ++i) {
                 if (i != 0)
                     result.append(", ");
@@ -1346,6 +1378,33 @@ static bool process(expr_ty expression, QString &result, int indent, Environment
         if (name == "OBJ_HANDLE_NULL") {
             result.append("null");
             return true;
+        } else if (name == "LAWFUL_GOOD") {
+            result.append("LawfulGood");
+            return true;
+        } else if (name == "NEUTRAL_GOOD") {
+            result.append("NeutralGood");
+            return true;
+        } else if (name == "CHAOTIC_GOOD") {
+            result.append("ChaoticGood");
+            return true;
+        } else if (name == "LAWFUL_NEUTRAL") {
+            result.append("LawfulNeutral");
+            return true;
+        } else if (name == "TRUE_NEUTRAL") {
+            result.append("TrueNeutral");
+            return true;
+        } else if (name == "CHAOTIC_NEUTRAL") {
+            result.append("ChaoticNeutral");
+            return true;
+        } else if (name == "LAWFUL_EVIL") {
+            result.append("LawfulEvil");
+            return true;
+        } else if (name == "NEUTRAL_EVIL") {
+            result.append("NeutralEvil");
+            return true;
+        } else if (name == "CHAOTIC_EVIL") {
+            result.append("ChaoticEvil");
+            return true;
         }
     } else if (expression->kind == Subscript_kind) {
         QString varId;
@@ -1353,6 +1412,19 @@ static bool process(expr_ty expression, QString &result, int indent, Environment
             result.append("GlobalVars.get(").append(varId).append(")");
             return true;
         }
+
+    } else if (expression->kind == Attribute_kind) {
+        expr_ty value = expression->v.Attribute.value;
+        QString attr = getIdentifier(expression->v.Attribute.attr);
+
+        if (attr == "story_state" && isGameObject(value)) {
+            result.append("StoryState");
+            return true;
+        } else if (attr == "party_alignment" && isGameObject(value)) {
+            result.append("Party.alignment");
+            return true;
+        }
+
     } else if (expression->kind == Compare_kind) {
         asdl_int_seq *ops = expression->v.Compare.ops;
 
@@ -1482,6 +1554,26 @@ static bool process(expr_ty expression, QString &result, int indent, Environment
         } else if (isGlobalFlagsField(right, &flagId, environment)) {
             qWarning("GlobalFlags on the right-hand-side of a comparison: Didn't handle this case.");
         }
+
+        /**
+         Convert reads to game.areas[ID] into direct "isKnown" calls for the world map.
+         */
+        QString mapId;
+        if (isAreasField(left, &mapId, environment)) {
+            QString comparingTo;
+            convertExpression(right, comparingTo, indent, environment, false);
+
+            if (comparingTo == "0")
+                result.append("!");
+            else if (comparingTo != "1")
+            {
+                qWarning("Comparing area %s to unknown constant %s.", qPrintable(mapId), qPrintable(comparingTo));
+                return false;
+            }
+
+            result.append("WorldMap.isMarked(").append(mapId).append(")");
+            return true;
+        }
     }
 
     return false;
@@ -1535,6 +1627,21 @@ static bool process(stmt_ty stmt, QString &result, int indent, Environment *envi
             convertExpression(value, result, indent, environment, true);
             result.append(");\n");
             return true;
+        }
+
+        QString mapId;
+        if (isAreasField(target, &mapId, environment)) {
+            QString settingTo;
+            convertExpression(value, settingTo, indent, environment, false);
+
+            if (settingTo == "1") {
+                appendIndent(indent, result);
+                result.append("WorldMap.mark(").append(mapId).append(");\n");
+                return true;
+            } else {
+                qWarning("Setting area %s to unknown constant %s.", qPrintable(mapId), qPrintable(settingTo));
+                return false;
+            }
         }
     }
 

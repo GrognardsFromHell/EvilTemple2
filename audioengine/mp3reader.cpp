@@ -1,4 +1,6 @@
 
+#include <QFile>
+
 extern "C" {
 #include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
@@ -9,6 +11,79 @@ extern "C" {
 #include "isound.h"
 #include "isoundsource.h"
 
+static int file_read(URLContext *h, unsigned char *buf, int size)
+{
+    QFile *file = (QFile*) h->priv_data;
+
+    return file->read(reinterpret_cast<char*>(buf), size);
+}
+
+static int file_write(URLContext *h, unsigned char *buf, int size)
+{
+    qFatal("Writing to QFile from libavformat is not supported.");
+    return -1;
+}
+
+static int file_open(URLContext *h, const char *rawFilename, int flags)
+{
+    QString filename = QString::fromLocal8Bit(rawFilename);
+    if (filename.startsWith("qfile:"))
+        filename = filename.mid(strlen("qfile:"));
+
+    qDebug("Opening %s via qfile avformat protocol.", qPrintable(filename));
+
+    QFile *file = new QFile(filename);
+
+    if (!file->open(QIODevice::ReadOnly)) {
+        int error = file->error();
+        delete file;
+        return AVERROR(error);
+    }
+
+    h->priv_data = (void *) file;
+    return 0;
+}
+
+static int64_t file_seek(URLContext *h, int64_t pos, int whence)
+{
+    QFile *file = (QFile*) h->priv_data;
+    if (whence == AVSEEK_SIZE)
+        return file->size();
+
+    if (whence == SEEK_SET) {
+        if (!file->seek(pos))
+            return -1;
+    } else if (whence == SEEK_CUR) {
+        if (pos == 0)
+            return file->pos();
+        if (!file->seek(file->pos() + pos))
+            return -1;
+    } else if (whence == SEEK_END) {
+        if (!file->seek(file->size() + pos))
+            return -1;
+    }
+
+    return file->pos();
+}
+
+static int file_close(URLContext *h)
+{
+    QFile *file = (QFile*) h->priv_data;
+    delete file;
+    h->priv_data = NULL;
+    return 0;
+}
+
+URLProtocol qfile_protocol = {
+    "qfile",
+    file_open,
+    file_read,
+    file_write,
+    file_seek,
+    file_close,
+    0
+};
+
 static bool avCodecsRegistered = false;
 
 static void initializeCodecs()
@@ -18,6 +93,7 @@ static void initializeCodecs()
 
     fprintf(stderr, "Registering AV Codecs.\n");
     av_register_all();
+    av_register_protocol(&qfile_protocol);
     avCodecsRegistered = true;
 }
 
@@ -57,7 +133,7 @@ MP3SoundSource::MP3SoundSource(const QString &filename)
 {
     initializeCodecs();
 
-    int error = av_open_input_file(&formatCtx, qPrintable(filename), NULL, 0, NULL);
+    int error = av_open_input_file(&formatCtx, qPrintable("qfile:" + filename), NULL, 0, NULL);
 
     if (error != 0) {
         qWarning("Unable to open MP3 file %s: %d.", qPrintable(filename), error);
@@ -85,6 +161,8 @@ MP3SoundSource::MP3SoundSource(const QString &filename)
                 qWarning("Found stream %d, but couldn't find matching codec. Skipping.", i);
                 codecCtx = NULL;
             }
+            if (codec->capabilities & CODEC_CAP_TRUNCATED)
+                codecCtx->flags |= CODEC_FLAG_TRUNCATED;
             break;
         }
     }
@@ -150,23 +228,23 @@ void MP3SoundSource::copySampleFormat()
 
 bool MP3SoundSource::readNextPacket()
 {
-    nextPacketValid = false;
-
-    if (nextPacket.data)
+    if (nextPacketValid) {
         av_free_packet(&nextPacket);
+        nextPacketValid = false;
+    }
 
-    forever {
-        int error = av_read_frame(formatCtx, &nextPacket);
-
-        if (error < 0) {
-            return false; // Unable to read another packet
-        }
-
-        if (nextPacket.stream_index == streamIndex) {
+    while (av_read_frame(formatCtx, &nextPacket) >= 0) {
+        if (nextPacket.stream_index == streamIndex
+            && nextPacket.size > 0) {
             nextPacketValid = true;
             return true;
+        } else {
+            av_free_packet(&nextPacket);
         }
     }
+
+    qDebug("Unable to read another packet.");
+    return false;
 }
 
 MP3SoundSource::~MP3SoundSource()
@@ -196,14 +274,17 @@ quint32 MP3SoundSource::length() const
 bool MP3SoundSource::atEnd() const
 {
     // We're at the end of the buffered samples and there is no packet following
-    return sampleBuffer.size() == 0 && !nextPacketValid;
+    return sampleBuffer.isEmpty() && !nextPacketValid;
 }
 
 void MP3SoundSource::rewind()
 {
+    qDebug("Rewinding MP3 sound sample.");
     sampleBuffer.clear();
     av_seek_frame(formatCtx, streamIndex, 0, AVSEEK_FLAG_ANY);
-    readNextPacket();
+    if (!readNextPacket()) {
+        qWarning("Rewinding MP3 source failed.");
+    }
 }
 
 void MP3SoundSource::readSamples(void *buffer, quint32 &bufferSize)
@@ -215,33 +296,29 @@ void MP3SoundSource::readSamples(void *buffer, quint32 &bufferSize)
     while ((quint32)sampleBuffer.size() < bufferSize && nextPacketValid)
     {
         int frameSize = decodeBuffer.size();
+        int nextPacketSize = nextPacket.size;
         int result = avcodec_decode_audio2(codecCtx,
                               (int16_t*)decodeBuffer.data(),
                               &frameSize,
                               nextPacket.data,
-                              nextPacket.size);
+                              nextPacketSize);
 
-        if (result <= 0) {
+        if (result < 0) {
             qWarning("Unable to decode audio packet @ %d", nextPacket.pos);
-        } else if (result < nextPacket.size) {
-            qWarning("TODO: Packet decoding is incomplete.");
+        } else {
+            sampleBuffer.append(decodeBuffer.constData(), frameSize);
         }
 
-        readNextPacket(); // Next packet is now invalid, read another one
-
-        if (frameSize > 0) {
-            int oldSize = sampleBuffer.size();
-            sampleBuffer.resize(sampleBuffer.size() + frameSize);
-            memcpy(sampleBuffer.data() + oldSize, decodeBuffer.data(), frameSize);
+        if (!readNextPacket()) {
+            break; // Next packet is now invalid, read another one
         }
     }
 
     // Consume bytes in our sample buffer.
-    int consume = qMin(sampleBuffer.size(), (int)bufferSize);
-    memcpy(buffer, sampleBuffer.data(), consume);
+    int consume = qMin<int>(sampleBuffer.size(), bufferSize);
+    memcpy(buffer, sampleBuffer.constData(), consume);
     bufferSize = consume;
-
-    sampleBuffer = sampleBuffer.right(sampleBuffer.size() - consume);
+    sampleBuffer.remove(0, consume);
 
 }
 

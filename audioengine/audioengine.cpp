@@ -31,7 +31,9 @@ public:
     qreal volume() const;
     SoundCategory category() const;
     void setCategory(SoundCategory category);
+    void stop();
 
+    bool mStop;
     bool mLooping;
     ALuint sourceId; // The OpenAL source associated with this stream
     ScopedSoundSource source; // The source used to feed the audio stream
@@ -46,7 +48,7 @@ public:
 
 AudioEngineHandle::AudioEngineHandle(ISoundSource *_source)
     : source(_source), mLooping(false), sampleBuffer(_source->desiredBuffer(), Qt::Uninitialized), mVolume(1.0),
-    mCategory(SoundCategory_Other), mPaused(false)
+    mCategory(SoundCategory_Other), mPaused(false), mStop(false)
 {
     alGenSources(1, &sourceId);
 
@@ -114,6 +116,11 @@ void AudioEngineHandle::setLooping(bool looping)
 bool AudioEngineHandle::looping() const
 {
     return mLooping;
+}
+
+void AudioEngineHandle::stop()
+{
+    mStop = true;
 }
 
 void AudioEngineHandle::setVolume(qreal volume)
@@ -357,15 +364,14 @@ const QString &AudioEngine::errorString() const
     return d_ptr->lastError;
 }
 
-bool AudioEngine::playSoundOnce(const QString &filename, SoundCategory category)
+SharedSoundHandle AudioEngine::playSoundOnce(const QString &filename, SoundCategory category)
 {
     SharedSound sound = readSound(filename);
 
     if (sound) {
-        playSound(sound, category);
-        return true;
+        return playSound(sound, category);
     } else {
-        return false;
+        return SharedSoundHandle();
     }
 
 }
@@ -406,6 +412,13 @@ void AudioEngineThread::run()
             const SharedAudioEngineHandle &handle = audioHandles.at(i);
 
             Q_ASSERT(handle->category() >= 0 && handle->category() < SoundCategory_Count);
+
+            // Stop & Remove the source if requested
+            if (handle->mStop) {
+                alSourceStop(handle->sourceId);
+                audioHandles.removeAt(i--);
+                continue;
+            }
 
             // Adjust volume if necessary
             if (handle->volumeChanged) {
