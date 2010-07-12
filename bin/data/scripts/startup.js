@@ -108,18 +108,25 @@ var BaseObject = {
     },
 
     clicked: function(button, buttons) {
-        if (currentSelection != null)
-            currentSelection.setSelected(false);
+        /**
+         * Shows a mobile info dialog if right-clicked on, selects the mobile
+         * if left-clicked on.
+         */
+        if (button == Mouse.RightButton) {
+            var renderState = this.getRenderState();
+            if (renderState)
+                showMobileInfo(this, renderState.modelInstance);
+        } else if (button == Mouse.LeftButton) {
+            if (currentSelection != null)
+                currentSelection.setSelected(false);
 
-        currentSelection = this;
+            currentSelection = this;
 
-        this.setSelected(true);
+            this.setSelected(true);
+        }
     },
 
     doubleClicked: function() {
-        var renderState = this.getRenderState();
-        if (renderState)
-            showMobileInfo(this, renderState.modelInstance);
     },
 
     getReactionColor: function() {
@@ -174,7 +181,15 @@ var Critter = {
 };
 
 var NonPlayerCharacter = {
-    __proto__: Critter
+    __proto__: Critter,
+
+    doubleClicked: function() {
+        /*
+         If there's a OnDialog script associated, trigger the event in the legacy script system.
+         */
+        if (this.OnDialog)
+            LegacyScripts.OnDialog(this.OnDialog, this);
+    }
 };
 
 var prototypes;
@@ -182,6 +197,10 @@ var sounds;
 
 function startup() {
     models = gameView.models;
+
+    print("Loading subsystems.");
+    LegacyScripts.load();
+    LegacyDialog.load();
 
     print("Showing main menu.");
 

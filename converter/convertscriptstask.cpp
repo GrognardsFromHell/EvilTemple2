@@ -1,10 +1,13 @@
 
 #include <QScriptEngine>
 
+#include <serializer.h>
+
 #include "messagefile.h"
 #include "virtualfilesystem.h"
 #include "convertscriptstask.h"
 #include "prototypeconverter.h"
+#include "pythonconverter.h"
 
 using namespace Troika;
 
@@ -21,6 +24,175 @@ uint ConvertScriptsTask::cost() const
 QString ConvertScriptsTask::description() const
 {
     return "Converting scripts";
+}
+
+static QVariantMap convertDialogScript(const QByteArray &rawScript, const QString &filename)
+{
+    PythonConverter converter;
+
+    QVariantMap result;
+
+    QString script = rawScript;
+
+    QStringList lines = script.split("\n", QString::SkipEmptyParts);
+
+    foreach (QString line, lines) {
+        line = line.trimmed();
+
+        QStringList parts = line.split(QRegExp("\\}\\s*\\{"), QString::KeepEmptyParts);
+        for (int i = 0; i < parts.size(); ++i) {
+            parts[i] = parts[i].trimmed(); // Trim spacing between parenthesis
+        }
+
+        if (parts.size() != 7)
+            continue;
+
+        parts[0] = parts[0].right(parts[0].length() - 1); // Skip opening bracket
+        parts[parts.size() - 1] = parts[parts.size() - 1].left(parts[parts.size() - 1].length() - 1); // Skip closing bracket
+
+        QString id = parts[0];
+        QString text = parts[1];
+        QString femaleText = parts[2];
+        int intelligence = parts[3].toInt();
+        QString guard = parts[4];
+        QString nextId = parts[5];
+        QString action = parts[6];
+
+        QVariantMap entry;
+        entry["text"] = text;
+        if (!femaleText.isEmpty() && femaleText != text)
+            entry["femaleText"] = femaleText;
+        if (intelligence != 0)
+            entry["intelligence"] = intelligence;
+        if (!guard.isEmpty()) {
+            entry["guard"] = converter.convertDialogGuard(guard.toUtf8(), filename);
+        }
+        if (!nextId.isEmpty() && nextId != "0")
+            entry["nextId"] = nextId.toUInt();
+        if (!action.isEmpty())
+            entry["action"] = converter.convertDialogAction(action.toUtf8(), filename);
+        result[id] = entry;
+    }
+
+    return result;
+}
+
+static void convertQuests(IConversionService *service, IFileWriter *output)
+{
+    QHash<uint, QString> questMes = service->openMessageFile("mes/gamequestlog.mes");
+
+    QVariantMap quests;
+
+    // At most 200 quests
+    for (int i = 0; i < 200; ++i) {
+        if (questMes.contains(i)) {
+            QVariantMap quest;
+            quest["name"] = questMes[i];
+            quest["description"] = questMes[200 + i];
+            quests[QString("quest-%1").arg(i)] = quest;
+        }
+    }
+
+    QJson::Serializer serializer;
+    output->addFile("quests.js", serializer.serialize(quests));
+}
+
+static void convertDialogScripts(Troika::VirtualFileSystem *vfs, IFileWriter *output)
+{
+    QVariantMap dialogFiles;
+
+    QJson::Serializer serializer;
+
+    QSet<QString> filesWritten;
+
+    QStringList allDialogFiles = vfs->listAllFiles("*.dlg");
+    foreach (const QString &filename, allDialogFiles) {
+        if (filesWritten.contains(filename))
+            continue;
+
+        if (!QDir::toNativeSeparators(filename).startsWith(QDir::toNativeSeparators("dlg/")))
+            continue;
+
+        QVariantMap dialogScript = convertDialogScript(vfs->openFile(filename), filename);
+
+        if (dialogScript.isEmpty()) {
+            qWarning("Dialog script %s is empty.", qPrintable(filename));
+            continue;
+        }
+
+        filesWritten.insert(filename);
+
+        QString shortFilename = filename.right(filename.length() - 4);
+        uint id = shortFilename.left(5).toUInt();
+
+        shortFilename.replace(".dlg", ".js");
+        shortFilename.prepend("dialog/");
+
+        dialogFiles[QString("%1").arg(id)] = shortFilename;
+        output->addFile(shortFilename, serializer.serialize(dialogScript));
+    }
+
+    output->addFile("dialogs.js", serializer.serialize(dialogFiles));
+}
+
+static QByteArray convertScript(const QByteArray &pythonScript, const QString &filename)
+{
+    PythonConverter converter;
+
+    return converter.convert(pythonScript, filename).toLocal8Bit();
+}
+
+static void convertScripts(Troika::VirtualFileSystem *vfs, IFileWriter *output)
+{
+    QVariantMap scriptFiles;
+
+    QSet<QString> filesWritten;
+
+    QStringList allScriptFiles = vfs->listAllFiles("*.py");
+
+    foreach (const QString &filename, allScriptFiles) {
+        if (filesWritten.contains(filename))
+            continue;
+
+        if (!QDir::toNativeSeparators(filename).startsWith(QDir::toNativeSeparators("scr/Spell"))
+            && !QDir::toNativeSeparators(filename).startsWith(QDir::toNativeSeparators("scr/py")))
+            continue;
+
+        QByteArray script = convertScript(vfs->openFile(filename), filename);
+
+        if (script.isEmpty()) {
+            qWarning("Sript %s is empty.", qPrintable(filename));
+            continue;
+        }
+
+        filesWritten.insert(filename);
+
+        QString shortFilename = filename.right(filename.length() - 4); // Skips scr/ at front of filename
+
+        if (shortFilename.startsWith("py")) {
+            uint id = shortFilename.left(7).right(5).toUInt();
+            shortFilename.replace(".py", ".js");
+            shortFilename.prepend("scripts/legacy/");
+            scriptFiles[QString("%1").arg(id)] = shortFilename;
+        } else if (shortFilename.startsWith("Spell")) {
+            QString spellId = shortFilename.left(8).toLower();
+            shortFilename.replace(".py", ".js");
+            shortFilename.prepend("scripts/legacy/");
+            scriptFiles[spellId] = shortFilename;
+        } else {
+            continue;
+        }
+
+        output->addFile(shortFilename, script);
+    }
+
+    // Process some scripts separately
+    output->addFile("scripts/legacy/utilities.js", convertScript(vfs->openFile("scr/utilities.py"), "scr/utilities.py"));
+    output->addFile("scripts/legacy/random_encounter.js", convertScript(vfs->openFile("scr/random_encounter.py"), "scr/random_encounter.py"));
+    output->addFile("scripts/legacy/rumor_control.js", convertScript(vfs->openFile("scr/rumor_control.py"), "scr/rumor_control.py"));
+
+    QJson::Serializer serializer;
+    output->addFile("scripts.js", serializer.serialize(scriptFiles));
 }
 
 static QScriptValue readMesFile(QScriptContext *ctx, QScriptEngine *engine, Troika::VirtualFileSystem *vfs) {
@@ -139,6 +311,12 @@ void ConvertScriptsTask::run()
     engine.evaluate(scriptCode, "scripts/converter.js");
 
     convertPrototypes(writer.data(), &engine);
+
+    convertDialogScripts(vfs, writer.data());
+
+    convertQuests(service(), writer.data());
+
+    convertScripts(vfs, writer.data());
 
     writer->close();
 }

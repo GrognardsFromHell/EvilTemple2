@@ -501,9 +501,9 @@ namespace EvilTemple {
 
     void GameView::mousePressEvent(QMouseEvent *evt)
     {
-        QGraphicsView::mousePressEvent(evt);
-
-        if (!evt->isAccepted()) {
+        if (d->uiScene.itemAt(evt->posF())) {
+            QGraphicsView::mousePressEvent(evt);
+        } else {
             d->dragging = true;
             d->mouseMovedDuringDrag = false;
             evt->accept();
@@ -513,18 +513,21 @@ namespace EvilTemple {
 
     void GameView::mouseReleaseEvent(QMouseEvent *evt)
     {
-        if (d->dragging && !d->mouseMovedDuringDrag) {
-            Renderable *renderable = d->pickObject(evt->pos());
+        if (d->dragging) {
+            if (!d->mouseMovedDuringDrag) {
+                Renderable *renderable = d->pickObject(evt->pos());
 
-            if (renderable) {
-                renderable->mouseReleaseEvent(evt);
-            } else {
-                Vector4 worldPosition = d->worldPositionFromScreen(evt->pos());
-                emit worldClicked(evt->button(), evt->buttons(), worldPosition);
+                if (renderable) {
+                    renderable->mouseReleaseEvent(evt);
+                } else {
+                    Vector4 worldPosition = d->worldPositionFromScreen(evt->pos());
+                    emit worldClicked(evt->button(), evt->buttons(), worldPosition);
+                }
             }
+            d->dragging = false;
+        } else {
+            QGraphicsView::mouseReleaseEvent(evt);
         }
-        d->dragging = false;
-        QGraphicsView::mouseReleaseEvent(evt);
     }
 
     void GameView::mouseDoubleClickEvent(QMouseEvent *evt)

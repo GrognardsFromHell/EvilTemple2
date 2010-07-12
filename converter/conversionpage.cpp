@@ -48,7 +48,10 @@ static void handleQtMessage(QtMsgType type, const char *msg)
         QMetaObject::invokeMethod(logBrowser, "append", Qt::QueuedConnection, Q_ARG(QString, text));
     }
 
-    oldMsgHandler(type, msg);
+    if (oldMsgHandler)
+        oldMsgHandler(type, msg);
+    else
+        printf("%s\n", qPrintable(text));
 }
 
 class ConversionThread : public QThread {

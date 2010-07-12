@@ -4,9 +4,9 @@ TEMPLATE = app
 TARGET = converter
 
 QT += xml opengl xmlpatterns script
-CONFIG += qaxcontainer
+CONFIG += qaxcontainer console
 
-TEMPLE_LIBS += troikaformats qt3d minizip jpeg qjson glew
+TEMPLE_LIBS += troikaformats qt3d minizip jpeg qjson glew python
 
 win32:RC_FILE = icon.rc
 
@@ -30,7 +30,8 @@ SOURCES += converter.cpp \
     convertinterfacetask.cpp \
     convertsoundstask.cpp \
     convertmodelstask.cpp \
-    ../game/tga.cpp
+    ../game/tga.cpp \
+    pythonconverter.cpp
 
 HEADERS += \
     util.h \
@@ -56,7 +57,8 @@ HEADERS += \
     convertinterfacetask.h \
     convertsoundstask.h \
     convertmodelstask.h \
-    ../game/tga.h
+    ../game/tga.h \
+    pythonconverter.h
 
 win32:SOURCES += basepathfinder_win32.cpp
 else:SOURCES += basepathfinder.cpp

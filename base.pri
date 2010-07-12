@@ -22,6 +22,16 @@ contains(TEMPLE_LIBS,qt3d) {
     }
 }
 
+contains(TEMPLE_LIBS,python) {
+    win32 {
+        INCLUDEPATH += C:/python26/include/
+        LIBS += -LC:/python26/libs/ -lpython26
+    }
+    unix {
+        LIBS += -lpython
+    }
+}
+
 contains(TEMPLE_LIBS,game) {
     INCLUDEPATH += ../game
     CONFIG(debug, debug|release) {
