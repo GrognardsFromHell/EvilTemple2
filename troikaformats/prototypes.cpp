@@ -813,7 +813,7 @@ namespace Troika
             levelUpScheme = parts[332];
 
         if (isPartDefined(parts[333]))
-            strategy = parts[333];
+            strategy = parts[333].trimmed();
     }
 
     void EntityProperties::parse(const QStringList &parts)
