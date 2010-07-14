@@ -106,7 +106,7 @@ public slots:
 
     void centerOnWorld(const Vector4 &position);
 
-    Vector4 getWorldCenter() const;
+    Vector4 worldCenter() const;
 
     int objectsDrawn() const;
 

@@ -6,6 +6,8 @@ DEFINES += AUDIOENGINE_LIBRARY
 
 TEMPLE_LIBS += openal libavcodec
 
+include(../3rdparty/game-math/game-math.pri)
+
 QT += script
 
 PRECOMPILED_HEADER = stable.h

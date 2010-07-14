@@ -5,8 +5,8 @@ Item {
     height: childrenRect.height
     y: (gameView.viewportSize.height - height)
 
-    property variant playerCharacters
-    property variant nonPlayerCharacters
+    property variant playerCharacters : []
+    property variant nonPlayerCharacters : []
 
     signal action(string type, int index)
 

@@ -64,6 +64,27 @@ void ISoundHandlePrototype::setVolume(qreal volume)
         handle->setVolume(volume);
 }
 
+void ISoundHandlePrototype::setMaxDistance(float maxDistance)
+{
+    SharedSoundHandle handle = qscriptvalue_cast<SharedSoundHandle>(thisObject());
+    if (handle)
+        handle->setMaxDistance(maxDistance);
+}
+
+void ISoundHandlePrototype::setReferenceDistance(float distance)
+{
+    SharedSoundHandle handle = qscriptvalue_cast<SharedSoundHandle>(thisObject());
+    if (handle)
+        handle->setReferenceDistance(distance);
+}
+
+void ISoundHandlePrototype::setPosition(const Vector4 &position)
+{
+    SharedSoundHandle handle = qscriptvalue_cast<SharedSoundHandle>(thisObject());
+    if (handle)
+        handle->setPosition(position);
+}
+
 SoundCategory ISoundHandlePrototype::category() const
 {
     SharedSoundHandle handle = qscriptvalue_cast<SharedSoundHandle>(thisObject());

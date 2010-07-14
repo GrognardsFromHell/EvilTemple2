@@ -32,6 +32,9 @@ public:
     SoundCategory category() const;
     void setCategory(SoundCategory category);
     void stop();
+    void setPosition(const Vector4 &position);
+    void setMaxDistance(float maxDistance);
+    void setReferenceDistance(float refDistance);
 
     bool mStop;
     bool mLooping;
@@ -51,6 +54,9 @@ AudioEngineHandle::AudioEngineHandle(ISoundSource *_source)
     mCategory(SoundCategory_Other), mPaused(false), mStop(false)
 {
     alGenSources(1, &sourceId);
+
+    // Default to non-positional
+    alSourcei(sourceId, AL_ROLLOFF_FACTOR, 0);
 
     // Get valid OpenAL format identifiers now, since we don't want to convert them
     // everytime we upload samples
@@ -106,6 +112,22 @@ AudioEngineHandle::~AudioEngineHandle()
     }
 
     alDeleteSources(1, &sourceId);
+}
+
+void AudioEngineHandle::setPosition(const Vector4 &position)
+{
+    alSource3f(sourceId, AL_POSITION, position.x(), position.y(), position.z());
+    alSourcei(sourceId, AL_ROLLOFF_FACTOR, 1);
+}
+
+void AudioEngineHandle::setMaxDistance(float maxDistance)
+{
+    alSourcef(sourceId, AL_MAX_DISTANCE, maxDistance);
+}
+
+void AudioEngineHandle::setReferenceDistance(float distance)
+{
+    alSourcef(sourceId, AL_REFERENCE_DISTANCE, distance);
 }
 
 void AudioEngineHandle::setLooping(bool looping)
@@ -189,7 +211,10 @@ private:
 class AudioEngineData
 {
 public:
-    AudioEngineData() : device(NULL), context(NULL), audioThread(new AudioEngineThread(categoryVolume, categoryVolumeChanged))
+    AudioEngineData()
+        : device(NULL),
+        context(NULL),
+        audioThread(new AudioEngineThread(categoryVolume, categoryVolumeChanged))
     {
         for (int i = 0; i < (int)SoundCategory_Count; ++i) {
             categoryVolume[i] = 1.0;
@@ -220,6 +245,25 @@ AudioEngine::AudioEngine(QObject *parent) :
 AudioEngine::~AudioEngine()
 {
     close(); // Clean up if the engine is destroyed.
+}
+
+void AudioEngine::setListenerPosition(const Vector4 &position)
+{
+    alListener3f(AL_POSITION, position.x(), position.y(), position.z());
+}
+
+void AudioEngine::setListenerOrientation(const Vector4 &forwardVector, const Vector4 &upVector)
+{
+    ALfloat orientation[6] = {
+        forwardVector.x(),
+        forwardVector.y(),
+        forwardVector.z(),
+        upVector.x(),
+        upVector.y(),
+        upVector.z()
+    };
+
+    alListenerfv(AL_DIRECTION, orientation);
 }
 
 bool AudioEngine::paused() const
@@ -279,6 +323,9 @@ bool AudioEngine::open(const QString &deviceName)
         d_ptr->handleError("Making context current");
         return false;
     }
+
+    // Set the actual distance model used
+    alDistanceModel(AL_INVERSE_DISTANCE_CLAMPED);
 
     // Start the audio processing thread
     qDebug("Starting audio processing thread.");

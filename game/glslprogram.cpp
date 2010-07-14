@@ -12,7 +12,7 @@
 
 namespace EvilTemple {
 
-    GLSLProgram::GLSLProgram() : vertexShader(0), fragmentShader(0), program(0)
+    GLSLProgram::GLSLProgram() : mVertexShaderId(0), mFragmentShaderId(0), mProgramId(0)
     {
     }
 
@@ -23,9 +23,8 @@ namespace EvilTemple {
 
     bool GLSLProgram::bind()
     {
-        glUseProgram(program);
-        HANDLE_GL_ERROR
-                return true;
+        SAFE_GL(glUseProgram(mProgramId));
+        return true;
     }
 
     void GLSLProgram::unbind()
@@ -33,86 +32,7 @@ namespace EvilTemple {
         glUseProgram(0);
     }
 
-    bool GLSLProgram::checkShaderError(GLuint shader, const char *file, int line)
-    {
-        GLint success;
-        glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-
-        if (success == GL_TRUE) {
-            return false;
-        }
-
-        GLint length;
-        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &length);
-        if (length > 0) {
-            mError.append(QString("GLSL Shader error @ %1:%2: ").arg(file).arg(line));
-
-            QByteArray message(length, Qt::Uninitialized);
-            GLsizei actualLength;
-            glGetShaderInfoLog(shader, length, &actualLength, message.data());
-            mError.append(message);
-            mError.append("\n");
-            return true;
-        }
-
-        return false;
-    }
-
-    bool GLSLProgram::checkProgramError(const char *file, int line)
-    {
-        GLint status;
-        glGetProgramiv(program, GL_LINK_STATUS, &status);
-
-        if (status == GL_TRUE) {
-            return false;
-        }
-
-        GLint length;
-        glGetProgramiv(program, GL_INFO_LOG_LENGTH, &length);
-        if (length > 0) {
-            mError.append(QString("GLSL Program error @ %1:%2: ").arg(file).arg(line));
-
-            QByteArray message(length, Qt::Uninitialized);
-            GLsizei actualLength;
-            glGetProgramInfoLog(program, length, &actualLength, message.data());
-            mError.append(message);
-            mError.append("\n");
-            return true;
-        }
-
-        return false;
-    }
-
-    bool GLSLProgram::handleGlError(const char *file, int line) {
-        bool errorOccured = false;
-
-        mError.clear();
-
-        if (program) {
-            errorOccured |= checkProgramError(file, line);
-        }
-        if (vertexShader) {
-            errorOccured |= checkShaderError(vertexShader, file, line);
-        }
-        if (fragmentShader) {
-            errorOccured |= checkShaderError(fragmentShader, file, line);
-        }
-
-        GLenum glErr = glGetError();
-        while (glErr != GL_NO_ERROR) {
-            const char *errorString = (const char*)gluErrorString(glErr);
-            if (errorString)
-                mError.append(QString("OpenGL error @ %1:%2: %3").arg(file).arg(line).arg(errorString));
-            else
-                mError.append(QString("Unknown OpenGL error @ %1:%2").arg(file).arg(line));
-            errorOccured = true;
-            glErr = glGetError();
-        }
-
-        return errorOccured;
-    }
-
-    bool GLSLProgram::loadFromFile( const QString &vertexShaderFile, const QString &fragmentShaderFile )
+    bool GLSLProgram::loadFromFile(const QString &vertexShaderFile, const QString &fragmentShaderFile)
     {
         QFile file(vertexShaderFile);
 
@@ -138,85 +58,169 @@ namespace EvilTemple {
         return load(fragmentShaderCode, fragmentShaderCode);
     }
 
+    static bool checkCompileStatus(GLuint shader, QString *error = NULL)
+    {
+        // An OpenGL error is not raised when compilation of the shader failed
+        GLint compileStatus;
+        SAFE_GL(glGetShaderiv(shader, GL_COMPILE_STATUS, &compileStatus));
+
+        if (compileStatus == GL_TRUE)
+            return true; // Compilation succeeded
+
+        if (!error)
+            return false; // No error log needs to be retrieved
+
+        // Retrieve the error log
+        GLint logLength;
+        SAFE_GL(glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logLength));
+
+        // According to spec, log-length is 0 for no log, otherwise it includes the nul-termination
+        if (logLength == 0) {
+            *error = "Compilation failed due to an unknown error.";
+            return false;
+        }
+
+        // Create a temporary buffer for the info log, retrieve it and set it as the current error
+        QScopedArrayPointer<char> infoLog(new char[logLength]);
+
+        GLint realLogLength;
+        SAFE_GL(glGetShaderInfoLog(shader, logLength, &realLogLength, infoLog.data()));
+
+        *error = QString::fromLatin1(infoLog.data(), realLogLength);
+        return false;
+    }
+
+    static bool checkLinkStatus(GLuint program, QString *error = NULL)
+    {
+        GLint linkStatus;
+        SAFE_GL(glGetProgramiv(program, GL_LINK_STATUS, &linkStatus));
+
+        if (linkStatus == GL_TRUE)
+            return true; // Linking succeeded
+
+        if (!error)
+            return false; // No error log needs to be retrieved
+
+        // Retrieve the error log
+        GLint logLength;
+        SAFE_GL(glGetProgramiv(program, GL_INFO_LOG_LENGTH, &logLength));
+
+        // According to spec, log-length is 0 for no log, otherwise it includes the nul-termination
+        if (logLength == 0) {
+            *error = "Compilation failed due to an unknown error.";
+            return false;
+        }
+
+        // Create a temporary buffer for the info log, retrieve it and set it as the current error
+        QScopedArrayPointer<char> infoLog(new char[logLength]);
+
+        GLint realLogLength;
+        SAFE_GL(glGetProgramInfoLog(program, logLength, &realLogLength, infoLog.data()));
+
+        *error = QString::fromLatin1(infoLog.data(), realLogLength);
+        return false;
+    }
+
     bool GLSLProgram::load( const QByteArray &vertexShaderCode, const QByteArray &fragmentShaderCode )
     {
+        const char *code = NULL;
+        QString compileError;
 
         release();
 
-        // TODO: Fix this mess
-        GLuint shader = glCreateShader(GL_VERTEX_SHADER);
+        /*
+         Create the vertex shader.
+         */
+        mVertexShaderId = glCreateShader(GL_VERTEX_SHADER);
 
-        const char *code = vertexShaderCode.constData();
-        glShaderSource(shader, 1, &code, 0);
-        HANDLE_GL_ERROR
-        vertexShader = shader;
+        if (!mVertexShaderId) {
+            mError = "Unable to create the vertex shader object.";
+            return false;
+        }
 
-        glCompileShader(vertexShader);
-        HANDLE_GL_ERROR
-        shader = glCreateShader(GL_FRAGMENT_SHADER);
-        HANDLE_GL_ERROR
+        code = vertexShaderCode.constData();
+        SAFE_GL(glShaderSource(mVertexShaderId, 1, &code, 0));
+
+        SAFE_GL(glCompileShader(mVertexShaderId));
+
+        if (!checkCompileStatus(mVertexShaderId, &compileError)) {
+            mError = "Unable to compile the vertex shader: " + compileError;
+            return false;
+        }
+
+        /*
+         Create the fragment shader.
+         */
+        mFragmentShaderId = glCreateShader(GL_FRAGMENT_SHADER);
+
+        if (!mFragmentShaderId) {
+            mError = "Unable to create the fragment shader object.";
+            return false;
+        }
 
         code = fragmentShaderCode.constData();
-        glShaderSource(shader, 1, &code, 0);
-        HANDLE_GL_ERROR
-        fragmentShader = shader;
+        SAFE_GL(glShaderSource(mFragmentShaderId, 1, &code, 0));
 
-        glCompileShader(fragmentShader);
-        HANDLE_GL_ERROR
+        SAFE_GL(glCompileShader(mFragmentShaderId));
 
-        shader = glCreateProgram();
-        HANDLE_GL_ERROR
+        if (!checkCompileStatus(mFragmentShaderId, &compileError)) {
+            mError = "Unable to compile the fragment shader: " + compileError;
+            return false;
+        }
 
-        glAttachShader(shader, vertexShader);
-        HANDLE_GL_ERROR
+        /*
+         Create the program.
+         */
+        mProgramId = glCreateProgram();
 
-        glAttachShader(shader, fragmentShader);
-        HANDLE_GL_ERROR
+        if (!mProgramId) {
+            mError = "Unable to create the program object.";
+            return false;
+        }
 
-        glLinkProgram(shader);
-        HANDLE_GL_ERROR
+        SAFE_GL(glAttachShader(mProgramId, mVertexShaderId));
+        SAFE_GL(glAttachShader(mProgramId, mFragmentShaderId));
 
-        program = shader;
+        SAFE_GL(glLinkProgram(mProgramId));
+
+        if (!checkLinkStatus(mProgramId, &compileError)) {
+            mError = "Unable to link the program: " + compileError;
+            return false;
+        }
 
         return true;
     }
 
-    void GLSLProgram::setUniformMatrix(const char *name, GLfloat *matrix)
-    {
-        GLint position = glGetUniformLocation(program, name);
-        glUniformMatrix4fv(position, 16, false, matrix);
-    }
-
     GLint GLSLProgram::attributeLocation(const char *name)
     {
-        return glGetAttribLocation(program, name);
+        GLint location;
+        SAFE_GL(location = glGetAttribLocation(mProgramId, name));
+        return location;
+    }
+
+    GLint GLSLProgram::uniformLocation(const char *name)
+    {
+        GLint location;
+        SAFE_GL(location = glGetUniformLocation(mProgramId, name));
+        return location;
     }
 
     void GLSLProgram::release()
     {
-        glUseProgram(0); // Avoid flagging for deletion, instead delete *now*
-
-        if (program) {
-            glDeleteProgram(program);
-            program = 0;
+        if (mProgramId) {
+            glDeleteProgram(mProgramId);
+            mProgramId = 0;
         }
 
-        if (vertexShader) {
-            glDeleteShader(vertexShader);
-            vertexShader = 0;
+        if (mVertexShaderId) {
+            glDeleteShader(mVertexShaderId);
+            mVertexShaderId = 0;
         }
 
-        if (fragmentShader) {
-            glDeleteShader(fragmentShader);
-            fragmentShader = 0;
+        if (mFragmentShaderId) {
+            glDeleteShader(mFragmentShaderId);
+            mFragmentShaderId = 0;
         }
-    }
-
-    GLint GLSLProgram::uniformLocation( const char *name )
-    {
-        GLint location;
-        SAFE_GL(location = glGetUniformLocation(program, name));
-        return location;
     }
 
 }

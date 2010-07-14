@@ -113,7 +113,6 @@ public:
             // Look for the file in the data directory.
             engine.setFileName(absoluteDataPath + path);
             if (engine.fileFlags(QAbstractFileEngine::ExistsFlag) & QAbstractFileEngine::ExistsFlag) {
-                qDebug("Using override for %s.", qPrintable(path));
                 return new QFSFileEngine(absoluteDataPath + path);
             }
         } else {

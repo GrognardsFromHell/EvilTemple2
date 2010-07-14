@@ -14,38 +14,44 @@ var Maps = {
 };
 
 (function() {
-
-    /*
-      Automatically load available zones. This should probably be refactored into some sort of "campaign" / "module"
-      structure, which means maps only get loaded in module packages.
-      */
-    var mapIdMapping = eval('(' + readFile('legacy_maps.js') + ')');
-
     /**
-     * Gets an array of all available map ids.
+     * This is a rather odd function. In this case, it loads all mobiles from all maps on initial startup and
+     * creates several data-structures for holding them.
      */
-    Maps.maps = function() {
-        var result = [];
-        for (var k in maps)
-            result.push(k);
-        return result;
+    Maps.load = function() {
+        /*
+          Automatically load available zones. This should probably be refactored into some sort of "campaign" / "module"
+          structure, which means maps only get loaded in module packages.
+          */
+        var mapIdMapping = readJson('legacy_maps.js');
+
+        for (var mapId in mapIdMapping) {
+            var filename = mapIdMapping[mapId];
+
+            var map = new Map(mapId, filename);
+            maps.push(map);
+            print("Loaded map " + map.name);
+        }
+    };
+
+    Maps.getByLegacyId = function(mapId) {
+        for (var i = 0; i < maps.length; ++i) {
+            if (maps[i].id == mapId)
+                return maps[i];
+        }
+        return null;
     };
 
     Maps.goToMap = function(map, position) {
         // TODO: Should we assert, that the map object is actually in Maps.maps?
 
-        var newMap = Maps.maps[id];
+        if (this.currentMap)
+            this.currentMap.leaving(map, position);
 
-        if (currentMap)
-            currentMap.leaving();
+        this.currentMap = map;
 
-        currentMap = map;
-
-        if (currentMap) {
-            // TODO: Position the party on the map
-
-            currentMap.entering(position);
-        }
+        if (map)
+            map.entering(position);
     };
 
 })();

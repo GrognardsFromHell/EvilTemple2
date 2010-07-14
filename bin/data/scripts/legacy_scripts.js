@@ -31,7 +31,12 @@ var LegacyScripts = {};
          */
         fade_and_teleport: function(unk1, unk2, unk3, mapId, worldX, worldY) {
             var newPosition = [worldX * 28.2842703, 0, worldY * 28.2842703]; // this should probably go into the converter
-            Maps.goToMap(mapId, newPosition);
+
+            var map = Maps.getByLegacyId(mapId);
+            if (map)
+                Maps.goToMap(map, newPosition);
+            else
+                print("Unknown legacy map id: " + mapId);
         }
     };
 

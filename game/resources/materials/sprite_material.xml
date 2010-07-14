@@ -6,8 +6,6 @@
       <vertexShader>
         <code>
           <![CDATA[
-#version 120
-
 uniform int displayMode = 0; // 0 = Sprite, 1 = Disc
 uniform mat4 worldViewMatrix;
 uniform mat4 projectionMatrix;
@@ -71,8 +69,6 @@ void main() {
       <fragmentShader>
         <code>
           <![CDATA[
-#version 120
-
 uniform sampler2D texSampler;
 
 varying vec2 texCoord;

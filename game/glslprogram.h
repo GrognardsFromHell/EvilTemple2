@@ -45,8 +45,6 @@ public:
      */
     void setUniformTexture(const char *name, GLuint texture);
 
-    void setUniformMatrix(const char *name, GLfloat *matrix);
-
     /**
      * Returns the last error string if a method fails.
      */
@@ -60,10 +58,7 @@ public:
 
 private:
     QString mError;
-    GLuint vertexShader, fragmentShader, program;
-    bool handleGlError(const char *file, int line);
-    bool checkProgramError(const char *file, int line);
-    bool checkShaderError(GLuint shader, const char *file, int line);
+    GLuint mVertexShaderId, mFragmentShaderId, mProgramId;
 
     Q_DISABLE_COPY(GLSLProgram)
 };
@@ -72,7 +67,7 @@ typedef QSharedPointer<GLSLProgram> SharedGLSLProgram;
 
 inline GLuint GLSLProgram::handle() const
 {
-        return program;
+        return mProgramId;
 }
 
 }

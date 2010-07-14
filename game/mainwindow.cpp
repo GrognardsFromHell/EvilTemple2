@@ -80,6 +80,23 @@ namespace EvilTemple {
             qWarning("GLEWinit failed.");
         }
 
+        const char *openGlVersion = (const char*)glGetString(GL_VERSION);
+        const char *openGlVendor = (const char*)glGetString(GL_VENDOR);
+        const char *openGlRenderer = (const char*)glGetString(GL_RENDERER);
+        const char *openGlSlVersion = (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
+
+        qDebug("OpenGL Version: %s, Vendor: %s, Renderer: %s, GLSL: %s", openGlVersion,
+               openGlVendor, openGlRenderer, openGlSlVersion);
+
+        if (!GLEW_VERSION_2_1) {
+            qWarning("Graphics card driver doesn't support OpenGL 2.1.");
+            QMessageBox::critical(NULL, "OpenGL Version", QString("Your graphics card driver doesn't provide OpenGL Version 2.1"
+                                  " or later. Please make sure your graphics card driver is up to date.\n"
+                                  "The OpenGL version reported by your driver is: %1\n"
+                                  "Vendor: %2, Renderer: %3, GLSL: %4").arg(openGlVersion).arg(openGlVendor)
+                                  .arg(openGlRenderer).arg(openGlSlVersion));
+        }
+
         while (glGetError() != GL_NO_ERROR) {}
 
         // Create the actual OpenGL widget

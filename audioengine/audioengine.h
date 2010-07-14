@@ -9,6 +9,7 @@
 #include <QStringList>
 #include <QByteArray>
 #include <QSharedPointer>
+#include <QVector3D>
 
 #include "isoundsource.h"
 #include "isound.h"
@@ -127,6 +128,20 @@ public slots:
       @returns True if the sound was sucessfully loaded.
       */
     SharedSoundHandle playSoundOnce(const QString &filename, SoundCategory category);
+
+    /**
+      Sets the position of the listener.
+
+      This is used to attenuate and position sounds.
+      */
+    void setListenerPosition(const Vector4 &position);
+
+    /**
+      Gives two directional vectors that specify the orientation of the listener.
+
+      This is used to position audio around the listener.
+      */
+    void setListenerOrientation(const Vector4 &forwardVector, const Vector4 &upVector);
 
 private:
     QScopedPointer<AudioEngineData> d_ptr;

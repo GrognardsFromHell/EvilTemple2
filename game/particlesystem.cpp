@@ -2057,6 +2057,12 @@ namespace EvilTemple {
     {
         ParticleSystem *result = new ParticleSystem(tpl.id());
 
+        /*
+         If the sprite material couldn't be loaded, particle systems are disabled.
+         */
+        if (!mSpriteMaterial)
+            return result;
+
         foreach (const EmitterTemplate &emitterTemplate, tpl.emitterTemplates()) {
             result->addEmitter(instantiate(result, emitterTemplate));
         }

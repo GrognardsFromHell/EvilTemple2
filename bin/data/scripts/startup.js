@@ -226,6 +226,11 @@ var Critter = {
     killsOnSight: false,
 
     joinedParty: function() {
+        // Remove the mobile from the map's list of mobiles
+        if (this.map) {
+            this.map.removeMobile(this);
+        }
+
         if (this.OnJoin)
             LegacyScripts.OnJoin(this.OnJoin, this);
     },
@@ -233,6 +238,11 @@ var Critter = {
     leftParty: function() {
         if (this.OnDisband)
             LegacyScripts.OnDisband(this.OnDisband, this);
+
+        // Add the mobile back to the current map's list of mobiles
+        if (this.map) {
+            this.map.addMobile(this);
+        }        
     }
 };
 
@@ -263,10 +273,22 @@ var sounds;
 function startup() {
     models = gameView.models;
 
+    print("Loading prototypes...");
+    prototypes = eval('(' + readFile('prototypes.js') + ')');
+    prototypes['StaticGeometry'] = {
+        interactive: false
+    };
+    print("Loading jump points...");
+    jumppoints = eval('(' + readFile('jumppoints.js') + ')');
+    loadEquipment();
+    loadPortraits();
+    loadInventoryIcons();
+    sounds = eval('(' + readFile('sound/sounds.js') + ')');
+
     print("Loading subsystems.");
     LegacyScripts.load();
     LegacyDialog.load();
-    Mobiles.load();
+    Maps.load();    
 
     print("Showing main menu.");
 
@@ -290,18 +312,6 @@ function startup() {
         connectToPrototype(player1);
         Party.addMember(player1);
     });
-
-    print("Loading prototypes...");
-    prototypes = eval('(' + readFile('prototypes.js') + ')');
-    prototypes['StaticGeometry'] = {
-        interactive: false
-    };
-    print("Loading jump points...");
-    jumppoints = eval('(' + readFile('jumppoints.js') + ')');
-    loadEquipment();
-    loadPortraits();
-    loadInventoryIcons();
-    sounds = eval('(' + readFile('sound/sounds.js') + ')');
 
     // Assign the prototype of each loaded prototype
     for (var i in prototypes) {
@@ -450,7 +460,10 @@ var animEventAnimObjFacade = {
 
         var sound = sounds[footstepCounter++ % sounds.length];
 
-        gameView.audioEngine.playSoundOnce(sound, SoundCategory_Effect);
+        var handle = gameView.audioEngine.playSoundOnce(sound, SoundCategory_Effect);
+        handle.setPosition(this.sceneNode.position);
+        handle.setMaxDistance(1500);
+        handle.setReferenceDistance(50);
     }
 };
 
@@ -573,13 +586,13 @@ function loadMap(filename) {
         createMapObject(scene, obj);
     }
 
-    var dynamicObjects = eval('(' + readFile(mapObj.mobiles) + ')');
+    var map = Maps.getByLegacyId(mapObj.id);
+    var mobiles = map.mobiles;
 
-    print("Creating " + dynamicObjects.length + " dynamic objects.");
+    print("Creating " + mobiles.length + " dynamic objects.");
 
-    for (var i = 0; i < dynamicObjects.length; ++i) {
-        obj = dynamicObjects[i];
-        connectToPrototype(obj);
+    for (var i = 0; i < mobiles.length; ++i) {
+        obj = mobiles[i];
         createMapObject(scene, obj);
     }
 

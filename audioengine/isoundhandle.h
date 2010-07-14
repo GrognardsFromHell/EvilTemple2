@@ -3,6 +3,9 @@
 
 #include "audioengineglobal.h"
 
+#include <gamemath.h>
+using namespace GameMath;
+
 #include <QSharedPointer>
 
 namespace EvilTemple {
@@ -55,6 +58,18 @@ public:
       Changes the category of this sound handle.
       */
     virtual void setCategory(SoundCategory category) = 0;
+
+    /**
+      Changes the position of this sound.
+      */
+    virtual void setPosition(const Vector4 &position) = 0;
+
+    /**
+      Change the maximum distance for this sound.
+      */
+    virtual void setMaxDistance(float maxDistance) = 0;
+
+    virtual void setReferenceDistance(float distance) = 0;
 };
 
 typedef QSharedPointer<ISoundHandle> SharedSoundHandle;

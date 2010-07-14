@@ -93,7 +93,7 @@ namespace EvilTemple {
             : q(view), rootItem(0), backgroundMap(renderStates),
             clippingGeometry(renderStates), dragging(false), lightDebugger(renderStates),
             materials(renderStates), sectorMap(&scene), models(&materials, renderStates),
-            particleSystems(&models, &materials), scene(&materials)
+            particleSystems(&models, &materials), scene(&materials), lastAudioEnginePosition(0, 0, 0, 1)
         {
             sceneTimer.invalidate();
 
@@ -117,6 +117,12 @@ namespace EvilTemple {
                 qWarning("Unable to initialize audio engine.");
             }
 
+            audioEngine.setVolume(0.25f);
+
+            // Set some properties on the audio engine relating to positional audio
+            audioEngine.setListenerOrientation(Vector4(-1, 0, -1, 0).normalized(),
+                                               Vector4(0, 1, 0, 0));
+
             // Old: -44
             Quaternion rot1 = Quaternion::fromAxisAndAngle(1, 0, 0, deg2rad(-44.42700648682643));
             Matrix4 rotate1matrix = Matrix4::transformation(Vector4(1,1,1,0), rot1, Vector4(0,0,0,0));
@@ -136,7 +142,6 @@ namespace EvilTemple {
             baseViewMatrix = id * flipZMatrix * rotate1matrix * rotate2matrix;
 
             renderStates.setViewMatrix(baseViewMatrix);
-            centerOnWorld(480 * 28.2842703f, 480 * 28.2842703f);
 
             lightDebugger.loadMaterial();
             Light::setDebugRenderer(&lightDebugger);
@@ -147,10 +152,21 @@ namespace EvilTemple {
             GlobalTextureCache::stop();
         }
 
+        void updateListenerPosition()
+        {
+            Vector4 worldCenter = q->worldCenter();
+            if (!(worldCenter == lastAudioEnginePosition)) {
+                lastAudioEnginePosition = worldCenter;
+                audioEngine.setListenerPosition(worldCenter);
+            }
+        }
+
         void centerOnWorld(float worldX, float worldY)
         {
             Matrix4 matrix = Matrix4::translation(-worldX, 0, -worldY);
             renderStates.setViewMatrix(baseViewMatrix * matrix);
+
+            audioEngine.setListenerPosition(Vector4(worldX, 0, worldY, 1));
         }
 
         Vector4 worldPositionFromScreen(const QPoint &point) {
@@ -267,6 +283,8 @@ namespace EvilTemple {
         QElapsedTimer sceneTimer;
         Scene scene;
 
+        Vector4 lastAudioEnginePosition;
+
         void resize(int width, int height) {
             float halfWidth = width * 0.5f;
             float halfHeight = height * 0.5f;
@@ -349,6 +367,9 @@ namespace EvilTemple {
         Profiler::newFrame();
 
         SAFE_GL(;); // Clears existing OpenGL errors
+
+        // Update the audio engine state if necessary
+        d->updateListenerPosition();
 
         // Evaluate visual script timers
         d->pollVisualTimers();

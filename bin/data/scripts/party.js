@@ -106,8 +106,6 @@ var Party = {};
         if (followers.indexOf(npc) != -1)
             return false;
 
-        print("Proto: " + npc.__proto__);
-
         /*if (!(npc instanceof NonPlayerCharacter)) {
             throw "Trying to add a player character as a follower to the party.";
         }*/
