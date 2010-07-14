@@ -30,7 +30,7 @@ namespace EvilTemple {
 
         void callGlobalFunction(const QString &name);
 
-        void callGlobalFunction(const QString &name, const QList<QVariant> &arguments);
+        void callGlobalFunction(const QString &name, const QScriptValueList &arguments);
 
     private:
         void handleUncaughtException();

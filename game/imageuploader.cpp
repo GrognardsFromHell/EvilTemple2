@@ -5,6 +5,8 @@
 #include <QNetworkRequest>
 #include <QNetworkReply>
 
+#include <parser.h>
+
 #include "imageuploader.h"
 
 namespace EvilTemple {
@@ -119,7 +121,8 @@ void ImageUploader::upload(const QUrl &filename)
 
     QByteArray data = buildRequest("ee407cd5193cfc4d01b1fd48bcc52594", imageData);
     request.setHeader(QNetworkRequest::ContentLengthHeader, data.size());
-    request.setHeader(QNetworkRequest::ContentTypeHeader, QString("multipart/form-data; boundary=\"%1\"").arg(MULTIPART_BOUNDARY));
+    request.setHeader(QNetworkRequest::ContentTypeHeader, QString("multipart/form-data; boundary=\"%1\"")
+                      .arg(MULTIPART_BOUNDARY));
 
     mCurrentReply = mAccessManager.post(request, data);
     connect(mCurrentReply, SIGNAL(uploadProgress(qint64,qint64)), SIGNAL(uploadProgress(qint64,qint64)));
@@ -133,11 +136,15 @@ void ImageUploader::finished()
     mCurrentReply->deleteLater();
     mCurrentReply = NULL;
 
-    QString responseText = QString::fromUtf8(content);
+    QJson::Parser parser;
+    bool ok;
+    QVariant result = parser.parse(content, &ok);
 
-    qDebug("Response: %s", qPrintable(responseText));
-
-    emit finished(responseText);
+    if (!ok) {
+        emit uploadFailed();
+    } else {
+        emit uploadFinished(result);
+    }
 }
 
 }

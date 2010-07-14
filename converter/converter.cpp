@@ -239,12 +239,12 @@ public:
 
         QList<ConversionTask*> tasks;
         tasks << new ConvertScriptsTask(this)
-              //<< new ConvertParticleSystemsTask(this)
-              //<< new ConvertTranslationsTask(this)
-              // << new ConvertMapsTask(this);
-              << new ConvertSoundsTask(this);
-              //<< new ConvertInterfaceTask(this)
-              //<< new ConvertModelsTask(this);
+              << new ConvertParticleSystemsTask(this)
+              << new ConvertTranslationsTask(this)
+              << new ConvertMapsTask(this)
+              << new ConvertSoundsTask(this)
+              << new ConvertInterfaceTask(this)
+              << new ConvertModelsTask(this);
 
         // Sum up total work over all tasks
         mTotalWork = 0;

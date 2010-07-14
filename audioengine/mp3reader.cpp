@@ -30,8 +30,6 @@ static int file_open(URLContext *h, const char *rawFilename, int flags)
     if (filename.startsWith("qfile:"))
         filename = filename.mid(strlen("qfile:"));
 
-    qDebug("Opening %s via qfile avformat protocol.", qPrintable(filename));
-
     QFile *file = new QFile(filename);
 
     if (!file->open(QIODevice::ReadOnly)) {
@@ -148,8 +146,9 @@ MP3SoundSource::MP3SoundSource(const QString &filename)
         return;
     }
 
-    // TODO: Limit this dump to debug mode
+#ifndef QT_NO_DEBUG
     dump_format(formatCtx, 0, qPrintable(filename), false);
+#endif
 
     for (quint32 i = 0; i < formatCtx->nb_streams; ++i) {
         AVStream *stream = formatCtx->streams[i];
@@ -243,7 +242,6 @@ bool MP3SoundSource::readNextPacket()
         }
     }
 
-    qDebug("Unable to read another packet.");
     return false;
 }
 

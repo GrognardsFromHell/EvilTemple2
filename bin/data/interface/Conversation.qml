@@ -3,14 +3,15 @@ import Qt 4.7
 Item {
     id: root
     width: 640
-    height: 380
+    height: answerColumn.y + answerColumn.height + 20
 
     x: (gameView.viewportSize.width - width) / 2
     y: (gameView.viewportSize.height - height) / 2
 
-    property alias text : npcText.text;
+    property alias npcName : npcNameLabel.text
+    property alias npcText : npcTextLabel.text
     property alias answers : answerRepeater.model;
-    property string portrait;
+    property string portrait : 'art/interface/portraits/TempMan.png';
 
     signal answered(int id);
 
@@ -21,7 +22,7 @@ Item {
         gradient: Gradient {
             GradientStop {
                 position: 0
-                color: "#ffffff"
+                color: "#000000"
             }
 
             GradientStop {
@@ -33,79 +34,84 @@ Item {
         anchors.fill: parent
     }
 
+    Text {
+        id: npcNameLabel
+        x: 21
+        y: 14
+        width: 600
+        height: 19
+        color: "#ffffff"
+        smooth: false
+        style: "Outline"
+        wrapMode: "WordWrap"
+        font.bold: true
+        font.family: "Fontin"
+        font.pointSize: 14
+        text: 'NPC Name'
+    }
+
     Rectangle {
         id: portraitRect
         x: 19
-        y: 24
-        width: 100
+        y: 44
+        width: 113
         height: 100
+        color: "#00000000"
         radius: 5
-        gradient: Gradient {
-            GradientStop {
-                position: 0
-                color: "#ffffff"
-            }
-
-            GradientStop {
-                position: 0.46
-                color: "#888888"
-            }
-        }
-
+        clip: true
         Image {
             id: portraitImg
-            anchors.rightMargin: 5
-            anchors.leftMargin: 5
-            anchors.bottomMargin: 5
-            anchors.topMargin: 5
             anchors.fill: parent
-            fillMode: "PreserveAspectFit"
+            fillMode: "Stretch"
             smooth: true
             source: '../' + portrait
         }
     }
 
     Rectangle {
-        x: 131
-        y: 24
-        width: 490
+        id: npctextbg
+        x: 142
+        y: 44
+        width: 479
         height: 100
         radius: 5
         gradient: Gradient {
             GradientStop {
                 position: 0
-                color: "#ffffff"
+                color: "#555555"
             }
 
             GradientStop {
-                position: 0.43
-                color: "#868686"
+                position: 0.99
+                color: "#292929"
             }
         }
+        opacity: 0.5
+    }
 
-        Text {
-            id: npcText
-            color: "#ffffff"
-            text: "text"
-            style: "Outline"
-            font.bold: true
-            font.pointSize: 12
-            font.family: "Fontin"
-            smooth: true
-            wrapMode: "WordWrap"
-            anchors.rightMargin: 10
-            anchors.leftMargin: 10
-            anchors.bottomMargin: 10
-            anchors.topMargin: 10
-            anchors.fill: parent
-        }
+    Text {
+        id: npcTextLabel
+        color: "#ffffff"
+        style: "Outline"
+        font.bold: true
+        font.pointSize: 12
+        font.family: "Fontin"
+        smooth: false
+        wrapMode: "WordWrap"
+        anchors.rightMargin: 10
+        anchors.leftMargin: 10
+        anchors.bottomMargin: 10
+        anchors.topMargin: 10
+        anchors.fill: npctextbg
+        text: 'Some text the NPC would say'
     }
 
     Column {
+        id: answerColumn
         x: 19
-        y: 129
+        y: 159
         width: 602
-        height: 232
+        height: childrenRect.height
         spacing: 5
         Repeater {
             id: answerRepeater

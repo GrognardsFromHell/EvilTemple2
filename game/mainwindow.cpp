@@ -1,6 +1,7 @@
 
 #include <GL/glew.h>
 
+#include <QCoreApplication>
 #include <QEventLoop>
 #include <QGraphicsView>
 #include <QGLWidget>
@@ -30,7 +31,6 @@
 
 namespace EvilTemple {
 
-
     void loadFont(const QString &filename)
     {
         int handle = QFontDatabase::addApplicationFont(filename);
@@ -58,7 +58,6 @@ namespace EvilTemple {
         : QMainWindow(parent),
         d_ptr(new MainWindowData(game))
     {
-
         setWindowIcon(QIcon(":/images/application.ico"));
 
         loadFont(":/fonts/5inq_-_Handserif.ttf");
@@ -143,6 +142,11 @@ namespace EvilTemple {
         windowTitle.append(QString(" NavMeshes: %1").arg(getActiveNavigationMeshes()));
         windowTitle.append(QString(" Renderables: %1").arg(getActiveRenderables()));
 
+        Vector4 worldPosition = d_ptr->gameView->worldCenter();
+        windowTitle.append(QString(" (%1,%2,%3)").arg((int)worldPosition.x())
+                           .arg((int)worldPosition.y())
+                           .arg((int)worldPosition.z()));
+
         setWindowTitle(windowTitle);
     }
 
@@ -220,7 +224,16 @@ namespace EvilTemple {
                 d_ptr->profilerDialog = new ProfilerDialog;
                 d_ptr->profilerDialog->show();
             }
+        } else {
+            QScriptValue scriptEvent = d_ptr->game.scriptEngine()->engine()->newObject();
+            scriptEvent.setProperty("key", QScriptValue(e->key()));
+            scriptEvent.setProperty("text", QScriptValue(e->text()));
 
+            QScriptValueList args;
+            args << scriptEvent;
+
+            qDebug("Delegating shortcut to JavaScript.");
+            d_ptr->game.scriptEngine()->callGlobalFunction("keyPressed", args);
         }
     }
 

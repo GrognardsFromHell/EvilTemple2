@@ -79,7 +79,7 @@ static QVariantList factionsToList(const QList<uint> &factions)
     return result;
 }
 
-static QVariant toVariant(IConversionService *service, GameObject *object)
+static QVariant toVariant(IConversionService *service, GameObject *object, bool isChild = false)
 {
     QVariantMap objectMap;
 
@@ -92,17 +92,28 @@ static QVariant toVariant(IConversionService *service, GameObject *object)
 
     objectMap["prototype"] = object->prototype->id;
 
-    QVariantList vector;
-    vector.append(object->position.x());
-    vector.append(object->position.y());
-    vector.append(object->position.z());
-    objectMap["position"] = QVariant(vector);
-
     NonPlayerCharacterProperties *npcProperties = qobject_cast<NonPlayerCharacterProperties*>(object->prototype->additionalProperties);
 
     JsonPropertyWriter props(objectMap);
     if (object->name.isDefined())
         props.write("internalDescription", service->getInternalName(object->name.value()));
+
+    if (isChild) {
+        int inventoryLoc = 0;
+        if (object->itemInventoryLocation.isDefined())
+            inventoryLoc = object->itemInventoryLocation.value();
+        if (inventoryLoc < 0)
+            qWarning("Negative item inventory location. What does that mean? %d", inventoryLoc);
+        if (inventoryLoc > 25)
+            props.write("itemInventoryLocation", inventoryLoc);
+    } else {
+        QVariantList vector;
+        vector.append(object->position.x());
+        vector.append(object->position.y());
+        vector.append(object->position.z());
+        objectMap["position"] = QVariant(vector);
+    }
+
     props.write("flags", object->flags);
     props.write("scale", object->scale);
     props.write("rotation", object->rotation);
@@ -116,7 +127,6 @@ static QVariant toVariant(IConversionService *service, GameObject *object)
     props.write("teleportTarget", object->teleportTarget);
     // props.write("parentItemId", object->parentItemId);
     props.write("substituteInventoryId", object->substituteInventoryId);
-    props.write("itemInventoryLocation", object->itemInventoryLocation);
     props.write("hitPoints", object->hitPoints);
     props.write("hitPointsAdjustment", object->hitPointsAdjustment);
     props.write("hitPointsDamage", object->hitPointsDamage);
@@ -187,7 +197,7 @@ static QVariant toVariant(IConversionService *service, GameObject *object)
     if (!object->content.isEmpty()) {
         QVariantList content;
         foreach (GameObject *subObject, object->content) {
-            content.append(toVariant(service, subObject));
+            content.append(toVariant(service, subObject, true));
         }
         objectMap["content"] = content;
     }
@@ -280,6 +290,18 @@ void ConvertMapsTask::convertStaticObjects(ZoneTemplate *zoneTemplate, IFileWrit
 
     QVariantList objectList;
     foreach (GameObject *object, zoneTemplate->staticObjects()) {
+
+        /*
+         This is a special hack that assigns GUIDs to portals so state for them can be persisted. They're pretty much
+         the only type of *static* object in a map that can be interacted with by the player (except for level-
+         transition objects maybe).
+         */
+        if (object->prototype->type == Portal) {
+            if (object->id.isNull()) {
+                object->id = QUuid::createUuid().toString();
+            }
+        }
+
         objectList.append(toVariant(service(), object));
     }
 
@@ -304,18 +326,19 @@ void ConvertMapsTask::convertStaticObjects(ZoneTemplate *zoneTemplate, IFileWrit
     }
 
     mapObject["staticObjects"] = objectList;
+    mapObject["mobiles"] = zoneTemplate->directory() + "mobiles.js";
 
     objectList.clear();
 
-    foreach (GameObject *object, zoneTemplate->mobiles()) {
-        objectList.append(toVariant(service(), object));
-    }
-    mapObject["dynamicObjects"] = objectList;
-
     Serializer serializer;
-    QByteArray data = serializer.serialize(mapObject);
 
-    writer->addFile(zoneTemplate->directory() + "map.js", data, 9);
+    writer->addFile(zoneTemplate->directory() + "map.js", serializer.serialize(mapObject));
+
+    QVariantList dynamicObjects;
+    foreach (GameObject *object, zoneTemplate->mobiles()) {
+        dynamicObjects.append(toVariant(service(), object));
+    }
+    writer->addFile(zoneTemplate->directory() + "mobiles.js", serializer.serialize(dynamicObjects));
 }
 
 bool compareScale(const Vector4 &a, const Vector4 &b) {
@@ -523,6 +546,8 @@ void ConvertMapsTask::run()
     int totalWork = zoneTemplates->mapIds().size();
     int workDone = 0;
 
+    QVariantMap mapsMapping;
+
     // Convert all maps
     foreach (quint32 mapId, zoneTemplates->mapIds()) {
         assertNotAborted();
@@ -536,6 +561,8 @@ void ConvertMapsTask::run()
         converter.convert(zoneTemplate.data());
 
         if (zoneTemplate) {
+            mapsMapping[QString("%1").arg(zoneTemplate->id())] = zoneTemplate->directory() + "map.js";
+
             Troika::ZoneBackgroundMap *background = zoneTemplate->dayBackground();
 
             if (background) {
@@ -564,6 +591,9 @@ void ConvertMapsTask::run()
 
         emit progress(workDone, totalWork);
     }
+
+    Serializer serializer;
+    mapsOutput->addFile("legacy_maps.js", serializer.serialize(mapsMapping));
 
     backgroundOutput->close();
     mapsOutput->close();

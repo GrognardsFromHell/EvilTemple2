@@ -31,14 +31,14 @@ static void install_google_breakpad()
     using namespace google_breakpad;
     using namespace std;
 
-    ExceptionHandler *handler = new ExceptionHandler(wstring(L"."),
-                                                     etFilterCallback,
-                                                     etMinidumpCallback,
-                                                     NULL,
-                                                     ExceptionHandler::HANDLER_ALL,
-                                                     MiniDumpNormal,
-                                                     NULL,
-                                                     NULL);
+    new ExceptionHandler(wstring(L"."),
+                         etFilterCallback,
+                         etMinidumpCallback,
+                         NULL,
+                         ExceptionHandler::HANDLER_ALL,
+                         MiniDumpNormal,
+                         NULL,
+                         NULL);
 }
 
 #endif

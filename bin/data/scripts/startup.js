@@ -1,15 +1,4 @@
-
 var models; // Will be aliased to gameView.models
-
-// Constants for mouse buttons
-var Mouse = {
-    NoButton: 0,
-    LeftButton: 1,
-    RightButton: 2,
-    MidButton: 4,
-    XButton1: 8,
-    XButton2: 16
-};
 
 var maps = [
     { name: 'Temple Level 1', dir: 'Map12-temple-dungeon-level-1' },
@@ -56,6 +45,25 @@ var BaseObject = {
     rotation: 0,
     interactive: true,
     drawBehindWalls: false,
+
+    /**
+     * Retrives a name for this object that can be presented to the user.
+     *
+     * @param unknown If true, the object is unknown, and if present, the unknown id should be returned.
+     */
+    getName: function(unknown) {
+
+        if (unknown && this.unknownDescriptionId !== undefined) {
+            return translations.get('mes/description/' + this.unknownDescriptionId);
+        }
+
+        // A custom name overrides the prototype description id
+        if (this.name !== undefined)
+            return this.name;
+        else
+            return translations.get('mes/description/' + this.descriptionId);
+
+    },
 
     getRenderState: function() {
         if (this.renderStateId === undefined)
@@ -134,25 +142,60 @@ var BaseObject = {
     }
 };
 
-var Portal = {
+var Item = {
     __proto__: BaseObject,
+
+    doubleClicked: function(button) {
+        if (button == Mouse.LeftButton) {
+            if (this.OnUse) {
+                LegacyScripts.OnUse(this.OnUse, this);
+            }
+        }
+    }
+};
+
+var Scenery = {
+    __proto__: Item
+};
+
+var Container = {
+    __proto__: Item,
+    interactive: true,
+    clicked: function(button) {
+        if (button == Mouse.LeftButton) {
+            showInventory(this);
+        } else if (button == Mouse.RightButton) {
+            var renderState = this.getRenderState();
+            if (renderState)
+                showMobileInfo(this, renderState.modelInstance);
+        }
+    }
+};
+
+var Portal = {
+    __proto__: Item,
     interactive: true,
     open: false, // All doors are shut by default
-    clicked: function() {
+    clicked: function(button) {
         var renderState = this.getRenderState();
 
-        if (this.open) {
-            print("Closing door.");
-            renderState.modelInstance.playAnimation('close', false);
-            renderState.modelInstance.idleAnimation = 'item_idle';
-        } else {
-            print("Opening door.");
-            if (!renderState.modelInstance.playAnimation('open', false)) {
-                print("Unable to play open animation for door.");
+        if (button == Mouse.LeftButton) {
+            if (this.open) {
+                print("Closing door.");
+                renderState.modelInstance.playAnimation('close', false);
+                renderState.modelInstance.idleAnimation = 'item_idle';
+            } else {
+                print("Opening door.");
+                if (!renderState.modelInstance.playAnimation('open', false)) {
+                    print("Unable to play open animation for door.");
+                }
+                renderState.modelInstance.idleAnimation = 'open_idle';
             }
-            renderState.modelInstance.idleAnimation = 'open_idle';
+            this.open = !this.open;
+        } else if (button == Mouse.RightButton) {
+            if (renderState)
+                showMobileInfo(this, renderState.modelInstance);
         }
-        this.open = !this.open;
     }
 };
 
@@ -162,7 +205,7 @@ var MapChanger = {
     clicked: function() {
         var jumpPoint = jumppoints[this.teleportTarget];
         loadMap('maps/' + jumpPoint.map + '/map.js');
-        gameView.centerOnWorld(jumpPoint.x, jumpPoint.z);
+        gameView.centerOnWorld([jumpPoint.x, 0, jumpPoint.z]);
     }
 };
 
@@ -176,8 +219,21 @@ var Critter = {
             return [0.33, 1, 0]; // Friendly
         }
     },
+    getReaction: function() {
+        return Reaction.Neutral;        
+    },
     drawBehindWalls: true,
-    killsOnSight: false    
+    killsOnSight: false,
+
+    joinedParty: function() {
+        if (this.OnJoin)
+            LegacyScripts.OnJoin(this.OnJoin, this);
+    },
+
+    leftParty: function() {
+        if (this.OnDisband)
+            LegacyScripts.OnDisband(this.OnDisband, this);
+    }
 };
 
 var NonPlayerCharacter = {
@@ -189,7 +245,16 @@ var NonPlayerCharacter = {
          */
         if (this.OnDialog)
             LegacyScripts.OnDialog(this.OnDialog, this);
+    },
+
+    getReaction: function() {
+        // TODO: This should keep track of the reaction value and return the status accordingly
+        return Reaction.Neutral;
     }
+};
+
+var PlayerCharacter = {
+    __proto__: Critter
 };
 
 var prototypes;
@@ -201,6 +266,7 @@ function startup() {
     print("Loading subsystems.");
     LegacyScripts.load();
     LegacyDialog.load();
+    Mobiles.load();
 
     print("Showing main menu.");
 
@@ -208,6 +274,21 @@ function startup() {
     mainMenu.newGameClicked.connect(function() {
         mainMenu.deleteLater();
         showDebugBar();
+        PartyUi.show();
+
+        // Set up a nice debugging party
+        Party.money.addGold(1000); // Start with 1000 gold
+
+        var player1 = {
+            __proto__: PlayerCharacter,
+            id: '{000-000-000-000}', // TODO: GUID generation
+            prototype: 13000,
+            position: [0, 0, 0],
+            portrait: '151',
+            name: 'Storm'
+        };
+        connectToPrototype(player1);
+        Party.addMember(player1);
     });
 
     print("Loading prototypes...");
@@ -230,8 +311,14 @@ function startup() {
             prototypes[i].__proto__ = MapChanger;
         else if (type == 'Portal')
             prototypes[i].__proto__ = Portal;
+        else if (type == 'Container')
+            prototypes[i].__proto__ = Container;
+        else if (type == 'Scenery')
+            prototypes[i].__proto__ = Scenery;
         else if (type == 'NonPlayerCharacter')
             prototypes[i].__proto__ = NonPlayerCharacter;
+        else if (type == 'PlayerCharacter')
+            prototypes[i].__proto__ = PlayerCharacter;
         else
             prototypes[i].__proto__ = BaseObject;
     }
@@ -290,7 +377,7 @@ function setupWorldClickHandler() {
             for (var i = 0; i < path.length; ++i) {
                 if (i + 1 < path.length) {
                     var line = new LineRenderable(gameView.scene);
-                    line.addLine(path[i], path[i+1]);
+                    line.addLine(path[i], path[i + 1]);
                     sceneNode.attachObject(line);
                 }
 
@@ -308,7 +395,7 @@ function setupWorldClickHandler() {
 
     gameView.worldDoubleClicked.connect(function(button, buttons, worldPosition) {
         print("Doubleclicked: " + button);
-        gameView.centerOnWorld(worldPosition[0], worldPosition[2]);
+        gameView.centerOnWorld(worldPosition);
     });
 }
 
@@ -323,7 +410,7 @@ var animEventGameFacade = {
     sound_local_obj: function(soundId, sceneNode) {
         var filename = sounds[soundId];
         if (filename === undefined) {
-            print ("Unknown sound id: " + soundId);
+            print("Unknown sound id: " + soundId);
             return;
         }
 
@@ -379,15 +466,18 @@ function handleAnimationEvent(sceneNode, modelInstance, obj, type, content)
     anim_obj.__proto__ = animEventAnimObjFacade;
 
     /*
-        Python one-liners are in general valid javascript, so we directly evaluate them here.
-        Eval has access to all local variables in this scope, so we can define game + anim_obj,
-        which are the most often used by the animation events.
-    */
+     Python one-liners are in general valid javascript, so we directly evaluate them here.
+     Eval has access to all local variables in this scope, so we can define game + anim_obj,
+     which are the most often used by the animation events.
+     */
     eval(content);
 }
 
 function createMapObject(scene, obj)
 {
+    if (obj.dontDraw || obj.disabled)
+        return;
+
     var sceneNode = gameView.scene.createNode();
     sceneNode.interactive = obj.interactive;
     sceneNode.position = obj.position;
@@ -483,10 +573,12 @@ function loadMap(filename) {
         createMapObject(scene, obj);
     }
 
-    print("Creating " + mapObj.dynamicObjects.length + " dynamic objects.");
+    var dynamicObjects = eval('(' + readFile(mapObj.mobiles) + ')');
 
-    for (var i = 0; i < mapObj.dynamicObjects.length; ++i) {
-        obj = mapObj.dynamicObjects[i];
+    print("Creating " + dynamicObjects.length + " dynamic objects.");
+
+    for (var i = 0; i < dynamicObjects.length; ++i) {
+        obj = dynamicObjects[i];
         connectToPrototype(obj);
         createMapObject(scene, obj);
     }
@@ -501,7 +593,7 @@ function loadMap(filename) {
     globalLight.direction = [-0.632409, -0.774634, 0, 0];
 
     var sceneNode = gameView.scene.createNode();
-    sceneNode.position = [480 * 28, 0, 480*28];
+    sceneNode.position = [480 * 28, 0, 480 * 28];
     sceneNode.attachObject(globalLight);
 
     for (var i = 0; i < mapObj.lights.length; ++i) {
@@ -533,12 +625,20 @@ function loadMap(filename) {
         sceneNode.attachObject(particleSystem);
 
         /*
-            Debugging code
-        */
+         Debugging code
+         */
         // makeParticleSystemTestModel(obj, sceneNode);
     }
 
-    gameView.centerOnWorld(mapObj.startPosition[0], mapObj.startPosition[2]);
+    // Move party to starting location, add nodes to scene
+    Party.getMembers().forEach(function (critter) {
+        critter.position = mapObj.startPosition;
+        createMapObject(scene, critter);
+
+        // Fire areaChanged event (NOTE: Not if loading a savegame)
+    });
+
+    gameView.centerOnWorld(mapObj.startPosition);
 
     gc();
 

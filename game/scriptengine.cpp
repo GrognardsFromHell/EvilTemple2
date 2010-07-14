@@ -30,9 +30,11 @@ namespace EvilTemple {
 
     class ScriptEngineData {
     public:
+        ScriptEngineData(ScriptEngine *parent, Game *game);
+
         QScriptEngine *engine; // Owned by the parent, not this class
 
-        ScriptEngineData(ScriptEngine *parent, Game *game);
+        QScriptEngineDebugger *debugger; // Also owned by the parent
     };
 
     ScriptEngine::ScriptEngine(Game *game) :
@@ -74,8 +76,15 @@ namespace EvilTemple {
         }
     }
 
-    void ScriptEngine::callGlobalFunction(const QString &name, const QList<QVariant> &arguments)
+    void ScriptEngine::callGlobalFunction(const QString &name, const QScriptValueList &arguments)
     {
+        QScriptValue func = d->engine->globalObject().property(name);
+        if (!func.isNull()) {
+            func.call(QScriptValue(), arguments);
+        } else {
+            qWarning("Global function %s not found.", qPrintable(name));
+        }
+        handleUncaughtException();
     }
 
     QScriptEngine *ScriptEngine::engine() const
@@ -194,8 +203,17 @@ namespace EvilTemple {
      }
 
      ScriptEngineData::ScriptEngineData(ScriptEngine *parent, Game *game)
+         : engine(new QScriptEngine(parent)),
+           debugger(NULL)
      {
-        engine = new QScriptEngine(parent);
+        // Debug the script engine if requested by the user
+        foreach (const QString &argument, QCoreApplication::instance()->arguments()) {
+            if (argument == "-scriptdebugger") {
+                debugger = new QScriptEngineDebugger(game);
+                debugger->attachTo(engine);
+                break;
+            }
+        }
 
         QScriptValue global = engine->globalObject();
 

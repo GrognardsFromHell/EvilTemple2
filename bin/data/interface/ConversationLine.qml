@@ -3,35 +3,49 @@ import Qt 4.7
 /**
     A line the player can pick in the conversation UI.
   */
-Rectangle {
-    id: rectangle
+MouseArea {
+    id: mouseArea
     width: 400
-    height: 30
-    color: "#000000"
-    radius: 5
+    height: textDisplay.height + 10 // Include a margin of 10
+    hoverEnabled: true
 
     property alias text : textDisplay.text
 
-    signal clicked
-
-    MouseArea {
-        id: mouseArea
+    Rectangle {
+        id: rectangle
         anchors.fill: parent
-        anchors.margins: 5
-        hoverEnabled: true
 
-        Text {
-            id: textDisplay
-            anchors.fill: parent
+        radius: 5
+        opacity: 0.5
+        gradient: Gradient {
+            GradientStop {
+                position: 0
+                id: stop1
+                color: "#555555"
+            }
 
-            color: "#ffffff"
-            text: "text"
-            font.bold: true
-            font.pointSize: 12
-            font.family: "Fontin"
+            GradientStop {
+                position: 1
+                id: stop2
+                color: "#292929"
+            }
         }
+    }
 
-        onClicked: rectangle.clicked()
+    Text {
+        id: textDisplay
+
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.margins: 5
+        y: 5
+
+        color: "#ffffff"
+        text: "text"
+        wrapMode: "WordWrap"
+        font.bold: true
+        font.pointSize: 12
+        font.family: "Fontin"
     }
 
     states: [
@@ -39,10 +53,9 @@ Rectangle {
             name: "HoverState"
             when: mouseArea.containsMouse
 
-            PropertyChanges {
-                target: rectangle
-                color: "#8b8b8b"
-            }
+            PropertyChanges { target: rectangle; opacity: 1 }
+            PropertyChanges { target: stop1; color: '#00b7e8' }
+            PropertyChanges { target: stop2; color: '#005993' }
         }
     ]
 
@@ -50,7 +63,7 @@ Rectangle {
         Transition {
             from: "*"
             to: "*"
-            ColorAnimation { properties: "color"; duration: 200 }
+            NumberAnimation { properties: "opacity"; duration: 200 }
         }
     ]
 }

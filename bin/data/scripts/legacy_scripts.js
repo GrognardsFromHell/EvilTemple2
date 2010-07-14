@@ -10,12 +10,32 @@ var LegacyScripts = {};
     var scriptCache = {};
 
     var GameFacade = {
+        /*
+         Returns the number of members in the party.
+         This only seems to extend to the players in the party.
+         */
+        party_size: function() {
+            return Party.getPlayers().length;
+        },
 
+        /**
+         * Opens the Party Pool interface to add/remove members from the party.
+         */
+        party_pool: function() {
+            var text = 'Should open party pool now.';
+            gameView.scene.addTextOverlay(gameView.worldCenter(), text, [0.9, 0.0, 0.0, 0.9]);
+        },
+
+        /**
+         * Changes the current map.
+         */
+        fade_and_teleport: function(unk1, unk2, unk3, mapId, worldX, worldY) {
+            var newPosition = [worldX * 28.2842703, 0, worldY * 28.2842703]; // this should probably go into the converter
+            Maps.goToMap(mapId, newPosition);
+        }
     };
 
     var LegacyScriptPrototype = {
-        OBJ_HANDLE_NULL: null,
-
         SKIP_DEFAULT: true,
 
         RUN_DEFAULT: false,
@@ -27,6 +47,20 @@ var LegacyScripts = {};
             return false; // TODO: Implement
         },
 
+        find_npc_near: function(critter, nameId) {
+
+            var pos = critter.obj.position;
+
+            print("Trying to find NPC with name " + nameId + " (" + translations.get('mes/description/' + nameId) + ") near " + pos);
+
+            return null;
+
+        },
+
+        create_item_in_inventory: function(prototypeId, receiver) {
+            print("Creating item with prototype " + prototypeId + " for " + receiver.obj.id);
+        },
+
         /**
          * Checks a conversation guard using this script as the "this" context.
          * @param npc The NPC participating in the conversation.
@@ -35,6 +69,24 @@ var LegacyScripts = {};
          */
         checkGuard: function(npc, pc, guard) {
             return eval('(' + guard + ')');
+        },
+
+        /**
+         * Performs an action with this script as the 'this' context.
+         * @param npc The NPC participating in the conversation.
+         * @param pc The PC participating in the conversation.
+         * @param action The action to perform. This must be valid javascript code.
+         */
+        performAction: function (npc, pc, action) {
+            // Perform in the context of the dialog script
+            var proxy = {
+                performAction: function(npc, pc) {
+                    eval(action);
+                }
+            };
+            proxy.__proto__ = this; // This forces the script to be accessible via the "this" variable
+            print("Performing action: " + action);
+            proxy.performAction(npc, pc);
         }
     };
 
@@ -88,6 +140,16 @@ var LegacyScripts = {};
         return true;
     }
 
+    /**
+     * Returns the player character that caused a legacy event, if no further information is available.
+     *
+     * Right now this is the first member of the party.
+     */
+    function getTriggerer() {
+        // TODO: Later on, take selection into account. Right now, use first partymember
+        return Party.getPlayers()[0];
+    }
+
     var ObjectWrapper = function(obj) {
         if (!(this instanceof ObjectWrapper)) {
             print("You must use new ObjectWrapper instead of ObjectWrapper(...)!");
@@ -103,7 +165,7 @@ var LegacyScripts = {};
      * @param character A player character.
      */
     ObjectWrapper.prototype.has_met = function(character) {
-        return false; // TODO: No real implementation yet.
+        return this.obj.hasBeenTalkedTo;
     };
 
     /**
@@ -133,7 +195,7 @@ var LegacyScripts = {};
      * This should return the current money-level for a player character in coppers (?)
      */
     ObjectWrapper.prototype.money_get = function() {
-        return 10000;
+        return Party.money.getTotalCopper();
     };
 
     /**
@@ -144,15 +206,28 @@ var LegacyScripts = {};
     };
 
     /**
-     * Changes the wealth of the party.
-     * @param delta The amount of money to adjust. This may be negative or positive.
+     * Adds a new follower to the party, if there's still room.
+     * @param npc The npc to add to the party.
      */
-    ObjectWrapper.prototype.money_adj = function(delta) {
-        if (delta < 0)
-            print("Taking " + delta + " money from the player.");
-        else
-            print("Giving " + delta + " money to the player.");
-    };
+    ObjectWrapper.prototype.follower_add = function(npc) {
+        if (!npc || !npc.obj) {
+            print("Passed null object to follower_add.");
+            return false;
+        }
+        return Party.addFollower(npc.obj);
+    },
+
+        /**
+         * Changes the wealth of the party.
+         * @param delta The amount of money to adjust. This may be negative or positive.
+         */
+            ObjectWrapper.prototype.money_adj = function(delta) {
+                if (delta < 0)
+                    print("Taking " + Math.abs(delta) + " money from the player.");
+                else
+                    print("Giving " + delta + " money to the player.");
+                Party.money.addCopper(delta);
+            };
 
     /**
      * Returns the effective rank of a skill (including bonuses) given a target.
@@ -165,17 +240,35 @@ var LegacyScripts = {};
     };
 
     /**
-     * Opens the dialog interface and pauses the game.
-     * @param pc The player character that is talking to the NPC.
+     * This method causes NPCs to rummage through their inventory and equip all the items
+     * they can (the best of their respective type).
+     */
+    ObjectWrapper.prototype.item_wield_best_all = function() {
+        // TODO: Implement
+    };
+
+    // The current dialog UI if it's open
+    var conversationDialog = null;
+
+    /**
+     * Opens the dialog interface and pauses the game. This should only be called on player characters.
+     *
+     * @param npc The NPC that should start the conversation.
      * @param line The dialog line to start on.
      */
-    ObjectWrapper.prototype.begin_dialog = function(pc, line) {
-        var npc = this; // Used by the val scripts
-        print("Starting conversation with " + pc + " on line " + line);
+    ObjectWrapper.prototype.begin_dialog = function(npc, line) {
+        if (conversationDialog) {
+            conversationDialog.deleteLater();
+            conversationDialog = null;
+        }
 
-        var dialogId = this.obj.OnDialog.script;
+        var pc = this; // Used by the val scripts
+        print("Starting conversation with " + npc.obj.id + " on line " + line);
+
+        var dialogId = npc.obj.OnDialog.script;
 
         var dialog = LegacyDialog.get(dialogId);
+        var script = getScript(dialogId);
 
         if (!dialog) {
             print("Dialog not found: " + dialogId);
@@ -190,8 +283,10 @@ var LegacyScripts = {};
             var answerLine = dialog[i];
             if (answerLine) {
                 // Check the guard
-                if (!checkGuards(this, pc, answerLine))
+                if (!checkGuards(npc, pc, answerLine))
                     continue;
+
+                answerLine = LegacyDialog.transformLine(dialog, answerLine, npc.obj, pc.obj);
 
                 answers.push({
                     id: i,
@@ -203,9 +298,10 @@ var LegacyScripts = {};
         var npcLine = dialog[line];
 
         if (npcLine.action) {
-            print("Performing action: " + npcLine.action);
-            eval(npcLine.action);
+            script.performAction(npc, pc, npcLine.action);
         }
+
+        npcLine = LegacyDialog.transformLine(dialog, npcLine, npc.obj, pc.obj);
 
         var voiceOver = null;
 
@@ -228,13 +324,17 @@ var LegacyScripts = {};
             voiceOver = gameView.audioEngine.playSoundOnce(filename, SoundCategory_Effect);
         }
 
-        var conversationDialog = gameView.addGuiItem("interface/Conversation.qml");
-        conversationDialog.text = npcLine.text;
-        conversationDialog.portrait = getPortrait(this.obj.portrait, Portrait_Medium);
+        conversationDialog = gameView.addGuiItem("interface/Conversation.qml");
+        conversationDialog.npcText = (pc.obj.gender == 'female' && npcLine.femaleText) ? npcLine.femaleText : npcLine.text;
+        conversationDialog.npcName = npc.obj.getName(true);
+        conversationDialog.portrait = getPortrait(npc.obj.portrait, Portrait_Medium);
         conversationDialog.answers = answers;
-        var obj = this;
+
         conversationDialog.answered.connect(this, function(line) {
-            conversationDialog.deleteLater();
+            if (conversationDialog) {
+                conversationDialog.deleteLater();
+                conversationDialog = null;
+            }
 
             if (voiceOver) {
                 print("Stopping previous voice over.");
@@ -244,15 +344,14 @@ var LegacyScripts = {};
             var action = dialog[line].action;
 
             if (action) {
-                print("Performing action: " + action);
-                eval(action);
+                script.performAction(npc, pc, action);
             }
 
             var nextId = dialog[line].nextId;
 
             if (nextId) {
                 print("Showing dialog for next id: " + nextId);
-                obj.begin_dialog(pc, nextId);
+                pc.begin_dialog(npc, nextId);
             }
         });
     };
@@ -284,10 +383,61 @@ var LegacyScripts = {};
             return false;
         }
 
-        var result = script.san_dialog(new ObjectWrapper(attachedTo), new ObjectWrapper(attachedTo));
+        return script.san_dialog(new ObjectWrapper(attachedTo), new ObjectWrapper(getTriggerer()));
+    };
 
-        // TODO: Translate return code
+    /**
+     * Triggers the OnJoin event for a legacy script.
+     *
+     * @param attachedScript The legacy script. This is a JavaScript object with at least a 'script' property giving
+     *                 the id of the legacy script.
+     * @param attachedTo The object the script is attached to.
+     */
+    LegacyScripts.OnJoin = function(attachedScript, attachedTo) {
+        var script = getScript(attachedScript.script);
 
-        return result;
-    }
+        if (!script) {
+            print("Unknown legacy script: " + attachedScript.script);
+            return false;
+        }
+
+        return script.san_join(new ObjectWrapper(attachedTo), new ObjectWrapper(getTriggerer()));
+    };
+
+    /**
+     * Triggers the OnDisband event for a legacy script.
+     *
+     * @param attachedScript The legacy script. This is a JavaScript object with at least a 'script' property giving
+     *                 the id of the legacy script.
+     * @param attachedTo The object the script is attached to.
+     */
+    LegacyScripts.OnDisband = function(attachedScript, attachedTo) {
+        var script = getScript(attachedScript.script);
+
+        if (!script) {
+            print("Unknown legacy script: " + attachedScript.script);
+            return false;
+        }
+
+        return script.san_disband(new ObjectWrapper(attachedTo), new ObjectWrapper(getTriggerer()));
+    };
+
+    /**
+     * Triggers the OnUse event for a legacy script.
+     *
+     * @param attachedScript The legacy script. This is a JavaScript object with at least a 'script' property giving
+     *                 the id of the legacy script.
+     * @param attachedTo The object the script is attached to.
+     */
+    LegacyScripts.OnUse = function(attachedScript, attachedTo) {
+        var script = getScript(attachedScript.script);
+
+        if (!script) {
+            print("Unknown legacy script: " + attachedScript.script);
+            return false;
+        }
+
+        return script.san_use(new ObjectWrapper(attachedTo), new ObjectWrapper(getTriggerer()));
+    };    
+
 })();

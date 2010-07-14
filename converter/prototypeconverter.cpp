@@ -46,7 +46,7 @@ QVariantMap PrototypeConverter::convertPrototype(Prototype *prototype)
     writer.write("interactive", prototype->interactive);
     writer.write("unlit", prototype->unlit);
     writer.write("scale", prototype->scale);
-    // writer.write("internalDescriptionId", prototype->internalDescriptionId);
+    writer.write("internalId", prototype->internalDescriptionId);
     writer.write("descriptionId", prototype->descriptionId);
     writer.write("size", prototype->objectSize);
     writer.write("hitPoints", prototype->hitPoints);

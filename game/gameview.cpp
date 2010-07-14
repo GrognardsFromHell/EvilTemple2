@@ -1,6 +1,7 @@
 
 #include <GL/glew.h>
 
+#include <QDesktopServices>
 #include <QtCore/QElapsedTimer>
 #include <QtDeclarative/QtDeclarative>
 #include <QtGui/QResizeEvent>
@@ -182,7 +183,7 @@ namespace EvilTemple {
             return pickingRayOrigin - t * pickingRayDirection;
         }
 
-        Renderable *pickObject(const QPoint &point)
+        Ray3d getPickingRay(float x, float y)
         {
             GLint viewport[4];
             glGetIntegerv(GL_VIEWPORT, viewport);
@@ -191,8 +192,8 @@ namespace EvilTemple {
             float height = viewport[3];
 
             // Construct a picking ray
-            Vector4 nearPlanePoint(2 * point.x() / width - 1,
-                                   2 * (height - point.y()) / height - 1,
+            Vector4 nearPlanePoint(2 * x / width - 1,
+                                   2 * (height - y) / height - 1,
                                    0,
                                    1);
 
@@ -204,8 +205,27 @@ namespace EvilTemple {
             Vector4 pickingRayOrigin = matrix.mapPosition(nearPlanePoint);
             Vector4 pickingRayDirection = (matrix.mapPosition(farPlanePoint) - pickingRayOrigin).normalized();
 
-            Ray3d pickingRay(pickingRayOrigin, pickingRayDirection);
-            return scene.pickRenderable(pickingRay);
+            return Ray3d(pickingRayOrigin, pickingRayDirection);
+        }
+
+        Vector4 getWorldCenter()
+        {
+            Ray3d pickingRay = getPickingRay(viewportSize.width() * 0.5f, viewportSize.height() * 0.5f);
+
+            // Get intersection with x,z plane
+            if (qFuzzyIsNull(pickingRay.direction().y())) {
+                // In this case, the ray is parallel to the x,z axis
+                return Vector4(0, 0, 0, 0);
+            }
+
+            float d = pickingRay.origin().y() / pickingRay.direction().y();
+
+            return pickingRay.origin() - d * pickingRay.direction();
+        }
+
+        Renderable *pickObject(const QPoint &point)
+        {
+            return scene.pickRenderable(getPickingRay(point.x(), point.y()));
         }
 
         QDeclarativeEngine uiEngine;
@@ -254,6 +274,8 @@ namespace EvilTemple {
 
             viewportSize.setWidth(width);
             viewportSize.setHeight(height);
+
+            uiScene.setSceneRect(0, 0, width, height);
 
             const float zoom = 1;
 
@@ -549,21 +571,14 @@ namespace EvilTemple {
         }
     }
 
-    QPoint GameView::screenCenter() const
+    void GameView::centerOnWorld(const Vector4 &center)
     {
-        Vector4 viewCenter(0,0,0,1);
-        Vector4 viewDirection(0,0,1,0);
-        viewCenter = d->renderStates.viewMatrix().inverted() * viewCenter;
-        viewDirection = d->renderStates.viewMatrix().inverted() * viewDirection;
-
-        viewCenter *= 1 / viewCenter.w();
-
-        return QPoint(viewCenter.x(), viewCenter.z());
+        d->centerOnWorld(center.x(), center.z());
     }
 
-    void GameView::centerOnWorld(float worldX, float worldY)
+    Vector4 GameView::worldCenter() const
     {
-        d->centerOnWorld(worldX, worldY);
+        return d->getWorldCenter();
     }
 
     int GameView::objectsDrawn() const
@@ -669,6 +684,24 @@ namespace EvilTemple {
         QString result = QString::fromLatin1(content.toBase64());
 
         return result;
+    }
+
+    void GameView::deleteScreenshot(const QUrl &url)
+    {
+        QString localFile = url.toLocalFile();
+
+        QDir currentDir = QDir::current();
+        if (!currentDir.cd("screenshots"))
+            return;
+
+        QFileInfo localFileInfo(localFile);
+        currentDir.remove(localFileInfo.fileName());
+    }
+
+    void GameView::openBrowser(const QUrl &url)
+    {
+        qDebug("Opening browser with URL %s.", qPrintable(url.toString()));
+        QDesktopServices::openUrl(url);
     }
 
 }

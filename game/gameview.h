@@ -104,9 +104,9 @@ public slots:
 
     QObject *addGuiItem(const QString &url);
 
-    void centerOnWorld(float worldX, float worldY);
+    void centerOnWorld(const Vector4 &position);
 
-    QPoint screenCenter() const;
+    Vector4 getWorldCenter() const;
 
     int objectsDrawn() const;
 
@@ -114,7 +114,11 @@ public slots:
 
     QUrl takeScreenshot();
 
+    void deleteScreenshot(const QUrl &url);
+
     QString readBase64(const QUrl &file);
+
+    void openBrowser(const QUrl &url);
 
 protected:
     void resizeEvent(QResizeEvent *event);

@@ -2,6 +2,7 @@
 #define IMAGEUPLOADER_H
 
 #include <QObject>
+#include <QVariantMap>
 #include <QImage>
 #include <QNetworkAccessManager>
 
@@ -17,7 +18,9 @@ signals:
 
     void uploadProgress(qint64 uploadedBytes, qint64 totalBytes);
 
-    void finished(const QString &result);
+    void uploadFinished(const QVariant &result);
+
+    void uploadFailed();
 
 public slots:
 

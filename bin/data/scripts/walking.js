@@ -6,44 +6,48 @@ var WalkJobs = {
     driven: 0,
     currentPathNode: 0,
     addTime: function(time) {
-        if (this.canceled)
-            return;
-        var driven = this.speed * time;
-        this.modelInstance.elapseDistance(driven);
-        this.driven += driven;
-        if (this.driven + driven > this.length) {
-            driven = this.length - this.driven;
-        }
-
-        var pos = this.sceneNode.position;
-        var dx = this.direction[0] * driven;
-        var dy = this.direction[1] * driven;
-        var dz = this.direction[2] * driven;
-
-        this.sceneNode.position = [pos[0] + dx, pos[1] + dy, pos[2] + dz, 1];
-
-        if (this.driven >= this.length) {
-            this.currentPathNode += 1;
-            if (this.currentPathNode + 1 >= this.path.length) {
-                this.modelInstance.stopAnimation();
-
-                for (var i = 0; i < walkJobs.length; ++i) {
-                    if (walkJobs[i] === this) {
-                        walkJobs.splice(i, 1);
-                        --i;
-                    }
-                }
-
+        try {
+            if (this.canceled)
                 return;
+            var driven = this.speed * time;
+            this.modelInstance.elapseDistance(driven);
+            this.driven += driven;
+            if (this.driven + driven > this.length) {
+                driven = this.length - this.driven;
             }
-            this.driven = 0;
-            this.init(this.path[this.currentPathNode], this.path[this.currentPathNode+1]);
-        }
 
-        var obj = this;
-        gameView.addVisualTimer(30, function() {
-            obj.addTime(0.03);
-        });
+            var pos = this.sceneNode.position;
+            var dx = this.direction[0] * driven;
+            var dy = this.direction[1] * driven;
+            var dz = this.direction[2] * driven;
+
+            this.sceneNode.position = [pos[0] + dx, pos[1] + dy, pos[2] + dz, 1];
+
+            if (this.driven >= this.length) {
+                this.currentPathNode += 1;
+                if (this.currentPathNode + 1 >= this.path.length) {
+                    this.modelInstance.stopAnimation();
+
+                    for (var i = 0; i < walkJobs.length; ++i) {
+                        if (walkJobs[i] === this) {
+                            walkJobs.splice(i, 1);
+                            --i;
+                        }
+                    }
+
+                    return;
+                }
+                this.driven = 0;
+                this.init(this.path[this.currentPathNode], this.path[this.currentPathNode+1]);
+            }
+
+            var obj = this;
+            gameView.addVisualTimer(30, function() {
+                obj.addTime(0.03);
+            });
+        } catch (error) {
+            print(error);
+        }
     },
     init: function(from, to) {
         var x = to[0] - from[0];

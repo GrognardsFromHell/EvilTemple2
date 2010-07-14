@@ -49,4 +49,8 @@ function handleDebugEvent(name) {
 function showDebugBar() {
     var debugBar = gameView.addGuiItem('interface/DebugBar.qml');
     debugBar.debugEvent.connect(handleDebugEvent);
+
+    Shortcuts.register(Keys.F10, function() {
+        debugBar.takeScreenshot();
+    });
 }

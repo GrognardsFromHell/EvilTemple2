@@ -10,6 +10,12 @@ Item
     x: (gameView.viewportSize.width - width) / 2
     y: gameView.viewportSize.height - height
 
+    function takeScreenshot() {
+        var screenshot = gameView.takeScreenshot();
+        var uploadDialog = gameView.addGuiItem("interface/UploadScreenshot.qml");
+        uploadDialog.screenshot = screenshot;
+    }
+
     Rectangle {
         x: 0
         y: 0
@@ -70,9 +76,7 @@ Item
                 font.family: "Fontin"
             }
             onClicked: {
-                var screenshot = gameView.takeScreenshot();
-                var uploadDialog = gameView.addGuiItem("interface/UploadScreenshot.qml");
-                uploadDialog.screenshot = screenshot;
+                takeScreenshot();
             }
         }
     }
