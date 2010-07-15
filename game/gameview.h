@@ -37,6 +37,8 @@ class GameView : public QGraphicsView
     Q_PROPERTY(int scrollBoxMaxX READ scrollBoxMaxX WRITE setScrollBoxMaxX)
     Q_PROPERTY(int scrollBoxMaxY READ scrollBoxMaxY WRITE setScrollBoxMaxY)
 
+    Q_PROPERTY(bool scrollingDisabled READ isScrollingDisabled WRITE setScrollingDisabled)
+
     Q_PROPERTY(QSize viewportSize READ viewportSize NOTIFY viewportChanged)
 public:
     explicit GameView(QWidget *parent = 0);
@@ -89,6 +91,9 @@ public:
     Translations *translations() const;
 
     Models *models() const;
+
+    void setScrollingDisabled(bool disabled);
+    bool isScrollingDisabled() const;
 
 signals:
 

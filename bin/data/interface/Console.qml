@@ -1,100 +1,108 @@
 import Qt 4.7
 
-Rectangle {
-    id: consoleRectangle
+MovableWindow {
+    id: movablewindow1
     width: 640
-    height: 0
-    z: 100
-    clip: true
-    color: "transparent"
+    height: 480
 
-    /*anchors.left: parent.left
-    anchors.right: parent.right
-    anchors.top: parent.top*/
+    signal commandIssued(string command)
 
-    // Adds a message to the console
-    // Type can be one of the following:
-    // - error
-    // - warning
-    // anything else is treated as a normal message.
-    function addMessage(message, type) {
-        if (type == 'error') {
-            message = '<font color="red">' + message + '</font>';
-        }
-
-        consoleLog.text += message + "<br>";
+    function appendResult(text) {
+        logText.text += text + "<br><br>\n\n";
+        scrollDown();
     }
 
-    // Toggles the console, is called by the C++ program to show/hide the console
-    // if the corresponding key event was ignored by Qml since no item had focus.
-    function toggle() {
-        state = (state == '') ? 'shown' : '';
+    function issueCommand() {
+        var command = commandLine.text;
+        commandLine.text = '';
+
+        logText.text += '> ' + command + '<br>\n';
+        commandIssued(command);
+        scrollDown();
     }
 
-    Rectangle {
-        color: "white"
-        opacity: 0.25
-        anchors.fill: parent
-        z: 0
+    function scrollDown() {
+        flickable1.contentY = flickable1.contentHeight - flickable1.height
     }
 
-    TextInput {
-        id: inputLine
-        x: 6
-        y: 454
-        width: 628
-        height: 20
-        z: 1
-        color: "white"
-        text: ""
-        cursorVisible: false
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: 6
-        anchors.right: parent.right
-        anchors.rightMargin: 6
-        anchors.left: parent.left
-        anchors.leftMargin: 6
-    }
+    data: [
+        Flickable {
+            id: flickable1
+            anchors.fill: rectangle1
+            anchors.margins: 5
+            contentHeight: logText.height
+            contentWidth: width
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
 
-    Text {
-        id: consoleLog
-        x: 6
-        y: 6
-        z: 1
-        width: 628
-        textFormat: 'StyledText'
-        height: 446
-        text: ""
-        color: "white"
-        anchors.bottom: inputLine.top
-        anchors.bottomMargin: 6
-        anchors.right: parent.right
-        anchors.rightMargin: 6
-        anchors.left: parent.left
-        anchors.leftMargin: 6
-        anchors.top: parent.top
-        anchors.topMargin: 6        
-    }
-
-    states: [
-        State {
-            name: "shown"
-
-            PropertyChanges {
-                target: consoleRectangle
-                height: 400
+            Text {
+                id: logText
+                color: "#ffffff"
+                text: ""
+                font.pointSize: 11
+                font.family: "Consolas"
+                width: parent.width
+                wrapMode: "WrapAtWordBoundaryOrAnywhere"
+                textFormat: "RichText"
             }
+        },
+        Rectangle {
+            id: rectangle1
+            x: 8
+            y: 40
+            width: 624
+            height: 397
+            color: "#000000"
+            radius: 5
+            border.color: "#ffffff"
+            opacity: 0.4
+            anchors.right: parent.right
+            anchors.rightMargin: 10
+            anchors.left: parent.left
+            anchors.leftMargin: 10
+        },
+        Rectangle {
+            id: rectangle2
+            x: 118
+            y: 443
+            width: 515
+            height: 26
+            color: "#000000"
+            radius: 5
+            border.color: "#ffffff"
+            opacity: 0.4
+            anchors.left: text1.right
+            anchors.leftMargin: 10
+            anchors.right: parent.right
+            anchors.rightMargin: 10
+        },
+        TextInput {
+            id: commandLine
+            color: "#ffffff"
+            text: ""
+            cursorVisible: false
+            font.pointSize: 11
+            font.family: "Consolas"
+            anchors.left: rectangle2.left
+            anchors.leftMargin: 4
+            anchors.right: rectangle2.right
+            anchors.rightMargin: 4
+            anchors.verticalCenter: rectangle2.verticalCenter
+            Keys.onEnterPressed: issueCommand()
+            Keys.onReturnPressed: issueCommand()
+        },
+        Text {
+            id: text1
+            x: 7
+            y: 446
+            color: "#ffffff"
+            text: "Command:"
+            anchors.verticalCenter: rectangle2.verticalCenter
+            font.pointSize: 12
+            font.family: "Fontin"
+            anchors.left: parent.left
+            anchors.leftMargin: 10
         }
     ]
-
-    transitions: [
-    Transition {
-        NumberAnimation {
-            properties: "height"
-            easing.type: "OutBounce"
-            duration: 250
-        }
-    }
-    ]
-
+    title: "Console"
 }

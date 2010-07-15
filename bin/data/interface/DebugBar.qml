@@ -47,6 +47,11 @@ Item
             }
             onClicked: debugEvent('spawnParticleSystem')
         }
+        Rectangle {
+            width: 1
+            height: 32
+            color: '#CCCCCC'
+        }
         MouseArea {
             width: childrenRect.width
             height: parent.height
@@ -61,6 +66,11 @@ Item
                 font.family: "Fontin"
             }
             onClicked: debugEvent('loadMap')
+        }
+        Rectangle {
+            width: 1
+            height: 32
+            color: '#CCCCCC'
         }
         MouseArea {
             width: childrenRect.width
@@ -78,6 +88,26 @@ Item
             onClicked: {
                 takeScreenshot();
             }
+        }
+        Rectangle {
+            width: 1
+            height: 32
+            color: '#CCCCCC'
+        }
+        MouseArea {
+            width: childrenRect.width
+            height: parent.height
+            anchors.verticalCenter: parent.verticalCenter
+            hoverEnabled: true
+            Text {
+                color: parent.containsMouse ? '#00a9f8' : '#FFFFFF'
+                text: 'Console'
+                anchors.verticalCenter: parent.verticalCenter
+                font.pointSize: 12
+                font.bold: true
+                font.family: "Fontin"
+            }
+            onClicked: debugEvent('openConsole')
         }
     }
 

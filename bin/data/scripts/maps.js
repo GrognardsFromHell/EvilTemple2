@@ -29,15 +29,15 @@ var Maps = {
             var filename = mapIdMapping[mapId];
 
             var map = new Map(mapId, filename);
-            maps.push(map);
+            this.maps.push(map);
             print("Loaded map " + map.name);
         }
     };
 
     Maps.getByLegacyId = function(mapId) {
-        for (var i = 0; i < maps.length; ++i) {
-            if (maps[i].id == mapId)
-                return maps[i];
+        for (var i = 0; i < this.maps.length; ++i) {
+            if (this.maps[i].id == mapId)
+                return this.maps[i];
         }
         return null;
     };

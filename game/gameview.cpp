@@ -93,7 +93,8 @@ namespace EvilTemple {
             : q(view), rootItem(0), backgroundMap(renderStates),
             clippingGeometry(renderStates), dragging(false), lightDebugger(renderStates),
             materials(renderStates), sectorMap(&scene), models(&materials, renderStates),
-            particleSystems(&models, &materials), scene(&materials), lastAudioEnginePosition(0, 0, 0, 1)
+            particleSystems(&models, &materials), scene(&materials), lastAudioEnginePosition(0, 0, 0, 1),
+            scrollingDisabled(false)
         {
             sceneTimer.invalidate();
 
@@ -243,6 +244,8 @@ namespace EvilTemple {
         {
             return scene.pickRenderable(getPickingRay(point.x(), point.y()));
         }
+
+        bool scrollingDisabled;
 
         QDeclarativeEngine uiEngine;
         QGraphicsScene uiScene;
@@ -503,29 +506,31 @@ namespace EvilTemple {
         if (d->dragging) {
             d->mouseMovedDuringDrag = true;
 
-            int diffX = evt->pos().x() - d->lastPoint.x();
-            int diffY = evt->pos().y() - d->lastPoint.y();
+            if (!isScrollingDisabled()) {
+                int diffX = evt->pos().x() - d->lastPoint.x();
+                int diffY = evt->pos().y() - d->lastPoint.y();
 
-            Vector4 diff(diffX, -diffY, 0, 0);
+                Vector4 diff(diffX, -diffY, 0, 0);
 
-            Matrix4 transform = d->renderStates.viewMatrix().transposed();
-            // Clear last column
-            transform(3, 0) = 0;
-            transform(3, 1) = 0;
-            transform(3, 2) = 0;
-            transform(3, 3) = 1;
+                Matrix4 transform = d->renderStates.viewMatrix().transposed();
+                // Clear last column
+                transform(3, 0) = 0;
+                transform(3, 1) = 0;
+                transform(3, 2) = 0;
+                transform(3, 3) = 1;
 
-            // This should now be the inverse of the funky view matrix.
-            diff = transform * diff;
+                // This should now be the inverse of the funky view matrix.
+                diff = transform * diff;
 
-            transform.setToIdentity();
-            transform(0,3) = diff.x() - diff.y();
-            transform(2,3) = diff.z() - diff.y();
-            // TODO: We should instead project it to the x,z plane.
+                transform.setToIdentity();
+                transform(0,3) = diff.x() - diff.y();
+                transform(2,3) = diff.z() - diff.y();
+                // TODO: We should instead project it to the x,z plane.
 
-            Matrix4 viewMatrix = d->renderStates.viewMatrix();
-            d->renderStates.setViewMatrix(viewMatrix * transform);
-            evt->accept();
+                Matrix4 viewMatrix = d->renderStates.viewMatrix();
+                d->renderStates.setViewMatrix(viewMatrix * transform);
+                evt->accept();
+            }
         } else {
             Renderable *renderable = d->pickObject(evt->pos());
             Renderable *lastMouseOver = d->lastMouseOverRenderable;
@@ -723,6 +728,16 @@ namespace EvilTemple {
     {
         qDebug("Opening browser with URL %s.", qPrintable(url.toString()));
         QDesktopServices::openUrl(url);
+    }
+
+    void GameView::setScrollingDisabled(bool disabled)
+    {
+        d->scrollingDisabled = disabled;
+    }
+
+    bool GameView::isScrollingDisabled() const
+    {
+        return d->scrollingDisabled;
     }
 
 }

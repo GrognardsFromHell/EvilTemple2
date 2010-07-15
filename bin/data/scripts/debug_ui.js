@@ -1,4 +1,3 @@
-
 var loadMapUi = null;
 
 function showLoadMapWindow() {
@@ -38,11 +37,35 @@ function showSpawnParticleSystemWindow() {
     });
 }
 
+var consoleWindow = null;
+
+function showConsoleWindow() {
+    if (consoleWindow != null)
+        return;
+
+    consoleWindow = gameView.addGuiItem('interface/Console.qml');
+
+    consoleWindow.commandIssued.connect(function(command) {
+        try {
+            consoleWindow.appendResult(eval(command));
+        } catch (e) {
+            consoleWindow.appendResult('<b style="color: red">ERROR:</b> ' + e);
+        }
+    });
+
+    consoleWindow.closeClicked.connect(function() {
+        consoleWindow.deleteLater();
+        consoleWindow = null;
+    });
+}
+
 function handleDebugEvent(name) {
     if (name == 'loadMap') {
         showLoadMapWindow();
     } else if (name == 'spawnParticleSystem') {
         showSpawnParticleSystemWindow();
+    } else if (name == 'openConsole') {
+        showConsoleWindow();
     }
 }
 
