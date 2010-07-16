@@ -12,3 +12,6 @@
 
 # Clipping test
 5111
+
+# A map that was seemingly used to create screenshots, hence the name
+5105

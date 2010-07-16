@@ -81,6 +81,7 @@ var LegacyDialog = {};
             // PC2NPC Appreciation message
         } else if (text == 'B:') {
             // PC2NPC Barter message (Note: can always be followed by some more text, so this wont match)
+            result.text = translations.get(translationBase + randomRange(300, 316));
         } else if (text == 'K:') {
             // PC2NPC Can i ask some more questions
             result.text = translations.get(translationBase + randomRange(1500, 1514));

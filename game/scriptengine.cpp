@@ -155,6 +155,13 @@ namespace EvilTemple {
         return QScriptValue(QString::fromUtf8(file.readAll()));
      }
 
+     static QScriptValue fileExists(QScriptContext *context, QScriptEngine *engine)
+     {
+        QScriptValue filename = context->argument(0);
+
+        return QFile::exists(filename.toString());
+     }
+
      static QScriptValue timerReference(QScriptContext*, QScriptEngine*)
      {
         QElapsedTimer timer;
@@ -239,6 +246,9 @@ namespace EvilTemple {
         // Add a function to read files
         QScriptValue readFileFn = engine->newFunction(readFile, 1);
         global.setProperty("readFile", readFileFn);
+
+        QScriptValue fileExistsFn = engine->newFunction(fileExists, 1);
+        global.setProperty("fileExists", fileExistsFn);
 
         QScriptValue timerReferenceFn = engine->newFunction(timerReference, 0);
         global.setProperty("timerReference", timerReferenceFn);

@@ -31,7 +31,8 @@ SOURCES += converter.cpp \
     convertsoundstask.cpp \
     convertmodelstask.cpp \
     ../game/tga.cpp \
-    pythonconverter.cpp
+    pythonconverter.cpp \
+    mapareamapping.cpp
 
 HEADERS += \
     util.h \
@@ -58,7 +59,8 @@ HEADERS += \
     convertsoundstask.h \
     convertmodelstask.h \
     ../game/tga.h \
-    pythonconverter.h
+    pythonconverter.h \
+    mapareamapping.h
 
 win32:SOURCES += basepathfinder_win32.cpp
 else:SOURCES += basepathfinder.cpp
@@ -77,7 +79,8 @@ OTHER_FILES += exclusions.txt \
     particlefiles.txt \
     scripts/converter.js \
     icon.rc \
-    map_exclusions.txt
+    map_exclusions.txt \
+    map_area_mapping.txt
 
 PRECOMPILED_HEADER = stable.h
 

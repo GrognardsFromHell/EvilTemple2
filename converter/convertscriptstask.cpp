@@ -3,6 +3,7 @@
 
 #include <serializer.h>
 
+#include "exclusions.h"
 #include "messagefile.h"
 #include "virtualfilesystem.h"
 #include "convertscriptstask.h"
@@ -26,9 +27,9 @@ QString ConvertScriptsTask::description() const
     return "Converting scripts";
 }
 
-static QVariantMap convertDialogScript(const QByteArray &rawScript, const QString &filename)
+static QVariantMap convertDialogScript(IConversionService *service, const QByteArray &rawScript, const QString &filename)
 {
-    PythonConverter converter;
+    PythonConverter converter(service);
 
     QVariantMap result;
 
@@ -62,7 +63,7 @@ static QVariantMap convertDialogScript(const QByteArray &rawScript, const QStrin
         entry["text"] = text;
         if (!femaleText.isEmpty() && femaleText != text)
             entry["femaleText"] = femaleText;
-        if (intelligence != 0 && intelligence != 1)
+        if (intelligence != 0)
             entry["intelligence"] = intelligence;
         if (!guard.isEmpty()) {
             entry["guard"] = converter.convertDialogGuard(guard.toUtf8(), filename);
@@ -75,6 +76,33 @@ static QVariantMap convertDialogScript(const QByteArray &rawScript, const QStrin
     }
 
     return result;
+}
+
+static void convertLegacyMaps(IConversionService *service, IFileWriter *output)
+{
+    Exclusions exclusions;
+    if (!exclusions.load(":/map_exclusions.txt")) {
+        qWarning("Unable to load map exclusions in legacy mapping conversion.");
+    }
+
+    QHash<uint, QString> mapListMes = service->openMessageFile("rules/maplist.mes");
+
+    QVariantMap legacyMaps;
+
+    foreach (uint legacyId, mapListMes.keys()) {
+        QString legacyIdString = QString("%1").arg(legacyId);
+
+        // Only add it to the mapping if the map id wasn't excluded
+        if (exclusions.isExcluded(legacyIdString))
+            continue;
+
+        QString entry = mapListMes[legacyId];
+        QString mapId = entry.split(',')[0].toLower();
+        legacyMaps[legacyIdString] = mapId;
+    }
+
+    QJson::Serializer serializer;
+    output->addFile("legacy_maps.js", serializer.serialize(legacyMaps));
 }
 
 static void convertQuests(IConversionService *service, IFileWriter *output)
@@ -97,8 +125,10 @@ static void convertQuests(IConversionService *service, IFileWriter *output)
     output->addFile("quests.js", serializer.serialize(quests));
 }
 
-static void convertDialogScripts(Troika::VirtualFileSystem *vfs, IFileWriter *output)
+static void convertDialogScripts(IConversionService *service, IFileWriter *output)
 {
+    Troika::VirtualFileSystem *vfs = service->virtualFileSystem();
+
     QVariantMap dialogFiles;
 
     QJson::Serializer serializer;
@@ -113,7 +143,7 @@ static void convertDialogScripts(Troika::VirtualFileSystem *vfs, IFileWriter *ou
         if (!QDir::toNativeSeparators(filename).startsWith(QDir::toNativeSeparators("dlg/")))
             continue;
 
-        QVariantMap dialogScript = convertDialogScript(vfs->openFile(filename), filename);
+        QVariantMap dialogScript = convertDialogScript(service, vfs->openFile(filename), filename);
 
         if (dialogScript.isEmpty()) {
             qWarning("Dialog script %s is empty.", qPrintable(filename));
@@ -135,15 +165,17 @@ static void convertDialogScripts(Troika::VirtualFileSystem *vfs, IFileWriter *ou
     output->addFile("dialogs.js", serializer.serialize(dialogFiles));
 }
 
-static QByteArray convertScript(const QByteArray &pythonScript, const QString &filename)
+static QByteArray convertScript(IConversionService *service, const QByteArray &pythonScript, const QString &filename)
 {
-    PythonConverter converter;
+    PythonConverter converter(service);
 
     return converter.convert(pythonScript, filename).toLocal8Bit();
 }
 
-static void convertScripts(Troika::VirtualFileSystem *vfs, IFileWriter *output)
+static void convertScripts(IConversionService *service, IFileWriter *output)
 {
+    Troika::VirtualFileSystem *vfs = service->virtualFileSystem();
+
     QVariantMap scriptFiles;
 
     QSet<QString> filesWritten;
@@ -158,7 +190,7 @@ static void convertScripts(Troika::VirtualFileSystem *vfs, IFileWriter *output)
             && !QDir::toNativeSeparators(filename).startsWith(QDir::toNativeSeparators("scr/py")))
             continue;
 
-        QByteArray script = convertScript(vfs->openFile(filename), filename);
+        QByteArray script = convertScript(service, vfs->openFile(filename), filename);
 
         if (script.isEmpty()) {
             qWarning("Sript %s is empty.", qPrintable(filename));
@@ -187,9 +219,9 @@ static void convertScripts(Troika::VirtualFileSystem *vfs, IFileWriter *output)
     }
 
     // Process some scripts separately
-    output->addFile("scripts/legacy/utilities.js", convertScript(vfs->openFile("scr/utilities.py"), "scr/utilities.py"));
-    output->addFile("scripts/legacy/random_encounter.js", convertScript(vfs->openFile("scr/random_encounter.py"), "scr/random_encounter.py"));
-    output->addFile("scripts/legacy/rumor_control.js", convertScript(vfs->openFile("scr/rumor_control.py"), "scr/rumor_control.py"));
+    output->addFile("scripts/legacy/utilities.js", convertScript(service, vfs->openFile("scr/utilities.py"), "scr/utilities.py"));
+    output->addFile("scripts/legacy/random_encounter.js", convertScript(service, vfs->openFile("scr/random_encounter.py"), "scr/random_encounter.py"));
+    output->addFile("scripts/legacy/rumor_control.js", convertScript(service, vfs->openFile("scr/rumor_control.py"), "scr/rumor_control.py"));
 
     QJson::Serializer serializer;
     output->addFile("scripts.js", serializer.serialize(scriptFiles));
@@ -312,11 +344,13 @@ void ConvertScriptsTask::run()
 
     convertPrototypes(writer.data(), &engine);
 
-    convertDialogScripts(vfs, writer.data());
+    convertDialogScripts(service(), writer.data());
 
     convertQuests(service(), writer.data());
 
-    convertScripts(vfs, writer.data());
+    convertScripts(service(), writer.data());
+
+    convertLegacyMaps(service(), writer.data());
 
     writer->close();
 }

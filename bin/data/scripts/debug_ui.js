@@ -1,13 +1,58 @@
 var loadMapUi = null;
 
+/*var maps = [
+    { name: 'Temple Level 1', dir: 'Map12-temple-dungeon-level-1' },
+    { name: "Temple Level 1 (Room)", dir: 'Map12-temple-dungeon-level-1-room-131' },
+    { name: "Temple Level 2", dir: "Map13-dungeon-level-02" },
+    { name: "Temple Level 3 (Lower)", dir: "Map14-dungeon-level-03_lower" },
+    { name: "Temple Level 3 (Upper)", dir: "Map14-dungeon-level-03_upper" },
+    { name: "Temple Level 4", dir: "Map15-dungeon-level-04" },
+    { name: 'Hommlet', dir: 'Map-2-Hommlet-Exterior' },
+    { name: 'Moathouse Interior', dir: 'Map-7-Moathouse_Interior' },
+    { name: 'Nulb', dir: 'Map-9-Nulb-Exterior' },
+    { name: 'Air Node', dir: 'Map16-air-node' },
+    { name: 'Fire Node', dir: 'Map18-fire-node' },
+    { name: 'Water Node', dir: 'Map19-water-node' },
+    { name: 'Colosseum', dir: 'Map-49-Colosseum' },
+    { name: 'Emridy Meadows', dir: 'Map-Area-5-Emridy-Meadows' },
+    { name: 'Imeryds Run', dir: 'Map-Area-6-Imeryds-Run' },
+    { name: 'Ogre Cave', dir: 'Map-Area-9-Ogre-Cave-Exterior' },
+    { name: 'Decklo Grove', dir: 'Map-Area-10-Decklo-Grove' },
+    { name: 'Tutorial Map', dir: 'Tutorial Map 1' },
+    { name: 'Vignette Lawful Good', dir: 'Vignette-Lawful-Good' },
+    { name: 'Vignette Good', dir: 'Vignette-Good' },
+    { name: 'Vignette Chaotic-Good', dir: 'Vignette-Chaotic-Good' },
+    { name: 'Vignette Lawful', dir: 'Vignette-Lawful' },
+    { name: 'Vignette Neutral', dir: 'Vignette-Neutral' },
+    { name: 'Vignette Chaotic', dir: 'Vignette-Chaotic' },
+    { name: 'Vignette Lawful Evil', dir: 'Vignette-Lawful-Evil' },
+    { name: 'Vignette Evil', dir: 'Vignette-Evil' },
+    { name: 'Vignette Chaotic Evil', dir: 'Vignette-Chaotic-Evil' },
+    { name: 'Random Riverside Road', dir: 'Random-Riverside-Road' }
+];*/
+
 function showLoadMapWindow() {
     if (loadMapUi != null)
         return;
 
+    var mapList = [];
+    Maps.maps.forEach(function (map) {
+        mapList.push({
+            name: map.name + ' (' + map.legacyId + ')',
+            dir: map.id
+        });
+    });
+
     loadMapUi = gameView.addGuiItem('interface/LoadMap.qml');
-    loadMapUi.setMapList(maps);
-    loadMapUi.mapSelected.connect(function(dir) {
-        loadMap('maps/' + dir + '/map.js');
+    loadMapUi.mapList = mapList;
+    loadMapUi.mapSelected.connect(function(mapId) {
+        var newMap = Maps.mapsById[mapId];
+        if (!newMap) {
+            print("Unable to find map id: " + mapId);
+        } else {
+            print("STARTLOC: "+ newMap.startPosition);
+            Maps.goToMap(newMap, newMap.startPosition);
+        }
     });
     loadMapUi.closeClicked.connect(function() {
         loadMapUi.deleteLater();

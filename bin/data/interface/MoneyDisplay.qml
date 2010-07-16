@@ -1,68 +1,47 @@
 import Qt 4.7
 
 Row {
-    spacing: 15
-    height: 32
-    width: 500
+    spacing: 10
+    height: 20
+    width: childrenRect.width
 
-    property int platinum: 0;
-    property int gold: 0;
-    property int silver: 0;
-    property int copper: 0;
-
-    Row {
-        id: platinumDisplay
-        spacing: 4
-        visible: platinum != 0
-        Image {
-            width: 32
-            height: 32
-            smooth: true
-            source: "../art/interface/inventory/coins_platinum.png"
-        }
-        Text {
-            font.family: "Handserif"
-            font.pointSize: 18
-            font.weight: Font.Bold
-            text: platinum
-        }
-    }
-
+    property int money : 111
 
     Row {
         id: goldDisplay
         spacing: 4
-        visible: gold != 0
-        Image {
-            width: 32
-            height: 32
-            smooth: true
-            source: "../art/interface/inventory/coins_gold.png"
-        }
+        visible: Math.floor(money / 100) > 0
         Text {
-            font.family: "Handserif"
-            font.pointSize: 18
+            color: '#FFFFFF'
+            font.family: "Fontin"
+            font.pointSize: 12
             font.weight: Font.Bold
-            text: gold
+            text: Math.floor(money / 100)
+        }
+        Image {
+            width: 20
+            height: 20
+            smooth: true
+            source: "gold-coin.png"
         }
     }
-
 
     Row {
         id: silverDisplay
         spacing: 4
-        visible: silver != 0
-        Image {
-            width: 32
-            height: 32
-            smooth: true
-            source: "../art/interface/inventory/coins_silver.png"
-        }
+        visible: Math.floor(money / 10) % 10 != 0
         Text {
-            font.family: "Handserif"
-            font.pointSize: 18
+            color: '#FFFFFF'
+            font.family: "Fontin"
+            font.pointSize: 12
             font.weight: Font.Bold
-            text: silver
+            text: Math.floor(money / 10) % 10
+        }
+        Image {
+            width: 20
+            height: 20
+            smooth: true
+            source: "silver-coin.png"
         }
     }
 
@@ -70,18 +49,19 @@ Row {
     Row {
         id: copperDisplay
         spacing: 4
-        visible: copper != 0
-        Image {
-            width: 32
-            height: 32
-            smooth: true
-            source: "../art/interface/inventory/coins_copper.png"
-        }
+        visible: money % 10 != 0
         Text {
-            font.family: "Handserif"
-            font.pointSize: 18
+            color: '#FFFFFF'
+            font.family: "Fontin"
+            font.pointSize: 12
             font.weight: Font.Bold
-            text: copper
+            text: money % 10
+        }
+        Image {
+            width: 20
+            height: 20
+            smooth: true
+            source: "copper-coin.png"
         }
     }
 }

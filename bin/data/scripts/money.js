@@ -2,12 +2,16 @@
 /**
  * A class that represents currency.
  */
-var Money = function() {
+var Money = function(value) {
     if (!(this instanceof Money)) {
         throw "Please use the Money constructor only with the new keyword.";
     }
 
-    this._value = 0; // All currency is stored in copper-form
+    // All currency is stored in copper-form
+    if (value)
+        this._value = value; 
+    else
+        this._value = 0;
 };
 
 (function() {

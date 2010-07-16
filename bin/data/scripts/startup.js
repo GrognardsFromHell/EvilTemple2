@@ -1,36 +1,5 @@
 var models; // Will be aliased to gameView.models
 
-var maps = [
-    { name: 'Temple Level 1', dir: 'Map12-temple-dungeon-level-1' },
-    { name: "Temple Level 1 (Room)", dir: 'Map12-temple-dungeon-level-1-room-131' },
-    { name: "Temple Level 2", dir: "Map13-dungeon-level-02" },
-    { name: "Temple Level 3 (Lower)", dir: "Map14-dungeon-level-03_lower" },
-    { name: "Temple Level 3 (Upper)", dir: "Map14-dungeon-level-03_upper" },
-    { name: "Temple Level 4", dir: "Map15-dungeon-level-04" },
-    { name: 'Hommlet', dir: 'Map-2-Hommlet-Exterior' },
-    { name: 'Moathouse Interior', dir: 'Map-7-Moathouse_Interior' },
-    { name: 'Nulb', dir: 'Map-9-Nulb-Exterior' },
-    { name: 'Air Node', dir: 'Map16-air-node' },
-    { name: 'Fire Node', dir: 'Map18-fire-node' },
-    { name: 'Water Node', dir: 'Map19-water-node' },
-    { name: 'Colosseum', dir: 'Map-49-Colosseum' },
-    { name: 'Emridy Meadows', dir: 'Map-Area-5-Emridy-Meadows' },
-    { name: 'Imeryds Run', dir: 'Map-Area-6-Imeryds-Run' },
-    { name: 'Ogre Cave', dir: 'Map-Area-9-Ogre-Cave-Exterior' },
-    { name: 'Decklo Grove', dir: 'Map-Area-10-Decklo-Grove' },
-    { name: 'Tutorial Map', dir: 'Tutorial Map 1' },
-    { name: 'Vignette Lawful Good', dir: 'Vignette-Lawful-Good' },
-    { name: 'Vignette Good', dir: 'Vignette-Good' },
-    { name: 'Vignette Chaotic-Good', dir: 'Vignette-Chaotic-Good' },
-    { name: 'Vignette Lawful', dir: 'Vignette-Lawful' },
-    { name: 'Vignette Neutral', dir: 'Vignette-Neutral' },
-    { name: 'Vignette Chaotic', dir: 'Vignette-Chaotic' },
-    { name: 'Vignette Lawful Evil', dir: 'Vignette-Lawful-Evil' },
-    { name: 'Vignette Evil', dir: 'Vignette-Evil' },
-    { name: 'Vignette Chaotic Evil', dir: 'Vignette-Chaotic-Evil' },
-    { name: 'Random Riverside Road', dir: 'Random-Riverside-Road' }
-];
-
 var jumppoints = {};
 
 var currentSelection = null;
@@ -161,6 +130,12 @@ var Scenery = {
 var Container = {
     __proto__: Item,
     interactive: true,
+
+    /**
+     * The amount of money contained in this container, in copper coins.
+     */
+    money: 0,
+
     clicked: function(button) {
         if (button == Mouse.LeftButton) {
             showInventory(this);
@@ -204,8 +179,14 @@ var MapChanger = {
     interactive: true,
     clicked: function() {
         var jumpPoint = jumppoints[this.teleportTarget];
-        loadMap('maps/' + jumpPoint.map + '/map.js');
-        gameView.centerOnWorld([jumpPoint.x, 0, jumpPoint.z]);
+
+        var newMap = Maps.mapsById[jumpPoint.map];
+
+        if (!newMap) {
+            print("JumpPoint " + this.teleportTarget + " links to unknown map: " + jumpPoint.map);
+        } else {
+            Maps.goToMap(newMap, [jumpPoint.x, 0, jumpPoint.z]);
+        }
     }
 };
 
@@ -220,7 +201,7 @@ var Critter = {
         }
     },
     getReaction: function() {
-        return Reaction.Neutral;        
+        return Reaction.Neutral;
     },
     drawBehindWalls: true,
     killsOnSight: false,
@@ -242,12 +223,17 @@ var Critter = {
         // Add the mobile back to the current map's list of mobiles
         if (this.map) {
             this.map.addMobile(this);
-        }        
+        }
     }
 };
 
 var NonPlayerCharacter = {
     __proto__: Critter,
+
+    /**
+     * The amount of money held by this NPC, in copper coins.
+     */
+    money: 0,
 
     doubleClicked: function() {
         /*
@@ -288,7 +274,7 @@ function startup() {
     print("Loading subsystems.");
     LegacyScripts.load();
     LegacyDialog.load();
-    Maps.load();    
+    Maps.load();
 
     print("Showing main menu.");
 
@@ -540,123 +526,6 @@ function makeParticleSystemTestModel(particleSystem, sceneNode) {
         print(particleSystem.name);
     });
     sceneNode.attachObject(modelInstance);
-}
-
-/**
- * Unloads the current map. Also clears the render states and the current selection.
- */
-function unloadMap() {
-    if (currentSelection != null) {
-        currentSelection.setSelected(false);
-    }
-    gameView.scene.clear();
-    renderStates = {}; // Clear render states
-    gc();
-}
-
-function loadMap(filename) {
-    var start = timerReference();
-
-    unloadMap();
-
-    var mapObj = readJson(filename);
-
-    gameView.scrollBoxMinX = mapObj.scrollBox[0];
-    gameView.scrollBoxMinY = mapObj.scrollBox[1];
-    gameView.scrollBoxMaxX = mapObj.scrollBox[2];
-    gameView.scrollBoxMaxY = mapObj.scrollBox[3];
-
-    gameView.backgroundMap.directory = mapObj.dayBackground;
-
-    var scene = gameView.scene;
-
-    gameView.clippingGeometry.load(mapObj.clippingGeometry, scene);
-
-    gameView.sectorMap.load(filename.replace('map.js', '') + 'regions.dat');
-
-    // gameView.sectorMap.createDebugView();
-
-    print("Creating " + mapObj.staticObjects.length + " static objects.");
-
-    var obj;
-
-    for (var i = 0; i < mapObj.staticObjects.length; ++i) {
-        obj = mapObj.staticObjects[i];
-        connectToPrototype(obj);
-        createMapObject(scene, obj);
-    }
-
-    var map = Maps.getByLegacyId(mapObj.id);
-    var mobiles = map.mobiles;
-
-    print("Creating " + mobiles.length + " dynamic objects.");
-
-    for (var i = 0; i < mobiles.length; ++i) {
-        obj = mobiles[i];
-        createMapObject(scene, obj);
-    }
-
-    print("Creating " + mapObj.lights.length + " lights.");
-
-    // Create global lighting in form of an infinite-range directional light
-    var globalLight = new Light(gameView.scene);
-    globalLight.range = 10000000000; // The light should be visible anywhere on the map
-    globalLight.type = 1;
-    globalLight.color = [0.962745, 0.964706, 0.965882, 0];
-    globalLight.direction = [-0.632409, -0.774634, 0, 0];
-
-    var sceneNode = gameView.scene.createNode();
-    sceneNode.position = [480 * 28, 0, 480 * 28];
-    sceneNode.attachObject(globalLight);
-
-    for (var i = 0; i < mapObj.lights.length; ++i) {
-        obj = mapObj.lights[i];
-
-        sceneNode = gameView.scene.createNode();
-        sceneNode.interactive = false;
-        sceneNode.position = obj.position;
-
-        var light = new Light(gameView.scene);
-        light.type = obj.type;
-        light.range = obj.range;
-        // Enable this to see the range of lights
-        // light.debugging = true;
-        light.color = obj.color;
-        sceneNode.attachObject(light);
-    }
-
-    print("Creating " + mapObj.particleSystems.length + " particle systems.");
-
-    for (var i = 0; i < mapObj.particleSystems.length; ++i) {
-        obj = mapObj.particleSystems[i];
-
-        var sceneNode = gameView.scene.createNode();
-        sceneNode.interactive = false;
-        sceneNode.position = obj.position;
-
-        var particleSystem = gameView.particleSystems.instantiate(obj.name);
-        sceneNode.attachObject(particleSystem);
-
-        /*
-         Debugging code
-         */
-        // makeParticleSystemTestModel(obj, sceneNode);
-    }
-
-    // Move party to starting location, add nodes to scene
-    Party.getMembers().forEach(function (critter) {
-        critter.position = mapObj.startPosition;
-        createMapObject(scene, critter);
-
-        // Fire areaChanged event (NOTE: Not if loading a savegame)
-    });
-
-    gameView.centerOnWorld(mapObj.startPosition);
-
-    gc();
-
-    var elapsed = timerReference() - start;
-    print("Loaded map in " + elapsed + " ms.");
 }
 
 function connectToPrototype(obj) {

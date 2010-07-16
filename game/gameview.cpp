@@ -328,7 +328,7 @@ namespace EvilTemple {
     }
 
     GameView::GameView(QWidget *parent) :
-            QGraphicsView(parent), d(new GameViewData(this))
+            QGraphicsView(parent), d(new GameViewData(this)), mScrollingBorder(0)
     {
         QPixmap defaultCursor("art/interface/cursors/MainCursor.png");
         setCursor(QCursor(defaultCursor, 2, 2));

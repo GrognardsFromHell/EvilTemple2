@@ -30,36 +30,57 @@ var LegacyScripts = {};
          * Changes the current map.
          */
         fade_and_teleport: function(unk1, unk2, unk3, mapId, worldX, worldY) {
-            var newPosition = [worldX * 28.2842703, 0, worldY * 28.2842703]; // this should probably go into the converter
+            var newPosition = [worldX, 0, worldY]; // this should probably go into the converter
 
-            var map = Maps.getByLegacyId(mapId);
+            var map = Maps.mapsById(mapId);
             if (map)
                 Maps.goToMap(map, newPosition);
             else
                 print("Unknown legacy map id: " + mapId);
+        },
+
+        obj_list_vicinity: function(pos, type) {
+            // Filter the map's mobile list.
+            var result = Maps.currentMap.mobiles.filter(function (mobile) {
+                if (mobile.type != type)
+                    return false; // Skip objects that are not of the requested type
+
+                // Check that the NPC is in the vicinity, whatever that means
+                return distance(pos, mobile.position) <= 500;
+            });
+
+            print("Found " + result.length + " objects of type " + type + " near " + pos);
+            return result;
         }
     };
+
+    /*
+     Copy all functions from utilities.py over to the legacy prototype.
+     */
+    var UtilityModule = eval('(' + readFile('scripts/legacy/utilities.js') + ')');
 
     var LegacyScriptPrototype = {
         SKIP_DEFAULT: true,
 
         RUN_DEFAULT: false,
 
+        stat_gender: 'gender',
+
+        gender_female: Female,
+
+        gender_male: Male,
+
+        OLC_NPC: 'NonPlayerCharacter',
+
+        OLC_CONTAINER: 'Container',
+
         game: GameFacade,
+
+        __proto__: UtilityModule,
 
         anyone: function(creatures, command, id) {
             print("Checking whether " + creatures + " have " + command + " " + id);
             return false; // TODO: Implement
-        },
-
-        find_npc_near: function(critter, nameId) {
-
-            var pos = critter.obj.position;
-
-            print("Trying to find NPC with name " + nameId + " (" + translations.get('mes/description/' + nameId) + ") near " + pos);
-
-            return null;
-
         },
 
         create_item_in_inventory: function(prototypeId, receiver) {
@@ -155,13 +176,21 @@ var LegacyScripts = {};
         return Party.getPlayers()[0];
     }
 
-    var ObjectWrapper = function(obj) {
-        if (!(this instanceof ObjectWrapper)) {
-            print("You must use new ObjectWrapper instead of ObjectWrapper(...)!");
+    var CritterWrapper = function(obj) {
+        if (!(this instanceof CritterWrapper)) {
+            print("You must use new CritterWrapper instead of CritterWrapper(...)!");
         }
         if (!obj) {
             print("Constructing an object wrapper for a null-object: Very bad idea.");
         }
+
+        // Some accesses are properties, not function calls. Set them here
+        if (obj.map) {
+            this.map = obj.map.id;
+            this.area = obj.map.area;
+        }
+        this.position = obj.position;
+
         this.obj = obj;
     };
 
@@ -169,44 +198,57 @@ var LegacyScripts = {};
      * Checks if the NPC wrapped by this object has met the given player character yet.
      * @param character A player character.
      */
-    ObjectWrapper.prototype.has_met = function(character) {
+    CritterWrapper.prototype.has_met = function(character) {
         return this.obj.hasBeenTalkedTo;
     };
 
     /**
-     * Returns a list of the character in this characters group. (Have to check, may need to be wrapped)
+     * Returns a list of the character in this characters group.
+     * Have to check: Is this including followers or not?
      */
-    ObjectWrapper.prototype.group_list = function() {
-        return [this.obj]; // TODO: Implement
+    CritterWrapper.prototype.group_list = function() {
+        var result = [];
+        Party.getMembers().forEach(function(critter) {
+            result.push(new CritterWrapper(critter));
+        });
+        return result;
     };
 
     /**
      * Returns the current value of a statistic.
      * @param stat The statistic to return.
      */
-    ObjectWrapper.prototype.stat_level_get = function(stat) {
+    CritterWrapper.prototype.stat_level_get = function(stat) {
+        if (stat == 'gender')
+            return this.obj.gender;
+
         print("Retrieving statistic: " + stat);
         return 0;
     };
 
     /**
-     * Returns the leader of an NPC. This seems to be an odd function to call.
+     * Returns the leader of an NPC. This is rather odd, since every party member should be considered the leader.
+     * Instead, we'll return the first player character in the party if the NPC is a follower, null otherwise.
      */
-    ObjectWrapper.prototype.leader_get = function() {
-        return null;
+    CritterWrapper.prototype.leader_get = function() {
+        if (Party.isMember(this.obj)) {
+            return Party.getPlayers()[0];
+        } else {
+            return null;
+        }
     };
 
     /**
      * This should return the current money-level for a player character in coppers (?)
      */
-    ObjectWrapper.prototype.money_get = function() {
+    CritterWrapper.prototype.money_get = function() {
         return Party.money.getTotalCopper();
     };
 
     /**
      * Returns whether the PC cannot accept more followers.
      */
-    ObjectWrapper.prototype.follower_atmax = function() {
+    CritterWrapper.prototype.follower_atmax = function() {
         return false;
     };
 
@@ -214,25 +256,37 @@ var LegacyScripts = {};
      * Adds a new follower to the party, if there's still room.
      * @param npc The npc to add to the party.
      */
-    ObjectWrapper.prototype.follower_add = function(npc) {
+    CritterWrapper.prototype.follower_add = function(npc) {
         if (!npc || !npc.obj) {
             print("Passed null object to follower_add.");
             return false;
         }
         return Party.addFollower(npc.obj);
-    },
+    };
 
-        /**
-         * Changes the wealth of the party.
-         * @param delta The amount of money to adjust. This may be negative or positive.
-         */
-            ObjectWrapper.prototype.money_adj = function(delta) {
-                if (delta < 0)
-                    print("Taking " + Math.abs(delta) + " money from the player.");
-                else
-                    print("Giving " + delta + " money to the player.");
-                Party.money.addCopper(delta);
-            };
+    /**
+     * Removes a follower from the party.
+     * @param npc
+     */
+    CritterWrapper.prototype.follower_remove = function(npc) {
+        if (!npc || !npc.obj) {
+            print("Passed null object to follower_remove");
+            return false;
+        }
+        return Party.removeFollower(npc.obj);
+    };
+
+    /**
+     * Changes the wealth of the party.
+     * @param delta The amount of money to adjust. This may be negative or positive.
+     */
+    CritterWrapper.prototype.money_adj = function(delta) {
+        if (delta < 0)
+            print("Taking " + Math.abs(delta) + " money from the player.");
+        else
+            print("Giving " + delta + " money to the player.");
+        Party.money.addCopper(delta);
+    };
 
     /**
      * Returns the effective rank of a skill (including bonuses) given a target.
@@ -240,16 +294,43 @@ var LegacyScripts = {};
      * @param against Against who is the skill check made.
      * @param skill The skill identifier.
      */
-    ObjectWrapper.prototype.skill_level_get = function(against, skill) {
+    CritterWrapper.prototype.skill_level_get = function(against, skill) {
         return 5;
+    };
+
+    /**
+     * Check the inventory of this critter for an item with the given internal id.
+     * @param internalId The internal id of the item.
+     */
+    CritterWrapper.prototype.item_find = function(internalId) {
+        // TODO: Decide whether there should be a shared party inventory and if so, fix this accordingly.
+
+        if (!this.obj.content)
+            return null; // No inventory
+
+        for (var i = 0; i < this.obj.content.length; ++i) {
+            var item = this.obj.content[i];
+            if (item.internalId == internalId)
+                return item;
+        }
+
+        return null;
     };
 
     /**
      * This method causes NPCs to rummage through their inventory and equip all the items
      * they can (the best of their respective type).
      */
-    ObjectWrapper.prototype.item_wield_best_all = function() {
+    CritterWrapper.prototype.item_wield_best_all = function() {
         // TODO: Implement
+    };
+
+    /**
+     * Wraps an item for legacy scripts.
+     * @param item The item to wrap.
+     */
+    var ItemWrapper = function(item) {
+        this.item = item;
     };
 
     // The current dialog UI if it's open
@@ -261,10 +342,13 @@ var LegacyScripts = {};
      * @param npc The NPC that should start the conversation.
      * @param line The dialog line to start on.
      */
-    ObjectWrapper.prototype.begin_dialog = function(npc, line) {
+    CritterWrapper.prototype.begin_dialog = function(npc, line) {
         if (conversationDialog) {
-            conversationDialog.deleteLater();
-            conversationDialog = null;
+            /**
+             * Thanks to some scripting bugs, begin_dialog can be called multiple times in a row, causing
+             * bugs if we replace dialogs...
+             */
+            return;
         }
 
         var pc = this; // Used by the val scripts
@@ -282,11 +366,11 @@ var LegacyScripts = {};
 
         line = parseInt(line); // Ensure line is an integer
 
-        var lastLine = Math.floor(line / 10) * 10 + 10;
         var answers = [];
-        for (var i = line + 1; i < lastLine; ++i) {
+        for (var i = line + 1; i <= line + 10; ++i) {
+            print("Checking dialog line " + i + " for being a valid PC answer.");
             var answerLine = dialog[i];
-            if (answerLine) {
+            if (answerLine && answerLine.intelligence) {
                 // Check the guard
                 if (!checkGuards(npc, pc, answerLine))
                     continue;
@@ -297,7 +381,17 @@ var LegacyScripts = {};
                     id: i,
                     text: answerLine.text
                 });
+            } else {
+                break; // There may be 2 PC lines, then a NPC line then more PC lines.
             }
+        }
+
+        if (answers.length == 0) {
+            print("Found a dialog deadlock on line " + line + " of dialog id " + dialogId);
+            answers.push({
+                id: -1,
+                text: '[DIALOG BUG: NOT A SINGLE ANSWER MATCHES]'
+            });
         }
 
         var npcLine = dialog[line];
@@ -346,11 +440,23 @@ var LegacyScripts = {};
                 voiceOver.stop();
             }
 
+            if (line == -1)
+                return; // This was the "escape line" for buggy dialogs
+
+            // Interestingly enough, B: always causes a barter, even if "pc.barter" is not the action
+            if (dialog[line].text.substring(0, 2) == 'B:') {
+                MerchantUi.show(npc.obj, pc.obj);
+                return;
+            }
+
             var action = dialog[line].action;
 
             if (action) {
                 script.performAction(npc, pc, action);
             }
+
+            // Now we have talked to the NPC
+            npc.obj.hasBeenTalkedTo = true;
 
             var nextId = dialog[line].nextId;
 
@@ -388,7 +494,7 @@ var LegacyScripts = {};
             return false;
         }
 
-        return script.san_dialog(new ObjectWrapper(attachedTo), new ObjectWrapper(getTriggerer()));
+        return script.san_dialog(new CritterWrapper(attachedTo), new CritterWrapper(getTriggerer()));
     };
 
     /**
@@ -406,7 +512,7 @@ var LegacyScripts = {};
             return false;
         }
 
-        return script.san_join(new ObjectWrapper(attachedTo), new ObjectWrapper(getTriggerer()));
+        return script.san_join(new CritterWrapper(attachedTo), new CritterWrapper(getTriggerer()));
     };
 
     /**
@@ -424,7 +530,7 @@ var LegacyScripts = {};
             return false;
         }
 
-        return script.san_disband(new ObjectWrapper(attachedTo), new ObjectWrapper(getTriggerer()));
+        return script.san_disband(new CritterWrapper(attachedTo), new CritterWrapper(getTriggerer()));
     };
 
     /**
@@ -442,7 +548,7 @@ var LegacyScripts = {};
             return false;
         }
 
-        return script.san_use(new ObjectWrapper(attachedTo), new ObjectWrapper(getTriggerer()));
-    };    
+        return script.san_use(new CritterWrapper(attachedTo), new CritterWrapper(getTriggerer()));
+    };
 
 })();

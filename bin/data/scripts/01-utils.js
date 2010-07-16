@@ -39,3 +39,20 @@ function rotationFromDegrees(degrees) {
     var sinRot = Math.sin(radians / 2);
     return [0, sinRot, 0, cosRot];
 }
+
+/**
+ * Calculates the distance between two 3d points.
+ *
+ * @param pointA The first point.
+ * @param pointB The second point.
+ * @returns The distance in world units.
+ */
+function distance(pointA, pointB) {
+    var dx = pointA[0] - pointB[0];
+    var dy = pointA[1] - pointB[1];
+    var dz = pointA[2] - pointB[2];
+
+    var squaredDistance = dx * dx + dy * dy + dz * dz;
+
+    return Math.sqrt(squaredDistance);
+}

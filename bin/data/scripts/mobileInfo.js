@@ -76,9 +76,11 @@ function showMobileInfo(obj, modelInstance)
         mobileInfoDialog.deleteLater();
     });
 
-    mobileInfoDialog.openAnimations.connect(function() {
-        openAnimations(modelInstance);
-    });
+    if (modelInstance) {
+        mobileInfoDialog.openAnimations.connect(function() {
+            openAnimations(modelInstance);
+        });
+    }
 
     mobileInfoDialog.hasInventory = (obj.content !== undefined && obj.content.length > 0);
     mobileInfoDialog.openInventory.connect(function() {

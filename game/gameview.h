@@ -37,6 +37,8 @@ class GameView : public QGraphicsView
     Q_PROPERTY(int scrollBoxMaxX READ scrollBoxMaxX WRITE setScrollBoxMaxX)
     Q_PROPERTY(int scrollBoxMaxY READ scrollBoxMaxY WRITE setScrollBoxMaxY)
 
+    Q_PROPERTY(int scrollingBorder READ scrollingBorder WRITE setScrollingBorder)
+
     Q_PROPERTY(bool scrollingDisabled READ isScrollingDisabled WRITE setScrollingDisabled)
 
     Q_PROPERTY(QSize viewportSize READ viewportSize NOTIFY viewportChanged)
@@ -84,6 +86,14 @@ public:
 
     void setScrollBoxMaxY(int value) {
         mScrollBoxMaxY = value;
+    }
+
+    int scrollingBorder() {
+        return mScrollingBorder;
+    }
+
+    void setScrollingBorder(int border) {
+        mScrollingBorder = border;
     }
 
     const QSize &viewportSize() const;
@@ -136,6 +146,7 @@ protected:
 
 private:
     int mScrollBoxMinX, mScrollBoxMaxX, mScrollBoxMinY, mScrollBoxMaxY;
+    int mScrollingBorder;
 
     QScopedPointer<GameViewData> d;
 

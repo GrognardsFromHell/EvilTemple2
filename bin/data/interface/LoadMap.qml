@@ -1,23 +1,29 @@
 import Qt 4.7
 
 MovableWindow {
-    width: 500
+    width: 700
     height: 300
     title: 'Load Map'
 
-    signal mapSelected(string mapName)
+    property variant mapList : [{mapId: 1000, name: 'Some Map', dir: 'Some Dir'}]
+
+    signal mapSelected(variant map)
 
     ListModel {
-        id: mapModel
+        id: listModel
     }
 
-    ListView {
-        anchors.fill: parent
-        anchors.margins: 6
-        anchors.topMargin: 45
-        clip: true
-        model: mapModel
-        delegate: MouseArea {
+    onMapListChanged: {
+        listModel.clear();
+        for (var i = 0; i < mapList.length; ++i) {
+            listModel.append(mapList[i]);
+        }
+    }
+
+    Component {
+        id: delegate
+
+        MouseArea {
             id: mouseArea
             anchors.left: parent.left
             anchors.right: parent.right
@@ -25,14 +31,14 @@ MovableWindow {
             hoverEnabled: true
             Row {
                 Text {
-                    text: name
-                    width: 200
+                    text: model.name
+                    width: 350
                     font.family: "Fontin"
                     font.pointSize: 12
                     color: mouseArea.containsMouse ? '#00a9f8':'#ffffff'
                 }
                 Text {
-                    text: dir
+                    text: model.dir
                     font.family: "Fontin"
                     font.pointSize: 12
                     color: mouseArea.containsMouse ? '#00a9f8':'#ffffff'
@@ -42,13 +48,13 @@ MovableWindow {
         }
     }
 
-    function setMapList(maps) {
-        mapModel.clear();
-
-        for (var i = 0; i < maps.length; ++i) {
-            mapModel.append(maps[i]);
-        }
+    ListView {
+        anchors.fill: parent
+        anchors.margins: 6
+        anchors.topMargin: 45
+        clip: true
+        model: listModel
+        delegate: delegate
     }
-
 
 }

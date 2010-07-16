@@ -11,8 +11,8 @@ var npcAddMeshes = {}; // Maps npc addmesh ids to the actual addmeshes.
    ALL have [ "SeeThrough", "ShootThrough", "NoBlock", "ProvidesCover", "Invulnerable" ]
   */
 function teleportIcon(proto) {
-	proto.type = 'MapChanger';
-	proto.flags = ["SeeThrough", "ShootThrough", "NoBlock", "ProvidesCover", "Invulnerable"];
+        proto.type = 'MapChanger';
+        proto.flags = ["SeeThrough", "ShootThrough", "NoBlock", "ProvidesCover", "Invulnerable"];
 }
 
 function money(proto) {
@@ -21,282 +21,282 @@ function money(proto) {
 
 var processors = {};
 processors.register = function(func, ids) {
-	for (var i = 0; i < ids.length; ++i)
-		this[ids[i]] = func;
+        for (var i = 0; i < ids.length; ++i)
+                this[ids[i]] = func;
 };
 
 processors.register(money, ['7000', '7001', '7002', '7003']);
 processors.register(teleportIcon, ['2011', '2012', '2013', '2014', '2015', '2035', '2036', '2037', '2038', '2039']);
 
 var hairTypes = {
-	"Longhair (m/f)": 0,
-	"Ponytail (m/f)": 1,
-	"Shorthair (m/f)": 2,
-	"Topknot (m/f)": 3,
-	"Mullet (m)": 4,
-	"Pigtails (f)": 5,
-	"Bald (m)": 6,
-	"Braids (f)": 7,
-	"Mohawk (m/f)": 8,
-	"Medium (m)": 9,
-	"Ponytail2 (f)": 10
+        "Longhair (m/f)": 0,
+        "Ponytail (m/f)": 1,
+        "Shorthair (m/f)": 2,
+        "Topknot (m/f)": 3,
+        "Mullet (m)": 4,
+        "Pigtails (f)": 5,
+        "Bald (m)": 6,
+        "Braids (f)": 7,
+        "Mohawk (m/f)": 8,
+        "Medium (m)": 9,
+        "Ponytail2 (f)": 10
 };
 
 var hairColors = {
-	"Black": 0,
-	"Blonde": 1,
-	"Blue": 2,
-	"Brown": 3,
-	"Light Brown": 4,
-	"Pink": 5,
-	"Red": 6,
-	"White": 7
+        "Black": 0,
+        "Blonde": 1,
+        "Blue": 2,
+        "Brown": 3,
+        "Light Brown": 4,
+        "Pink": 5,
+        "Red": 6,
+        "White": 7
 };
 
 function postprocess(prototypes) {
-	
-	processLegacyMapList();
-	processJumpPoints();
-	processAddMeshes();
-	processPortraits();
-	processInventory();
 
-	print("Running postprocessor on: " + prototypes);
+        processLegacyMapList();
+        processJumpPoints();
+        processAddMeshes();
+        processPortraits();
+        processInventory();
 
-	for (var k in prototypes) {
-		var processor = processors[k];
-		var proto = prototypes[k];
-		if (processor !== undefined) {
-			processor(proto);
-		}
-		
-		// Generic post-processing
-		if (proto['wearMeshId'] !== undefined) {
-			proto['wearMeshId'] /= 100; // the last two digits are the specific model-types, but we organize differently
-		}
-		if (proto['hairType'] !== undefined) {
-			var hairId = hairTypes[proto['hairType']];
-			if (hairId === undefined) {
-				print("Unknown hair style: " + proto['hairType']);
-				proto['hairType'] = undefined;
-			} else {			
-				proto['hairType'] = hairId;
-			}
-		}
-		if (proto['hairColor'] !== undefined) {
-			var hairId = hairColors[proto['hairColor']];
-			if (hairId === undefined) {
-				print("Unknown hair color: " + proto['hairColor']);
-				proto['hairColor'] = undefined;
-			} else {			
-				proto['hairColor'] = hairId;
-			}
-		}
-		if (proto['portraitId'] !== undefined) {		
-			var portraitId = proto['portraitId'];
-			delete proto['portraitId'];
-			proto['portrait'] = Math.floor(portraitId / 10);
-		}
-		
-		var addMeshId = proto['addMeshId'];
-		if (addMeshId !== undefined) {
-			delete proto['addMeshId'];
-			if (addMeshId < 10000000) {
-				print("Warning: Prototype has invalid add mesh id: " + addMeshId);
-			} else {
-				var filename = npcAddMeshes[addMeshId];
-				if (filename === undefined) {
-					print ('Unknown addmesh id: ' + addMeshId);
-				} else {
-					proto['addMeshes'] = [filename];
-				}
-			}
-		}
-	}
-	
-	var result = JSON.stringify(prototypes);
-	addFile('prototypes.js', result, 9);
-	
-	print("Finished postprocessing");
+        print("Running postprocessor on: " + prototypes);
 
-	return result;
+        for (var k in prototypes) {
+                var processor = processors[k];
+                var proto = prototypes[k];
+                if (processor !== undefined) {
+                        processor(proto);
+                }
+
+                // Generic post-processing
+                if (proto['wearMeshId'] !== undefined) {
+                        proto['wearMeshId'] /= 100; // the last two digits are the specific model-types, but we organize differently
+                }
+                if (proto['hairType'] !== undefined) {
+                        var hairId = hairTypes[proto['hairType']];
+                        if (hairId === undefined) {
+                                print("Unknown hair style: " + proto['hairType']);
+                                proto['hairType'] = undefined;
+                        } else {
+                                proto['hairType'] = hairId;
+                        }
+                }
+                if (proto['hairColor'] !== undefined) {
+                        var hairId = hairColors[proto['hairColor']];
+                        if (hairId === undefined) {
+                                print("Unknown hair color: " + proto['hairColor']);
+                                proto['hairColor'] = undefined;
+                        } else {
+                                proto['hairColor'] = hairId;
+                        }
+                }
+                if (proto['portraitId'] !== undefined) {
+                        var portraitId = proto['portraitId'];
+                        delete proto['portraitId'];
+                        proto['portrait'] = Math.floor(portraitId / 10);
+                }
+
+                var addMeshId = proto['addMeshId'];
+                if (addMeshId !== undefined) {
+                        delete proto['addMeshId'];
+                        if (addMeshId < 10000000) {
+                                print("Warning: Prototype has invalid add mesh id: " + addMeshId);
+                        } else {
+                                var filename = npcAddMeshes[addMeshId];
+                                if (filename === undefined) {
+                                        print ('Unknown addmesh id: ' + addMeshId);
+                                } else {
+                                        proto['addMeshes'] = [filename];
+                                }
+                        }
+                }
+        }
+
+        var result = JSON.stringify(prototypes);
+        addFile('prototypes.js', result, 9);
+
+        print("Finished postprocessing");
+
+        return result;
 }
 
 function processLegacyMapList() {
-	var records = readMes('rules/MapList.mes');
-	
-	for (var mapId in records) {
-		var mapDir = records[mapId].split(',')[0];
-		LegacyMapList[mapId] = mapDir;
-	}
+        var records = readMes('rules/MapList.mes');
+
+        for (var mapId in records) {
+            var mapDir = records[mapId].split(',')[0];
+            LegacyMapList[mapId] = mapDir.toLowerCase();
+        }
 }
 
 function mangleFilename(filename) {
-	filename = filename.replace(/\\/g, '/');
-	filename = filename.replace(/^art\/+/i, '');
-	return filename;
+        filename = filename.replace(/\\/g, '/');
+        filename = filename.replace(/^art\/+/i, '');
+        return filename;
 }
 
 function processAddMeshes() {
-	var addMeshes = readMes('rules/addmesh.mes');
-		
-	var equipment = {};
-	
-	var typeIds = {};
-	typeIds[0] = 'human-male';
-	typeIds[1] = 'human-female';
-	typeIds[2] = 'elf-male';
-	typeIds[3] = 'elf-female';
-	typeIds[4] = 'halforc-male';
-	typeIds[5] = 'halforc-female';
-	typeIds[6] = 'dwarf-male';
-	typeIds[7] = 'dwarf-female';
-	typeIds[8] = 'gnome-male';
-	typeIds[9] = 'gnome-female';
-	typeIds[10] = 'halfelf-male';
-	typeIds[11] = 'halfelf-female';
-	typeIds[12] = 'halfling-male';
-	typeIds[13] = 'halfling-female';
-	
-	// Group by item-id
-	for (var k in addMeshes) {
-		if (k >= 10000000) {
-			var filename = addMeshes[k];
-			filename = filename.replace(/\\/g, '/');
-			filename = filename.replace(/^art\/+/i, '');
-			filename = filename.replace(/skm$/i, 'model');		
-			npcAddMeshes[k] = filename;
-			continue;
-		}
-	
-		var id = Math.floor(k / 100);
-		var typeId = typeIds[k % 100];
-		
-		if (typeId === undefined) {
-			print("Unknown type id for addmesh: " + typeId);
-		}
-		
-		if (equipment[id] === undefined)
-			equipment[id] = {};
-			
-		if (equipment[id][typeId] === undefined)
-			equipment[id][typeId] = {};
-			
-		var meshFilenames = addMeshes[k].split(';');
+        var addMeshes = readMes('rules/addmesh.mes');
 
-		for (var i = 0; i < meshFilenames.length; ++i) {
-			meshFilenames[i] = meshFilenames[i].replace(/\\/g, '/');
-			meshFilenames[i] = meshFilenames[i].replace(/^art\/+/i, '');
-			meshFilenames[i] = meshFilenames[i].replace(/skm$/i, 'model');
-		}
-		
-		equipment[id][typeId].meshes = meshFilenames;
-	}
-	
-	// Group by item-id
-	var materials = readMes('rules/materials.mes');
-	for (var k in materials) {	
-		var id = Math.floor(k / 100);
-		var typeId = typeIds[k % 100];
-		
-		if (typeId === undefined) {
-			print("Unknown type id for material: " + typeId);
-		}
-		
-		if (equipment[id] === undefined)
-			equipment[id] = {};
-			
-		if (equipment[id][typeId] === undefined)
-			equipment[id][typeId] = {};
-			
-		var line = materials[k].split(':');
-		var slot = line[0];
-		var material = mangleFilename(line[1]).replace(/mdf$/i, 'xml');
+        var equipment = {};
 
-		if (equipment[id][typeId].materials === undefined)
-			equipment[id][typeId].materials = {};
-		equipment[id][typeId].materials[slot] = material;
-	}
-	
-	var result = JSON.stringify(equipment);	
-	addFile('equipment.js', result, 9);
+        var typeIds = {};
+        typeIds[0] = 'human-male';
+        typeIds[1] = 'human-female';
+        typeIds[2] = 'elf-male';
+        typeIds[3] = 'elf-female';
+        typeIds[4] = 'halforc-male';
+        typeIds[5] = 'halforc-female';
+        typeIds[6] = 'dwarf-male';
+        typeIds[7] = 'dwarf-female';
+        typeIds[8] = 'gnome-male';
+        typeIds[9] = 'gnome-female';
+        typeIds[10] = 'halfelf-male';
+        typeIds[11] = 'halfelf-female';
+        typeIds[12] = 'halfling-male';
+        typeIds[13] = 'halfling-female';
+
+        // Group by item-id
+        for (var k in addMeshes) {
+                if (k >= 10000000) {
+                        var filename = addMeshes[k];
+                        filename = filename.replace(/\\/g, '/');
+                        filename = filename.replace(/^art\/+/i, '');
+                        filename = filename.replace(/skm$/i, 'model');
+                        npcAddMeshes[k] = filename;
+                        continue;
+                }
+
+                var id = Math.floor(k / 100);
+                var typeId = typeIds[k % 100];
+
+                if (typeId === undefined) {
+                        print("Unknown type id for addmesh: " + typeId);
+                }
+
+                if (equipment[id] === undefined)
+                        equipment[id] = {};
+
+                if (equipment[id][typeId] === undefined)
+                        equipment[id][typeId] = {};
+
+                var meshFilenames = addMeshes[k].split(';');
+
+                for (var i = 0; i < meshFilenames.length; ++i) {
+                        meshFilenames[i] = meshFilenames[i].replace(/\\/g, '/');
+                        meshFilenames[i] = meshFilenames[i].replace(/^art\/+/i, '');
+                        meshFilenames[i] = meshFilenames[i].replace(/skm$/i, 'model');
+                }
+
+                equipment[id][typeId].meshes = meshFilenames;
+        }
+
+        // Group by item-id
+        var materials = readMes('rules/materials.mes');
+        for (var k in materials) {
+                var id = Math.floor(k / 100);
+                var typeId = typeIds[k % 100];
+
+                if (typeId === undefined) {
+                        print("Unknown type id for material: " + typeId);
+                }
+
+                if (equipment[id] === undefined)
+                        equipment[id] = {};
+
+                if (equipment[id][typeId] === undefined)
+                        equipment[id][typeId] = {};
+
+                var line = materials[k].split(':');
+                var slot = line[0];
+                var material = mangleFilename(line[1]).replace(/mdf$/i, 'xml');
+
+                if (equipment[id][typeId].materials === undefined)
+                        equipment[id][typeId].materials = {};
+                equipment[id][typeId].materials[slot] = material;
+        }
+
+        var result = JSON.stringify(equipment);
+        addFile('equipment.js', result, 9);
 }
 
 function processJumpPoints() {
-	var records = readTab('rules/jumppoint.tab');
-	
-	var jumppoints = {};
-	
-	for (var i = 0; i < records.length; ++i) {
-		var record = records[i];
-		
-		var mapId = LegacyMapList[record[2]];
-		
-		if (mapId === undefined) {
-			print("Warning: Undefined map id in jumppoint " + record[0] + ": " + record[2]);
-			continue;
-		}
-		
-		var jumppoint = {
-			name: record[1],
-			map: mapId,
-			x: record[3] * PixelPerWorldTile,
-			y: 0,
-			z: record[4] * PixelPerWorldTile
-		};
-		
-		jumppoints[record[0]] = jumppoint;
-	}
-	
-	var result = JSON.stringify(jumppoints);
-	addFile('jumppoints.js', result, 9);
+        var records = readTab('rules/jumppoint.tab');
+
+        var jumppoints = {};
+
+        for (var i = 0; i < records.length; ++i) {
+                var record = records[i];
+
+                var mapId = LegacyMapList[record[2]];
+
+                if (mapId === undefined) {
+                        print("Warning: Undefined map id in jumppoint " + record[0] + ": " + record[2]);
+                        continue;
+                }
+
+                var jumppoint = {
+                        name: record[1],
+                        map: mapId,
+                        x: Math.round((parseInt(record[3]) + 0.5) * PixelPerWorldTile),
+                        y: 0,
+                        z: Math.round((parseInt(record[4]) + 0.5) * PixelPerWorldTile)
+                };
+
+                jumppoints[record[0]] = jumppoint;
+        }
+
+        var result = JSON.stringify(jumppoints);
+        addFile('jumppoints.js', result, 9);
 }
 
 function processPortraits() {
-	var records = readMes('art/interface/portraits/portraits.mes');
-	
-	var portraits = {};
-	
-	for (var k in records) {
-		k = parseInt(k);
-		
-		if (k % 10 != 0)
-			continue;
+        var records = readMes('art/interface/portraits/portraits.mes');
 
-		var large = records[k];
-		if (large == '')
-			large = null;
-		var medium = records[k + 1];
-		var small = records[k + 2];
-		var smallGray = records[k + 3];
-		var mediumGray = records[k + 4];
-			
-		var files = [large, medium, small, mediumGray, smallGray];
-		
-		for (var i = 0; i < files.length; ++i) {
-			if (files[i] === undefined || files[i] === null)
-				continue;
-			files[i] = files[i].replace(/\.tga$/i, '.png');
-		}
-		
-		portraits[k/10] = files;
-	}
-	
-	var result = JSON.stringify(portraits);	
-	addFile('portraits.js', result, 9);
+        var portraits = {};
+
+        for (var k in records) {
+                k = parseInt(k);
+
+                if (k % 10 != 0)
+                        continue;
+
+                var large = records[k];
+                if (large == '')
+                        large = null;
+                var medium = records[k + 1];
+                var small = records[k + 2];
+                var smallGray = records[k + 3];
+                var mediumGray = records[k + 4];
+
+                var files = [large, medium, small, mediumGray, smallGray];
+
+                for (var i = 0; i < files.length; ++i) {
+                        if (files[i] === undefined || files[i] === null)
+                                continue;
+                        files[i] = files[i].replace(/\.tga$/i, '.png');
+                }
+
+                portraits[k/10] = files;
+        }
+
+        var result = JSON.stringify(portraits);
+        addFile('portraits.js', result, 9);
 }
 
 function processInventory() {
-	var records = readMes('art/interface/inventory/inventory.mes');
-	
-	var inventory = {};
-	
-	for (var k in records) {
-		inventory[k] = records[k].replace(/\.tga$/i, '.png');
-	}
-	
-	var result = JSON.stringify(inventory);	
-	addFile('inventoryIcons.js', result, 9);
+        var records = readMes('art/interface/inventory/inventory.mes');
+
+        var inventory = {};
+
+        for (var k in records) {
+                inventory[k] = records[k].replace(/\.tga$/i, '.png');
+        }
+
+        var result = JSON.stringify(inventory);
+        addFile('inventoryIcons.js', result, 9);
 }
 
 /*

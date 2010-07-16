@@ -3,9 +3,13 @@
 #include <QString>
 
 #include "pythonconverter.h"
+#include "constants.h"
 
 #include <Python.h>
 #include <Python-ast.h>
+
+// This is a cheap hack and must be removed if this is to be threaded!
+static IConversionService *service = NULL;
 
 class Environment {
 public:
@@ -57,7 +61,7 @@ private:
     Environment *mParent;
 };
 
-PythonConverter::PythonConverter()
+PythonConverter::PythonConverter(IConversionService *service) : mService(service)
 {
     Py_NoSiteFlag = 1;
     if (!Py_IsInitialized())
@@ -819,12 +823,29 @@ static void convertFor(expr_ty target,
 
     // The actual iterator depends on what we're iterating on. If we're iterating over "i", we use "foreach"
 
+    QString iterateOn = "objects";
+    int append = 1;
+    while (environment->isDefined(iterateOn)) {
+        iterateOn = QString("objects%1").arg(append++);
+    }
+
     appendIndent(indent, result);
-    result.append("foreach(");
+    result.append("var ").append(iterateOn).append(" = ");
     convertExpression(iter, result, indent, environment, true);
-    result.append(", function(");
+    result.append(";\n");
+
+    QString iterator = "i";
+    append = 1;
+    while (environment->isDefined(iterator)) {
+        iterator= QString("i%1").arg(append++);
+    }
+
+    appendIndent(indent, result);
+    result.append(QString("for (var %1 = 0; %1 < %2.length; ++%1) {\n").arg(iterator).arg(iterateOn));
+    appendIndent(indent + 1, result);
+    result.append("var ");
     convertExpression(target, result, indent, environment);
-    result.append(") {\n");
+    result.append(QString(" = %1[%2];\n").arg(iterateOn).arg(iterator));
 
     Environment localEnvironment(environment);
     if (target->kind == Name_kind) {
@@ -836,7 +857,7 @@ static void convertFor(expr_ty target,
     }
 
     appendIndent(indent, result);
-    result.append("});\n");
+    result.append("}\n\n");
 
     if (asdl_seq_LEN(orelse) != 0) {
         qWarning("For loops with else branches are unsupported.");
@@ -1083,6 +1104,8 @@ static void dumpModule(const _mod *module, QString &result)
 
 QString PythonConverter::convert(const QByteArray &code, const QString &filename)
 {
+    service = mService;
+
     QString result;
 
     PyArena *arena = PyArena_New();
@@ -1116,6 +1139,8 @@ QString PythonConverter::convert(const QByteArray &code, const QString &filename
 
 QString PythonConverter::convertDialogGuard(const QByteArray &code, const QString &filename)
 {
+    service = mService;
+
     QString result;
 
     PyArena *arena = PyArena_New();
@@ -1161,6 +1186,8 @@ QString PythonConverter::convertDialogGuard(const QByteArray &code, const QStrin
 
 QString PythonConverter::convertDialogAction(const QByteArray &code, const QString &filename)
 {
+    service = mService;
+
     QString result;
 
     PyArena *arena = PyArena_New();
@@ -1281,6 +1308,16 @@ static bool isGlobalFlagsField(expr_ty expression, QString *flagId, Environment 
     return true;
 }
 
+static bool isAreaProperty(expr_ty expression)
+{
+    return (expression->kind == Attribute_kind && getIdentifier(expression->v.Attribute.attr) == "area");
+}
+
+static bool isMapProperty(expr_ty expression)
+{
+    return (expression->kind == Attribute_kind && getIdentifier(expression->v.Attribute.attr) == "map");
+}
+
 static bool isGlobalVarsField(expr_ty expression, QString *varId, Environment *environment)
 {
     if (expression->kind != Subscript_kind)
@@ -1334,6 +1371,50 @@ static bool isAreasField(expr_ty expression, QString *mapId, Environment *enviro
     return true;
 }
 
+/**
+  Used to convert comparisons of the form 'npc.area == 1' to symbolic constants.
+  */
+static QString areaIds[] = {
+    "",
+    "Area.Hommlet",
+    "Area.Moathouse",
+    "Area.Nulb",
+    "Area.Temple",
+    "Area.EmridyMeadows",
+    "Area.ImerydsRun",
+    "Area.TempleSecretExit",
+    "Area.MoathouseSecretExit",
+    "Area.OgreCave",
+    "Area.DekloGrove",
+    "Area.TempleRuinedHouse",
+    "Area.TempleTower"
+};
+
+static int expressionToInt(expr_ty expression, bool *ok = NULL)
+{
+    if (expression->kind != Num_kind) {
+        if (ok)
+            *ok = false;
+        return 0;
+    }
+
+    object numObj = expression->v.Num.n;
+
+    if (PyInt_Check(numObj)) {
+        if (ok)
+            *ok = true;
+        return PyInt_AS_LONG(numObj);
+    } else if (PyLong_Check(numObj)) {
+        if (ok)
+            *ok = true;
+        return PyLong_AsLong(numObj);
+    } else {
+        if (ok)
+            *ok = false;
+        return 0;
+    }
+}
+
 /*
    These are pre-processing functions that operate on the AST level to convert several commonly used
    idioms from ToEE to a more modern version.
@@ -1367,6 +1448,58 @@ static bool process(expr_ty expression, QString &result, int indent, Environment
             }
             result.append(")");
             return true;
+        } else if (func == "game.fade_and_teleport") {
+            result.append("this.game.fade_and_teleport(");
+            for (int i = 0; i < asdl_seq_LEN(args); ++i) {
+                if (i != 0)
+                    result.append(", ");
+                if (i == 3) {
+                    // Convert the map id string
+                    QString newMapId = service->convertMapId(expressionToInt((expr_ty)asdl_seq_GET(args, i)));
+                    if (newMapId.isNull()) {
+                        result.append("'invalid-map'");
+                        qWarning("Invalid map id to fade_and_teleport.");
+                    } else {
+                        result.append("'" + newMapId + "'");
+                    }
+                } else if (i == 4 || i == 5) {
+                    // Convert the coordinates to the new system by multiplying with PixelPerWorldTile
+                    bool ok;
+                    int coord = expressionToInt((expr_ty)asdl_seq_GET(args, i), &ok);
+                    if (!ok) {
+                        qWarning("Invalid parameter to fade_and_teleport.");
+                    }
+                    result.append(QString("%1").arg((int)((coord + 0.5f) * PixelPerWorldTile)));
+                } else {
+                    convertExpression((expr_ty)asdl_seq_GET(args, i), result, indent, environment, true);
+                }
+            }
+            result.append(")");
+            return true;
+        } else if (func == "game.map_flags") {
+            result.append("this.game.map_flags(");
+            for (int i = 0; i < asdl_seq_LEN(args); ++i) {
+                if (i != 0)
+                    result.append(", ");
+                if (i == 0) {
+                    // Convert the map id string
+                    QString mapIdString;
+                    convertExpression((expr_ty)asdl_seq_GET(args, i), mapIdString, indent, environment, true);
+                    bool ok;
+                    uint mapId = mapIdString.toUInt(&ok);
+                    QString newMapId = service->convertMapId(mapId);
+                    if (!ok || newMapId.isNull()) {
+                        result.append("'invalid-map'");
+                        qWarning("Invalid map id : %s", mapIdString);
+                    } else {
+                        result.append("'" + newMapId + "'");
+                    }
+                } else {
+                    convertExpression((expr_ty)asdl_seq_GET(args, i), result, indent, environment, true);
+                }
+            }
+            result.append(")");
+            return true;
         }
 
     } else if (expression->kind == Name_kind) {
@@ -1379,31 +1512,31 @@ static bool process(expr_ty expression, QString &result, int indent, Environment
             result.append("null");
             return true;
         } else if (name == "LAWFUL_GOOD") {
-            result.append("LawfulGood");
+            result.append("Alignment.LawfulGood");
             return true;
         } else if (name == "NEUTRAL_GOOD") {
-            result.append("NeutralGood");
+            result.append("Alignment.NeutralGood");
             return true;
         } else if (name == "CHAOTIC_GOOD") {
-            result.append("ChaoticGood");
+            result.append("Alignment.ChaoticGood");
             return true;
         } else if (name == "LAWFUL_NEUTRAL") {
-            result.append("LawfulNeutral");
+            result.append("Alignment.LawfulNeutral");
             return true;
         } else if (name == "TRUE_NEUTRAL") {
-            result.append("TrueNeutral");
+            result.append("Alignment.TrueNeutral");
             return true;
         } else if (name == "CHAOTIC_NEUTRAL") {
-            result.append("ChaoticNeutral");
+            result.append("Alignment.ChaoticNeutral");
             return true;
         } else if (name == "LAWFUL_EVIL") {
-            result.append("LawfulEvil");
+            result.append("Alignment.LawfulEvil");
             return true;
         } else if (name == "NEUTRAL_EVIL") {
-            result.append("NeutralEvil");
+            result.append("Alignment.NeutralEvil");
             return true;
         } else if (name == "CHAOTIC_EVIL") {
-            result.append("ChaoticEvil");
+            result.append("Alignment.ChaoticEvil");
             return true;
         }
     } else if (expression->kind == Subscript_kind) {
@@ -1422,6 +1555,14 @@ static bool process(expr_ty expression, QString &result, int indent, Environment
             return true;
         } else if (attr == "party_alignment" && isGameObject(value)) {
             result.append("Party.alignment");
+            return true;
+        } else if (attr == "location") {
+            convertExpression(value, result, indent, environment, true);
+            result.append(".position");
+            return true;
+        } else if (attr == "name") {
+            convertExpression(value, result, indent, environment, true);
+            result.append(".internalId");
             return true;
         }
 
@@ -1449,6 +1590,62 @@ static bool process(expr_ty expression, QString &result, int indent, Environment
                 return true;
             }
         }
+
+        /*
+         Querying the .area field in a comparison will convert the constant operand to a string
+         corresponding to the new area ids.
+         */
+        if (isAreaProperty(left)) {
+            // Evaluate the right hand side
+            QString areaIdString;
+            convertExpression(right, areaIdString, 0, environment, false);
+            bool ok;
+            uint areaId = areaIdString.toUInt(&ok);
+
+            if (!ok || areaId == 0 || areaId > 12) {
+                qWarning("Invalid area id encountered: %s", qPrintable(areaIdString));
+            } else {
+                convertExpression(left, result, indent, environment, true);
+                writeCompareOperator(op, result);
+                result.append(areaIds[areaId]);
+                return true;
+            }
+
+        } else if (isAreaProperty(right)) {
+            qWarning("Didn't account for npc.area to be on the right hand side.");
+        }
+
+
+        /*
+         Querying the .map field of an NPC or PC will convert the right-hand-side from the numeric
+         id to the new string ids.
+         */
+        if (isMapProperty(left)) {
+
+            // TODO: if the LHS is game.leader, rewrite to Maps.currentMap
+
+            // Evaluate the right hand side
+            QString mapIdString;
+            convertExpression(right, mapIdString, 0, environment, false);
+            bool ok;
+            uint mapId = mapIdString.toUInt(&ok);
+            QString mapConstant = service->convertMapId(mapId);
+
+            if (!ok || mapConstant.isNull()) {
+                qWarning("Invalid map id encountered: %s", qPrintable(mapIdString));
+            } else {
+                convertExpression(left, result, indent, environment, true);
+                writeCompareOperator(op, result);
+                result.append("'");
+                result.append(mapConstant);
+                result.append("'");
+                return true;
+            }
+
+        } else if (isMapProperty(right)) {
+            qWarning("Didn't account for npc.map to be on the right hand side.");
+        }
+
         /*
          Quests state queries should be redirected to the new system.
          i.e.: game.quests[18].state == this.qs_unknown ==> Quests.isUnknown(18)
@@ -1571,8 +1768,15 @@ static bool process(expr_ty expression, QString &result, int indent, Environment
                 return false;
             }
 
-            result.append("WorldMap.isMarked(").append(mapId).append(")");
-            return true;
+            bool ok;
+            uint realMapId = mapId.toUInt(&ok);
+
+            if (!ok || realMapId < 1 || realMapId > 12) {
+                qWarning("Invalid area id encountered: %s", qPrintable(mapId));
+            } else {
+                result.append("WorldMap.isMarked(").append(areaIds[realMapId]).append(")");
+                return true;
+            }
         }
     }
 

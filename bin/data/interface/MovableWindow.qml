@@ -22,15 +22,18 @@ MouseArea {
         id: background
         opacity: 0.5
         anchors.fill: parent
-        color: "#333333"
-        radius: 4
         clip: true
-        border.width: 4
-        Image {
-            anchors.margins: 4
-            anchors.fill: parent
-            source: 'CharScreen.jpg'
-            fillMode: 'Stretch'
+        radius: 5
+        gradient: Gradient {
+            GradientStop {
+                position: 0
+                color: "#333333"
+            }
+
+            GradientStop {
+                position: 1
+                color: "#000000"
+            }
         }
     }
 

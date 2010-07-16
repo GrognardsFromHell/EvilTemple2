@@ -10,5 +10,6 @@
         <file>64x64.png</file>
         <file>map_exclusions.txt</file>
         <file>scripts/converter.js</file>
+        <file>map_area_mapping.txt</file>
     </qresource>
 </RCC>

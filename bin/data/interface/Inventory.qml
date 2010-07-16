@@ -1,43 +1,43 @@
 import Qt 4.7
 
 MovableWindow {
-    width: 500
+    id: root
+    width: 350
     height: 480
     title: 'Inventory'
 
+    property alias money : moneyDisplay.money
+    property variant items : [{
+        iconPath: 'art/interface/inventory/Sword_2-Handed3_Icon.png',
+        description: 'Some Sword',
+        worth: 1000,
+        weight: 10
+    }]
+
+    signal itemClicked(string guid)
+
+    onItemsChanged: {
+        listModel.clear();
+        for (var i = 0; i < items.length; ++i) {
+            listModel.append(items[i]);
+        }
+    }
+
     Component {
-        id: itemDelegate
-        Row {
-            spacing: 5
-            Image {
-                source: '../' + iconPath
-            }
-            Column {
-                spacing: 2
-                Text {
-                    text: description
-                    font.family: 'Fontin'
-                    font.pointSize: 12
-                    font.weight: Font.Bold
-                    color: magical ? '#00a9f8' : '#ffffff'
-                }
-                Row {
-                    spacing: 5
-                    Text {
-                        text: "<i>Quantity:</i> " + quantity
-                        font.family: 'Fontin'
-                        font.pointSize: 12
-                        visible: quantity > 1
-                        color: '#eeeeee'
-                    }
-                    Text {
-                        text: "<i>Location:</i> " + location
-                        font.family: 'Fontin'
-                        font.pointSize: 12
-                        color: '#eeeeee'
-                    }
-                }
-            }
+        id: delegate
+
+        InventoryItem {
+            iconPath: model.iconPath
+            quantity: model.quantity
+            location: model.location ? model.location : 0
+            description: model.description
+            magical: model.magical
+            weight: model.weight
+            worth: model.worth
+
+            anchors.left: parent ? parent.left : undefined
+            anchors.right: parent ? parent.right : undefined
+            onClicked: itemClicked(guid)
         }
     }
 
@@ -46,13 +46,15 @@ MovableWindow {
     }
 
     ListView {
+        id: listView
         anchors.fill: parent
         anchors.margins: 6
         anchors.topMargin: 45
         anchors.bottomMargin: 40
         model: listModel
-        delegate: itemDelegate
+        delegate: delegate
         clip: true
+        spacing: 5
     }
 
     MoneyDisplay {
@@ -61,21 +63,6 @@ MovableWindow {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.margins: 6
-    }
-
-    function setInventory(inventory) {
-        var items = inventory.items;
-
-        moneyDisplay.platinum = inventory.platinum;
-        moneyDisplay.gold = inventory.gold;
-        moneyDisplay.silver = inventory.silver;
-        moneyDisplay.copper = inventory.copper;
-
-        listModel.clear();
-        for (var i = 0; i < items.length; ++i) {
-            listModel.append(items[i]);
-        }
-
     }
 
 }

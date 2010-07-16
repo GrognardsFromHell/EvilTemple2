@@ -91,6 +91,8 @@ public:
 
     QHash<uint, QString> mInternalDescription;
 
+    QHash<uint, QString> mMapIds;
+
     bool external;
 
     uint mTotalWork;
@@ -208,6 +210,12 @@ public:
 
         // Validate archives here?
 
+
+        QHash<uint,QString> maplist = openMessageFile("rules/maplist.mes");
+        foreach (uint mapId, maplist.keys()) {
+            mMapIds[mapId] = maplist[mapId].split(',')[0].toLower();
+        }
+
         return true;
     }
 
@@ -274,6 +282,11 @@ public:
         }
 
         return true;
+    }
+
+    QString convertMapId(uint mapId) const
+    {
+        return mMapIds[mapId];
     }
 
 public slots:

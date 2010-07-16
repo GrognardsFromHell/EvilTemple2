@@ -15,6 +15,7 @@ using namespace QJson;
 #include "virtualfilesystem.h"
 #include "navigationmeshbuilder.h"
 #include "model.h"
+#include "mapareamapping.h"
 
 static QVariantMap convertPathNodes(const QString &directory, IConversionService *service)
 {
@@ -79,13 +80,61 @@ static QVariantList factionsToList(const QList<uint> &factions)
     return result;
 }
 
-static QVariant toVariant(IConversionService *service, GameObject *object, bool isChild = false)
+static QVariant toVariant(IConversionService *service, GameObject *object, QVariantMap *parent = NULL)
 {
     QVariantMap objectMap;
 
     // JSON doesn't support comments
     // if (object->descriptionId.isDefined())
     // xml.writeComment(descriptions[object->descriptionId.value()]);
+
+    /*
+     Money is converted directly into copper-coins and set as a property on the parent object.
+     */
+    if (parent) {
+        int quantity = 0;
+
+        switch (object->prototype->id) {
+        case 7000:
+            if (object->quantity.isDefined())
+                quantity = object->quantity.value();
+            else
+                quantity = 1;
+            break;
+        case 7001:
+            if (object->quantity.isDefined())
+                quantity = object->quantity.value() * 10;
+            else
+                quantity = 10;
+            break;
+        case 7002:
+            if (object->quantity.isDefined())
+                quantity = object->quantity.value() * 100;
+            else
+                quantity = 100;
+            break;
+        case 7003:
+            if (object->quantity.isDefined())
+                quantity = object->quantity.value() * 1000;
+            else
+                quantity = 1000;
+            break;
+        default:
+            break;
+        }
+
+        if (quantity > 0) {
+            bool ok;
+            quantity += parent->value("money", 0).toInt(&ok);
+
+            if (!ok) {
+                qWarning("Parent has an invalid money entry.");
+            }
+
+            parent->insert("money", quantity);
+            return QVariant(); // Don't actually convert the money objects
+        }
+    }
 
     if (!object->id.isNull())
         objectMap["id"] = object->id;
@@ -95,23 +144,30 @@ static QVariant toVariant(IConversionService *service, GameObject *object, bool 
     NonPlayerCharacterProperties *npcProperties = qobject_cast<NonPlayerCharacterProperties*>(object->prototype->additionalProperties);
 
     JsonPropertyWriter props(objectMap);
-    if (object->name.isDefined())
+    if (object->name.isDefined()) {
         props.write("internalDescription", service->getInternalName(object->name.value()));
+        props.write("internalId", object->name.value());
+    }
 
-    if (isChild) {
+    if (parent) {
         int inventoryLoc = 0;
         if (object->itemInventoryLocation.isDefined())
             inventoryLoc = object->itemInventoryLocation.value();
         if (inventoryLoc < 0)
             qWarning("Negative item inventory location. What does that mean? %d", inventoryLoc);
-        if (inventoryLoc > 25)
-            props.write("itemInventoryLocation", inventoryLoc);
+        if (inventoryLoc >= 200)
+            props.write("slot", inventoryLoc);
     } else {
         QVariantList vector;
         vector.append(object->position.x());
         vector.append(object->position.y());
         vector.append(object->position.z());
         objectMap["position"] = QVariant(vector);
+    }
+
+    if (object->waypoints.isEmpty()) {
+        object->flags.removeAll("WaypointsDay");
+        object->flags.removeAll("WaypointsNight");
     }
 
     props.write("flags", object->flags);
@@ -197,7 +253,10 @@ static QVariant toVariant(IConversionService *service, GameObject *object, bool 
     if (!object->content.isEmpty()) {
         QVariantList content;
         foreach (GameObject *subObject, object->content) {
-            content.append(toVariant(service, subObject, true));
+            QVariant convertedObj = toVariant(service, subObject, &objectMap);
+
+            if (!convertedObj.isNull())
+                content.append(convertedObj);
         }
         objectMap["content"] = content;
     }
@@ -207,8 +266,6 @@ static QVariant toVariant(IConversionService *service, GameObject *object, bool 
 
 void ConvertMapsTask::convertStaticObjects(ZoneTemplate *zoneTemplate, IFileWriter *writer)
 {
-    QHash<uint, QString> descriptions = service()->openMessageFile("mes/description.mes");
-
     QVariantMap mapObject;
 
     mapObject["name"] = zoneTemplate->name();
@@ -220,7 +277,11 @@ void ConvertMapsTask::convertStaticObjects(ZoneTemplate *zoneTemplate, IFileWrit
                              << zoneTemplate->scrollBox().maximum().x()
                              << zoneTemplate->scrollBox().maximum().y();
 
-    mapObject["id"] = zoneTemplate->id(); // This is actually legacy...
+    QString areaId = getAreaFromMapId(zoneTemplate->id());
+    if (!areaId.isEmpty())
+        mapObject["area"] = areaId;
+
+    mapObject["legacyId"] = zoneTemplate->id(); // This is actually legacy...
     if (zoneTemplate->dayBackground()) {
         mapObject["dayBackground"] = getNewBackgroundMapFolder(zoneTemplate->dayBackground()->directory());
     }
@@ -238,6 +299,7 @@ void ConvertMapsTask::convertStaticObjects(ZoneTemplate *zoneTemplate, IFileWrit
     mapObject["menuMap"] = zoneTemplate->isMenuMap();
     mapObject["tutorialMap"] = zoneTemplate->isTutorialMap();
     mapObject["clippingGeometry"] = zoneTemplate->directory() + "clipping.dat";
+    mapObject["regions"] = zoneTemplate->directory() + "regions.dat";
 
     Light globalLight = zoneTemplate->globalLight();
     QVariantMap globalLightMap;
@@ -546,8 +608,6 @@ void ConvertMapsTask::run()
     int totalWork = zoneTemplates->mapIds().size();
     int workDone = 0;
 
-    QVariantMap mapsMapping;
-
     // Convert all maps
     foreach (quint32 mapId, zoneTemplates->mapIds()) {
         assertNotAborted();
@@ -561,8 +621,6 @@ void ConvertMapsTask::run()
         converter.convert(zoneTemplate.data());
 
         if (zoneTemplate) {
-            mapsMapping[QString("%1").arg(zoneTemplate->id())] = zoneTemplate->directory() + "map.js";
-
             Troika::ZoneBackgroundMap *background = zoneTemplate->dayBackground();
 
             if (background) {
@@ -591,9 +649,6 @@ void ConvertMapsTask::run()
 
         emit progress(workDone, totalWork);
     }
-
-    Serializer serializer;
-    mapsOutput->addFile("legacy_maps.js", serializer.serialize(mapsMapping));
 
     backgroundOutput->close();
     mapsOutput->close();

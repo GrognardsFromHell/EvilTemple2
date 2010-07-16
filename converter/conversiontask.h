@@ -72,6 +72,8 @@ public:
     virtual QString getInternalName(uint id) = 0;
 
     virtual QHash<uint, QString> openMessageFile(const QString &filename) = 0;
+
+    virtual QString convertMapId(uint mapId) const = 0;
 };
 
 class ConversionTask : public QObject

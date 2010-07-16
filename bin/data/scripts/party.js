@@ -15,7 +15,7 @@ var Party = {};
      * The main party alignment. This defines the opening vignette and motivational quest, and also limits the
      * choice of alignments the player characters may have.
      */
-    Party.alignment = TrueNeutral;
+    Party.alignment = Alignment.TrueNeutral;
 
     /**
      * The current player character members of the party.
@@ -119,5 +119,28 @@ var Party = {};
         PartyUi.update();
         return true;
     };
+
+    /**
+     * Removes a follower from the party.
+     * @param npc The NPC that should be removed from the followers of this party.
+     * @returns True if the follower was removed, false if it wasn't a follower.
+     */
+    Party.removeFollower = function(npc) {
+        if (followers.indexOf(npc) == -1)
+            return false;
+
+        /*if (!(npc instanceof NonPlayerCharacter)) {
+            throw "Trying to add a player character as a follower to the party.";
+        }*/
+
+        print("Remove member from party: " + npc.id);
+
+        followers.splice(followers.indexOf(npc), 1);
+
+        npc.leftParty();
+
+        PartyUi.update();
+        return true;
+    };    
 
 })();
