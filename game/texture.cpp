@@ -18,7 +18,7 @@ uint getActiveTextures()
     return activeTextures;
 }
 
-Texture::Texture() : mValid(false), mHandle(-1), mMinFilter(GL_LINEAR), mMagFilter(GL_LINEAR),
+Texture::Texture() : mValid(false), mHandle(0), mMinFilter(GL_LINEAR), mMagFilter(GL_LINEAR),
     mWrapModeS(GL_CLAMP), mWrapModeT(GL_CLAMP)
 {
     activeTextures++;

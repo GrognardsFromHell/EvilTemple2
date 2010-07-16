@@ -3,7 +3,7 @@
 #include <QScopedArrayPointer>
 #include <QFile>
 
-#if defined(GOOGLE_BREAKPAD_ENABLED)
+#if defined(GOOGLE_BREAKPAD_ENABLED) && defined(Q_CC_MSVC)
 #include "client/windows/handler/exception_handler.h"
 #include <string>
 
@@ -90,7 +90,7 @@ static void messageHandler(QtMsgType type, const char *message)
 
 int main(int argc, char *argv[])
 {
-#if defined(GOOGLE_BREAKPAD_ENABLED)
+#if defined(GOOGLE_BREAKPAD_ENABLED) && defined(Q_CC_MSVC)
     install_google_breakpad();
 #endif
 

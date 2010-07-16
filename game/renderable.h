@@ -78,8 +78,6 @@ private:
     Q_DISABLE_COPY(Renderable)
 };
 
-Q_DECLARE_METATYPE(Renderable*)
-
 inline bool Renderable::isAnimated() const
 {
     return mAnimated;
@@ -147,5 +145,7 @@ private:
 uint getActiveRenderables();
 
 };
+
+Q_DECLARE_METATYPE(EvilTemple::Renderable*)
 
 #endif // RENDERABLE_H

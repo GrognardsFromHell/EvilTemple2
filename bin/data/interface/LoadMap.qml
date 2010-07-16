@@ -5,7 +5,9 @@ MovableWindow {
     height: 300
     title: 'Load Map'
 
-    property variant mapList : [{mapId: 1000, name: 'Some Map', dir: 'Some Dir'}]
+    property variant mapList : {
+        maps: [{mapId: 1000, name: 'Some Map', dir: 'Some Dir'}]
+    }
 
     signal mapSelected(variant map)
 

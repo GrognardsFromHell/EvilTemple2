@@ -32,7 +32,7 @@ var LegacyScripts = {};
         fade_and_teleport: function(unk1, unk2, unk3, mapId, worldX, worldY) {
             var newPosition = [worldX, 0, worldY]; // this should probably go into the converter
 
-            var map = Maps.mapsById(mapId);
+            var map = Maps.mapsById[mapId];
             if (map)
                 Maps.goToMap(map, newPosition);
             else
@@ -391,7 +391,7 @@ var LegacyScripts = {};
         line = parseInt(line); // Ensure line is an integer
 
         var answers = [];
-        for (var i = line + 1; i <= line + 10; ++i) {
+        for (var i = line + 1; i <= line + 50; ++i) {
             print("Checking dialog line " + i + " for being a valid PC answer.");
             var answerLine = dialog[i];
             if (answerLine && answerLine.intelligence) {
@@ -431,21 +431,19 @@ var LegacyScripts = {};
         /**
          * Guards on NPC lines are actually sound-ids
          */
-        if (npcLine.guard) {
-            var filename = 'sound/speech/';
-            if (dialogId < 10000)
-                filename += '0';
-            if (dialogId < 1000)
-                filename += '0';
-            if (dialogId < 100)
-                filename += '0';
-            if (dialogId < 10)
-                filename += '0';
-            filename += dialogId + '/v' + npcLine.guard + '_m.mp3';
+        var filename = 'sound/speech/';
+        if (dialogId < 10000)
+            filename += '0';
+        if (dialogId < 1000)
+            filename += '0';
+        if (dialogId < 100)
+            filename += '0';
+        if (dialogId < 10)
+            filename += '0';
+        filename += dialogId + '/v' + line + '_m.mp3';
 
-            print("Playing sound: " + filename);
-            voiceOver = gameView.audioEngine.playSoundOnce(filename, SoundCategory_Effect);
-        }
+        print("Playing sound: " + filename);
+        voiceOver = gameView.audioEngine.playSoundOnce(filename, SoundCategory_Effect);
 
         conversationDialog = gameView.addGuiItem("interface/Conversation.qml");
         conversationDialog.npcText = (pc.obj.gender == 'female' && npcLine.femaleText) ? npcLine.femaleText : npcLine.text;

@@ -1,7 +1,7 @@
 
 TEMPLATE = app
 
-TEMPLE_LIBS += binkplayer audioengine
+TEMPLE_LIBS += binkplayer audioengine libavcodec
 
 SOURCES += \
     main.cpp \

@@ -119,8 +119,8 @@ inline void SelectionCircle::setHovering(bool hovering)
     mHovering = hovering;
 }
 
-Q_DECLARE_METATYPE(SelectionCircle*)
-
 }
+
+Q_DECLARE_METATYPE(EvilTemple::SelectionCircle*)
 
 #endif // SELECTIONCIRCLE_H

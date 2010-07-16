@@ -126,7 +126,7 @@ private:
 class MaterialPassUniformState
 {
 public:
-    MaterialPassUniformState() : mBinder(NULL), mLocation(-1), mDeleteBinder(false)
+    MaterialPassUniformState() : mLocation(-1), mDeleteBinder(false), mBinder(NULL)
     {
     }
 

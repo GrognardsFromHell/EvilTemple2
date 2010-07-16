@@ -276,29 +276,6 @@ function startup() {
     LegacyDialog.load();
     Maps.load();
 
-    print("Showing main menu.");
-
-    var mainMenu = gameView.showView("interface/MainMenu.qml");
-    mainMenu.newGameClicked.connect(function() {
-        mainMenu.deleteLater();
-        showDebugBar();
-        PartyUi.show();
-
-        // Set up a nice debugging party
-        Party.money.addGold(1000); // Start with 1000 gold
-
-        var player1 = {
-            __proto__: PlayerCharacter,
-            id: '{000-000-000-000}', // TODO: GUID generation
-            prototype: 13000,
-            position: [0, 0, 0],
-            portrait: '151',
-            name: 'Storm'
-        };
-        connectToPrototype(player1);
-        Party.addMember(player1);
-    });
-
     // Assign the prototype of each loaded prototype
     for (var i in prototypes) {
         var type = prototypes[i].type;
@@ -321,6 +298,9 @@ function startup() {
 
     // Accept clicks from the game view
     setupWorldClickHandler();
+
+    print("Showing main menu.");
+    MainMenuUi.show();
 }
 
 var worldClickCallback = null;

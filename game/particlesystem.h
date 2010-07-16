@@ -56,8 +56,6 @@ namespace EvilTemple {
         Q_DISABLE_COPY(ParticleSystem);
     };
 
-    Q_DECLARE_METATYPE(ParticleSystem*);
-
     class ParticleSystems : public QObject
     {
     Q_OBJECT
@@ -84,5 +82,6 @@ namespace EvilTemple {
 }
 
 Q_DECLARE_METATYPE(EvilTemple::ParticleSystems*)
+Q_DECLARE_METATYPE(EvilTemple::ParticleSystem*)
 
 #endif // PARTICLESYSTEM_H

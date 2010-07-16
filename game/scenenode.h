@@ -246,8 +246,8 @@ inline SceneNode *SceneNode::parentNode() const
     return mParentNode;
 }
 
-Q_DECLARE_METATYPE(SceneNode*)
-
 }
+
+Q_DECLARE_METATYPE(EvilTemple::SceneNode*)
 
 #endif // SCENENODE_H

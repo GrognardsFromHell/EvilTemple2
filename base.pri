@@ -77,13 +77,13 @@ contains(TEMPLE_LIBS,troikaformats) {
 }
 
 contains(TEMPLE_LIBS,libavcodec) {
-    win32:INCLUDEPATH += $${PWD}/3rdparty/libavcodec/include
-    win32:LIBS += -L$${PWD}/3rdparty/libavcodec/lib
+    win32:INCLUDEPATH += $${PWD}/3rdparty/libavcodec-minimal/include
+    win32:LIBS += -L$${PWD}/3rdparty/libavcodec-minimal
 
-    win32-msvc2008:INCLUDEPATH += $${PWD}/3rdparty/libavcodec/msvc
-    win32-msvc2010:INCLUDEPATH += $${PWD}/3rdparty/libavcodec/msvc
+    win32-msvc2008:INCLUDEPATH += $${PWD}/3rdparty/libavcodec-minimal/msvc
+    win32-msvc2010:INCLUDEPATH += $${PWD}/3rdparty/libavcodec-minimal/msvc
 
-    LIBS += -lavcodec -lavformat -lavutil -lswscale
+    LIBS += -lavcodec-52 -lavformat-52 -lavutil-50 -lswscale-0
 }
 
 contains(TEMPLE_LIBS,minizip) {
@@ -106,7 +106,11 @@ contains(TEMPLE_LIBS,audioengine) {
 
 contains(TEMPLE_LIBS,qjson) {
     INCLUDEPATH += $${PWD}/3rdparty/qjson/src/
-    LIBS += -lqjson
+    CONFIG(debug, debug|release) {
+        LIBS += -lqjson_d
+    } else {
+        LIBS += -lqjson
+    }
 }
 
 # Add game libraries
@@ -129,8 +133,10 @@ contains(TEMPLE_LIBS,openal) {
 }
 
 # Enable to get PDB for release builds
-win32:QMAKE_CXXFLAGS_RELEASE += -Zi
-win32:QMAKE_LFLAGS_RELEASE += /DEBUG /INCREMENTAL:NO /OPT:REF /OPT:ICF
+win32-msvc2008:QMAKE_CXXFLAGS_RELEASE += -Zi
+win32-msvc2008:QMAKE_LFLAGS_RELEASE += /DEBUG /INCREMENTAL:NO /OPT:REF /OPT:ICF
+win32-msvc2010:QMAKE_CXXFLAGS_RELEASE += -Zi
+win32-msvc2010:QMAKE_LFLAGS_RELEASE += /DEBUG /INCREMENTAL:NO /OPT:REF /OPT:ICF
 
 OTHER_FILES += \
     ../bin/data/scripts/mobileInfo.js

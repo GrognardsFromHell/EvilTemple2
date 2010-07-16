@@ -124,6 +124,7 @@ struct ModelBufferSource : public BufferSource {
             return mTexCoordBuffer;
         default:
             qWarning("Unknown buffer id requested: %d.", attribute.bufferType);
+            return 0;
         }
     }
 

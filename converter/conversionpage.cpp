@@ -8,10 +8,11 @@
 #include "ui_conversionpage.h"
 #include "converter.h"
 
-#ifdef Q_OS_WIN32
+#if defined(Q_OS_WIN32) && defined(Q_CC_MSVC)
 #include <QAxObject>
 #include <windows.h>
 #include "shobjidl.h"
+#define USE_TASKBAR_LIST
 #endif
 
 static QtMsgHandler oldMsgHandler = NULL;
@@ -115,7 +116,7 @@ ConversionPage::ConversionPage(QWidget *parent) :
     QWizardPage(parent),
     ui(new Ui::ConversionPage),
     conversionThread(new ConversionThread)
-#ifdef Q_OS_WIN32
+#if defined(USE_TASKBAR_LIST)
     , mTaskbarList(0), mDontUseTaskbarList(false)
 #endif
 {
@@ -147,7 +148,7 @@ void ConversionPage::updateProgress(int value, int max, const QString &operation
     ui->progressBar->setValue(value);
     setSubTitle(operation);
 
-#ifdef Q_OS_WIN32
+#if defined(USE_TASKBAR_LIST)
     if (mDontUseTaskbarList)
         return;
 

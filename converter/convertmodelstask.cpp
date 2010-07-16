@@ -15,12 +15,12 @@
 #include "materialconverter.h"
 #include "modelwriter.h"
 
-void writeDebugModel(IFileWriter *writer, Troika::MeshModel *model, const QString &modelDir);
-void writeDebugBoneHierarchy(QTextStream &stream,
+static void writeDebugModel(IFileWriter *writer, Troika::MeshModel *model, const QString &modelDir);
+static void writeDebugBoneHierarchy(QTextStream &stream,
                              const Troika::Bone &bone,
                              const QVector<Troika::Bone> &bones,
                              int indent = 0);
-bool writeModel(IFileWriter *writer, Troika::MeshModel *model, QDataStream &stream);
+static bool writeModel(IFileWriter *writer, Troika::MeshModel *model, QDataStream &stream);
 
 ConvertModelsTask::ConvertModelsTask(IConversionService *service, QObject *parent)
     : ConversionTask(service, parent)

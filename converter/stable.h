@@ -1,4 +1,10 @@
 
+// Target windows xp sp1
+#define WINVER 0x0502
+
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
 #include <GL/glew.h>
 
 #define GAMEMATH_NO_MEMORY_OPERATORS

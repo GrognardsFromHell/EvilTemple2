@@ -90,7 +90,7 @@ namespace EvilTemple {
     {
     public:
         GameViewData(GameView *view)
-            : q(view), rootItem(0), backgroundMap(renderStates),
+            : q(view), backgroundMap(renderStates),
             clippingGeometry(renderStates), dragging(false), lightDebugger(renderStates),
             materials(renderStates), sectorMap(&scene), models(&materials, renderStates),
             particleSystems(&models, &materials), scene(&materials), lastAudioEnginePosition(0, 0, 0, 1),
@@ -249,7 +249,7 @@ namespace EvilTemple {
 
         QDeclarativeEngine uiEngine;
         QGraphicsScene uiScene;
-        QDeclarativeItem* rootItem;
+        QPointer<QDeclarativeItem> rootItem;
 
         QSize viewportSize;
 
@@ -297,6 +297,10 @@ namespace EvilTemple {
             viewportSize.setHeight(height);
 
             uiScene.setSceneRect(0, 0, width, height);
+            if (rootItem) {
+                rootItem->setWidth(width);
+                rootItem->setHeight(height);
+            }
 
             const float zoom = 1;
 
@@ -369,7 +373,7 @@ namespace EvilTemple {
 
         Profiler::newFrame();
 
-        SAFE_GL(;); // Clears existing OpenGL errors
+        while (glGetError() != GL_NO_ERROR);
 
         // Update the audio engine state if necessary
         d->updateListenerPosition();

@@ -7,6 +7,9 @@
 #include "particlesystem.h"
 #include "materialstate.h"
 
+#include <gamemath.h>
+using namespace GameMath;
+
 using EvilTemple::SharedModel;
 using EvilTemple::SharedMaterialState;
 
@@ -20,8 +23,8 @@ Q_DECLARE_METATYPE(Box3d)
 
 namespace EvilTemple {
 
-static const Vector4 nullVector(0, 0, 0, 0);
-static const Box3d emptyBoundingBox(nullVector, nullVector);
+GAMEMATH_ALIGNEDTYPE_PRE Vector4 GAMEMATH_ALIGNEDTYPE_MID nullVector GAMEMATH_ALIGNEDTYPE_POST = Vector4(0, 0, 0, 0);
+GAMEMATH_ALIGNEDTYPE_PRE Box3d GAMEMATH_ALIGNEDTYPE_MID emptyBoundingBox GAMEMATH_ALIGNEDTYPE_POST = Box3d(nullVector, nullVector);
 
 template<typename T>
 QScriptValue valueToScriptValue(QScriptEngine *engine, T const &in)

@@ -349,7 +349,7 @@ static void convertComparison(expr_ty left,
                               QString &result,
                               int indent, Environment *environment)
 {
-    Q_ASSERT(asdl_seq_LEN(ops) == asdl_seq_len(comparators));
+    Q_ASSERT(asdl_seq_LEN(ops) == asdl_seq_LEN(comparators));
 
     if (!isPrimitive(left))
         result.append('(');

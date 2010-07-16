@@ -169,7 +169,7 @@ namespace EvilTemple {
         template<typename _T, typename _FT>
         friend inline QDataStream &operator >>(QDataStream &stream, KeyframeStream<_T,_FT> &keyframeStream);
     public:
-        KeyframeStream() : mFrameStream(0), mValueStream(0), mSize(0)
+        KeyframeStream() : mSize(0), mFrameStream(0), mValueStream(0)
         {
         }
 

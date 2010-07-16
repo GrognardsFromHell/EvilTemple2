@@ -236,13 +236,13 @@ bool MaterialPass::load(const QDomElement &passElement)
         ref = stencilFuncElement.attribute("reference", "0").toInt(&ok);
 
         if (!ok)
-            qWarning("Invalid stencil function reference: %s", stencilFuncElement.attribute("reference"));
+            qWarning("Invalid stencil function reference: %s", qPrintable(stencilFuncElement.attribute("reference")));
 
         if (stencilFuncElement.hasAttribute("mask"))
             mask = stencilFuncElement.attribute("mask").toUInt(&ok);
 
         if (!ok)
-            qWarning("Invalid stencil function mask: %s", stencilFuncElement.attribute("mask"));
+            qWarning("Invalid stencil function mask: %s", qPrintable(stencilFuncElement.attribute("mask")));
 
         SharedMaterialRenderState renderState(new StencilFuncState(func, ref, mask));
         mRenderStates.append(renderState);

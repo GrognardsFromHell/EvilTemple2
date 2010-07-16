@@ -1,3 +1,4 @@
+
 #include <QScopedPointer>
 
 #include "basepathfinder.h"
@@ -58,7 +59,7 @@ namespace EvilTemple {
             qWarning("Unable to read registry key for ToEE installation directory: %#lx", result);
             return defaultDir();
         }
-        
+
         QDir dir = QDir(QString::fromWCharArray(data.data()));
 
         result = RegCloseKey(key);

@@ -6,6 +6,20 @@
 #include "binkplayer.h"
 #include "dialog.h"
 
+extern "C" {
+    #include "libavcodec/avcodec.h"
+    #include "libavformat/avformat.h"
+}
+
+static void registerCodecs()
+{
+    fprintf(stderr, "Registering AV Codecs.\n");
+    avcodec_register_all();
+
+    fprintf(stderr, "Registering AV Formats.\n");
+    av_register_all();
+}
+
 class PlayerThread : public QThread
 {
 public:
@@ -21,6 +35,8 @@ protected:
 
 int main(int argc, char *argv[])
 {
+    registerCodecs();
+
     QApplication app(argc, argv);
 
     if (argc != 2) {

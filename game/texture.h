@@ -100,7 +100,7 @@ inline void Texture::bind()
 
 inline bool Texture::isValid() const
 {
-        return mHandle != -1;
+        return mHandle != 0;
 }
 
 // Holders of textures should use this pointer type instead of textures directly

@@ -134,8 +134,6 @@ private:
     Q_DISABLE_COPY(ModelInstance);
 };
 
-Q_DECLARE_METATYPE(ModelInstance*)
-
 inline const SharedModel &ModelInstance::model() const
 {
     return mModel;
@@ -157,5 +155,7 @@ inline void ModelInstance::setDrawsBehindWalls(bool drawsBehindWalls)
 }
 
 }
+
+Q_DECLARE_METATYPE(EvilTemple::ModelInstance*)
 
 #endif // MODELINSTANCE_H

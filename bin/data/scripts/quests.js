@@ -87,7 +87,7 @@ var StoryState = 0; // Progress of the current story
             print("Mentioning quest " + id + " to player.");
             questMap[id] = Mentioned;
         }
-    };    
+    };
 
     /**
      * Accepts a quest, if it's not already accepted or completed.
@@ -99,4 +99,18 @@ var StoryState = 0; // Progress of the current story
             questMap[id] = Accepted;
         }
     };
+
+    /**
+     * Completes a quest.
+     * @param id The id of the quest to complete.
+     */
+    Quests.complete = function(id) {
+        if (!Quests.isFinished(id)) {
+            print("Completing quest " + id);
+            questMap[id] = Completed;
+        } else {
+            print("Quest is already finished, why complete it?");
+        }
+    };
+
 })();

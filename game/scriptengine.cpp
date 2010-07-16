@@ -106,7 +106,7 @@ namespace EvilTemple {
 
             QFile scriptFile(fullFilename);
 
-            qDebug("Loading script file %s (%d byte).", qPrintable(fullFilename), scriptFile.size());
+            qDebug("Loading script file %s (%ld byte).", qPrintable(fullFilename), (long int)scriptFile.size());
 
             if (!scriptFile.open(QIODevice::ReadOnly|QIODevice::Text)) {
                 qWarning("Unable to read script file %s: %s", qPrintable(scriptFile.fileName()),
@@ -279,5 +279,4 @@ namespace EvilTemple {
 
 }
 
-Q_DECLARE_METATYPE(EvilTemple::QVector2DClass*)
 

@@ -11,6 +11,15 @@ extern "C" {
 #include "isound.h"
 #include "isoundsource.h"
 
+template <typename T>
+struct AvFree : QScopedPointerDeleter<T>
+{
+    static inline void cleanup(T *pointer)
+    {
+        av_free(pointer);
+    }
+};
+
 static int file_read(URLContext *h, unsigned char *buf, int size)
 {
     QFile *file = (QFile*) h->priv_data;
@@ -122,12 +131,14 @@ private:
     bool readNextPacket();
     void copySampleFormat();
     QByteArray sampleBuffer;
-    QByteArray decodeBuffer;
+    size_t decodeBufferSize;
+    QScopedPointer< int16_t, AvFree<int16_t> > decodeBuffer;
 };
 
 MP3SoundSource::MP3SoundSource(const QString &filename)
     : mFilename(filename), formatCtx(NULL), codec(NULL), codecCtx(NULL), nextPacketValid(false),
-    decodeBuffer(AVCODEC_MAX_AUDIO_FRAME_SIZE * 3 / 2, Qt::Uninitialized)
+    decodeBufferSize(AVCODEC_MAX_AUDIO_FRAME_SIZE * 3 / 2),
+    decodeBuffer( (int16_t*) av_malloc(decodeBufferSize) )
 {
     initializeCodecs();
 
@@ -225,26 +236,6 @@ void MP3SoundSource::copySampleFormat()
            (int)soundFormat.sampleFormat());
 }
 
-bool MP3SoundSource::readNextPacket()
-{
-    if (nextPacketValid) {
-        av_free_packet(&nextPacket);
-        nextPacketValid = false;
-    }
-
-    while (av_read_frame(formatCtx, &nextPacket) >= 0) {
-        if (nextPacket.stream_index == streamIndex
-            && nextPacket.size > 0) {
-            nextPacketValid = true;
-            return true;
-        } else {
-            av_free_packet(&nextPacket);
-        }
-    }
-
-    return false;
-}
-
 MP3SoundSource::~MP3SoundSource()
 {
     if (codec) {
@@ -285,32 +276,72 @@ void MP3SoundSource::rewind()
     }
 }
 
+bool MP3SoundSource::readNextPacket()
+{
+    if (nextPacketValid) {
+        av_free_packet(&nextPacket);
+        nextPacketValid = false;
+    }
+
+    int error;
+    while ((error = av_read_frame(formatCtx, &nextPacket)) >= 0) {
+        if (nextPacket.stream_index == streamIndex
+            && nextPacket.size > 0) {
+            nextPacketValid = true;
+            return true;
+        } else {
+            qDebug("Read packet with size == 0 || stream_index != our stream");
+            av_free_packet(&nextPacket);
+        }
+    }
+
+    qDebug("EOF reached.");
+
+    return false;
+}
+
 void MP3SoundSource::readSamples(void *buffer, quint32 &bufferSize)
 {
     Q_ASSERT(nextPacketValid);
 
+    AVPacket tmp;
+    memcpy(&tmp, &nextPacket, sizeof(nextPacket));
+
     // While the size of our buffer is less than the requested size, try to
     // fullfil the request by parsing packets
-    while ((quint32)sampleBuffer.size() < bufferSize && nextPacketValid)
+    while ((quint32)sampleBuffer.size() < bufferSize && tmp.size > 0)
     {
-        int frameSize = decodeBuffer.size();
-        int nextPacketSize = nextPacket.size;
-        int result = avcodec_decode_audio2(codecCtx,
-                              (int16_t*)decodeBuffer.data(),
+        if (decodeBufferSize < tmp.size * sizeof(int16_t)) {
+            qWarning("Decoding buffer may be too small.");
+        }
+
+        int frameSize = decodeBufferSize;
+        int result = avcodec_decode_audio3(codecCtx,
+                              decodeBuffer.data(),
                               &frameSize,
-                              nextPacket.data,
-                              nextPacketSize);
+                              &tmp);
 
         if (result < 0) {
-            qWarning("Unable to decode audio packet @ %d", nextPacket.pos);
-        } else {
-            sampleBuffer.append(decodeBuffer.constData(), frameSize);
-        }
+            qWarning("Unable to decode audio packet @ %ld", (long int)tmp.pos);
 
-        if (!readNextPacket()) {
-            break; // Next packet is now invalid, read another one
+            // Skip the entire packet
+            tmp.data += tmp.size;
+            tmp.size = 0;
+            break;
+        } else {
+            tmp.size -= result;
+            tmp.data += result;
+
+            if (frameSize <= 0) {
+                qDebug("Audio codec overflow.");
+            } else {
+                sampleBuffer.append(reinterpret_cast<char*>(decodeBuffer.data()), frameSize);
+            }
         }
     }
+
+    if (tmp.size <= 0)
+        readNextPacket(); // Fully consumed packet, read next
 
     // Consume bytes in our sample buffer.
     int consume = qMin<int>(sampleBuffer.size(), bufferSize);

@@ -74,8 +74,8 @@ public:
             errorDetails = "Operation not supported";
             break;
         default:
-#if LIBAVUTIL_VERSION_MAJOR < 51 
-	    errorDetails = QString("Error Code: %1").arg(errorCode);
+#if LIBAVUTIL_VERSION_MAJOR < 50
+            errorDetails = QString("Error Code: %1").arg(errorCode);
 #else
             av_strerror(errorCode, errorDescription, sizeof(errorDescription));
             errorDescription[sizeof(errorDescription) - 1] = 0; // Always nul-terminate
@@ -214,6 +214,15 @@ bool BinkPlayer::open(const QString &filename)
     return true;
 }
 
+template <typename T>
+struct AvFree : QScopedPointerDeleter<T>
+{
+    static inline void cleanup(T *pointer)
+    {
+        av_free(pointer);
+    }
+};
+
 void BinkPlayer::play()
 {
     int error;
@@ -248,16 +257,15 @@ void BinkPlayer::play()
     while ((error = av_read_frame(d_ptr->formatCtx, &packet)) >= 0) {
         // Audio frame?
         if (packet.stream_index == d_ptr->audioStreamIndex) {
-            QByteArray audioBuffer(AVCODEC_MAX_AUDIO_FRAME_SIZE * 3 / 2, Qt::Uninitialized);
-            int frameSize = audioBuffer.size();
-            int result = avcodec_decode_audio2(d_ptr->audioCodecCtx,
-                                  (int16_t*)audioBuffer.data(),
+            int frameSize = AVCODEC_MAX_AUDIO_FRAME_SIZE * 3 / 2;
+            QScopedPointer< int16_t, AvFree<int16_t> > audioBuffer((int16_t*)av_malloc(frameSize));
+            int result = avcodec_decode_audio3(d_ptr->audioCodecCtx,
+                                  audioBuffer.data(),
                                   &frameSize,
-                                  packet.data,
-                                  packet.size);
+                                  &packet);
 
             if (result <= 0) {
-                qWarning("Unable to decode audio packet @ %ld.", packet.pos);
+                qWarning("Unable to decode audio packet @ %ld.", (long int)packet.pos);
             }
 
             if (frameSize == 0)
@@ -281,7 +289,7 @@ void BinkPlayer::play()
             ALuint buffer;
             alGenBuffers(1, &buffer);
 
-            alBufferData(buffer, AL_FORMAT_STEREO16, audioBuffer, frameSize, d_ptr->audioCodecCtx->sample_rate);
+            alBufferData(buffer, AL_FORMAT_STEREO16, audioBuffer.data(), frameSize, d_ptr->audioCodecCtx->sample_rate);
             alSourceQueueBuffers(source, 1, &buffer);
             ALint sourceState;
             alGetSourcei(source, AL_SOURCE_STATE, &sourceState);
@@ -289,14 +297,13 @@ void BinkPlayer::play()
                 alSourcePlay(source);
         }
         if (packet.stream_index == d_ptr->videoStreamIndex) {
-            error = avcodec_decode_video(d_ptr->videoCodecCtx,
+            error = avcodec_decode_video2(d_ptr->videoCodecCtx,
                                          d_ptr->videoFrame,
                                          &frameFinished,
-                                         packet.data,
-                                         packet.size);
+                                         &packet);
 
             if (error <= 0) {
-                qWarning("Unable to decode video packet @ %ld.", packet.pos);
+                qWarning("Unable to decode video packet @ %ld.", (long int)packet.pos);
             }
 
             if (frameFinished) {
