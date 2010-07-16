@@ -10,8 +10,8 @@ Item {
 
     property alias npcName : npcNameLabel.text
     property alias npcText : npcTextLabel.text
-    property alias answers : answerRepeater.model;
-    property string portrait : 'art/interface/portraits/TempMan.png';
+    property alias answers : answerRepeater.model
+    property string portrait : 'art/interface/portraits/TempMan.png'
 
     signal answered(int id);
 

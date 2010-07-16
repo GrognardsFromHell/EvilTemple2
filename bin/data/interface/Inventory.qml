@@ -7,19 +7,22 @@ MovableWindow {
     title: 'Inventory'
 
     property alias money : moneyDisplay.money
-    property variant items : [{
-        iconPath: 'art/interface/inventory/Sword_2-Handed3_Icon.png',
-        description: 'Some Sword',
-        worth: 1000,
-        weight: 10
-    }]
+    property variant items : {
+                             objects: [{
+                                    iconPath: 'art/interface/inventory/Sword_2-Handed3_Icon.png',
+                                    description: 'Some Sword',
+                                    worth: 1000,
+                                    weight: 10
+                                    }]
+                             }
 
     signal itemClicked(string guid)
 
     onItemsChanged: {
+        var objects = items.objects;
         listModel.clear();
-        for (var i = 0; i < items.length; ++i) {
-            listModel.append(items[i]);
+        for (var i = 0; i < objects.length; ++i) {
+            listModel.append(objects[i]);
         }
     }
 

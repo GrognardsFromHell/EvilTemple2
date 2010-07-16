@@ -50,7 +50,7 @@ function showInventory(obj) {
     print("Object money: " + obj.money);
 
     inventoryDialog.money = money.getTotalCopper();
-    inventoryDialog.items = objects;
+    inventoryDialog.items = { objects: objects };
     
     inventoryDialog.closeClicked.connect(function() {
         inventoryDialog.deleteLater();

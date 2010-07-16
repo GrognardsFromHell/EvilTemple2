@@ -88,7 +88,7 @@ var Money = function(value) {
      * removed from this money object, but the total amount can never go below zero.
      */
     Money.prototype.addCopper = function(amount) {
-        this._value += amount * SilverInCopper;
+        this._value += amount;
         if (this._value < 0)
             this._value = 0;
     };

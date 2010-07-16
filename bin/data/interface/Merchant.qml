@@ -7,8 +7,13 @@ MovableWindow {
     height: 480
 
     signal buyItem(string guid)
+    signal sellItem(string guid)
 
     property alias money : moneyDisplay.money
+    property alias merchantName : merchantNameText.text
+    property alias playerName : playerNameText.text
+    property string playerPortrait : 'art/interface/portraits/TempMan.png'
+    property string merchantPortrait : 'art/interface/portraits/TempMan.png'
 
     property variant merchantItems : [{
             iconPath: 'art/interface/inventory/Sword_2-Handed3_Icon.png',
@@ -17,17 +22,35 @@ MovableWindow {
             weight: 10
         }]
 
+    property variant playerItems : [{
+            iconPath: 'art/interface/inventory/Sword_2-Handed3_Icon.png',
+            description: 'Some Sword',
+            worth: 1000,
+            weight: 10
+        }]
+
+    function copyItem(item) {
+        return {
+            iconPath: item.iconPath,
+            description: item.description,
+            worth: item.worth,
+            quantity: item.quantity,
+            weight: item.weight,
+            guid: item.guid
+        };
+    }
+
     onMerchantItemsChanged: {
         merchantInventoryModel.clear();
         merchantItems.forEach(function (item) {
-            merchantInventoryModel.append({
-                iconPath: item.iconPath,
-                description: item.description,
-                worth: item.worth,
-                quantity: item.quantity,
-                weight: item.weight,
-                guid: item.guid
-            });
+            merchantInventoryModel.append(copyItem(item));
+        });
+    }
+
+    onPlayerItemsChanged: {
+        playerInventoryModel.clear();
+        playerItems.forEach(function (item) {
+            playerInventoryModel.append(copyItem(item));
         });
     }
 
@@ -87,8 +110,33 @@ MovableWindow {
         opacity: 0.5
     }
 
+
+    Image {
+        id: buyArrowImage
+        visible: false
+        source: 'buyarrow_over.png'
+        x: (parent.width - width) / 2 - 10
+        width: 64
+        height: 64
+        smooth: true
+        opacity: 0.75
+        z: 1000
+    }
+
+    Image {
+        id: sellArrowImage
+        visible: false
+        source: 'sellarrow_over.png'
+        x: (parent.width - width) / 2 - 10
+        width: 64
+        height: 64
+        smooth: true
+        opacity: 0.75
+        z: 1000
+    }
+
     Component {
-        id: delegate
+        id: buyDelegate
 
         InventoryItem {
             iconPath: model.iconPath
@@ -102,17 +150,54 @@ MovableWindow {
             anchors.left: parent ? parent.left : undefined
             anchors.right: parent ? parent.right : undefined
 
-            Image {
-                source: 'buyarrow_off.png'
-                x: parent.width - 48
-                y: (parent.height - height) / 2
-                width: 32
-                height: 32
-                smooth: true
-                visible: parent.containsMouse
+            onEntered: {
+                buyArrowImage.y = merchantInventoryView.y + y - merchantInventoryView.contentY + (height - 64) / 2;
+                buyArrowImage.visible = true;
+            }
+
+            onMousePositionChanged: {
+                buyArrowImage.y = merchantInventoryView.y + y - merchantInventoryView.contentY + (height - 64) / 2;
+            }
+
+            onExited: {
+                buyArrowImage.visible = false;
             }
 
             onDoubleClicked: buyItem(model.guid)
+        }
+    }
+
+
+    Component {
+        id: sellDelegate
+
+        InventoryItem {
+            iconPath: model.iconPath
+            quantity: model.quantity ? model.quantity : 1
+            location: model.location ? model.location : 0
+            description: model.description
+            magical: model.magical ? true : false
+            weight: model.weight
+            worth: model.worth
+
+            anchors.left: parent ? parent.left : undefined
+            anchors.right: parent ? parent.right : undefined
+
+
+            onEntered: {
+                sellArrowImage.y = playerInventoryView.y + y - playerInventoryView.contentY + (height - 64) / 2;
+                sellArrowImage.visible = true;
+            }
+
+            onMousePositionChanged: {
+                sellArrowImage.y = playerInventoryView.y + y - playerInventoryView.contentY + (height - 64) / 2;
+            }
+
+            onExited: {
+                sellArrowImage.visible = false;
+            }
+
+            onDoubleClicked: sellItem(model.guid)
         }
     }
 
@@ -121,25 +206,71 @@ MovableWindow {
         anchors.fill: merchantInventoryBackground
         anchors.margins: 10
         model: merchantInventoryModel
-        delegate: delegate
+        delegate: buyDelegate
         clip: true
         spacing: 5
     }
 
+    ListView {
+        id: playerInventoryView
+        anchors.fill: playerInventoryBackground
+        anchors.margins: 10
+        model: playerInventoryModel
+        delegate: sellDelegate
+        clip: true
+        spacing: 5
+    }
+
+    Rectangle {
+        id: merchantPortraitImage
+        width: 32
+        height: 28
+        anchors.verticalCenter: merchantNameText.verticalCenter
+        anchors.left: merchantInventoryBackground.left
+        color: 'black'
+        anchors.leftMargin: 5
+
+        Image {
+            anchors.fill: parent
+            anchors.margins: 1
+            source: '../' + merchantPortrait
+            smooth: true
+        }
+    }
+
     StandardText {
         id: merchantNameText
-        x: 12
+        anchors.left: merchantPortraitImage.right
+        anchors.leftMargin: 10
         y: 15
         text: 'Merchant Name'
         font.bold: true
+    }
+
+    Rectangle {
+        id: playerPortraitImage
+        width: 32
+        height: 28
+        anchors.verticalCenter: playerNameText.verticalCenter
+        anchors.left: playerInventoryBackground.left
+        anchors.leftMargin: 5
+        color: 'black'
+
+        Image {
+            anchors.fill: parent
+            anchors.margins: 1
+            source: '../' + playerPortrait
+            smooth: true
+        }
     }
 
     StandardText {
         id: playerNameText
         y: 15
         text: 'Player Name'
+        anchors.leftMargin: 10
         font.bold: true
-        anchors.left: playerInventoryBackground.left
+        anchors.left: playerPortraitImage.right
     }
 
 

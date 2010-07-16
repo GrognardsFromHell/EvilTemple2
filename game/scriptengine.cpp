@@ -1,6 +1,7 @@
 
 #include <QtScriptTools>
 #include <QElapsedTimer>
+#include <QUuid>
 
 #include "scriptengine.h"
 #include "game.h"
@@ -169,6 +170,11 @@ namespace EvilTemple {
         return QScriptValue((uint)timer.msecsSinceReference());
      }
 
+     static QScriptValue generateGuid(QScriptContext*, QScriptEngine*)
+     {
+         return QUuid::createUuid().toString();
+     }
+
      template<typename T>
      static QScriptValue renderableCtor(QScriptContext *context, QScriptEngine *engine)
      {
@@ -252,6 +258,8 @@ namespace EvilTemple {
 
         QScriptValue timerReferenceFn = engine->newFunction(timerReference, 0);
         global.setProperty("timerReference", timerReferenceFn);
+
+        global.setProperty("generateGuid", engine->newFunction(generateGuid, 0));
 
         global.setProperty("ModelInstance", engine->newFunction(renderableCtor<ModelInstance>));
         global.setProperty("Light", engine->newFunction(renderableCtor<Light>));

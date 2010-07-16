@@ -49,6 +49,10 @@ var LegacyScripts = {};
                 return distance(pos, mobile.position) <= 500;
             });
 
+            result = result.map(function(obj) {
+                return new CritterWrapper(obj);
+            });
+
             print("Found " + result.length + " objects of type " + type + " near " + pos);
             return result;
         }
@@ -84,7 +88,26 @@ var LegacyScripts = {};
         },
 
         create_item_in_inventory: function(prototypeId, receiver) {
-            print("Creating item with prototype " + prototypeId + " for " + receiver.obj.id);
+
+            var prototype = prototypes[prototypeId];
+
+            if (!prototype) {
+                print("Unknown prototype: " + prototype);
+                return;
+            }
+
+            var item = {
+                id: generateGuid(),
+                prototype: prototypeId
+            };
+            connectToPrototype(item);
+
+            if (!receiver.obj.content) {
+                receiver.obj.content = [];
+            }
+            receiver.obj.content.push(item);
+
+            print("Created item " + item.id + " with prototype " + prototypeId + " for " + receiver.obj.id);
         },
 
         /**
@@ -189,6 +212,7 @@ var LegacyScripts = {};
             this.map = obj.map.id;
             this.area = obj.map.area;
         }
+        this.internalId = obj.internalId;
         this.position = obj.position;
 
         this.obj = obj;

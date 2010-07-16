@@ -14,8 +14,33 @@ var MerchantUi = {
     function buyItem(guid) {
         print("Trying to buy item " + guid);
 
-        var mobile = Maps.currentMap.findMobileById(guid);
-        showMobileInfo(mobile, null);
+        var inventory = getInventory(currentMerchant);
+
+        for (var i = 0; i < inventory.length; ++i) {
+            var item = inventory[i];
+            if (item.id == guid) {
+                // Pay for it and only if that succeeds, move it
+                if (Party.money.getTotalCopper() < item.worth) {
+                    print("Player doesn't have enough money.");
+                    return;
+                }
+                Party.money.addCopper(- item.worth);
+
+                inventory.splice(i, 1); // Remove from container
+
+                if (!currentPlayer.content)
+                    currentPlayer.content = [];
+
+                currentPlayer.content.push(item);
+
+                // Refresh the UI
+                MerchantUi.refresh();
+
+                return;
+            }
+        }
+
+        print("Unknown item guid: " + guid);
     }
 
     /**
@@ -66,14 +91,10 @@ var MerchantUi = {
     }
 
     /**
-     * Shows the merchant UI.
-     *
+     * Gets the merchant's stock inventory.
      * @param merchant The merchant.
-     * @param player The player who initiated the trade.
      */
-    MerchantUi.show = function(merchant, player) {
-        this.close();
-
+    function getInventory(merchant) {
         var inventory = merchant.content;
 
         // If the NPC has a substitute inventory id, look for it.
@@ -82,21 +103,40 @@ var MerchantUi = {
 
             if (!container) {
                 print("Unable to find substitute inventory: " + merchant.substituteInventoryId);
-                return;
+                return null;
             }
 
             inventory = container.content;
         }
 
+        return inventory;
+    }
+
+    /**
+     * Shows the merchant UI.
+     *
+     * @param merchant The merchant.
+     * @param player The player who initiated the trade.
+     */
+    MerchantUi.show = function(merchant, player) {
+        this.close();
+
         currentMerchant = merchant;
         currentPlayer = player;
 
+        /*
+         Create and initialize the merchant UI
+         */
         merchantUi = gameView.addGuiItem("interface/Merchant.qml");
         merchantUi.closeClicked.connect(MerchantUi, MerchantUi.close);
         merchantUi.buyItem.connect(this, buyItem);
 
-        merchantUi.money = Party.money.getTotalCopper();
-        merchantUi.merchantItems = buildModelFromInventory(inventory);
+        merchantUi.merchantName = merchant.getName();
+        merchantUi.merchantPortrait = getPortrait(merchant.portrait, Portrait_Medium);
+        merchantUi.playerName = player.getName();
+        merchantUi.playerPortrait = getPortrait(player.portrait, Portrait_Medium);
+
+        this.refresh();
     };
 
     /**
@@ -110,5 +150,27 @@ var MerchantUi = {
         currentMerchant = null;
         currentPlayer = null;
     };
+
+    /**
+     * Refreshes the data displayed by the current merchant ui.
+     *
+     * This is used after a transaction and on the initial show of the UI.
+     */
+    MerchantUi.refresh = function() {
+        if (!currentMerchant)
+            return;
+
+        var inventory = getInventory(currentMerchant);
+        if (!inventory)
+            inventory = [];
+        merchantUi.merchantItems = buildModelFromInventory(inventory, 1.0);
+
+        var playerInventory = currentPlayer.content;
+        if (!playerInventory)
+            playerInventory = [];
+        merchantUi.playerItems = buildModelFromInventory(playerInventory, 0.5);
+
+        merchantUi.money = Party.money.getTotalCopper();
+    }
 
 })();
