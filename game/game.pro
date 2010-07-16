@@ -13,7 +13,7 @@ TARGET = game
 
 CONFIG += dll
 
-TEMPLE_LIBS += qt3d minizip glew jpeg audioengine qjson
+TEMPLE_LIBS += qt3d minizip glew jpeg audioengine qjson binkplayer
 include(../3rdparty/game-math/game-math.pri)
 
 DEFINES += GAME_LIBRARY

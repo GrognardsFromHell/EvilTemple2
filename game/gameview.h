@@ -135,6 +135,8 @@ public slots:
 
     void openBrowser(const QUrl &url);
 
+    bool playMovie(const QString &filename, const QScriptValue &callback);
+
 protected:
     void resizeEvent(QResizeEvent *event);
     void mouseMoveEvent(QMouseEvent *event);

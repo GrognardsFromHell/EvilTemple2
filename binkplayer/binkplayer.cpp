@@ -16,6 +16,18 @@ extern "C" {
 
 namespace EvilTemple {
 
+static bool avCodecsRegistered = false;
+
+static void initializeCodecs()
+{
+    if (avCodecsRegistered)
+        return;
+
+    fprintf(stderr, "Registering AV Codecs.\n");
+    av_register_all();
+    avCodecsRegistered = true;
+}
+
 class BinkPlayerData
 {
 public:
@@ -180,6 +192,8 @@ BinkPlayer::~BinkPlayer()
 
 bool BinkPlayer::open(const QString &filename)
 {
+    initializeCodecs();
+
     if (d_ptr->formatCtx) {
         close();
     }
@@ -321,9 +335,9 @@ void BinkPlayer::play()
                 }
 
                 int64_t sleep = nextFrame - av_gettime();
-                if (sleep > 0) {
-                    // TODO: Fix
-                    // Sleep(sleep / 1000);
+                while (sleep > 0) {
+                    // TODO: Fix this busy waiting....
+                    sleep = nextFrame - av_gettime();
                 }
 
                 nextFrame = av_gettime() + frameTime;

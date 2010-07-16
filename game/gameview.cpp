@@ -5,6 +5,8 @@
 #include <QtCore/QElapsedTimer>
 #include <QtDeclarative/QtDeclarative>
 #include <QtGui/QResizeEvent>
+#include <QtOpenGL/QGLContext>
+#include <QtGui/QImage>
 
 #include "gameview.h"
 
@@ -27,6 +29,7 @@
 #include "sectormap.h"
 #include "models.h"
 #include "imageuploader.h"
+#include "binkplayer.h"
 
 #include <QPointer>
 
@@ -86,15 +89,28 @@ namespace EvilTemple {
         }
     }
 
-    class GameViewData : public AlignedAllocation
+    class VideoPlayerThread : public QThread
     {
+    Q_OBJECT
+    public:
+        VideoPlayerThread(BinkPlayer *player) : mPlayer(player) {}
+    protected:
+        void run();
+        BinkPlayer *mPlayer;
+    };
+
+    class GameViewData : public QObject, public AlignedAllocation
+    {
+    Q_OBJECT
     public:
         GameViewData(GameView *view)
             : q(view), backgroundMap(renderStates),
             clippingGeometry(renderStates), dragging(false), lightDebugger(renderStates),
             materials(renderStates), sectorMap(&scene), models(&materials, renderStates),
             particleSystems(&models, &materials), scene(&materials), lastAudioEnginePosition(0, 0, 0, 1),
-            scrollingDisabled(false)
+            scrollingDisabled(false),
+            mPlayingVideo(false),
+            mVideoPlayerThread(&mVideoPlayer)
         {
             sceneTimer.invalidate();
 
@@ -146,6 +162,9 @@ namespace EvilTemple {
 
             lightDebugger.loadMaterial();
             Light::setDebugRenderer(&lightDebugger);
+
+            connect(&mVideoPlayer, SIGNAL(videoFrame(QImage)), SLOT(updateVideoFrame(QImage)));
+            connect(&mVideoPlayerThread, SIGNAL(finished()), SLOT(stoppedPlayingVideo()));
         }
 
         ~GameViewData()
@@ -247,6 +266,13 @@ namespace EvilTemple {
 
         bool scrollingDisabled;
 
+        QImage mCurrentVideoFrame;
+        bool mPlayingVideo;
+        BinkPlayer mVideoPlayer;
+        VideoPlayerThread mVideoPlayerThread;
+        QScriptValue mVideoFinishedCallback;
+        QGraphicsScene movieEmptyScene; // We switch to this scene for playback
+
         QDeclarativeEngine uiEngine;
         QGraphicsScene uiScene;
         QPointer<QDeclarativeItem> rootItem;
@@ -288,6 +314,8 @@ namespace EvilTemple {
 
         Vector4 lastAudioEnginePosition;
 
+        void playVideo(const QString &video);
+
         void resize(int width, int height) {
             float halfWidth = width * 0.5f;
             float halfHeight = height * 0.5f;
@@ -310,9 +338,33 @@ namespace EvilTemple {
 
         void pollVisualTimers();
 
+    public slots:
+        void updateVideoFrame(const QImage &image)
+        {
+            mCurrentVideoFrame = image;
+        }
+
+        void stoppedPlayingVideo()
+        {
+            qDebug("Finished playing video. Thread was stopped.");
+
+            q->setScene(&uiScene);
+            mPlayingVideo = false;
+            mCurrentVideoFrame = QImage();
+            if (mVideoFinishedCallback.isValid()) {
+                mVideoFinishedCallback.call();
+                mVideoFinishedCallback = QScriptValue();
+            }
+        }
+
     private:
         GameView *q;
     };
+
+    void VideoPlayerThread::run()
+    {
+        mPlayer->play();
+    }
 
     void GameViewData::pollVisualTimers()
     {
@@ -374,6 +426,43 @@ namespace EvilTemple {
         Profiler::newFrame();
 
         while (glGetError() != GL_NO_ERROR);
+
+        if (d->mPlayingVideo) {
+
+            if (d->mCurrentVideoFrame.isNull())
+                return;
+
+            glMatrixMode(GL_PROJECTION);
+            glLoadIdentity();
+
+            glMatrixMode(GL_MODELVIEW);
+            glLoadIdentity();
+
+            glClearColor(0, 0, 0, 0);
+            glClear(GL_COLOR_BUFFER_BIT);
+
+            QGLContext *context = const_cast<QGLContext*>(QGLContext::currentContext());
+            Q_ASSERT(context);
+
+            glEnable(GL_TEXTURE_2D);
+            GLuint texture = context->bindTexture(d->mCurrentVideoFrame, GL_TEXTURE_2D, GL_RGBA, QGLContext::NoBindOption);
+
+            glBegin(GL_QUADS);
+            glTexCoord2f(0, 1);
+            glVertex2i(-1, -1);
+            glTexCoord2f(0, 0);
+            glVertex2i(-1, 1);
+            glTexCoord2f(1, 0);
+            glVertex2i(1, 1);
+            glTexCoord2f(1, 1);
+            glVertex2i(1, -1);
+            glEnd();
+
+            glDisable(GL_TEXTURE_2D);
+            context->deleteTexture(texture);
+
+            return;
+        }
 
         // Update the audio engine state if necessary
         d->updateListenerPosition();
@@ -744,4 +833,26 @@ namespace EvilTemple {
         return d->scrollingDisabled;
     }
 
+    bool GameView::playMovie(const QString &filename, const QScriptValue &callback)
+    {
+        if (d->mPlayingVideo) {
+            qDebug("Already playing video. Movie queue is still todo...");
+            return false;
+        }
+
+        if (!d->mVideoPlayer.open(filename)) {
+            qDebug("Unable to open video: %s: %s", qPrintable(filename), qPrintable(d->mVideoPlayer.errorString()));
+            return false;
+        }
+
+        setScene(&d->movieEmptyScene);
+
+        d->mPlayingVideo = true;
+        d->mVideoFinishedCallback = callback;
+        d->mVideoPlayerThread.start();
+        return true;
+    }
+
 }
+
+#include "gameview.moc"
