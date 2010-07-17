@@ -3,6 +3,7 @@
 #include <QThread>
 #include <QApplication>
 
+#include "audioengine.h"
 #include "binkplayer.h"
 #include "dialog.h"
 
@@ -60,6 +61,9 @@ int main(int argc, char *argv[])
     dialog.connect(&player, SIGNAL(videoFrame(QImage)),
                    &dialog, SLOT(showFrame(QImage)));
     dialog.show();
+
+    AudioEngine audioEngine;
+    audioEngine.open();
 
     thread.start();
 

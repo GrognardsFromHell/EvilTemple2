@@ -9,10 +9,80 @@ extern "C" {
 }
 
 #include "binkplayer.h"
-#include "audioengine.h"
 
 #include <AL/al.h>
 #include <AL/alc.h>
+
+static int file_read(URLContext *h, unsigned char *buf, int size)
+{
+    QFile *file = (QFile*) h->priv_data;
+
+    return file->read(reinterpret_cast<char*>(buf), size);
+}
+
+static int file_write(URLContext *h, unsigned char *buf, int size)
+{
+    qFatal("Writing to QFile from libavformat is not supported.");
+    return -1;
+}
+
+static int file_open(URLContext *h, const char *rawFilename, int flags)
+{
+    QString filename = QString::fromLocal8Bit(rawFilename);
+    if (filename.startsWith("bfile:"))
+        filename = filename.mid(strlen("bfile:"));
+
+    QFile *file = new QFile(filename);
+
+    if (!file->open(QIODevice::ReadOnly)) {
+        int error = file->error();
+        delete file;
+        return AVERROR(error);
+    }
+
+    h->priv_data = (void *) file;
+    return 0;
+}
+
+static int64_t file_seek(URLContext *h, int64_t pos, int whence)
+{
+    QFile *file = (QFile*) h->priv_data;
+    if (whence == AVSEEK_SIZE)
+        return file->size();
+
+    if (whence == SEEK_SET) {
+        if (!file->seek(pos))
+            return -1;
+    } else if (whence == SEEK_CUR) {
+        if (pos == 0)
+            return file->pos();
+        if (!file->seek(file->pos() + pos))
+            return -1;
+    } else if (whence == SEEK_END) {
+        if (!file->seek(file->size() + pos))
+            return -1;
+    }
+
+    return file->pos();
+}
+
+static int file_close(URLContext *h)
+{
+    QFile *file = (QFile*) h->priv_data;
+    delete file;
+    h->priv_data = NULL;
+    return 0;
+}
+
+static URLProtocol binkfile_protocol = {
+    "bfile",
+    file_open,
+    file_read,
+    file_write,
+    file_seek,
+    file_close,
+    0
+};
 
 namespace EvilTemple {
 
@@ -25,6 +95,7 @@ static void initializeCodecs()
 
     fprintf(stderr, "Registering AV Codecs.\n");
     av_register_all();
+    av_register_protocol(&binkfile_protocol);
     avCodecsRegistered = true;
 }
 
@@ -200,7 +271,7 @@ bool BinkPlayer::open(const QString &filename)
 
     d_ptr->filename = filename;
 
-    int error = av_open_input_file(&d_ptr->formatCtx, qPrintable(filename), d_ptr->binkFormat, 0, NULL);
+    int error = av_open_input_file(&d_ptr->formatCtx, qPrintable("bfile:" + filename), d_ptr->binkFormat, 0, NULL);
     if (error != 0) {
         d_ptr->errorFromCode("Couldn't open file.", error);
         return false;
@@ -239,12 +310,11 @@ struct AvFree : QScopedPointerDeleter<T>
 
 void BinkPlayer::play()
 {
+    mStopped = false;
+
     int error;
     AVPacket packet;
     int frameFinished = 0;
-
-    AudioEngine audioEngine;
-    audioEngine.open();
 
     int width = d_ptr->videoCodecCtx->width;
     int height = d_ptr->videoCodecCtx->height;
@@ -268,7 +338,7 @@ void BinkPlayer::play()
     ALuint source;
     alGenSources(1, &source);
 
-    while ((error = av_read_frame(d_ptr->formatCtx, &packet)) >= 0) {
+    while (!mStopped && (error = av_read_frame(d_ptr->formatCtx, &packet)) >= 0) {
         // Audio frame?
         if (packet.stream_index == d_ptr->audioStreamIndex) {
             int frameSize = AVCODEC_MAX_AUDIO_FRAME_SIZE * 3 / 2;
@@ -346,9 +416,14 @@ void BinkPlayer::play()
             }
         }
 
-        if (packet.data)
+        if (packet.data) {
             av_free_packet(&packet);
+            packet.data = NULL;
+        }
     }
+
+    if (packet.data)
+        av_free_packet(&packet);
 
     sws_freeContext(scalingCtx);
 }
@@ -356,10 +431,7 @@ void BinkPlayer::play()
 void BinkPlayer::close()
 {
     if (d_ptr->formatCtx) {
-        av_close_input_file(d_ptr->formatCtx);
-        d_ptr->formatCtx = NULL;
-
-        if (d_ptr->audioCodec && d_ptr->audioCodecCtx) {
+       if (d_ptr->audioCodec && d_ptr->audioCodecCtx) {
             avcodec_close(d_ptr->audioCodecCtx);
             d_ptr->audioCodec = NULL;
             d_ptr->audioCodecCtx = NULL;
@@ -380,6 +452,9 @@ void BinkPlayer::close()
             av_free(d_ptr->audioFrame);
             d_ptr->audioFrame = NULL;
         }
+
+        av_close_input_file(d_ptr->formatCtx);
+        d_ptr->formatCtx = NULL;
     }
     d_ptr->filename = QString::null;
 }
@@ -387,6 +462,11 @@ void BinkPlayer::close()
 const QString &BinkPlayer::errorString()
 {
     return d_ptr->lastError;
+}
+
+void BinkPlayer::stop()
+{
+    mStopped = true;
 }
 
 }

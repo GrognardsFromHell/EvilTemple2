@@ -55,11 +55,11 @@ namespace Troika
         GameObject *readMobile(const QString &filename);
         bool readClippingMeshFiles(); // Loads clipping.cgf
         bool readClippingMeshInstances(); // Loads dag files + clipping.cif
-		bool readGlobalLight(); // Loads global.lit
+        bool readGlobalLight(); // Loads global.lit
 
         VirtualFileSystem *vfs;
         Prototypes *prototypes;
-        ZoneTemplate *zoneTemplate;        
+        ZoneTemplate *zoneTemplate;
         QString mapDirectory;
         QVector<GeometryMeshFile> geometryMeshFiles;
         QStringList clippingMeshFiles;

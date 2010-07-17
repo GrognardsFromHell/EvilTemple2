@@ -152,6 +152,11 @@ namespace Troika
         ObjectFileReader(Prototypes *prototypes, QDataStream &stream);
         ~ObjectFileReader();
 
+        /**
+          For debugging output only.
+          */
+        void setFilename(const QString &filename);
+
         bool read(bool skipHeader = false);
         const QString &errorMessage() const;
 

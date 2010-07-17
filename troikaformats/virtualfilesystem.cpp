@@ -1,3 +1,5 @@
+#include <QSet>
+
 #include "virtualfilesystem.h"
 
 namespace Troika {
@@ -42,7 +44,7 @@ QStringList VirtualFileSystem::listFiles(const QString &path, const QString &fil
         result.append(handler->listFiles(path, filter));
     }
 
-    return result;
+    return result.toSet().toList();
 }
 
 QStringList VirtualFileSystem::listAllFiles(const QString &filter)
@@ -53,7 +55,7 @@ QStringList VirtualFileSystem::listAllFiles(const QString &filter)
         result.append(handler->listAllFiles(filter));
     }
 
-    return result;
+    return result.toSet().toList();
 }
 
 }

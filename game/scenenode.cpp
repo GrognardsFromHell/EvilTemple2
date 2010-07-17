@@ -90,6 +90,11 @@ void SceneNode::updateBoundingBox() const
 
 void SceneNode::attachObject(Renderable *renderable)
 {
+    if (!renderable) {
+        qWarning("Trying to attach a null-renderable to a scene node.");
+        return;
+    }
+
     // TODO: Fix this mess
     if (!renderable->parent()) {
         renderable->setParent(mScene);

@@ -235,6 +235,7 @@ namespace Troika
         stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
 
         ObjectFileReader reader(prototypes, stream);
+        reader.setFilename(filename);
 
         if (!reader.read(false)) {
             qWarning("Unable to read mobile file: %s", qPrintable(filename));
@@ -365,9 +366,12 @@ namespace Troika
         // Read objects while the object header is valid
         stream >> header;
 
+        int objectId = 0;
+
         while (header == ObjectFileVersion)
         {
             ObjectFileReader reader(prototypes, stream);
+            reader.setFilename(QString("%1:%2").arg(mapDirectory).arg(objectId));
 
             if (!reader.read(true))
             {

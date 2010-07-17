@@ -16,7 +16,18 @@ MovableWindow {
                                     }]
                              }
 
-    signal itemClicked(string guid)
+    signal itemLeftClicked(string guid)
+    signal itemRightClicked(string guid)
+    signal itemDoubleClicked(string guid)
+
+    function removeItem(guid) {
+        for (var i = 0; i < listModel.count; ++i) {
+            if (listModel.get(i).guid == guid) {
+                listModel.remove(i);
+                return;
+            }
+        }
+    }
 
     onItemsChanged: {
         var objects = items.objects;
@@ -38,9 +49,18 @@ MovableWindow {
             weight: model.weight
             worth: model.worth
 
+            acceptedButtons: Qt.LeftButton|Qt.RightButton
             anchors.left: parent ? parent.left : undefined
             anchors.right: parent ? parent.right : undefined
-            onClicked: itemClicked(guid)
+            onClicked: if (mouse.button == Qt.LeftButton) {
+                itemLeftClicked(guid)
+            } else if (mouse.button == Qt.RightButton) {
+                itemRightClicked(guid)
+            }
+
+            onDoubleClicked: if (mouse.button == Qt.LeftButton) {
+                itemDoubleClicked(guid)
+            }
         }
     }
 

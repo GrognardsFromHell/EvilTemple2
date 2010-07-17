@@ -32,7 +32,9 @@ SOURCES += converter.cpp \
     convertmodelstask.cpp \
     ../game/tga.cpp \
     pythonconverter.cpp \
-    mapareamapping.cpp
+    mapareamapping.cpp \
+    convertmoviestask.cpp \
+    qdirvfshandler.cpp
 
 HEADERS += \
     util.h \
@@ -60,7 +62,9 @@ HEADERS += \
     convertmodelstask.h \
     ../game/tga.h \
     pythonconverter.h \
-    mapareamapping.h
+    mapareamapping.h \
+    convertmoviestask.h \
+    qdirvfshandler.h
 
 win32:SOURCES += basepathfinder_win32.cpp
 else:SOURCES += basepathfinder.cpp

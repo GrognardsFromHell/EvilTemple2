@@ -92,13 +92,21 @@ void appendIndent(int indent, QString &result)
 }
 
 static void convertStatement(stmt_ty stmt, QString &result, int indent, Environment *environment);
-static void convertExpression(expr_ty expression, QString &result, int indent, Environment *environment, bool prefix = false);
+static void convertExpression(expr_ty expression, QString &result, int indent, Environment *environment, bool prefix = true);
 static bool process(expr_ty expression, QString &result, int indent, Environment *environment);
 static bool process(stmt_ty stmt, QString &result, int indent, Environment *environment);
 
-static void convertName(const identifier id, const expr_context_ty ctx, QString &result, int indent, Environment *environment)
+static void convertName(const identifier id, const expr_context_ty ctx, QString &result, int indent, Environment *environment, bool prefix = true)
 {
-    result.append(QString::fromLocal8Bit(PyString_AsString(id)));
+    QString root = QString::fromLocal8Bit(PyString_AsString(id));
+
+    if (prefix) {
+        if (!root.isNull() && !environment->isDefined(root) && !environment->isParameter(root)) {
+            result.append("this.");
+        }
+    }
+
+    result.append(root);
 }
 
 static QString getRootObject(expr_ty value) {
@@ -161,7 +169,7 @@ static void convertCall(const expr_ty func,
     if (kwargs != NULL)
         qWarning("Unable to handle keyword ars.");
 
-    convertExpression(func, result, indent, environment);
+    convertExpression(func, result, indent, environment, true);
     result.append('(');
 
     for (int i = 0; i < asdl_seq_LEN(args); ++i) {
@@ -189,6 +197,15 @@ static void convertBinaryOp(expr_ty left,
                             QString &result,
                             int indent, Environment *environment)
 {
+    if (op == Pow) {
+        result.append("Math.pow(");
+        convertExpression(left, result, indent, environment, true);
+        result.append(", ");
+        convertExpression(right, result, indent, environment, true);
+        result.append(")");
+        return;
+    }
+
     if (!isPrimitive(left))
         result.append("(");
     convertExpression(left, result, indent, environment, true);
@@ -211,8 +228,6 @@ static void convertBinaryOp(expr_ty left,
     case Mod:
         result.append(" % ");
         break;
-    case Pow:
-        qWarning("POW is not supported yet.");
         break;
     case LShift:
         result.append(" << ");
@@ -351,6 +366,39 @@ static void convertComparison(expr_ty left,
 {
     Q_ASSERT(asdl_seq_LEN(ops) == asdl_seq_LEN(comparators));
 
+    cmpop_ty firstOp = (cmpop_ty)asdl_seq_GET(ops, 0);
+
+    // Special case handling for "not in" && "in"
+    if (asdl_seq_LEN(ops) == 1 && (firstOp == NotIn || firstOp == In)) {
+        expr_ty right = (expr_ty)asdl_seq_GET(comparators, 0);
+
+        // Very special case of checking for a party-member
+        QString rightString;
+        convertExpression(right, rightString, indent, environment, true);
+
+        /*
+        This causes some trouble because we're not operating on object wrappers here.
+        if (rightString == "this.game.party") {
+            if (firstOp == NotIn) {
+                result.append("!");
+            }
+            result.append("Party.isMember(");
+            convertExpression(left, result, indent, environment, true);
+            result.append(")");
+            return;
+        }*/
+
+        result.append(rightString);
+        result.append(".indexOf(");
+        convertExpression(left, result, indent, environment, true);
+        result.append(") ");
+        if (firstOp == In)
+            result.append(" != -1");
+        else
+            result.append(" == -1");
+        return;
+    }
+
     if (!isPrimitive(left))
         result.append('(');
     convertExpression(left, result, indent, environment, true);
@@ -420,8 +468,12 @@ static void convertTuple(asdl_seq *elts,
     convertList(elts, ctx, result, indent, environment);
 
     // JS has no tuples, so we'll use arrays instead. This is very problematic for assignments though.
-    if (ctx != 1)
-        qWarning("Converting tuple with ctx %d.", ctx);
+    if (ctx != 1) {
+        QString debugText;
+        convertList(elts, ctx, debugText, indent, environment);
+
+        qWarning("Converting tuple with ctx %d: %s", ctx, qPrintable(debugText));
+    }
 }
 
 static void convertExpression(const expr_ty expression, QString &result, int indent, Environment *environment, bool prefix)
@@ -432,13 +484,6 @@ static void convertExpression(const expr_ty expression, QString &result, int ind
       */
     if (process(expression, result, indent, environment))
         return;
-
-    if (prefix) {
-        QString root = getRootObject(expression);
-        if (!root.isNull() && !environment->isDefined(root) && !environment->isParameter(root)) {
-            result.append("this.");
-        }
-    }
 
     switch (expression->kind) {
     case BoolOp_kind:
@@ -517,7 +562,7 @@ static void convertExpression(const expr_ty expression, QString &result, int ind
                          indent, environment);
         break;
     case Name_kind:
-        convertName(expression->v.Name.id, expression->v.Name.ctx, result, indent, environment);
+        convertName(expression->v.Name.id, expression->v.Name.ctx, result, indent, environment, prefix);
         break;
     case List_kind:
         convertList(expression->v.List.elts,
@@ -597,16 +642,16 @@ static void convertRootFunction(const _stmt *stmt, QString &result, int indent, 
     for (int i = 0; i < asdl_seq_LEN(args->args); ++i) {
         const expr_ty name = (expr_ty)asdl_seq_GET(args->args, i);
 
-        if (i > 0)
-            result.append(", ");
-
-        convertExpression(name, result, indent, &localEnvironment);
-
         if (name->kind == Name_kind) {
             localEnvironment.define(getIdentifier(name->v.Name.id));
         } else {
             qWarning("Function argument declaration that is not a name: %d.", name->kind);
         }
+
+        if (i > 0)
+            result.append(", ");
+
+        convertExpression(name, result, indent, &localEnvironment);
     }
 
     result.append(") {\n");
@@ -843,14 +888,15 @@ static void convertFor(expr_ty target,
     appendIndent(indent, result);
     result.append(QString("for (var %1 = 0; %1 < %2.length; ++%1) {\n").arg(iterator).arg(iterateOn));
     appendIndent(indent + 1, result);
-    result.append("var ");
-    convertExpression(target, result, indent, environment);
-    result.append(QString(" = %1[%2];\n").arg(iterateOn).arg(iterator));
 
     Environment localEnvironment(environment);
     if (target->kind == Name_kind) {
         localEnvironment.defineParameter(getIdentifier(target->v.Name.id));
     }
+
+    result.append("var ");
+    convertExpression(target, result, indent, &localEnvironment);
+    result.append(QString(" = %1[%2];\n").arg(iterateOn).arg(iterator));
 
     for (int i = 0; i < asdl_seq_LEN(body); ++i) {
         convertStatement((stmt_ty)asdl_seq_GET(body, i), result, indent + 1, &localEnvironment);
@@ -1423,14 +1469,14 @@ static bool process(expr_ty expression, QString &result, int indent, Environment
 {
     if (expression->kind == Call_kind) {
         QString func;
-        convertExpression(expression->v.Call.func, func, 0, environment, false);
+        convertExpression(expression->v.Call.func, func, 0, environment);
 
         asdl_seq *args = expression->v.Call.args;
 
         /*
          Convert calls to "dice_new" into constructor calls for Dice.
          */
-        if (func == "dice_new") {
+        if (func == "this.dice_new") {
             result.append("new Dice(");
             for (int i = 0; i < asdl_seq_LEN(args); ++i) {
                 if (i != 0)
@@ -1439,7 +1485,7 @@ static bool process(expr_ty expression, QString &result, int indent, Environment
             }
             result.append(")");
             return true;
-        } else if (func == "game.random_range") {
+        } else if (func == "this.game.random_range") {
             result.append("randomRange(");
             for (int i = 0; i < asdl_seq_LEN(args); ++i) {
                 if (i != 0)
@@ -1448,7 +1494,7 @@ static bool process(expr_ty expression, QString &result, int indent, Environment
             }
             result.append(")");
             return true;
-        } else if (func == "game.fade_and_teleport") {
+        } else if (func == "this.game.fade_and_teleport") {
             result.append("this.game.fade_and_teleport(");
             for (int i = 0; i < asdl_seq_LEN(args); ++i) {
                 if (i != 0)
@@ -1476,7 +1522,7 @@ static bool process(expr_ty expression, QString &result, int indent, Environment
             }
             result.append(")");
             return true;
-        } else if (func == "game.map_flags") {
+        } else if (func == "this.game.map_flags") {
             result.append("this.game.map_flags(");
             for (int i = 0; i < asdl_seq_LEN(args); ++i) {
                 if (i != 0)
@@ -1564,7 +1610,12 @@ static bool process(expr_ty expression, QString &result, int indent, Environment
             convertExpression(value, result, indent, environment, true);
             result.append(".internalId");
             return true;
-        }
+        }/*
+            This causes some trouble because we're not operating on object wrappers.
+            else if (attr == "party" && isGameObject(value)) {
+            result.append("Party.getMembers()");
+            return true;
+        }*/
 
     } else if (expression->kind == Compare_kind) {
         asdl_int_seq *ops = expression->v.Compare.ops;
@@ -1603,7 +1654,12 @@ static bool process(expr_ty expression, QString &result, int indent, Environment
             uint areaId = areaIdString.toUInt(&ok);
 
             if (!ok || areaId == 0 || areaId > 12) {
-                qWarning("Invalid area id encountered: %s", qPrintable(areaIdString));
+                qDebug("Unknown area id encountered: %s", qPrintable(areaIdString));
+
+                convertExpression(left, result, indent, environment, true);
+                writeCompareOperator(op, result);
+                result.append("'area-").append(areaIdString).append("'");
+                return true;
             } else {
                 convertExpression(left, result, indent, environment, true);
                 writeCompareOperator(op, result);
@@ -1676,7 +1732,7 @@ static bool process(expr_ty expression, QString &result, int indent, Environment
                 } else {
                     QString value;
                     convertExpression(right, value, 0, environment, false);
-                    qWarning("Comparing quest state to unknown value: %s", qPrintable(value));
+                    qWarning("Comparing (EQ,NOTEQ) quest state to unknown value: %s", qPrintable(value));
                 }
             } else if (op == LtE) {
                 result.append('!');
@@ -1690,7 +1746,7 @@ static bool process(expr_ty expression, QString &result, int indent, Environment
                 } else {
                     QString value;
                     convertExpression(right, value, 0, environment, false);
-                    qWarning("Comparing quest state to unknown value: %s", qPrintable(value));
+                    qWarning("Comparing (LTE) quest state to unknown value: %s", qPrintable(value));
                 }
             } else if (op == GtE) {
 
@@ -1706,7 +1762,7 @@ static bool process(expr_ty expression, QString &result, int indent, Environment
                 } else {
                     QString value;
                     convertExpression(right, value, 0, environment, false);
-                    qWarning("Comparing quest state to unknown value: %s", qPrintable(value));
+                    qWarning("Comparing (GTE) quest state to unknown value: %s", qPrintable(value));
                 }
             } else if (op == Gt) {
                 if (isIdentifier(right, "qs_unknown")) {
@@ -1718,7 +1774,7 @@ static bool process(expr_ty expression, QString &result, int indent, Environment
                 } else {
                     QString value;
                     convertExpression(right, value, 0, environment, false);
-                    qWarning("Comparing quest state to unknown value: %s", qPrintable(value));
+                    qWarning("Comparing (GT) quest state to unknown value: %s", qPrintable(value));
                 }
             } else {
                 QString valueText;
@@ -1739,9 +1795,15 @@ static bool process(expr_ty expression, QString &result, int indent, Environment
             QString comparingTo;
             convertExpression(right, comparingTo, indent, environment, false);
 
+            bool invert = (op == NotEq);
+
             if (comparingTo == "0" || comparingTo == "false") {
-                result.append("!");
-            } else if (comparingTo != "1" && comparingTo != "true") {
+                if (!invert)
+                    result.append("!");
+            } else if (comparingTo == "1" || comparingTo == "true") {
+                if (invert)
+                    result.append("!");
+            } else {
                 qWarning("Comparing global flag to something other than 1 or 0: %s", qPrintable(comparingTo));
             }
 
@@ -1772,7 +1834,8 @@ static bool process(expr_ty expression, QString &result, int indent, Environment
             uint realMapId = mapId.toUInt(&ok);
 
             if (!ok || realMapId < 1 || realMapId > 12) {
-                qWarning("Invalid area id encountered: %s", qPrintable(mapId));
+                qDebug("Unknown area id encountered: %s", qPrintable(mapId));
+                result.append("WorldMap.isMarked('area-").append(mapId).append("')");
             } else {
                 result.append("WorldMap.isMarked(").append(areaIds[realMapId]).append(")");
                 return true;

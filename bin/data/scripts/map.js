@@ -8,6 +8,11 @@ var Map = function(id) {
     this.id = id;
     this.visited = false;
 
+    if (!mapObj) {
+        print("Unable to load map " + id);
+        return;
+    }    
+
     /*
      Store some additional information from the map file, which should be refreshed everytime the save game is loaded
      */

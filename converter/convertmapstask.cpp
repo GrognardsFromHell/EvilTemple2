@@ -1,6 +1,8 @@
 
 #include "qbox3d.h"
 
+#include "constants.h"
+
 #include "serializer.h"
 using namespace QJson;
 
@@ -597,6 +599,37 @@ QString ConvertMapsTask::description() const
     return "Converting maps";
 }
 
+static QHash< uint, QList<QPoint> > loadJumpPoints(Troika::VirtualFileSystem *vfs)
+{
+    QHash< uint, QList<QPoint> > result;
+
+    QString jumpPoints = QString::fromLocal8Bit(vfs->openFile("rules/jumppoint.tab"));
+
+    QStringList lines = jumpPoints.split("\n");
+
+    foreach (const QString &line, lines) {
+        QStringList parts = line.split("\t");
+        if (parts.size() != 5)
+            continue;
+
+        uint map = parts[2].toUInt();
+        uint x = parts[3].toUInt();
+        uint y = parts[4].toUInt();
+
+        if (map && x && y) {
+            QPoint p;
+            p.setX((x + 0.5) * PixelPerWorldTile);
+            p.setY((y + 0.5) * PixelPerWorldTile);
+
+            QList<QPoint> points = result[map];
+            points.append(p);
+            result[map] = points;
+        }
+    }
+
+    return result;
+}
+
 void ConvertMapsTask::run()
 {
     QScopedPointer<IFileWriter> backgroundOutput(service()->createOutput("backgrounds"));
@@ -607,6 +640,9 @@ void ConvertMapsTask::run()
 
     int totalWork = zoneTemplates->mapIds().size();
     int workDone = 0;
+
+    // Load jump points (for navmesh startpoints)
+    QHash< uint, QList<QPoint> > jumpPoints = loadJumpPoints(service()->virtualFileSystem());
 
     // Convert all maps
     foreach (quint32 mapId, zoneTemplates->mapIds()) {
@@ -627,7 +663,8 @@ void ConvertMapsTask::run()
                 qDebug("Loaded map %d. Name: %s. Dir: %s", zoneTemplate->id(),
                        qPrintable(zoneTemplate->name()), qPrintable(background->directory()));
             } else {
-                qWarning("Zone has no daylight background: %d.", mapId);
+                qWarning("Zone has no daylight background: %d (SKIPPING).", mapId);
+                continue;
             }
 
             // Add all static geometry files to the list of referenced models
@@ -641,6 +678,14 @@ void ConvertMapsTask::run()
 
             QVector<QPoint> startPositions;
             startPositions.append(zoneTemplate->startPosition());
+
+            // Find all jump-points that map here
+            if (jumpPoints.contains(zoneTemplate->id())) {
+                foreach (const QPoint &p, jumpPoints[zoneTemplate->id()]) {
+                    startPositions.append(p);
+                }
+            }
+
             QByteArray navmeshes = NavigationMeshBuilder::build(zoneTemplate.data(), startPositions);
             mapsOutput->addFile(zoneTemplate->directory() + "regions.dat", navmeshes);
         } else {

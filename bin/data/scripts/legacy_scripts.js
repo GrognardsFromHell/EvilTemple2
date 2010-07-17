@@ -29,15 +29,36 @@ var LegacyScripts = {};
         /**
          * Changes the current map.
          */
-        fade_and_teleport: function(unk1, unk2, unk3, mapId, worldX, worldY) {
-            var newPosition = [worldX, 0, worldY]; // this should probably go into the converter
+        fade_and_teleport: function(unk1, unk2, movieId, mapId, worldX, worldY) {
 
-            var map = Maps.mapsById[mapId];
-            if (map)
-                Maps.goToMap(map, newPosition);
-            else
-                print("Unknown legacy map id: " + mapId);
+            var goToNewMap = function() {
+                var newPosition = [worldX, 0, worldY]; // this should probably go into the converter
+
+                var map = Maps.mapsById[mapId];
+                if (map)
+                    Maps.goToMap(map, newPosition);
+                else
+                    print("Unknown legacy map id: " + mapId);
+            };
+
+            if (movieId) {
+                var movieMap = readJson('movies/movies.js');
+                if (movieMap[movieId]) {
+                    var movie = movieMap[movieId];
+                    if (gameView.playMovie(movie.filename, goToNewMap))
+                        return;
+                } else {
+                    print("Unknown movie id: " + movieId);
+                }
+            }
+
+            goToNewMap();
         },
+
+        /**
+         * This needs to be updated before each dialog. Contains object wrappers for the party.
+         */
+        party: [],
 
         obj_list_vicinity: function(pos, type) {
             // Filter the map's mobile list.
@@ -78,13 +99,45 @@ var LegacyScripts = {};
 
         OLC_CONTAINER: 'Container',
 
+        Q_IsFallenPaladin: 'fallen_paladin',
+
+        Q_Is_BreakFree_Possible: 'break_free_possible',
+
+        Q_Prone: 'is_prone',
+
+        Q_Critter_Is_Blinded: 'is_blind',
+
+        Q_Critter_Can_Find_Traps: 'critter_can_find_traps',
+
         game: GameFacade,
 
         __proto__: UtilityModule,
 
         anyone: function(creatures, command, id) {
             print("Checking whether " + creatures + " have " + command + " " + id);
-            return false; // TODO: Implement
+
+            var j;
+
+            for (var i = 0; i < creatures.length; ++i) {
+                var critter = creatures[i].obj;
+
+                switch (command) {
+                case 'has_item':
+                    if (critter.content) {
+                        for (j = 0; j < critter.content.length; ++j) {
+                            var item = critter.content[j];
+                            if (item.internalId == id)
+                                return true;
+                        }
+                    }
+                    break;
+                default:
+                    print("Unknown verb for 'anyone': " + command);
+                    return false;
+                }
+            }
+
+            return false;
         },
 
         create_item_in_inventory: function(prototypeId, receiver) {
@@ -224,6 +277,62 @@ var LegacyScripts = {};
      */
     CritterWrapper.prototype.has_met = function(character) {
         return this.obj.hasBeenTalkedTo;
+    };
+
+    /**
+     * Turns the NPC towards another critter.
+     * @param character The character to turn to.
+     */
+    CritterWrapper.prototype.turn_towards = function(character) {
+        // TODO: Implement
+    };
+
+    /**
+     * Transfers an item from the posession of this character to the
+     * posession of another character.
+     */
+    CritterWrapper.prototype.item_transfer_to = function(to, internalId) {
+        var from = this.obj;
+        to = to.obj;
+
+        if (!from.content)
+            return false;
+
+        // TODO: This needs refactoring to account for several things
+        // i.e. Updating inventory screens, taking weight updates into account,
+        // scripting events, etc. etc. (or even a unified party inventory)
+        for (var i = 0; i < from.content.length; ++i) {
+            var item = from.content[i];
+            if (item.internalId == internalId) {
+                to.content.push(item);
+                from.content.splice(i, 1);
+                return true;
+            }
+        }
+
+        return false;
+    };
+
+    /**
+     * Queries D20 state from the player.
+     * @param query What to query.
+     */
+    CritterWrapper.prototype.d20_query = function(query) {
+        switch (query) {
+            case 'fallen_paladin':
+                return 0; // TODO: Implement
+            case 'break_free_possible':
+                return 0; // TODO: Implement
+            case 'is_prone':
+                return 0; // TODO: Implement
+            case 'is_blind':
+                return 0; // TODO: Implement
+            case 'critter_can_find_traps':
+                return 0; // TODO: Implement
+            default:
+                print("Unknown d20 query.");
+                return 0;
+        }
     };
 
     /**
@@ -375,6 +484,11 @@ var LegacyScripts = {};
             return;
         }
 
+        GameFacade.party = [];
+        Party.getMembers().forEach(function(member) {
+            GameFacade.party.push(new CritterWrapper(member));
+        });
+
         var pc = this; // Used by the val scripts
         print("Starting conversation with " + npc.obj.id + " on line " + line);
 
@@ -392,8 +506,10 @@ var LegacyScripts = {};
 
         var answers = [];
         for (var i = line + 1; i <= line + 50; ++i) {
-            print("Checking dialog line " + i + " for being a valid PC answer.");
             var answerLine = dialog[i];
+
+            print("Checking answer line " + i);
+
             if (answerLine && answerLine.intelligence) {
                 // Check the guard
                 if (!checkGuards(npc, pc, answerLine))
@@ -405,7 +521,8 @@ var LegacyScripts = {};
                     id: i,
                     text: answerLine.text
                 });
-            } else {
+            } else if (answerLine && !answerLine.intelligence) {
+                print("Breaking out of the answer line search @ " + i);
                 break; // There may be 2 PC lines, then a NPC line then more PC lines.
             }
         }

@@ -27,12 +27,13 @@ public slots:
     bool open(const QString &filename); // Opens the movie file
     void close();
     void play();
+    void stop();
 
     const QString &errorString();
 
 private:
     QScopedPointer<BinkPlayerData> d_ptr;
-
+    volatile bool mStopped;
 };
 
 }

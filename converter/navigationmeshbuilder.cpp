@@ -209,7 +209,7 @@ inline static ProcessedSector *findSector(QVector<ProcessedSector> &sectors, con
         ProcessedSector *sector = sectors.data() + i;
 
         QPoint d = pos - sector->origin;
-        if (d.x() < SectorSideLength && d.y() < SectorSideLength)
+        if (d.x() >= 0 && d.x() < SectorSideLength && d.y() >= 0 && d.y() < SectorSideLength)
             return sector;
     }
 
@@ -241,7 +241,7 @@ static void findReachableTiles(const QPoint &startPosition, QVector<ProcessedSec
         uint x = item.pos.x();
         uint y = item.pos.y();
 
-        if (!sector->walkable[x][y] || sector->flyable[x][y])
+        if (!sector->walkable[x][y] || sector->flyable[x][y] || sector->reachable[x][y])
             continue;
 
         sector->anyReachable = true;
@@ -1010,6 +1010,9 @@ QByteArray NavigationMeshBuilder::build(const Troika::ZoneTemplate *tpl, const Q
 
     QVector<ProcessedSector> sectors;
     sectors.resize(tpl->tileSectors().size());
+
+    qDebug("Generating navigation mesh for %s with %d sectors and %d start locations.",
+           qPrintable(tpl->directory()), tpl->tileSectors().size(), startPositions.size());
 
     for (int i = 0; i < tpl->tileSectors().size(); ++i) {
         const Troika::TileSector &troikaSector = tpl->tileSectors()[i];

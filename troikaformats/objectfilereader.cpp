@@ -105,6 +105,8 @@ namespace Troika
         CritterGender = 288,
         CritterPadi1 = 293,
         CritterAlignment = 294,
+        CritterPortrait = 306, // Hopefully this is correct
+        CritterDescriptionUnknown = 311, // Hopefully this is correct
         CritterMoneyIndex = 307,
         CritterInventoryNum = 308,
         CritterInventoryListIndex = 309,
@@ -551,10 +553,10 @@ namespace Troika
         Prototypes *prototypes;
         QDataStream &stream;
         QString errorMessage;
-
+        QString filename;
         GameObject object;
 
-        ObjectFileReaderData(QDataStream &_stream) : stream(_stream)
+        ObjectFileReaderData(QDataStream &_stream) : stream(_stream), filename("<unknown>")
         {
         }
 
@@ -955,6 +957,16 @@ namespace Troika
                 //stream >> object.critterMoneyIndex;
                 skipPropertyArray();
                 break;
+            case CritterPortrait:
+                quint32 portrait;
+                stream >> portrait;
+                qDebug("CRITTER PORTRAIT: %d (%s)", (int)portrait, qPrintable(filename));
+                break;
+            case CritterDescriptionUnknown:
+                ushort descriptionUnknown;
+                stream >> descriptionUnknown;
+                qDebug("CRITTER DESC UNK: %d (%s)", (int)descriptionUnknown, qPrintable(filename));
+                break;
             case CritterInventoryNum:
                 stream >> object.critterInventoryNum;
                 break;
@@ -1025,7 +1037,7 @@ namespace Troika
                 skipPropertyArray();
                 break;
             default:
-                errorMessage = QString("Tried to read unknown property: %d").arg(property);
+                errorMessage = QString("Tried to read unknown property: %1").arg(property);
                 return false;
             }
 
@@ -1298,6 +1310,11 @@ namespace Troika
     const GameObject &ObjectFileReader::getObject()
     {
         return d_ptr->object;
+    }
+
+    void ObjectFileReader::setFilename(const QString &filename)
+    {
+        d_ptr->filename = filename;
     }
 
 }

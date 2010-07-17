@@ -29,7 +29,10 @@
 #include "converttranslationstask.h"
 #include "convertinterfacetask.h"
 #include "convertsoundstask.h"
+#include "convertmoviestask.h"
 #include "convertmodelstask.h"
+
+#include "qdirvfshandler.h"
 
 class ZipWriterHolder : public IFileWriter
 {
@@ -185,6 +188,21 @@ public:
     }
 
     void loadArchives() {
+        // VFS searches front-to-back, since overrides reside in the data/ dir it has to come first
+        QDir dataDir(mInputPath);
+        if (dataDir.cd("data")) {
+            qDebug("Adding override directory: %s", qPrintable(dataDir.absolutePath()));
+
+            vfs->add(new QDirVfsHandler(dataDir));
+        }
+
+        QDir moduleDir(mInputPath);
+        if (moduleDir.cd("modules/toee")) {
+            qDebug("Adding override directory: %s", qPrintable(moduleDir.absolutePath()));
+
+            vfs->add(new QDirVfsHandler(moduleDir));
+        }
+
         // Add base archives
         for (int i = 0; i < maxArchives; ++i) {
             QString archivePath = QString("%1ToEE%2.dat").arg(mInputPath).arg(i);
@@ -209,7 +227,6 @@ public:
         mMaterials.reset(new Troika::Materials(vfs.data()));
 
         // Validate archives here?
-
 
         QHash<uint,QString> maplist = openMessageFile("rules/maplist.mes");
         foreach (uint mapId, maplist.keys()) {
@@ -250,9 +267,11 @@ public:
               << new ConvertParticleSystemsTask(this)
               << new ConvertTranslationsTask(this)
               << new ConvertMapsTask(this)
-              << new ConvertSoundsTask(this)
-              << new ConvertInterfaceTask(this)
-              << new ConvertModelsTask(this);
+              // << new ConvertSoundsTask(this)
+              << new ConvertMoviesTask(this)
+              // << new ConvertInterfaceTask(this)
+              // << new ConvertModelsTask(this)
+              ;
 
         // Sum up total work over all tasks
         mTotalWork = 0;

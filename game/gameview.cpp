@@ -350,6 +350,7 @@ namespace EvilTemple {
 
             q->setScene(&uiScene);
             mPlayingVideo = false;
+            mVideoPlayer.close();
             mCurrentVideoFrame = QImage();
             if (mVideoFinishedCallback.isValid()) {
                 mVideoFinishedCallback.call();
@@ -594,6 +595,9 @@ namespace EvilTemple {
 
     void GameView::mouseMoveEvent(QMouseEvent *evt)
     {
+        if (d->mPlayingVideo)
+            return;
+
         QGraphicsView::mouseMoveEvent(evt);
 
         if (d->dragging) {
@@ -642,6 +646,11 @@ namespace EvilTemple {
 
     void GameView::mousePressEvent(QMouseEvent *evt)
     {
+        if (d->mPlayingVideo) {
+            d->mVideoPlayer.stop();
+            return;
+        }
+
         if (d->uiScene.itemAt(evt->posF())) {
             QGraphicsView::mousePressEvent(evt);
         } else {
@@ -654,6 +663,11 @@ namespace EvilTemple {
 
     void GameView::mouseReleaseEvent(QMouseEvent *evt)
     {
+        if (d->mPlayingVideo) {
+            d->mVideoPlayer.stop();
+            return;
+        }
+
         if (d->dragging) {
             if (!d->mouseMovedDuringDrag) {
                 Renderable *renderable = d->pickObject(evt->pos());
@@ -673,6 +687,9 @@ namespace EvilTemple {
 
     void GameView::mouseDoubleClickEvent(QMouseEvent *evt)
     {
+        if (d->mPlayingVideo)
+            return;
+
         // Sadly it's not really possible to detect, whether the double click was
         // really accepted by the scene. Instead we will simply check if there
         // is a QGraphicsItem at the clicked position.

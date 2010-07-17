@@ -10,6 +10,8 @@ namespace Troika
 {
     const QString PrototypesFile = "rules/protos.tab";
 
+    static uint currentPrototypeId; // Only used for debug output
+
     class PrototypesData
     {
     public:
@@ -73,6 +75,8 @@ namespace Troika
                     qWarning("Unable to parse id of prototype: %s", qPrintable(parts[0]));
                     continue;
                 }
+
+                currentPrototypeId = id;
 
                 Prototype *prototype = new Prototype(id, parent);
                 prototype->parse(parts);
@@ -185,7 +189,11 @@ namespace Troika
 
     inline QStringList splitFlagList(const QStringList &parts, int offset) {
         QString flagList = parts[offset].trimmed();
-        QStringList list = flagList.split(QRegExp("[\x0B\\ \\,]"), QString::SkipEmptyParts);
+
+        // Co8 bugfix
+        flagList.replace("OIF ", "OIF_");
+
+        QStringList list = flagList.split(QRegExp("[\x0B\\ \\,\x7F]"), QString::SkipEmptyParts);
 
         // remove duplicates
         for (int i = 0; i < list.size(); ++i) {
@@ -219,6 +227,9 @@ namespace Troika
             mapping["OF_SHOOT_THROUGH"] = "ShootThrough";
             mapping["OF_WADING"] = "Wading";
             mapping["OF_WATER_WALKING"] = "WaterWalking";
+            mapping["OF_HEIGHT_SET"] = "";
+            mapping["OF_RADIUS_SET"] = "";
+            mapping["OF_PROVIDES_COVER"] = "ProvidesCover";
         }
 
         Q_ASSERT_X(mapping.contains(objectFlag), "convertObjectFlag", qPrintable(objectFlag));
@@ -228,8 +239,11 @@ namespace Troika
     inline void readFlagList(const QStringList &parts, int offset, QStringList &result, TranslatorFn translate)
     {
         QStringList flagList = splitFlagList(parts, offset);
-        for (int i = 0; i < flagList.size(); ++i)
+        for (int i = 0; i < flagList.size(); ++i) {
             flagList[i] = translate(flagList[i]);
+            if (flagList[i].isEmpty())
+                flagList.removeAt(i--);
+        }
         result = flagList;
     }
 
@@ -585,8 +599,8 @@ namespace Troika
         optionalPart(parts, 153, aiData);
 
         if (isPartDefined(parts[154])) {
-            QStringList factionStrings = parts[154].split(QRegExp("\\s+"), QString::SkipEmptyParts);
-            foreach (QString faction, factionStrings) {
+            QStringList factionStrings = parts[154].split(QRegExp("(\\s+|\\,)"), QString::SkipEmptyParts);
+            foreach (QString faction, factionStrings) {               
                 bool ok;
                 factions.append(faction.toUInt(&ok));
                 Q_ASSERT_X(ok, "read faction", qPrintable(parts[154]));
@@ -647,6 +661,9 @@ namespace Troika
             mapping["OIF_NO_LOOT"] = "NoLoot";
             mapping["OIF_NO_NPC_PICKUP"] = "NoNpcPickup";
             mapping["OIF_USES_WAND_ANIM"] = "UsesWandAnim";
+            mapping["OIF_NO_PICKPOCKET"] = "NotPickpocketable";
+            mapping["OIF_STOLEN"] = "Stolen";
+            mapping["OIF_FAMILIAR"] = "Familiar";
         }
 
         Q_ASSERT(mapping.contains(objectType));
@@ -676,6 +693,7 @@ namespace Troika
             mapping["OIF_WEAR_ROBES"] = "Robes";
             mapping["OIF_WEAR_WEAPON_PRIMARY"] = "WeaponPrimary";
             mapping["OIF_WEAR_WEAPON_SECONDARY"] = "WeaponSecondary";
+            mapping["OF_WEAR_WEAPON_SECONDARY"] = "WeaponSecondary";
         }
 
         Q_ASSERT(mapping.contains(objectType));
@@ -712,6 +730,7 @@ namespace Troika
             mapping["OCF_AIR"] = "Air";
             mapping["OCF_FIRE"] = "Fire";
             mapping["OCF_EARTH"] = "Earth";
+            mapping["OCF_IS_CONCEALED"] = "IsConcealed";
             mapping["OCF_WATER"] = "Water";
         }
 
@@ -726,17 +745,35 @@ namespace Troika
         readFlagList(parts, 99, flags, convertCritterFlag);
         bool ok;
         strength = parts[101].toInt(&ok);
-        Q_ASSERT(ok);
+        if (!ok) {
+            qDebug("Strength missing for critter prototype %d. Defaulting to 10.", currentPrototypeId);
+            strength = 10;
+        }
         dexterity = parts[102].toInt(&ok);
-        Q_ASSERT(ok);
+        if (!ok) {
+            qDebug("Dexterity missing for critter prototype %d. Defaulting to 10.", currentPrototypeId);
+            dexterity = 10;
+        }
         constitution = parts[103].toInt(&ok);
-        Q_ASSERT(ok);
+        if (!ok) {
+            qDebug("Constitution missing for critter prototype %d. Defaulting to 10.", currentPrototypeId);
+            constitution = 10;
+        }
         intelligence = parts[104].toInt(&ok);
-        Q_ASSERT(ok);
+        if (!ok) {
+            qDebug("Intelligence missing for critter prototype %d. Defaulting to 10.", currentPrototypeId);
+            intelligence = 10;
+        }
         wisdom = parts[105].toInt(&ok);
-        Q_ASSERT(ok);
+        if (!ok) {
+            qDebug("Wisdom missing for critter prototype %d. Defaulting to 10.", currentPrototypeId);
+            wisdom = 10;
+        }
         charisma = parts[106].toInt(&ok);
-        Q_ASSERT(ok);
+        if (!ok) {
+            qDebug("Charisma missing for critter prototype %d. Defaulting to 10.", currentPrototypeId);
+            charisma = 10;
+        }
         if (isPartDefined(parts[108])) {
             race = parts[108];
             if (race.startsWith("race_"))
@@ -767,7 +804,8 @@ namespace Troika
                 naturalAttack.damageDice = parts[i+1];
                 naturalAttack.type = parts[i+2];
                 naturalAttack.attackBonus = parts[i+3].toInt(&ok);
-                Q_ASSERT(ok);
+                if (!ok)
+                    naturalAttack.attackBonus = 0;
                 naturalAttacks.append(naturalAttack);
             }
         }
@@ -842,7 +880,7 @@ namespace Troika
 
             // Try parsing the spell definition
             // It's: '........' \\w+ \\d+
-            QRegExp spellPattern("\\s*'(.*)'\\s+(\\w+)\\s+(\\d+)\\s*");
+            QRegExp spellPattern("\\s*'?(.*)'\\s+(\\w+)\\s+(\\d+)\\s*");
             bool exactMatch = spellPattern.exactMatch(parts[i]);
             Q_ASSERT_X(exactMatch, "EntityProperties::match", qPrintable(parts[i]));
 

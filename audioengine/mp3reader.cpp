@@ -101,6 +101,7 @@ static void initializeCodecs()
     fprintf(stderr, "Registering AV Codecs.\n");
     av_register_all();
     av_register_protocol(&qfile_protocol);
+
     avCodecsRegistered = true;
 }
 

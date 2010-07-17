@@ -15,8 +15,6 @@ void ConvertSoundsTask::run()
 {
     QScopedPointer<IFileWriter> writer(service()->createOutput("sounds"));
 
-    QSet<QString> soundFiles;
-    QSet<QString> mp3Files;
     QVariantMap soundMapping;
 
     QStringList soundIndexFiles = QStringList() << "sound/snd_critter.mes"
@@ -36,11 +34,15 @@ void ConvertSoundsTask::run()
                 continue;
 
             soundMapping.insert(QString("%1").arg(key), QVariant(filename));
-            soundFiles.insert(filename);
         }
     }
 
-    // Copy all MP3 files
+    // Copy all WAV/MP3 files
+    QSet<QString> soundFiles;
+    QSet<QString> mp3Files;
+    foreach (const QString &filename, service()->virtualFileSystem()->listAllFiles("*.wav")) {
+        soundFiles.insert(filename);
+    }
     foreach (const QString &filename, service()->virtualFileSystem()->listAllFiles("*.mp3")) {
         mp3Files.insert(filename);
     }
