@@ -10,6 +10,7 @@ var MainMenuUi = {};
     function startGame() {
         showDebugBar();
         PartyUi.show();
+        UtilityBarUi.show();
 
         // Set up a nice debugging party
         Party.money.addGold(1000); // Start with 1000 gold

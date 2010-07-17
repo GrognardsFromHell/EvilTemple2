@@ -1836,6 +1836,7 @@ static bool process(expr_ty expression, QString &result, int indent, Environment
             if (!ok || realMapId < 1 || realMapId > 12) {
                 qDebug("Unknown area id encountered: %s", qPrintable(mapId));
                 result.append("WorldMap.isMarked('area-").append(mapId).append("')");
+                return true;
             } else {
                 result.append("WorldMap.isMarked(").append(areaIds[realMapId]).append(")");
                 return true;
@@ -1902,9 +1903,18 @@ static bool process(stmt_ty stmt, QString &result, int indent, Environment *envi
             convertExpression(value, settingTo, indent, environment, false);
 
             if (settingTo == "1") {
+                bool ok;
+                uint realMapId = mapId.toUInt(&ok);
+
                 appendIndent(indent, result);
-                result.append("WorldMap.mark(").append(mapId).append(");\n");
-                return true;
+                if (!ok || realMapId < 1 || realMapId > 12) {
+                    qDebug("Unknown area id encountered: %s", qPrintable(mapId));
+                    result.append("WorldMap.mark('area-").append(mapId).append("');\n");
+                    return true;
+                } else {
+                    result.append("WorldMap.mark(").append(areaIds[realMapId]).append(");\n");
+                    return true;
+                }
             } else {
                 qWarning("Setting area %s to unknown constant %s.", qPrintable(mapId), qPrintable(settingTo));
                 return false;

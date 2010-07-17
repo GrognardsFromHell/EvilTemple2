@@ -1,0 +1,153 @@
+import Qt 4.7
+
+/*
+    Models the utility bar, which is visible on the lower right side in the original game.
+*/
+Item {
+    width: 181
+    height: 83
+
+    x: gameView.viewportSize.width - width - 20
+    y: 20
+
+    property bool townmapDisabled : false
+    property bool logbookDisabled : false
+    // TODO: Time Display
+
+    signal openOptions
+    signal openHelp
+    signal openFormations
+    signal openLogbook
+    signal openTownmap
+    // TODO: Camping
+    signal selectAll
+
+    Image {
+        width: 181
+        height: 83
+        source: "../art/interface/utility_bar_ui/background.png"
+        Button {
+            id: selectAllButton
+            x: 9
+            y: 5
+            width: 43
+            height: 67
+            text: ''
+            pressedImage: "art/interface/utility_bar_ui/selectparty_click.png"
+            hoverImage: "art/interface/utility_bar_ui/selectparty_hover.png"
+            normalImage: "art/interface/utility_bar_ui/selectparty.png"
+            disabledImage: "art/interface/utility_bar_ui/selectparty.png"
+            onClicked: selectAll()
+        }
+
+        Button {
+            id: logbookButton
+            x: 71
+            y: 5
+            width: 21
+            height: 43
+            text: ''
+            enabled: !logbookDisabled
+            pressedImage: "art/interface/utility_bar_ui/logbook_click.png"
+            hoverImage: "art/interface/utility_bar_ui/logbook_hover.png"
+            normalImage: "art/interface/utility_bar_ui/logbook.png"
+            disabledImage: "art/interface/utility_bar_ui/logbook_disabled.png"
+            onClicked: openLogbook()
+        }
+
+        Button {
+            id: optionsButton
+            x: 151
+            y: 5
+            width: 21
+            height: 43
+            text: ''
+            pressedImage: "art/interface/utility_bar_ui/options_click.png"
+            hoverImage: "art/interface/utility_bar_ui/options_hover.png"
+            normalImage: "art/interface/utility_bar_ui/options.png"
+            disabledImage: "art/interface/utility_bar_ui/options.png"
+            onClicked: openOptions()
+        }
+
+        Button {
+            id: helpButton
+            x: 131
+            y: 5
+            width: 21
+            height: 43
+            text: ''
+            pressedImage: "art/interface/utility_bar_ui/help_click.png"
+            hoverImage: "art/interface/utility_bar_ui/help_hover.png"
+            normalImage: "art/interface/utility_bar_ui/help.png"
+            disabledImage: "art/interface/utility_bar_ui/help.png"
+            onClicked: openHelp()
+        }
+
+        Button {
+            id: formationButton
+            x: 51
+            y: 5
+            width: 21
+            height: 43
+            text: ''
+            pressedImage: "art/interface/utility_bar_ui/formation_click.png"
+            hoverImage: "art/interface/utility_bar_ui/formation_hover.png"
+            normalImage: "art/interface/utility_bar_ui/formation.png"
+            disabledImage: "art/interface/utility_bar_ui/formation.png"
+            onClicked: openFormations()
+        }
+
+        Button {
+            id: campButton
+            x: 111
+            y: 5
+            width: 21
+            height: 43
+            text: ''
+            pressedImage: "art/interface/utility_bar_ui/camp_click.png"
+            hoverImage: "art/interface/utility_bar_ui/camp_hover.png"
+            normalImage: "art/interface/utility_bar_ui/camp.png"
+            disabledImage: "art/interface/utility_bar_ui/camp_clock_grey.png"
+        }
+
+        Button {
+            id: townmapButton
+            x: 91
+            y: 5
+            enabled: !townmapDisabled
+            width: 21
+            height: 43
+            text: ''
+            pressedImage: "art/interface/utility_bar_ui/townmap_click.png"
+            hoverImage: "art/interface/utility_bar_ui/townmap_hover.png"
+            normalImage: "art/interface/utility_bar_ui/townmap.png"
+            disabledImage: "art/interface/utility_bar_ui/townmap_disabled.png"
+            onClicked: openTownmap()
+        }
+
+        Item {
+            id: timeBar
+            x: 53
+            y: 49
+            width: 117
+            height: 21
+            clip: true
+            Image {
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                width: 256
+                x: 0
+                source: "../art/interface/utility_bar_ui/timebar.png"
+            }
+        }
+
+        Image {
+            id: timeBarArrow
+            x: 105
+            y: 60
+            width: 13
+            height: 12
+            source: "../art/interface/utility_bar_ui/timebar_arrow.png"
+        }
+    }
+}
