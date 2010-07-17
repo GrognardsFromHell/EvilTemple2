@@ -137,6 +137,8 @@ public slots:
 
     bool playMovie(const QString &filename, const QScriptValue &callback);
 
+    bool playUiSound(const QString &filename);
+
 protected:
     void resizeEvent(QResizeEvent *event);
     void mouseMoveEvent(QMouseEvent *event);

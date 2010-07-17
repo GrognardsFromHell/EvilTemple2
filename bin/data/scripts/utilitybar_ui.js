@@ -13,6 +13,13 @@ var UtilityBarUi = {};
         WorldMapUi.show();
     }
 
+    StartupListeners.add(function() {
+        WorldMap.addMarkedNewAreaListener(function() {
+            if (utilityBar)
+                utilityBar.flashTownmap();
+        });
+    });
+
     /**
      * Shows the utility bar.
      */

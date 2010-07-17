@@ -1041,6 +1041,14 @@ namespace Troika
                 return false;
             }
 
+            /**
+              Additional error checking to skip corrupt mob files.
+              */
+            if (stream.status() == QDataStream::ReadPastEnd) {
+                qWarning("Read past end of stream for field: %d in file %s.", property, qPrintable(filename));
+                return false;
+            }
+
             return true;
         }
 

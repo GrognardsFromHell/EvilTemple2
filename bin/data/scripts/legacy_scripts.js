@@ -508,9 +508,9 @@ var LegacyScripts = {};
         for (var i = line + 1; i <= line + 50; ++i) {
             var answerLine = dialog[i];
 
-            print("Checking answer line " + i);
-
             if (answerLine && answerLine.intelligence) {
+                print("Found PC answer line " + i + " in dialog " + dialogId);
+
                 // Check the guard
                 if (!checkGuards(npc, pc, answerLine))
                     continue;

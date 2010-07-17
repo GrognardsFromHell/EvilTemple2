@@ -11,7 +11,7 @@ Item {
     y: 20
 
     property bool townmapDisabled : false
-    property bool logbookDisabled : false
+    property bool journalDisabled : false
     // TODO: Time Display
 
     signal openOptions
@@ -21,6 +21,25 @@ Item {
     signal openTownmap
     // TODO: Camping
     signal selectAll
+
+    /**
+        Causes the townmap button to flash a little to indicate a new area has become
+        available.
+    */
+    function flashTownmap() {
+        if (!townmapBlingAnimation.running) {
+            gameView.playUiSound('sound/utility_bar_Bling-Sound.wav')
+            townmapBlingAnimation.running = true;
+        }
+    }
+
+    function flashJournal() {
+        if (!logbookBlingAnimation.running) {
+            gameView.playUiSound('sound/utility_bar_Bling-Sound.wav');
+            logbookBlingAnimation.running = true;
+        }
+
+    }
 
     Image {
         width: 181
@@ -47,12 +66,43 @@ Item {
             width: 21
             height: 43
             text: ''
-            enabled: !logbookDisabled
+            enabled: !journalDisabled
             pressedImage: "art/interface/utility_bar_ui/logbook_click.png"
             hoverImage: "art/interface/utility_bar_ui/logbook_hover.png"
             normalImage: "art/interface/utility_bar_ui/logbook.png"
             disabledImage: "art/interface/utility_bar_ui/logbook_disabled.png"
-            onClicked: openLogbook()
+            onClicked: {
+                openLogbook();
+                logbookBlingAnimation.running = false;
+            }
+
+            Image {
+                id: logbookBlingImage
+                anchors.fill: parent
+                opacity: 0
+                source: "../art/interface/utility_bar_ui/logbook_bling.png"
+
+                SequentialAnimation {
+                    id: logbookBlingAnimation
+                    loops: 5
+
+                    PropertyAnimation {
+                        target: logbookBlingImage
+                        property: "opacity"
+                        to: 1
+                        duration: 750
+                        easing.type: Easing.InOutQuad
+                    }
+                    PropertyAnimation {
+                        target: logbookBlingImage
+                        property: "opacity"
+                        to: 0
+                        duration: 750
+                        easing.type: Easing.InOutQuad
+                    }
+                    PauseAnimation { duration: 750 }
+                }
+            }
         }
 
         Button {
@@ -122,7 +172,38 @@ Item {
             hoverImage: "art/interface/utility_bar_ui/townmap_hover.png"
             normalImage: "art/interface/utility_bar_ui/townmap.png"
             disabledImage: "art/interface/utility_bar_ui/townmap_disabled.png"
-            onClicked: openTownmap()
+            onClicked: {
+                openTownmap();
+                townmapBlingAnimation.running = false;
+            }
+
+            Image {
+                id: townmapBlingImage
+                anchors.fill: parent
+                opacity: 0
+                source: "../art/interface/utility_bar_ui/townmap_bling.png"
+
+                SequentialAnimation {
+                    id: townmapBlingAnimation
+                    loops: 5
+
+                    PropertyAnimation {
+                        target: townmapBlingImage
+                        property: "opacity"
+                        to: 1
+                        duration: 750
+                        easing.type: Easing.InOutQuad
+                    }
+                    PropertyAnimation {
+                        target: townmapBlingImage
+                        property: "opacity"
+                        to: 0
+                        duration: 750
+                        easing.type: Easing.InOutQuad
+                    }
+                    PauseAnimation { duration: 750 }
+                }
+            }
         }
 
         Item {

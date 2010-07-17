@@ -5,6 +5,20 @@ var WorldMapUi = {};
 
     var worldMapDialog = null;
 
+    var newAreaSinceLastOpened = false;
+
+    StartupListeners.add(function() {
+        WorldMap.addMarkedNewAreaListener(function() {
+            if (worldMapDialog) {
+                // Play sound immediately & update ui
+                worldMapDialog.knownAreas = WorldMap.getMarkedAreas();
+                playNewAreaSound();
+            } else {
+                newAreaSinceLastOpened = true;
+            }
+        });
+    });
+
     WorldMapUi.show = function() {
         if (worldMapDialog)
             return;
@@ -13,6 +27,11 @@ var WorldMapUi = {};
         worldMapDialog.closeClicked.connect(WorldMapUi.close);
         worldMapDialog.knownAreas = WorldMap.getMarkedAreas();
         worldMapDialog.currentArea = Maps.currentMap.area;
+
+        if (newAreaSinceLastOpened) {
+            playNewAreaSound();
+            newAreaSinceLastOpened = false;
+        }
     };
 
     WorldMapUi.close = function() {
@@ -22,5 +41,9 @@ var WorldMapUi = {};
         worldMapDialog.deleteLater();
         worldMapDialog = null;
     };
+
+    function playNewAreaSound() {
+        gameView.playUiSound('sound/worldmap_location.wav');
+    }
 
 })();

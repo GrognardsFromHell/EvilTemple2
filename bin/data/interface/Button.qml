@@ -63,6 +63,9 @@ MouseArea {
                 anchors.horizontalCenterOffset: 2
                 anchors.verticalCenterOffset: 1
             }
+            StateChangeScript {
+                script: gameView.playUiSound('sound/Interface - Button Down.wav')
+            }
        },
        State {
             name: "Hover"
@@ -70,6 +73,9 @@ MouseArea {
             PropertyChanges {
                 target: image
                 source: '../' + hoverImage
+            }
+            StateChangeScript {
+                script: gameView.playUiSound('sound/Interface - Hover.wav')
             }
        }
     ]

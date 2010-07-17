@@ -554,7 +554,7 @@ bool AudioEngineThread::handleStoppedSource(const SharedAudioEngineHandle &handl
         return true;
     } else {
         // Clean up buffers used by the source
-        ALint buffersProcessed;
+        ALint buffersProcessed = 0;
         alGetSourcei(handle->sourceId, AL_BUFFERS_QUEUED, &buffersProcessed);
 
         if (buffersProcessed > 0) {

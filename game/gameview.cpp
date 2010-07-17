@@ -112,6 +112,8 @@ namespace EvilTemple {
             mPlayingVideo(false),
             mVideoPlayerThread(&mVideoPlayer)
         {
+            connect(&uiEngine, SIGNAL(warnings(QList<QDeclarativeError>)), SLOT(uiWarnings(QList<QDeclarativeError>)));
+
             sceneTimer.invalidate();
 
             qDebug("Initializing glew...");
@@ -339,6 +341,14 @@ namespace EvilTemple {
         void pollVisualTimers();
 
     public slots:
+
+        void uiWarnings(const QList<QDeclarativeError> &warnings)
+        {
+            foreach (const QDeclarativeError &error, warnings) {
+                qWarning("%s", qPrintable(error.toString()));
+            }
+        }
+
         void updateVideoFrame(const QImage &image)
         {
             mCurrentVideoFrame = image;
@@ -868,6 +878,12 @@ namespace EvilTemple {
         d->mVideoFinishedCallback = callback;
         d->mVideoPlayerThread.start();
         return true;
+    }
+
+    bool GameView::playUiSound(const QString &filename)
+    {
+        SharedSoundHandle handle = d->audioEngine.playSoundOnce(filename, SoundCategory_Interface);
+        return !handle.isNull();
     }
 
 }

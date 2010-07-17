@@ -259,6 +259,9 @@ var sounds;
 function startup() {
     models = gameView.models;
 
+    print("Calling startup hooks.");
+    StartupListeners.call();
+
     print("Loading prototypes...");
     prototypes = eval('(' + readFile('prototypes.js') + ')');
     prototypes['StaticGeometry'] = {
