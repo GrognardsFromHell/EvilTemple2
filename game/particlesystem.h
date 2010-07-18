@@ -29,7 +29,7 @@ namespace EvilTemple {
     class ParticleSystem : public Renderable
     {
     Q_OBJECT
-    Q_PROPERTY(ModelInstance* modelInstance READ modelInstance WRITE setModelInstance)
+    Q_PROPERTY(EvilTemple::ModelInstance* modelInstance READ modelInstance WRITE setModelInstance)
     Q_PROPERTY(bool dead READ isDead)
     Q_PROPERTY(QString id READ id)
     public:

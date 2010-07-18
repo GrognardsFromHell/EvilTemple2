@@ -154,10 +154,8 @@ inline void ModelInstance::setDrawsBehindWalls(bool drawsBehindWalls)
     mDrawsBehindWalls = drawsBehindWalls;
 }
 
-Q_DECLARE_METATYPE(ModelInstance*)
-
 }
 
-// Q_DECLARE_METATYPE(EvilTemple::ModelInstance*)
+Q_DECLARE_METATYPE(EvilTemple::ModelInstance*)
 
 #endif // MODELINSTANCE_H

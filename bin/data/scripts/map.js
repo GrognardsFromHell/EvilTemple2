@@ -152,7 +152,7 @@ Map.prototype.entering = function(position) {
     }
 
     print("Creating " + mapObj.particleSystems.length + " particle systems.");
-                 /*
+
     for (var i = 0; i < mapObj.particleSystems.length; ++i) {
         obj = mapObj.particleSystems[i];
 
@@ -164,7 +164,7 @@ Map.prototype.entering = function(position) {
         sceneNode.attachObject(particleSystem);
 
         // makeParticleSystemTestModel(obj, sceneNode);
-    }    */
+    }
 
     // Move party to starting location, add nodes to scene
     var map = this;

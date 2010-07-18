@@ -20,15 +20,8 @@ win32:RC_FILE = icon.rc
 
 include(../base.pri)
 
-win32:msvc-2008 {
-    DEFINES += GOOGLE_BREAKPAD_ENABLED
-    include(../3rdparty/google-breakpad.pri)
-}
-
-win32:msvc-2010 {
-    DEFINES += GOOGLE_BREAKPAD_ENABLED
-    include(../3rdparty/google-breakpad.pri)
-}
+win32-msvc2008:include(../3rdparty/google-breakpad.pri)
+win32-msvc2010:include(../3rdparty/google-breakpad.pri)
 
 OTHER_FILES += \
     icon.rc \

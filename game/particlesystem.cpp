@@ -1441,7 +1441,8 @@ namespace EvilTemple {
     class ParticleSystemData : public AlignedAllocation
     {
     public:
-        ParticleSystemData(const QString &_id) : id(_id), dead(false), modelInstance(NULL)
+        ParticleSystemData(const QString &_id)
+            : id(_id), dead(false), modelInstance(NULL), mTimeSinceLastRendered(0)
         {
         }
 
@@ -1454,6 +1455,7 @@ namespace EvilTemple {
         Box3d boundingBox;
         bool dead;
         ModelInstance* modelInstance;
+        float mTimeSinceLastRendered;
     };
 
     void ParticleSystem::addEmitter(Emitter *emitter)
@@ -1505,6 +1507,11 @@ namespace EvilTemple {
         if (d->dead)
             return;
 
+        if (d->mTimeSinceLastRendered > 3)
+            return;
+
+        d->mTimeSinceLastRendered += seconds;
+
         float timeUnits = seconds / ParticlesTimeUnit;
 
         bool allEmittersDead = true;
@@ -1533,6 +1540,8 @@ namespace EvilTemple {
 
     void ParticleSystem::render(RenderStates &renderStates, MaterialState *overrideMaterial) {
         ProfileScope<Profiler::ParticleSystemRender> profiler;
+
+        d->mTimeSinceLastRendered = 0;
 
         bool allDead = true;
 
