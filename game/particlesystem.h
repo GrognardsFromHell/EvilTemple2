@@ -7,6 +7,7 @@
 #include <QtCore/QScopedPointer>
 
 #include "renderable.h"
+#include "modelinstance.h"
 
 #include <gamemath.h>
 
@@ -21,16 +22,16 @@ namespace EvilTemple {
     class Emitter;
     class Models;
     class MaterialState;
-    class ModelInstance;
 
     /**
-  Models a particle system in world space and it's emitters.
-  */
+     Models a particle system in world space and it's emitters.
+     */
     class ParticleSystem : public Renderable
     {
     Q_OBJECT
     Q_PROPERTY(ModelInstance* modelInstance READ modelInstance WRITE setModelInstance)
     Q_PROPERTY(bool dead READ isDead)
+    Q_PROPERTY(QString id READ id)
     public:
         ParticleSystem(const QString &id);
         ~ParticleSystem();
@@ -47,6 +48,11 @@ namespace EvilTemple {
         const Box3d &boundingBox();
 
         bool isDead() const;
+
+        const QString &id() const;
+
+    public slots:
+        void modelInstanceDestroyed();
 
     signals:
         void finished();

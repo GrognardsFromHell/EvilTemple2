@@ -1,6 +1,5 @@
 import Qt 4.7
 
-import "WorldMap.js" as WorldMap
 
 MovableWindow {
     id: root

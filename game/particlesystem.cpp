@@ -479,7 +479,8 @@ namespace EvilTemple {
         Emitter(ParticleSystem *particleSystem, float spawnRate, float particleLifetime)
             : mParticleSystem(particleSystem), mPartialSpawnedParticles(0), mElapsedTime(0), mExpired(false),
             mSpawnRate(1/(spawnRate *ParticlesTimeUnit)), mParticleLifetime(particleLifetime), mLifetime(std::numeric_limits<float>::infinity()),
-            mEmitterSpace(Space_World), mBuffersInvalid(true), mModelInstance(NULL), mSecondsSinceLastRender(0)
+            mEmitterSpace(Space_World), mBuffersInvalid(true), mModelInstance(NULL), mSecondsSinceLastRender(0),
+            mWarnedAboutBoneSpace(false)
         {
             initializeIndexArray();
             mParticleIndexBuffer.upload(particleIndices, sizeof(particleIndices));
@@ -677,6 +678,8 @@ namespace EvilTemple {
         float mPartialSpawnedParticles; // If the elapsed time is not enough to spawn another particle, it is accumulated.
         bool mBuffersInvalid;
 
+        bool mWarnedAboutBoneSpace;
+
         float mSecondsSinceLastRender;
 
         Q_DISABLE_COPY(Emitter);
@@ -839,6 +842,13 @@ namespace EvilTemple {
                     trans.setW(0);
                     particle.position += trans;
                 }
+            }
+        } else if (mEmitterSpace == Space_RandomBone || mEmitterSpace == Space_Bone) {
+            if (!mWarnedAboutBoneSpace) {
+                qWarning("Emitter %s in particle system %s lacks model instance although it uses bone space.",
+                         qPrintable(mName),
+                         qPrintable(mParticleSystem->id()));
+                mWarnedAboutBoneSpace = true;
             }
         }
 
@@ -1431,7 +1441,7 @@ namespace EvilTemple {
     class ParticleSystemData : public AlignedAllocation
     {
     public:
-        ParticleSystemData(const QString &_id) : id(_id), dead(false)
+        ParticleSystemData(const QString &_id) : id(_id), dead(false), modelInstance(NULL)
         {
         }
 
@@ -1443,7 +1453,7 @@ namespace EvilTemple {
         QList<Emitter*> emitters;
         Box3d boundingBox;
         bool dead;
-        QPointer<ModelInstance> modelInstance;
+        ModelInstance* modelInstance;
     };
 
     void ParticleSystem::addEmitter(Emitter *emitter)
@@ -1451,38 +1461,17 @@ namespace EvilTemple {
         d->emitters.append(emitter);
     }
 
-    static QHash<QString, QWeakPointer<Texture> > spriteCache;
-
-    SharedTexture loadTexture(const QString &filename) {
-
-        if (spriteCache.contains(filename.toLower())) {
-            SharedTexture cachedResult = SharedTexture(spriteCache[filename.toLower()]);
-            if (cachedResult) {
-                return cachedResult;
-            }
-        }
-
-        QFile f(filename);
-        if (!f.open(QIODevice::ReadOnly)) {
-            qWarning("Unable to open texture: %s.", qPrintable(filename));
-            return SharedTexture(0);
-        }
-
-        SharedTexture t(new Texture);
-        if (!t->loadTga(f.readAll())) {
-            qWarning("Unable to read texture: %s.", qPrintable(filename));
-            return SharedTexture(0);
-        }
-
-        t->bind();
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-        glBindTexture(GL_TEXTURE_2D, 0);
-
-        spriteCache[filename.toLower()] = QWeakPointer<Texture>(t);
-
-        return t;
+    void ParticleSystem::modelInstanceDestroyed()
+    {
+        d->modelInstance = NULL;
     }
+
+    const QString &ParticleSystem::id() const
+    {
+        return d->id;
+    }
+
+    static QHash<QString, QWeakPointer<Texture> > spriteCache;
 
     ParticleSystem::ParticleSystem(const QString &id)
         : d(new ParticleSystemData(id))
@@ -1495,12 +1484,18 @@ namespace EvilTemple {
 
     void ParticleSystem::setModelInstance(ModelInstance *modelInstance)
     {
+        if (d->modelInstance) {
+            d->modelInstance->disconnect(SIGNAL(destroyed()), this);
+        }
         d->modelInstance = modelInstance;
+        if (d->modelInstance) {
+            connect(d->modelInstance, SIGNAL(destroyed()), SLOT(modelInstanceDestroyed()));
+        }
     }
 
     ModelInstance *ParticleSystem::modelInstance() const
     {
-        return d->modelInstance.data();
+        return d->modelInstance;
     }
 
     void ParticleSystem::elapseTime(float seconds)
@@ -2020,6 +2015,37 @@ namespace EvilTemple {
 
     ParticleSystems::~ParticleSystems()
     {
+    }
+
+    static SharedTexture loadTexture(const QString &filename) {
+
+        if (spriteCache.contains(filename.toLower())) {
+            SharedTexture cachedResult = SharedTexture(spriteCache[filename.toLower()]);
+            if (cachedResult) {
+                return cachedResult;
+            }
+        }
+
+        QFile f(filename);
+        if (!f.open(QIODevice::ReadOnly)) {
+            qWarning("Unable to open texture: %s.", qPrintable(filename));
+            return SharedTexture(0);
+        }
+
+        SharedTexture t(new Texture);
+        if (!t->loadTga(f.readAll())) {
+            qWarning("Unable to read texture: %s.", qPrintable(filename));
+            return SharedTexture(0);
+        }
+
+        t->bind();
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        spriteCache[filename.toLower()] = QWeakPointer<Texture>(t);
+
+        return t;
     }
 
     Emitter *ParticleSystemsData::instantiate(ParticleSystem *particleSystem, const EmitterTemplate &tpl) const

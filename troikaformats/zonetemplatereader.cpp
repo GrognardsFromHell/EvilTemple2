@@ -201,26 +201,38 @@ namespace Troika
     {
         QStringList mobFiles = vfs->listFiles(mapDirectory, "*.mob");
 
-        QMap<QString, GameObject*> gameObjects;
+        QHash<QString, GameObject*> gameObjects;
+        QHash<QString, QString> filenameMapping;
 
         foreach (QString mobFile, mobFiles)
         {
             GameObject *gameObject = readMobile(mobFile);
 
-            Q_ASSERT(!gameObject->id.isNull());
+            if (!gameObject)
+                continue;
+
+            Q_ASSERT(!gameObject->id.isNull()); // All mobiles need a GUID
 
             gameObjects[gameObject->id] = gameObject;
+            filenameMapping[gameObject->id] = mobFile;
 
             if (gameObject->parentItemId.isNull()) {
                 zoneTemplate->addMobile(gameObject);
             }
         }
 
-        foreach (GameObject *gameObject, gameObjects.values()) {
+        foreach (GameObject *gameObject, gameObjects) {
             if (gameObject->parentItemId.isNull())
-                continue;
+                continue; // We already processed non-parented mobiles
 
-            Q_ASSERT(gameObjects.contains(gameObject->parentItemId));
+            if (!gameObjects.contains(gameObject->parentItemId)) {
+                qWarning("Skipping game object %s, since its parent %s is missing.",
+                         qPrintable(filenameMapping[gameObject->id]),
+                         qPrintable(gameObject->parentItemId));
+                delete gameObject; // Free the object now that it won't be added to anything.
+                continue;
+            }
+
             gameObjects[gameObject->parentItemId]->content.append(gameObject);
         }
 
@@ -238,7 +250,8 @@ namespace Troika
         reader.setFilename(filename);
 
         if (!reader.read(false)) {
-            qWarning("Unable to read mobile file: %s", qPrintable(filename));
+            qWarning("%s (%s)", qPrintable(reader.errorMessage()), qPrintable(filename));
+            return NULL;
         }
 
         return new GameObject(reader.getObject());

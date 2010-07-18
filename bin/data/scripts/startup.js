@@ -16,6 +16,17 @@ var BaseObject = {
     drawBehindWalls: false,
 
     /**
+     * Destroys this object.
+     */
+    destroy: function() {
+        this.disable();
+        var index = this.map.mobiles.indexOf(this);
+        if (index != -1) {
+            this.map.mobiles.splice(index, 1);
+        }
+    },
+
+    /**
      * Retrives a name for this object that can be presented to the user.
      *
      * @param unknown If true, the object is unknown, and if present, the unknown id should be returned.
@@ -48,6 +59,32 @@ var BaseObject = {
 
         renderStates[this.renderStateId] = renderState;
     },
+
+    disable: function() {
+        if (this.disabled)
+            return;
+
+        // Remove from scene
+        var renderState = this.getRenderState();
+        if (renderState) {
+            gameView.scene.removeNode(renderState.sceneNode);
+            delete renderStates[this.renderStateId];
+            this.renderStateId = undefined;
+        }
+
+        this.disabled = true;
+    },
+
+    enable: function() {
+        if (!this.disabled)
+            return;
+
+        this.disabled = false;
+
+        // Only do this if a map is loaded
+        if (Maps.currentMap)
+            createMapObject(gameView.scene, this);
+    },    
 
     registerHandlers: function() {
         var renderState = this.getRenderState();
@@ -380,11 +417,16 @@ function setupWorldClickHandler() {
 
 var animEventGameFacade = {
     particles: function(partSysId, proxyObject) {
-        var modelInstance = proxyObject.modelInstance;
-        var sceneNode = proxyObject.sceneNode;
+        var renderState = proxyObject.obj.getRenderState();
+
+        if (!renderState || !renderState.modelInstance || !renderState.modelInstance.model) {
+            print("Called game.particles (animevent) for an object without rendering state: " + proxyObject.obj.id);
+            return;
+        }
+
         var particleSystem = gameView.particleSystems.instantiate(partSysId);
-        particleSystem.modelInstance = modelInstance;
-        sceneNode.attachObject(particleSystem);
+        particleSystem.modelInstance = renderState.modelInstance;
+        renderState.sceneNode.attachObject(particleSystem);
     },
     sound_local_obj: function(soundId, sceneNode) {
         var filename = sounds[soundId];
@@ -415,7 +457,7 @@ var footstepCounter = 0;
 var animEventAnimObjFacade = {
     footstep: function() {
         // TODO: Should we use Bip01 Footsteps bone here?
-        var material = gameView.sectorMap.regionTag("groundMaterial", this.sceneNode.position);
+        var material = gameView.sectorMap.regionTag("groundMaterial", this.obj.position);
 
         if (material === undefined)
             return;
@@ -430,20 +472,20 @@ var animEventAnimObjFacade = {
         var sound = sounds[footstepCounter++ % sounds.length];
 
         var handle = gameView.audioEngine.playSoundOnce(sound, SoundCategory_Effect);
-        handle.setPosition(this.sceneNode.position);
+        handle.setPosition(this.obj.position);
         handle.setMaxDistance(1500);
         handle.setReferenceDistance(50);
     }
 };
 
-function handleAnimationEvent(sceneNode, modelInstance, obj, type, content)
+function handleAnimationEvent(type, content)
 {
+    // Variable may be used by the eval call below.
+    //noinspection UnnecessaryLocalVariableJS
     var game = animEventGameFacade;
 
     var anim_obj = {
-        sceneNode: sceneNode,
-        modelInstance: modelInstance,
-        obj: obj
+        obj: this
     };
     anim_obj.__proto__ = animEventAnimObjFacade;
 
@@ -473,9 +515,7 @@ function createMapObject(scene, obj)
     modelInstance.model = modelObj;
     modelInstance.drawBehindWalls = obj.drawBehindWalls;
     updateEquipment(obj, modelInstance);
-    modelInstance.animationEvent.connect(function(type, content) {
-        handleAnimationEvent(sceneNode, modelInstance, obj, type, content);
-    });
+    modelInstance.animationEvent.connect(obj, handleAnimationEvent);
 
     // Store render state with the object
     var renderState = {

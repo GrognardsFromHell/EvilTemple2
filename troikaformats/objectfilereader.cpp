@@ -122,6 +122,7 @@ namespace Troika
         NpcFaction = 362,
         NpcSubstituteInventory = 364,
         NpcGeneratorData = 370,
+        NpcArmorBonus = 375,
         NpcAiFlags64 = 381,
         NpcStandpoints = 391,
     };
@@ -658,7 +659,8 @@ namespace Troika
 
                     if (enabled)
                     {
-                        readProperty((ObjectProperty)bitIndex);
+                        if (!readProperty((ObjectProperty)bitIndex))
+                            return false;
                     }
 
                     bitIndex++;
@@ -958,14 +960,12 @@ namespace Troika
                 skipPropertyArray();
                 break;
             case CritterPortrait:
-                quint32 portrait;
-                stream >> portrait;
-                qDebug("CRITTER PORTRAIT: %d (%s)", (int)portrait, qPrintable(filename));
+                stream >> object.portrait;
                 break;
             case CritterDescriptionUnknown:
                 ushort descriptionUnknown;
-                stream >> descriptionUnknown;
-                qDebug("CRITTER DESC UNK: %d (%s)", (int)descriptionUnknown, qPrintable(filename));
+                stream >> object.descriptionUnknownId;
+                object.descriptionUnknownId.setValue(descriptionUnknown);
                 break;
             case CritterInventoryNum:
                 stream >> object.critterInventoryNum;
@@ -1010,6 +1010,11 @@ namespace Troika
             case NpcFaction:
                 readFactions();
                 break;
+            case NpcArmorBonus:
+                short armorBonus;
+                stream >> armorBonus;
+                qDebug("NPC ARMOR BONUS: %d", (int)armorBonus);
+                break;
             case CritterInventoryListIndex:
                 skipPropertyArray();
                 break;
@@ -1045,7 +1050,7 @@ namespace Troika
               Additional error checking to skip corrupt mob files.
               */
             if (stream.status() == QDataStream::ReadPastEnd) {
-                qWarning("Read past end of stream for field: %d in file %s.", property, qPrintable(filename));
+                errorMessage = QString("Read past end of stream for field: %1.").arg(property);
                 return false;
             }
 

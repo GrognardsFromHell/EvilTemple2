@@ -36,6 +36,24 @@
 #include <gamemath.h>
 using namespace GameMath;
 
+#ifdef Q_OS_WIN32
+#include <windows.h>
+static bool initialized = false;
+LARGE_INTEGER frequency;
+
+static qint64 getTicks() {
+    if (!initialized) {
+        QueryPerformanceFrequency(&frequency);
+        initialized = true;
+    }
+
+    LARGE_INTEGER now;
+    QueryPerformanceCounter(&now);
+
+    return (now.QuadPart * 1000) / frequency.QuadPart;
+}
+#endif
+
 namespace EvilTemple {
 
     class VisualTimer {
@@ -52,22 +70,36 @@ namespace EvilTemple {
           */
         bool isElapsed(qint64 msecsSinceReference) const;
 
+        qint64 elapsedSinceStart(qint64 msecsSinceReference) const;
+
         /**
           Call the callback stored in this visual timer.
           */
-        void call();
+        void call(qint64 reference);
 
     private:
         QScriptValue mCallback;
         qint64 mElapseAfter;
+        qint64 mStarted;
     };
 
     inline VisualTimer::VisualTimer(const QScriptValue &callback, uint elapseAfter)
         : mCallback(callback)
     {
+#if defined(Q_OS_WIN32)
+        mElapseAfter = getTicks() + elapseAfter;
+        mStarted = getTicks();
+#else
         QElapsedTimer timer;
         timer.start();
+        mStarted = timer.msecsSinceReference();
         mElapseAfter = timer.msecsSinceReference() + elapseAfter;
+#endif
+    }
+
+    inline qint64 VisualTimer::elapsedSinceStart(qint64 msecsSinceReference) const
+    {
+        return msecsSinceReference - mStarted;
     }
 
     inline bool VisualTimer::isElapsed(qint64 msecsSinceReference) const
@@ -75,9 +107,11 @@ namespace EvilTemple {
         return msecsSinceReference >= mElapseAfter;
     }
 
-    inline void VisualTimer::call()
+    inline void VisualTimer::call(qint64 reference)
     {
-        mCallback.call();
+        int realElapsed = (int)elapsedSinceStart(reference);
+
+        mCallback.call(QScriptValue(), QScriptValueList() << QScriptValue(realElapsed));
 
         QScriptEngine *engine = mCallback.engine();
 
@@ -86,6 +120,10 @@ namespace EvilTemple {
 
         if (engine->hasUncaughtException()) {
             qDebug() << engine->uncaughtException().toString() << engine->uncaughtExceptionLineNumber();
+            foreach (const QString &line, engine->uncaughtExceptionBacktrace()) {
+                qDebug() << "   " << line;
+            }
+
         }
     }
 
@@ -379,16 +417,20 @@ namespace EvilTemple {
 
     void GameViewData::pollVisualTimers()
     {
+#ifdef Q_OS_WIN32
+        qint64 reference = getTicks();
+#else
         QElapsedTimer timer;
         timer.start();
         qint64 reference = timer.msecsSinceReference();
+#endif
 
         for (int i = 0; i < visualTimers.size(); ++i) {
             VisualTimer timer = visualTimers[i];
 
             if (timer.isElapsed(reference)) {
                 // qDebug("Timer has elapsed.");
-                timer.call();
+                timer.call(reference);
                 visualTimers.removeAt(i--);
             }
         }

@@ -43,8 +43,8 @@ var WalkJobs = {
             }
 
             var obj = this;
-            gameView.addVisualTimer(30, function() {
-                obj.addTime(0.03);
+            gameView.addVisualTimer(20, function(realElapsed) {
+                obj.addTime(realElapsed / 1000);
             });
         } catch (error) {
             print(error);

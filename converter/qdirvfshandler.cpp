@@ -9,10 +9,12 @@ QDirVfsHandler::QDirVfsHandler(const QDir &baseDir) : mBaseDir(baseDir)
 
 QByteArray QDirVfsHandler::openFile(const QString &filename)
 {
-    QFile f(mBaseDir.absoluteFilePath(filename));
+    if (filename.startsWith("movies") || filename.startsWith("sound")) {
+        QFile f(mBaseDir.absoluteFilePath(filename));
 
-    if (f.open(QIODevice::ReadOnly)) {
-        return f.readAll();
+        if (f.open(QIODevice::ReadOnly)) {
+            return f.readAll();
+        }
     }
 
     return QByteArray((char*)NULL, 0);
@@ -20,6 +22,8 @@ QByteArray QDirVfsHandler::openFile(const QString &filename)
 
 bool QDirVfsHandler::exists(const QString &filename)
 {
+    if (!filename.startsWith("movies") || filename.startsWith("sound"))
+        return false;
     return mBaseDir.exists(filename);
 }
 
@@ -31,16 +35,23 @@ static void addFiles(QDir dir, const QString &prefix, const QStringList &filters
         result.append(prefix + entry);
     }
 
-    entries = dir.entryList(filters, QDir::Dirs|QDir::NoDotAndDotDot|QDir::NoSymLinks);
+    entries = dir.entryList(QDir::Dirs|QDir::NoDotAndDotDot|QDir::NoSymLinks);
     foreach (const QString &entry, entries) {
         QDir subdir = dir;
         subdir.cd(entry);
-        addFiles(dir, prefix + entry + "/", filters, result);
+        addFiles(subdir, prefix + entry + "/", filters, result);
     }
 }
 
 QStringList QDirVfsHandler::listFiles(const QString &path, const QString &filter)
 {
+    /*
+     TODO: This fixes CO8 incompatibility for now by skipping everything other than
+         movies and sound
+    */
+    if (!path.startsWith("music") || path.startsWith("sound"))
+        return QStringList();
+
     QStringList result;
 
     QStringList filters;
@@ -66,7 +77,16 @@ QStringList QDirVfsHandler::listAllFiles(const QString &filenameFilter)
     QStringList filters;
     filters << filenameFilter;
 
-    addFiles(mBaseDir, "", filters, result);
+    /*
+     TODO: This fixes CO8 incompatibility for now by skipping everything other than
+         movies and sound
+    */
+    QDir subdir = mBaseDir;
+    if (subdir.cd("sound") && subdir.cd("music"))
+        addFiles(subdir, "sound/music/", filters, result);
+    subdir = mBaseDir;
+    if (subdir.cd("movies"))
+        addFiles(subdir, "movies/", filters, result);
 
     return result;
 }

@@ -68,12 +68,235 @@ PythonConverter::PythonConverter(IConversionService *service) : mService(service
         Py_Initialize();
 }
 
+static void
+print_error_text(QString *f, int offset, const char *text)
+{
+    const char *nl;
+    if (offset >= 0) {
+        if (offset > 0 && offset == (int)strlen(text))
+            offset--;
+        for (;;) {
+            nl = strchr(text, '\n');
+            if (nl == NULL || nl-text >= offset)
+                break;
+            offset -= (int)(nl+1-text);
+            text = nl+1;
+        }
+        while (*text == ' ' || *text == '\t') {
+            text++;
+            offset--;
+        }
+    }
+    f->append("    ");
+    f->append(text);
+    if (*text == '\0' || text[strlen(text)-1] != '\n')
+        f->append("\n");
+    if (offset == -1)
+        return;
+    f->append("    ");
+    offset--;
+    while (offset > 0) {
+        f->append(" ");
+        offset--;
+    }
+    f->append("^\n");
+}
+
+static int
+parse_syntax_error(PyObject *err, PyObject **message, const char **filename,
+                   int *lineno, int *offset, const char **text)
+{
+    long hold;
+    PyObject *v;
+
+    /* old style errors */
+    if (PyTuple_Check(err))
+        return PyArg_ParseTuple(err, "O(ziiz)", message, filename,
+                                lineno, offset, text);
+
+    /* new style errors.  `err' is an instance */
+
+    if (! (v = PyObject_GetAttrString(err, "msg")))
+        goto finally;
+    *message = v;
+
+    if (!(v = PyObject_GetAttrString(err, "filename")))
+        goto finally;
+    if (v == Py_None)
+        *filename = NULL;
+    else if (! (*filename = PyString_AsString(v)))
+        goto finally;
+
+    Py_DECREF(v);
+    if (!(v = PyObject_GetAttrString(err, "lineno")))
+        goto finally;
+    hold = PyInt_AsLong(v);
+    Py_DECREF(v);
+    v = NULL;
+    if (hold < 0 && PyErr_Occurred())
+        goto finally;
+    *lineno = (int)hold;
+
+    if (!(v = PyObject_GetAttrString(err, "offset")))
+        goto finally;
+    if (v == Py_None) {
+        *offset = -1;
+        Py_DECREF(v);
+        v = NULL;
+    } else {
+        hold = PyInt_AsLong(v);
+        Py_DECREF(v);
+        v = NULL;
+        if (hold < 0 && PyErr_Occurred())
+            goto finally;
+        *offset = (int)hold;
+    }
+
+    if (!(v = PyObject_GetAttrString(err, "text")))
+        goto finally;
+    if (v == Py_None)
+        *text = NULL;
+    else if (! (*text = PyString_AsString(v)))
+        goto finally;
+    Py_DECREF(v);
+    return 1;
+
+finally:
+    Py_XDECREF(v);
+    return 0;
+}
+
+QString
+display_error(PyObject *exception, PyObject *value, PyObject *tb)
+{
+    int err = 0;
+    QString f;
+    Py_INCREF(value);
+    PyErr_Clear();
+    //if (tb && tb != Py_None)
+    //    err = PyTraceBack_Print(tb, f);
+    if (err == 0 &&
+        PyObject_HasAttrString(value, "print_file_and_line"))
+    {
+        PyObject *message;
+        const char *filename, *text;
+        int lineno, offset;
+        if (!parse_syntax_error(value, &message, &filename,
+                                &lineno, &offset, &text))
+            PyErr_Clear();
+        else {
+            char buf[10];
+            f.append("  File \"");
+            if (filename == NULL)
+                f.append("<string>");
+            else
+                f.append(filename);
+            f.append("\", line ");
+            PyOS_snprintf(buf, sizeof(buf), "%d", lineno);
+            f.append(buf);
+            f.append("\n");
+            if (text != NULL)
+                print_error_text(&f, offset, text);
+            Py_DECREF(value);
+            value = message;
+            /* Can't be bothered to check all those
+                   PyFile_WriteString() calls */
+            if (PyErr_Occurred())
+                err = -1;
+        }
+    }
+    if (err) {
+        /* Don't do anything else */
+    }
+    else if (PyExceptionClass_Check(exception)) {
+        PyObject* moduleName;
+        char* className = PyExceptionClass_Name(exception);
+        if (className != NULL) {
+            char *dot = strrchr(className, '.');
+            if (dot != NULL)
+                className = dot+1;
+        }
+
+        err = 0;
+        moduleName = PyObject_GetAttrString(exception, "__module__");
+        if (moduleName == NULL)
+            f.append("<unknown>");
+        else {
+            char* modstr = PyString_AsString(moduleName);
+            if (modstr && strcmp(modstr, "exceptions"))
+            {
+                f.append(modstr);
+                f.append('.');
+            }
+            Py_DECREF(moduleName);
+        }
+        if (err == 0) {
+            if (className == NULL)
+                f.append("<unknown>");
+            else
+                f.append(className);
+        }
+    }
+    //else
+    //    err = PyFile_WriteObject(exception, f, Py_PRINT_RAW);
+    if (err == 0 && (value != Py_None)) {
+        PyObject *s = PyObject_Str(value);
+        /* only print colon if the str() of the
+               object is not the empty string
+            */
+        if (s == NULL)
+            err = -1;
+        else if (!PyString_Check(s) ||
+                 PyString_GET_SIZE(s) != 0)
+            f.append(": ");
+        f.append(PyString_AsString(s));
+        Py_XDECREF(s);
+    }
+    /* try to write a newline in any case */
+    f.append("\n");
+    Py_DECREF(value);
+    /* If an error happened here, don't show it.
+       XXX This is wrong, but too many callers rely on this behavior. */
+    if (err != 0)
+        PyErr_Clear();
+
+    return f;
+}
+
 static void reportError()
 {
-    PyObject *err = PyErr_Occurred();
+    // Print the Error
+    if ( PyErr_Occurred() )
+    {
+        PyObject* exception,* value,* traceback;
 
-    if (err) {
-        PyErr_Print();
+        PyErr_Fetch( &exception, &value, &traceback );
+        PyErr_NormalizeException( &exception, &value, &traceback );
+
+        // Set sys. variables for exception tracking
+        PySys_SetObject( "last_type", exception );
+        PySys_SetObject( "last_value", value );
+        PySys_SetObject( "last_traceback", traceback );
+
+        PyObject *pyExcName = PyObject_GetAttrString(exception, "__name__");
+        QString exceptionName = QString::fromLatin1(PyString_AsString(pyExcName));
+        Py_XDECREF(pyExcName);
+
+        // Do we have a detailed description of the error ?
+        PyObject* error = value != 0 ? PyObject_Str( value ) : 0;
+
+        qWarning("An error occured: %s", qPrintable(exceptionName));
+
+        if (error) {
+            qDebug("%s: %s", qPrintable(exceptionName), PyString_AsString(error));
+            Py_XDECREF(error);
+        }
+
+        qWarning("%s", qPrintable(display_error(exception, value, traceback)));
+
+        Py_XDECREF( exception );
+        Py_XDECREF( value );
+        Py_XDECREF( traceback );
     }
 }
 
@@ -1163,7 +1386,7 @@ QString PythonConverter::convert(const QByteArray &code, const QString &filename
     QByteArray textCode = code;
     textCode.replace("\r", "");
     textCode.replace("else if", "elif"); // Fixes some ToEE bugs
-    textCode = textCode.trimmed();
+    textCode.append("\n\n");
 
     PyCompilerFlags flags;
     flags.cf_flags = PyCF_SOURCE_IS_UTF8|PyCF_ONLY_AST;
@@ -1171,8 +1394,8 @@ QString PythonConverter::convert(const QByteArray &code, const QString &filename
     _mod *astRoot = PyParser_ASTFromString(textCode.constData(), qPrintable(filename), Py_file_input, &flags, arena);
 
     if (!astRoot) {
-        PyErr_Print();
-        qWarning("Unable to parse python file: %s.", qPrintable(filename));
+        qWarning("Unable to parse python file: %s:", qPrintable(filename));
+        reportError();
         return result;
     }
 
@@ -1207,8 +1430,8 @@ QString PythonConverter::convertDialogGuard(const QByteArray &code, const QStrin
     _mod *astRoot = PyParser_ASTFromString(textCode.constData(), qPrintable(filename), Py_eval_input, &flags, arena);
 
     if (!astRoot) {
-        PyErr_Print();
-        qWarning("Unable to parse python file: %s.", qPrintable(filename));
+        qWarning("Unable to parse dialog guard in %s: %s:", qPrintable(filename), code.constData());
+        reportError();
         return result;
     }
 
@@ -1255,8 +1478,8 @@ QString PythonConverter::convertDialogAction(const QByteArray &code, const QStri
     _mod *astRoot = PyParser_ASTFromString(textCode.constData(), qPrintable(filename), Py_file_input, &flags, arena);
 
     if (!astRoot) {
-        PyErr_Print();
-        qWarning("Unable to parse python file: %s.", qPrintable(filename));
+        qWarning("Unable to parse dialog action in %s: %s:", qPrintable(filename), code.constData());
+        reportError();
         return result;
     }
 

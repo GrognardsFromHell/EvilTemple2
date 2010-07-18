@@ -55,6 +55,26 @@ Map.prototype.findMobileById = function(id) {
     return null;
 };
 
+/**
+ * Causes the heartbeat event
+ */
+Map.prototype.heartbeat = function() {
+    if (Maps.currentMap !== this)
+        return;
+
+    this.mobiles.forEach(function (mobile) {
+        if (!mobile.OnHeartbeat)
+            return;
+
+        LegacyScripts.OnHeartbeat(mobile.OnHeartbeat, mobile);
+    });
+
+    var obj = this;
+    gameView.addVisualTimer(1000, function() {
+        obj.heartbeat();
+    });
+};
+
 Map.prototype.entering = function(position) {
     // Ensure that the map is only entered when it's the active map
     if (Maps.currentMap !== this) {
@@ -132,7 +152,7 @@ Map.prototype.entering = function(position) {
     }
 
     print("Creating " + mapObj.particleSystems.length + " particle systems.");
-
+                 /*
     for (var i = 0; i < mapObj.particleSystems.length; ++i) {
         obj = mapObj.particleSystems[i];
 
@@ -143,16 +163,15 @@ Map.prototype.entering = function(position) {
         var particleSystem = gameView.particleSystems.instantiate(obj.name);
         sceneNode.attachObject(particleSystem);
 
-        /*
-         Debugging code
-         */
         // makeParticleSystemTestModel(obj, sceneNode);
-    }
+    }    */
 
     // Move party to starting location, add nodes to scene
+    var map = this;
     Party.getMembers().forEach(function (critter) {
         critter.map = this;
         critter.position = position;
+        map.mobiles.push(critter);
         createMapObject(scene, critter);
 
         // Fire areaChanged event (NOTE: Not if loading a savegame)
@@ -164,6 +183,18 @@ Map.prototype.entering = function(position) {
 
     var elapsed = timerReference() - start;
     print("Loaded map in " + elapsed + " ms.");
+
+    // Process heartbeat scripts (Only when CHANGING maps, not when loading from save!)
+    for (i = 0; i < this.mobiles.length; ++i) {
+        var mobile = this.mobiles[i];
+        if (mobile.OnFirstHeartbeat) {
+            LegacyScripts.OnFirstHeartbeat(mobile.OnFirstHeartbeat, mobile);
+        }
+    }
+    
+    gameView.addVisualTimer(1000, function() {
+        map.heartbeat();
+    });    
 };
 
 Map.prototype.leaving = function(newMap, newPosition) {

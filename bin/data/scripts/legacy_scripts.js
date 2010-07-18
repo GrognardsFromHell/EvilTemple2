@@ -63,11 +63,13 @@ var LegacyScripts = {};
         obj_list_vicinity: function(pos, type) {
             // Filter the map's mobile list.
             var result = Maps.currentMap.mobiles.filter(function (mobile) {
-                if (mobile.type != type)
+                if ((type == 'Critter' && mobile.type != 'NonPlayerCharacter' && mobile.type != 'PlayerCharacter')
+                        || (type != 'Critter' && mobile.type != type)) {
                     return false; // Skip objects that are not of the requested type
+                }
 
                 // Check that the NPC is in the vicinity, whatever that means
-                return distance(pos, mobile.position) <= 500;
+                return distance(pos, mobile.position) <= 128;
             });
 
             result = result.map(function(obj) {
@@ -76,6 +78,70 @@ var LegacyScripts = {};
 
             print("Found " + result.length + " objects of type " + type + " near " + pos);
             return result;
+        },
+
+        /**
+         * Shows flags on the townmap. Currently not implemented.
+         *
+         * @param mapId
+         * @param flagId
+         * @param enabled
+         */
+        map_flags: function(mapId, flagId, enabled) {
+            if (enabled)
+                print("Showing flagid " + flagId + " on map " + mapId);
+            else
+                print("Hiding flagid " + flagId + " on map " + mapId);
+        },
+
+        /**
+         * Adds a timed call to a function in a given amount of time.
+         *
+         * @param callback The callback function.
+         * @param callbackArgs The arguments to the function.
+         * @param timeout The timeout value.
+         */
+        timevent_add: function(callback, callbackArgs, timeout)
+        {
+            print("Skipping " + timeout + " time and calling " + callback + " directly with args = " + callbackArgs);
+
+            var thisObj = {};
+            thisObj.__proto__ = LegacyScriptPrototype;
+            callback.apply(thisObj, callbackArgs);
+        },
+
+        /**
+         * Returns whether combat is occurring.
+         */
+        combat_is_active: function() {
+            return false;
+        },
+
+        particles: function(partSysId, proxyObject) {
+            var renderState = proxyObject.obj.getRenderState();
+
+            if (!renderState || !renderState.modelInstance || !renderState.modelInstance.model) {
+                print("Called game.particles (animevent) for an object without rendering state: " + proxyObject.obj.id);
+                return;
+            }
+
+            var particleSystem = gameView.particleSystems.instantiate(partSysId);
+            particleSystem.modelInstance = renderState.modelInstance;
+            renderState.sceneNode.attachObject(particleSystem);
+        },
+
+        obj_create: function(prototype, location) {
+            var obj = {};
+            obj.id = generateGuid();
+            obj.prototype = prototype;
+            obj.position = location;
+            obj.map = Maps.currentMap;
+            connectToPrototype(obj);
+            
+            Maps.currentMap.mobiles.push(obj);
+            createMapObject(gameView.scene, obj);
+            
+            return new CritterWrapper(obj);
         }
     };
 
@@ -97,7 +163,13 @@ var LegacyScripts = {};
 
         OLC_NPC: 'NonPlayerCharacter',
 
+        OLC_PC: 'PlayerCharacter',
+
         OLC_CONTAINER: 'Container',
+
+        OLC_SCENERY: 'Scenery',
+
+        OLC_CRITTERS: 'Critter',
 
         Q_IsFallenPaladin: 'fallen_paladin',
 
@@ -108,6 +180,8 @@ var LegacyScripts = {};
         Q_Critter_Is_Blinded: 'is_blind',
 
         Q_Critter_Can_Find_Traps: 'critter_can_find_traps',
+
+        OF_OFF: 'disabled',
 
         game: GameFacade,
 
@@ -122,18 +196,18 @@ var LegacyScripts = {};
                 var critter = creatures[i].obj;
 
                 switch (command) {
-                case 'has_item':
-                    if (critter.content) {
-                        for (j = 0; j < critter.content.length; ++j) {
-                            var item = critter.content[j];
-                            if (item.internalId == id)
-                                return true;
+                    case 'has_item':
+                        if (critter.content) {
+                            for (j = 0; j < critter.content.length; ++j) {
+                                var item = critter.content[j];
+                                if (item.internalId == id)
+                                    return true;
+                            }
                         }
-                    }
-                    break;
-                default:
-                    print("Unknown verb for 'anyone': " + command);
-                    return false;
+                        break;
+                    default:
+                        print("Unknown verb for 'anyone': " + command);
+                        return false;
                 }
             }
 
@@ -280,6 +354,25 @@ var LegacyScripts = {};
     };
 
     /**
+     * Checks line-of-sight and invisibility/concealment, so that it is assured this critter can see the
+     * other critter.
+     * @param critter A critter.
+     */
+    CritterWrapper.prototype.can_see = function(critter) {
+        return true; // TODO: Implement
+    };
+
+    /**
+     * Returns the distance between this critter and another critter.
+     *
+     * @param critter A critter.
+     */
+    CritterWrapper.prototype.distance_to = function(critter) {
+        // TODO: This is probably NOT in pixels but rather in world-tiles
+        return distance(critter.obj.position, this.obj.position) / 28;
+    };
+
+    /**
      * Turns the NPC towards another critter.
      * @param character The character to turn to.
      */
@@ -311,6 +404,45 @@ var LegacyScripts = {};
         }
 
         return false;
+    };
+
+    /**
+     * Destroys the object.
+     */
+    CritterWrapper.prototype.destroy = function() {
+        this.obj.destroy();
+    };
+
+    /**
+     * Enables a flag of this object.
+     */
+    CritterWrapper.prototype.object_flag_set = function(flagName) {
+
+        switch (flagName) {
+            case "disabled":
+                this.obj.disable();
+                break;
+            default:
+                print("Enabling unknown object flag on " + this.obj.id + ": " + flagName);
+                break;
+        }
+
+    };
+
+    /**
+     * Disables a flag of this object.
+     */
+    CritterWrapper.prototype.object_flag_unset = function(flagName) {
+
+        switch (flagName) {
+            case "disabled":
+                this.obj.enable();
+                break;
+            default:
+                print("Disabling unknown object flag on " + this.obj.id + ": " + flagName);
+                break;
+        }
+
     };
 
     /**
@@ -688,6 +820,61 @@ var LegacyScripts = {};
         }
 
         return script.san_use(new CritterWrapper(attachedTo), new CritterWrapper(getTriggerer()));
+    };
+
+    /**
+     * Triggers the first heartbeat event for a legacy script. This event is triggered once
+     * when a map is loaded.
+     *
+     * @param attachedScript The legacy script. This is a JavaScript object with at least a 'script' property giving
+     *                 the id of the legacy script.
+     * @param attachedTo The object the script is attached to.
+     */
+    LegacyScripts.OnFirstHeartbeat = function(attachedScript, attachedTo) {
+        var script = getScript(attachedScript.script);
+
+        if (!script) {
+            print("Unknown legacy script: " + attachedScript.script);
+            return false;
+        }
+
+        return script.san_first_heartbeat(new CritterWrapper(attachedTo), null);
+    };
+
+    /**
+     * Triggers the heartbeat event for a legacy script. This event is triggered in regular intervals.
+     *
+     * @param attachedScript The legacy script. This is a JavaScript object with at least a 'script' property giving
+     *                 the id of the legacy script.
+     * @param attachedTo The object the script is attached to.
+     */
+    LegacyScripts.OnHeartbeat = function(attachedScript, attachedTo) {
+        var script = getScript(attachedScript.script);
+
+        if (!script) {
+            print("Unknown legacy script: " + attachedScript.script);
+            return false;
+        }
+
+        return script.san_heartbeat(new CritterWrapper(attachedTo), null);
+    };
+
+    /**
+     * Triggers the enter combat event for a legacy script.
+     *
+     * @param attachedScript The legacy script. This is a JavaScript object with at least a 'script' property giving
+     *                 the id of the legacy script.
+     * @param attachedTo The object the script is attached to.
+     */
+    LegacyScripts.OnEnterCombat = function(attachedScript, attachedTo) {
+        var script = getScript(attachedScript.script);
+
+        if (!script) {
+            print("Unknown legacy script: " + attachedScript.script);
+            return false;
+        }
+
+        return script.san_enter_combat(new CritterWrapper(attachedTo), null);
     };
 
 })();

@@ -38,6 +38,10 @@ static QVariantMap convertDialogScript(IConversionService *service, const QByteA
     QStringList lines = script.split("\n", QString::SkipEmptyParts);
 
     foreach (QString line, lines) {
+        // Replace comment at end of line
+        line.replace(QRegExp("//[^\\{\\}]*$"), "");
+        line.replace(QRegExp("#[^\\{\\}]*$"), "");
+
         line = line.trimmed();
 
         QStringList parts = line.split(QRegExp("\\}\\s*\\{"), QString::KeepEmptyParts);
@@ -66,12 +70,12 @@ static QVariantMap convertDialogScript(IConversionService *service, const QByteA
         if (intelligence != 0)
             entry["intelligence"] = intelligence;
         if (!guard.isEmpty()) {
-            entry["guard"] = converter.convertDialogGuard(guard.toUtf8(), filename);
+            entry["guard"] = converter.convertDialogGuard(guard.toUtf8(), filename + ":" + id);
         }
         if (!nextId.isEmpty() && nextId != "0")
             entry["nextId"] = nextId.toUInt();
         if (!action.isEmpty())
-            entry["action"] = converter.convertDialogAction(action.toUtf8(), filename);
+            entry["action"] = converter.convertDialogAction(action.toUtf8(), filename + ":" + id);
         result[id] = entry;
     }
 

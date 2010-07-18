@@ -112,6 +112,8 @@ namespace Troika
         Integer blitAlpha;
         Integer npcGeneratorData;
         Integer critterAlignment;
+        Integer portrait;
+        Integer descriptionUnknownId;
 
         QList<uint> factions;
 

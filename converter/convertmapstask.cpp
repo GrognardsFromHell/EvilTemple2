@@ -172,6 +172,8 @@ static QVariant toVariant(IConversionService *service, GameObject *object, QVari
         object->flags.removeAll("WaypointsNight");
     }
 
+    props.write("unknownDescriptionId", object->descriptionUnknownId);
+    props.write("portraitId", object->portrait);
     props.write("flags", object->flags);
     props.write("scale", object->scale);
     props.write("rotation", object->rotation);
