@@ -770,20 +770,34 @@ namespace Troika
                     object.flags.clear();
                 break;
             case Radius:
-                stream >> object.radius;
-                // the first object that is encountered sets the prototype's radius
-                if (!object.prototype->radius.isDefined())
-                    object.prototype->radius.setValue(object.radius.value());
-                if (object.radius == object.prototype->radius)
-                    object.radius.clear();
+                float radius;
+                stream >> radius;
+
+                // This fixes the renderheight/radius for several badly broken items
+                if (radius > 0 && radius < 10000) {
+                    object.radius.setValue(radius);
+                    // the first object that is encountered sets the prototype's radius
+                    if (!object.prototype->radius.isDefined())
+                        object.prototype->radius.setValue(object.radius.value());
+                    if (object.radius == object.prototype->radius)
+                        object.radius.clear();
+                }
                 break;
             case RenderHeight3d:
-                stream >> object.renderHeight;
-                // the first object that is encountered sets the prototype's render height
-                if (!object.prototype->renderHeight.isDefined())
-                    object.prototype->renderHeight.setValue(object.renderHeight.value());
-                if (object.renderHeight == object.prototype->renderHeight)
-                    object.renderHeight.clear();
+                float height;
+                stream >> height;
+
+                // There are some broken object files where the height is out of range
+                if (height > 0 && height < 10000) {
+                    object.renderHeight.setValue(height);
+
+                    // the first object that is encountered sets the prototype's render height
+                    if (!object.prototype->renderHeight.isDefined()) {
+                        object.prototype->renderHeight.setValue(object.renderHeight6022.value());
+                    }
+                    if (object.renderHeight == object.prototype->renderHeight)
+                        object.renderHeight.clear();
+                }
                 break;
             case SceneryTeleportTo:
                 stream >> object.teleportTarget;
