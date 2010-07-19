@@ -7,12 +7,15 @@
 #include "game.h"
 #include "mainwindow.h"
 #include "scriptengine.h"
+#include "savegames.h"
 
 namespace EvilTemple {
 
     class GameData {
     public:
         ScriptEngine *scriptEngine;
+
+        SaveGames *saveGames;
     };
 
     Game::Game(QObject *parent) :
@@ -21,6 +24,10 @@ namespace EvilTemple {
     {
         d_ptr->scriptEngine = new ScriptEngine(this);
         d_ptr->scriptEngine->setObjectName("scriptEngine");
+
+        d_ptr->saveGames = new SaveGames("saves/", d_ptr->scriptEngine->engine(), this);
+
+        d_ptr->scriptEngine->exposeQObject("savegames", d_ptr->saveGames);
     }
 
     Game::~Game() {

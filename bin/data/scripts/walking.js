@@ -77,7 +77,7 @@ var WalkJobs = {
             rot = - rot;
         }
 
-        this.obj.rotation = rot;
+        this.obj.rotation = rad2deg(rot);
         this.sceneNode.rotation = [0, Math.sin(rot / 2), 0, Math.cos(rot / 2)];
     }
 };

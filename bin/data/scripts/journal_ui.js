@@ -11,6 +11,7 @@ var JournalUi = {};
 
         journalDialog = gameView.addGuiItem("interface/Journal.qml");
         journalDialog.closeClicked.connect(JournalUi.close);
+        journalDialog.quests = Quests.getKnown();
     };
 
     JournalUi.close = function() {

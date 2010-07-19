@@ -1,10 +1,24 @@
 import Qt 4.7
 
+import 'Tests.js' as Tests
+
 MovableWindow {
     id: root
     width: 750
     height: 420
     title: ''
+
+    property variant quests
+
+    onQuestsChanged: {
+        questListModel.clear();
+        for (var questId in quests) {
+            questListModel.append({
+                'questId': questId,
+                'questState': quests[questId]
+            });
+        }
+    }
 
     Image {
         source: "../art/interface/LOGBOOK_UI/whole_book.png"
@@ -12,7 +26,7 @@ MovableWindow {
     }
 
     Text {
-        id: text1
+        id: questsHeadline
         x: 66
         y: 64
         width: 279
@@ -26,12 +40,26 @@ MovableWindow {
         font.family: "Fontin"
     }
 
+    ListModel {
+        id: questListModel
+    }
+
+    Component {
+        id: questDelegate
+        Text {
+            text: questId + ': ' + questState
+            color: '#ffffff'
+        }
+    }
+
     ListView {
         id: questListView
         x: 66
         y: 84
-        width: 279
-        height: 292
+        width: 271
+        height: 290
+        model: questListModel
+        delegate: questDelegate
     }
 
     Button {
@@ -47,4 +75,6 @@ MovableWindow {
         text: ''
         onClicked: root.closeClicked()
     }
+
+    Component.onCompleted: Tests.fillQuests(root)
 }

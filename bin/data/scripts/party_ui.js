@@ -1,4 +1,3 @@
-
 var PartyUi = {};
 
 (function() {
@@ -20,27 +19,27 @@ var PartyUi = {};
         }
 
         switch (action) {
-        case "select":
-            if (currentSelection && currentSelection != target)
-                currentSelection.setSelected(false);
-            currentSelection = target;
-            target.setSelected(true);
-            PartyUi.update();
-            break;
+            case "select":
+                if (currentSelection && currentSelection != target)
+                    currentSelection.setSelected(false);
+                currentSelection = target;
+                target.setSelected(true);
+                PartyUi.update();
+                break;
 
-        case "select_and_center":
-            if (currentSelection && currentSelection != target)
-                currentSelection.setSelected(false);
-            currentSelection = target;
-            target.setSelected(true);
-            gameView.centerOnWorld(target.position);
-            PartyUi.update();
-            break;
+            case "select_and_center":
+                if (currentSelection && currentSelection != target)
+                    currentSelection.setSelected(false);
+                currentSelection = target;
+                target.setSelected(true);
+                gameView.centerOnWorld(target.position);
+                PartyUi.update();
+                break;
 
-        case "charsheet":
-            var renderState = target.getRenderState();
-            if (renderState)
-                showMobileInfo(target, renderState.modelInstance);
+            case "charsheet":
+                var renderState = target.getRenderState();
+                if (renderState)
+                    showMobileInfo(target, renderState.modelInstance);
         }
     }
 
@@ -64,9 +63,9 @@ var PartyUi = {};
 
     function getModel(critter) {
         return {
-                portrait: getPortrait(critter.portrait, Portrait_Medium),
-                selected: currentSelection == critter
-            };
+            portrait: getPortrait(critter.portrait, Portrait_Medium),
+            selected: currentSelection == critter
+        };
     }
 
     /**
@@ -88,7 +87,16 @@ var PartyUi = {};
             model.push(getModel(npc));
         });
 
-        ui.nonPlayerCharacters = model;        
+        ui.nonPlayerCharacters = model;
     };
+
+    // TODO: Replace this with a global gameStarted event
+    StartupListeners.add(function() {
+        SaveGames.addLoadedListener(function() {
+            print("Showing party ui");
+            PartyUi.show();
+            PartyUi.update();
+        });
+    });
 
 })();

@@ -19,7 +19,14 @@ var LegacyDialog = {};
         // TODO: Set a prototype on the resulting object?
 
         try {
-            return eval('(' + readFile(filename) + ')');
+            var result = eval('(' + readFile(filename) + ')');
+
+            for (var k in result) {
+                result[k].id = k; // Set the id on each line
+            }
+
+            return result;
+
         } catch(err) {
             print("Unable to read legacy dialog file " + filename);
             throw err;
@@ -54,6 +61,7 @@ var LegacyDialog = {};
 
         // Make a copy
         var result = {
+            id: line.id,
             text: line.text,
             femaleText: line.femaleText,
             nextId: line.nextId,
@@ -135,6 +143,7 @@ var LegacyDialog = {};
                 if (!dialog[newLineId])
                     return false;
                 var newLine = dialog[newLineId];
+                result.id = newLineId;
                 result.text = newLine.text;
                 result.femaleText = newLine.text;
                 result.guard = newLineId;

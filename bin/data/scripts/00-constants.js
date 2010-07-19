@@ -52,15 +52,15 @@ var Male = 'male';
  * This is why they're objects and not numbers.
  */
 var Alignment = {
-    LawfulGood: {},
-    NeutralGood: {},
-    ChaoticGood: {},
-    LawfulNeutral: {},
-    TrueNeutral: {},
-    ChaoticNeutral: {},
-    LawfulEvil: {},
-    NeutralEvil: {},
-    ChaoticEvil: {}
+    LawfulGood: 'lawful_good',
+    NeutralGood: 'neutral_good',
+    ChaoticGood: 'chaotic_good',
+    LawfulNeutral: 'lawful_neutral',
+    TrueNeutral: 'true_neutral',
+    ChaoticNeutral: 'chaotic_neutral',
+    LawfulEvil: 'lawful_evil',
+    NeutralEvil: 'neutral_evil',
+    ChaoticEvil: 'chaotic_evil'
 };
 
 var Area = {
@@ -76,4 +76,12 @@ var Area = {
     DekloGrove: "deklo_grove",
     TempleRuinedHouse: "temple_ruined_house",
     TempleTower: "temple_tower"
+};
+
+var QuestState = {
+    Unknown: 'unknown',
+    Mentioned: 'mentioned',
+    Accepted: 'accepted',
+    Completed: 'completed',
+    Botched: 'botched'
 };

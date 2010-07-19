@@ -24,6 +24,9 @@ namespace EvilTemple {
 
         QScriptEngine *engine() const;
 
+        template<typename T>
+        void exposeQObject(const QString &name, T *object);
+
     public slots:
         void handleException(const QScriptValue &exception);
 
@@ -38,6 +41,25 @@ namespace EvilTemple {
 
         Q_DISABLE_COPY(ScriptEngine)
     };
+
+    template<typename T>
+    QScriptValue qobjectToScriptValue(QScriptEngine *engine, T* const &in)
+    {
+        return engine->newQObject(in);
+    }
+
+    template<typename T>
+    void qobjectFromScriptValue(const QScriptValue &object, T* &out)
+    {
+        out = qobject_cast<T*>(object.toQObject());
+    }
+
+    template<typename T>
+    void ScriptEngine::exposeQObject(const QString &name, T *object)
+    {
+        qScriptRegisterMetaType(engine(), qobjectToScriptValue<T>, qobjectFromScriptValue<T>);
+        engine()->globalObject().setProperty(name, engine()->newQObject(object));
+    }
 
 }
 

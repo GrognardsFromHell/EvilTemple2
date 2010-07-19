@@ -3,6 +3,7 @@
  * Keyboard constants.
  */
 var Keys = {
+    F5: 0x01000034, 
     F10: 0x01000039
 };
 

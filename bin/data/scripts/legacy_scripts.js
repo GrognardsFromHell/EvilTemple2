@@ -76,7 +76,6 @@ var LegacyScripts = {};
                 return new CritterWrapper(obj);
             });
 
-            print("Found " + result.length + " objects of type " + type + " near " + pos);
             return result;
         },
 
@@ -139,7 +138,7 @@ var LegacyScripts = {};
             connectToPrototype(obj);
             
             Maps.currentMap.mobiles.push(obj);
-            createMapObject(gameView.scene, obj);
+            obj.createRenderState();
             
             return new CritterWrapper(obj);
         }
@@ -689,7 +688,7 @@ var LegacyScripts = {};
             filename += '0';
         if (dialogId < 10)
             filename += '0';
-        filename += dialogId + '/v' + line + '_m.mp3';
+        filename += dialogId + '/v' + npcLine.id + '_m.mp3';
 
         print("Playing sound: " + filename);
         voiceOver = gameView.audioEngine.playSoundOnce(filename, SoundCategory_Effect);

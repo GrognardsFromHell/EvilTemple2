@@ -15,6 +15,18 @@ function readJson(filename)
 }
 
 /**
+ * Writes an object to disk using JSON.
+ *
+ * @param filename The filename to write to.
+ * @param object The object to write.
+ */
+function writeJson(filename, object)
+{
+    var json = JSON.stringify(object);
+    writeFile(filename, json);
+}
+
+/**
  * Calculates a random integral number between a lower and an upper bound.
  *
  * @param min The lower bound (inclusive).
@@ -55,4 +67,66 @@ function distance(pointA, pointB) {
     var squaredDistance = dx * dx + dy * dy + dz * dz;
 
     return Math.sqrt(squaredDistance);
+}
+
+/**
+ * Converts an object deeply into a string, by resolving objects and arrays.
+ * @param value The object to convert.
+ */
+function objectToString(value) {
+    var result = '{';
+
+    for (var sk in value) {
+        if (result != '{')
+            result += ', ';
+        result += sk + ': ' + value[sk];
+    }
+
+    result += '}';
+    return result;
+}
+
+/**
+ * A queue of listeners that can be notified about events.
+ */
+var ListenerQueue = function() {
+    this.listeners = [];
+};
+
+ListenerQueue.prototype.append = function(callback, thisObject)
+{
+    this.listeners.push([callback, thisObject]);
+};
+
+ListenerQueue.prototype.remove = function(callback, thisObject)
+{
+    for (var i = 0; i < this.listeners.length; ++i) {
+        var listener = this.listeners[i];
+
+        if (listener[0] === callback && listener[1] === thisObject) {
+            this.listeners.splice(i, 1);
+            return true;
+        }
+    }
+
+    return false;
+};
+
+ListenerQueue.prototype.notify = function() {
+    for (var i = 0; i < this.listeners.length; ++i) {
+        this.listeners[i][0].apply(this.listeners[i][1], arguments);
+    }
+};
+
+function assertTrue(actual, msg) {
+    if (!actual)
+        throw msg;
+}
+
+/**
+ * Converts an angle from radians to degrees.
+ * @param radians The angle in radians.
+ */
+function rad2deg(radians) {
+    return (radians / Math.PI) * 180;
 }

@@ -126,18 +126,6 @@ namespace EvilTemple {
     }
 
     template<typename T>
-    QScriptValue qobjectToScriptValue(QScriptEngine *engine, T* const &in)
-    {
-        return engine->newQObject(in);
-    }
-
-    template<typename T>
-    void qobjectFromScriptValue(const QScriptValue &object, T* &out)
-    {
-        out = qobject_cast<T*>(object.toQObject());
-    }
-
-    template<typename T>
     void registerQObject(QScriptEngine *engine, const char *name)
     {
         qRegisterMetaType<T*>(name);
@@ -154,6 +142,21 @@ namespace EvilTemple {
         }
 
         return QScriptValue(QString::fromUtf8(file.readAll()));
+     }
+
+     static QScriptValue writeFile(QScriptContext *context, QScriptEngine *engine)
+     {
+        QString filename = context->argument(0).toString();
+        QString content = context->argument(1).toString();
+
+        QFile file(filename);
+
+        if (!file.open(QIODevice::WriteOnly|QIODevice::Truncate|QIODevice::Text)) {
+            return QScriptValue(false);
+        }
+
+        file.write(content.toUtf8());
+        return QScriptValue(true);
      }
 
      static QScriptValue fileExists(QScriptContext *context, QScriptEngine *engine)
@@ -252,6 +255,8 @@ namespace EvilTemple {
         // Add a function to read files
         QScriptValue readFileFn = engine->newFunction(readFile, 1);
         global.setProperty("readFile", readFileFn);
+        QScriptValue writeFileFn = engine->newFunction(writeFile, 2);
+        global.setProperty("writeFile", writeFileFn);
 
         QScriptValue fileExistsFn = engine->newFunction(fileExists, 1);
         global.setProperty("fileExists", fileExistsFn);

@@ -249,7 +249,6 @@ namespace EvilTemple {
             QScriptValueList args;
             args << scriptEvent;
 
-            qDebug("Delegating shortcut to JavaScript.");
             d_ptr->game.scriptEngine()->callGlobalFunction("keyPressed", args);
         }
     }

@@ -75,4 +75,52 @@ var Maps = {
             map.entering(position);
     };
 
+    function save(payload) {
+        // Save the current map
+        if (Maps.currentMap)
+            payload.currentMap = Maps.currentMap.id;
+        else
+            payload.currentMap = null;
+
+        payload.maps = [];
+
+        // Store the mobiles of all maps
+        Maps.maps.forEach(function (map) {
+            payload.maps.push(map.persistState());
+        });
+    }
+
+    function load(payload) {
+        Maps.maps = payload.maps;
+        Maps.mapsById = {};
+
+        print("Loading " + Maps.maps.length + " maps.");
+
+        Maps.maps.forEach(function (map) {
+            print("Loading map " + map.id + " from savegame.");
+            Maps.mapsById[map.id] = map;
+            map.__proto__ = Map.prototype;
+
+            // Reconnect all mobiles back to their prototypes
+            map.mobiles.forEach(connectToPrototype);
+        });
+
+        // Reload the current map
+        if (payload.currentMap) {
+            Maps.currentMap = Maps.mapsById[payload.currentMap];
+
+            if (!Maps.currentMap) {
+                print("The current map used by the savegame is no longer available!");
+                return;
+            }
+
+            Maps.currentMap.reload();
+        }
+    }
+
+    StartupListeners.add(function() {
+        SaveGames.addSavingListener(save);
+        SaveGames.addLoadingListener(load);
+    });
+
 })();

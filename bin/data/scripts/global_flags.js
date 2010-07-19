@@ -34,4 +34,17 @@ var GlobalFlags = {};
         delete flags[id];
     };
 
+    function save(payload) {
+        payload.globalFlags = flags;
+    }
+
+    function load(payload) {
+        flags = payload.globalFlags;
+    }
+
+    StartupListeners.add(function() {
+        SaveGames.addSavingListener(save);
+        SaveGames.addLoadingListener(load);
+    });
+
 })();

@@ -54,7 +54,8 @@ SOURCES += \
     navigationmesh.cpp \
     models.cpp \
     imageuploader.cpp \
-    selectioncircle.cpp
+    selectioncircle.cpp \
+    savegames.cpp
 HEADERS += \
     mainwindow.h \
     game.h \
@@ -95,7 +96,8 @@ HEADERS += \
     vertexbufferobject.h \
     models.h \
     imageuploader.h \
-    selectioncircle.h
+    selectioncircle.h \
+    savegames.h
 OTHER_FILES += \
     resources/schema/materialfile.xsd \
     resources/materials/map_material.xml \

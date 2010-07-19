@@ -312,6 +312,7 @@ namespace EvilTemple {
         VideoPlayerThread mVideoPlayerThread;
         QScriptValue mVideoFinishedCallback;
         QGraphicsScene movieEmptyScene; // We switch to this scene for playback
+        QString cursorFilename;
 
         QDeclarativeEngine uiEngine;
         QGraphicsScene uiScene;
@@ -926,6 +927,19 @@ namespace EvilTemple {
     {
         SharedSoundHandle handle = d->audioEngine.playSoundOnce(filename, SoundCategory_Interface);
         return !handle.isNull();
+    }
+
+    const QString &GameView::currentCursor() const
+    {
+        return d->cursorFilename;
+    }
+
+    void GameView::setCurrentCursor(const QString &filename)
+    {
+        d->cursorFilename = filename;
+
+        QPixmap cursor(filename);
+        setCursor(QCursor(cursor, 2, 2));
     }
 
 }

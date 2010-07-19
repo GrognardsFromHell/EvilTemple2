@@ -16,6 +16,29 @@ var BaseObject = {
     drawBehindWalls: false,
 
     /**
+     * Extracts the state of a mobile that needs to be saved.
+     * Effectively, this returns a shallow copy of this object with
+     * all runtime state (like render state ids) removed.
+     */
+    persist: function() {
+        var result = {};
+
+        for (var k in this) {
+            // Skip prototype properties and functions
+            if (!this.hasOwnProperty(k) || this[k] instanceof Function)
+                continue;
+
+            // Also skip volatile properties
+            if (k == 'map' || k == 'renderStateId')
+                continue;
+
+            result[k] = this[k]; // Shallow-copy
+        }
+
+        return result;
+    },
+
+    /**
      * Destroys this object.
      */
     destroy: function() {
@@ -60,10 +83,53 @@ var BaseObject = {
         renderStates[this.renderStateId] = renderState;
     },
 
-    disable: function() {
-        if (this.disabled)
+    createRenderState: function() {
+        if (this.dontDraw || this.disabled)
             return;
 
+        if (this.renderStateId) {
+            print("Warning: Possibly re-creating render state for an object that already has one.");
+        }
+
+        var sceneNode = gameView.scene.createNode();
+        sceneNode.interactive = this.interactive;
+        sceneNode.position = this.position;
+        sceneNode.rotation = rotationFromDegrees(this.rotation);
+        var scale = this.scale / 100.0;
+        sceneNode.scale = [scale, scale, scale];
+
+        var modelObj = models.load(this.model);
+
+        var modelInstance = new ModelInstance(gameView.scene);
+        modelInstance.model = modelObj;
+        modelInstance.drawBehindWalls = this.drawBehindWalls;
+        updateEquipment(this, modelInstance);
+        modelInstance.animationEvent.connect(this, handleAnimationEvent);
+
+        // Store render state with the object
+        var renderState = {
+            modelInstance: modelInstance,
+            sceneNode: sceneNode
+        };
+        this.setRenderState(renderState);
+
+        if (this.interactive) {
+            var selectionCircle = new SelectionCircle(gameView.scene, gameView.materials);
+            renderState.selectionCircle = selectionCircle;
+
+            if (this.radius !== undefined)
+                selectionCircle.radius = this.radius;
+
+            selectionCircle.color = this.getReactionColor();
+
+            sceneNode.attachObject(selectionCircle);
+
+            this.registerHandlers(sceneNode, modelInstance);
+        }
+        sceneNode.attachObject(modelInstance);
+    },
+
+    removeRenderState: function() {
         // Remove from scene
         var renderState = this.getRenderState();
         if (renderState) {
@@ -71,6 +137,13 @@ var BaseObject = {
             delete renderStates[this.renderStateId];
             this.renderStateId = undefined;
         }
+    },
+
+    disable: function() {
+        if (this.disabled)
+            return;
+
+        this.removeRenderState();
 
         this.disabled = true;
     },
@@ -83,8 +156,8 @@ var BaseObject = {
 
         // Only do this if a map is loaded
         if (Maps.currentMap)
-            createMapObject(gameView.scene, this);
-    },    
+            this.createRenderState();
+    },
 
     registerHandlers: function() {
         var renderState = this.getRenderState();
@@ -107,12 +180,18 @@ var BaseObject = {
         var renderState = this.getRenderState();
         if (renderState)
             renderState.selectionCircle.hovering = true;
+        if (this.OnDialog) {
+            print("Setting cursor");
+            gameView.currentCursor = 'art/interface/cursors/talk.png';
+        }
     },
 
     mouseLeave: function(buttons) {
         var renderState = this.getRenderState();
         if (renderState)
             renderState.selectionCircle.hovering = false;
+        if (this.OnDialog)
+            gameView.currentCursor = 'art/interface/cursors/maincursor.png';
     },
 
     setSelected: function(selected) {
@@ -244,11 +323,6 @@ var Critter = {
     killsOnSight: false,
 
     joinedParty: function() {
-        // Remove the mobile from the map's list of mobiles
-        if (this.map) {
-            this.map.removeMobile(this);
-        }
-
         if (this.OnJoin)
             LegacyScripts.OnJoin(this.OnJoin, this);
     },
@@ -256,11 +330,6 @@ var Critter = {
     leftParty: function() {
         if (this.OnDisband)
             LegacyScripts.OnDisband(this.OnDisband, this);
-
-        // Add the mobile back to the current map's list of mobiles
-        if (this.map) {
-            this.map.addMobile(this);
-        }
     }
 };
 
@@ -495,49 +564,6 @@ function handleAnimationEvent(type, content)
      which are the most often used by the animation events.
      */
     eval(content);
-}
-
-function createMapObject(scene, obj)
-{
-    if (obj.dontDraw || obj.disabled)
-        return;
-
-    var sceneNode = gameView.scene.createNode();
-    sceneNode.interactive = obj.interactive;
-    sceneNode.position = obj.position;
-    sceneNode.rotation = rotationFromDegrees(obj.rotation);
-    var scale = obj.scale / 100.0;
-    sceneNode.scale = [scale, scale, scale];
-
-    var modelObj = models.load(obj.model);
-
-    var modelInstance = new ModelInstance(gameView.scene);
-    modelInstance.model = modelObj;
-    modelInstance.drawBehindWalls = obj.drawBehindWalls;
-    updateEquipment(obj, modelInstance);
-    modelInstance.animationEvent.connect(obj, handleAnimationEvent);
-
-    // Store render state with the object
-    var renderState = {
-        modelInstance: modelInstance,
-        sceneNode: sceneNode
-    };
-    obj.setRenderState(renderState);
-
-    if (obj.interactive) {
-        var selectionCircle = new SelectionCircle(scene, gameView.materials);
-        renderState.selectionCircle = selectionCircle;
-
-        if (obj.radius !== undefined)
-            selectionCircle.radius = obj.radius;
-
-        selectionCircle.color = obj.getReactionColor();
-
-        sceneNode.attachObject(selectionCircle);
-
-        obj.registerHandlers(sceneNode, modelInstance);
-    }
-    sceneNode.attachObject(modelInstance);
 }
 
 function makeParticleSystemTestModel(particleSystem, sceneNode) {

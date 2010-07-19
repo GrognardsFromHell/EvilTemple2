@@ -30,6 +30,19 @@ var GlobalVars = {};
             return value;
         else
             return 0;
+    };
+
+    function save(payload) {
+        payload.globalVars = values;
     }
 
+    function load(payload) {
+        values = payload.globalVars;
+    }
+
+    StartupListeners.add(function() {
+        SaveGames.addSavingListener(save);
+        SaveGames.addLoadingListener(load);
+    });
+    
 })();

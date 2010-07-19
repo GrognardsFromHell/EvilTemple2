@@ -6,7 +6,7 @@ var Quests = {};
 var StoryState = 0; // Progress of the current story
 
 (function() {
-    // Constants for quest state
+    // Constants for quest states
     var Mentioned = 0;
     var Accepted = 1;
     var Completed = 2;
@@ -112,5 +112,46 @@ var StoryState = 0; // Progress of the current story
             print("Quest is already finished, why complete it?");
         }
     };
+
+    /**
+     * Get all known (and beyond) quests.
+     */
+    Quests.getKnown = function() {
+        var result = [];
+
+        for (var k in questMap) {
+            switch (questMap[k]) {
+            case Mentioned:
+                result[k] = QuestState.Mentioned;
+                break;
+            case Accepted:
+                result[k] = QuestState.Accepted;
+                break;
+            case Completed:
+                result[k] = QuestState.Completed;
+                break;
+            case Botched:
+                result[k] = QuestState.Botched;
+                break;
+            }
+        }
+
+        return result;
+    };
+
+    function save(payload) {
+        payload.storyState = StoryState;
+        payload.quests = payload;
+    }
+
+    function load(payload) {
+        StoryState = payload.storyState;
+        payload.quests = payload;
+    }
+
+    StartupListeners.add(function() {
+        SaveGames.addSavingListener(save);
+        SaveGames.addLoadingListener(load);
+    });
 
 })();

@@ -1,4 +1,3 @@
-
 /**
  * Models the utility bar, which is practically a toolbar on the bottom right
  * corner of the screen.
@@ -44,5 +43,12 @@ var UtilityBarUi = {};
             return;
         utilityBar.deleteLater();
     };
+
+    // TODO: Replace this with a global gameStarted event
+    StartupListeners.add(function() {
+        SaveGames.addLoadedListener(function() {
+            UtilityBarUi.show();
+        });
+    });
 
 })();

@@ -85,11 +85,25 @@ function handleDebugEvent(name) {
     }
 }
 
+var debugBar;
+
 function showDebugBar() {
-    var debugBar = gameView.addGuiItem('interface/DebugBar.qml');
+    debugBar = gameView.addGuiItem('interface/DebugBar.qml');
     debugBar.debugEvent.connect(handleDebugEvent);
+}
+
+// TODO: Replace this with a global gameStarted event
+StartupListeners.add(function() {
+    SaveGames.addLoadedListener(function() {
+        showDebugBar();
+    });
 
     Shortcuts.register(Keys.F10, function() {
-        debugBar.takeScreenshot();
-    });
-}
+        if (debugBar) {
+            debugBar.takeScreenshot();
+        } else {
+            var screenshot = gameView.takeScreenshot();
+            print("Taken screenshot " + screenshot);
+        }
+    });    
+});

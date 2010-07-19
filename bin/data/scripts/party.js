@@ -141,6 +141,65 @@ var Party = {};
 
         PartyUi.update();
         return true;
-    };    
+    };
+
+    // Loads a member from the savegame payload
+    function loadMember(member) {
+        // Re-use the given object
+        connectToPrototype(member);
+        return member;
+    }
+
+    function persistMobile(mobile) {
+        return mobile.persist();
+    }
+
+    function saving(payload) {
+        print("Saving party state.");
+
+        payload.party = {
+            money: Party.money.getTotalCopper(),
+            alignment: Party.alignment,
+            players: playerCharacters.map(persistMobile),
+            followers: followers.map(persistMobile)
+        };
+    }
+
+    function loading(payload) {
+        var partyPayload = payload.party;
+
+        Party.money = new Money(partyPayload.money);
+        Party.alignment = partyPayload.alignment;
+        playerCharacters = partyPayload.players.map(loadMember);
+        followers = partyPayload.followers.map(loadMember);
+
+        print("Loaded party state from savegame. "
+                + Party.money + ", "
+                + Party.alignment + ", "
+                + playerCharacters.length
+                + " players, "
+                + followers.length
+                + " followers.");
+    }
+
+    /**
+     * Processes the party state after the save has been loaded. The players get added to the map.
+     */
+    function loaded() {
+        var currentMap = Maps.currentMap;
+
+        // Move the party back to the current map
+        if (currentMap) {
+            Party.getMembers().forEach(function (mobile) {
+                currentMap.addMobile(mobile);
+            });
+        }
+    }
+
+    StartupListeners.add(function() {
+        SaveGames.addSavingListener(saving);
+        SaveGames.addLoadingListener(loading);
+        SaveGames.addLoadedListener(loaded);
+    });
 
 })();

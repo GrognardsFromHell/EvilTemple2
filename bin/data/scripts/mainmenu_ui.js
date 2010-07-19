@@ -98,6 +98,28 @@ var MainMenuUi = {};
 
             startGame();
         });
+        mainMenu.loadGameClicked.connect(function() {
+            // TODO: Warning/Unloading of previous game
+
+            mainMenu.deleteLater();
+            mainMenu = null;
+
+            mainMenu = gameView.showView('interface/LoadGame.qml');
+
+            mainMenu.saveGameList = savegames.listSaves();
+            mainMenu.loadGame.connect(function (saveId) {
+                mainMenu.deleteLater();
+                mainMenu = null;
+                SaveGames.load(saveId);
+            });
+            mainMenu.closeDialog.connect(function () {
+                mainMenu.deleteLater();
+                mainMenu = null;
+                MainMenuUi.show();
+            });
+
+            // Load all games from disk (probably a very bad idea)
+        });
     };
 
 })();

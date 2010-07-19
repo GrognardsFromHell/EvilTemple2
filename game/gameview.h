@@ -41,6 +41,8 @@ class GameView : public QGraphicsView
 
     Q_PROPERTY(bool scrollingDisabled READ isScrollingDisabled WRITE setScrollingDisabled)
 
+    Q_PROPERTY(QString currentCursor READ currentCursor WRITE setCurrentCursor)
+
     Q_PROPERTY(QSize viewportSize READ viewportSize NOTIFY viewportChanged)
 public:
     explicit GameView(QWidget *parent = 0);
@@ -104,6 +106,9 @@ public:
 
     void setScrollingDisabled(bool disabled);
     bool isScrollingDisabled() const;
+
+    const QString &currentCursor() const;
+    void setCurrentCursor(const QString &filename);
 
 signals:
 

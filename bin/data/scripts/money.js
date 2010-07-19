@@ -93,4 +93,26 @@ var Money = function(value) {
             this._value = 0;
     };
 
+    /**
+     * Converts this money object into a readable string for debugging purposes.
+     */
+    Money.prototype.toString = function() {
+        var gold = this.getGold();
+        var silver = this.getSilver();
+        var copper = this.getCopper();
+
+        var result = '';
+
+        if (gold > 0)
+            result += gold + 'g';
+
+        if (silver > 0)
+            result += silver + 'g';
+
+        if (copper > 0 || result == '')
+            result += copper + 'c';
+
+        return result;
+    };
+
 })();
