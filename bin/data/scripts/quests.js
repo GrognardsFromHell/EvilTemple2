@@ -117,7 +117,7 @@ var StoryState = 0; // Progress of the current story
      * Get all known (and beyond) quests.
      */
     Quests.getKnown = function() {
-        var result = [];
+        var result = {};
 
         for (var k in questMap) {
             switch (questMap[k]) {
@@ -141,12 +141,12 @@ var StoryState = 0; // Progress of the current story
 
     function save(payload) {
         payload.storyState = StoryState;
-        payload.quests = payload;
+        payload.quests = questMap;
     }
 
     function load(payload) {
         StoryState = payload.storyState;
-        payload.quests = payload;
+        questMap = payload.quests;
     }
 
     StartupListeners.add(function() {

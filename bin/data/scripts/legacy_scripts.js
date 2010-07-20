@@ -100,7 +100,7 @@ var LegacyScripts = {};
          * @param callbackArgs The arguments to the function.
          * @param timeout The timeout value.
          */
-        timevent_add: function(callback, callbackArgs, timeout)
+        timeevent_add: function(callback, callbackArgs, timeout)
         {
             print("Skipping " + timeout + " time and calling " + callback + " directly with args = " + callbackArgs);
 
@@ -136,13 +136,23 @@ var LegacyScripts = {};
             obj.position = location;
             obj.map = Maps.currentMap;
             connectToPrototype(obj);
-            
+
             Maps.currentMap.mobiles.push(obj);
             obj.createRenderState();
-            
+
             return new CritterWrapper(obj);
+        },
+
+        /**
+         * Updates the utility bar if the can-sleep-safely status has changed.
+         */
+        sleep_status_update: function() {
+            UtilityBarUi.update();
         }
     };
+
+    // This fixes a botched vanilla script that has a typo in it.
+    GameFacade.timevent_add = GameFacade.timeevent_add;
 
     /*
      Copy all functions from utilities.py over to the legacy prototype.
@@ -496,7 +506,7 @@ var LegacyScripts = {};
      */
     CritterWrapper.prototype.leader_get = function() {
         if (Party.isMember(this.obj)) {
-            return Party.getPlayers()[0];
+            return new CritterWrapper(Party.getPlayers()[0]);
         } else {
             return null;
         }
@@ -514,6 +524,27 @@ var LegacyScripts = {};
      */
     CritterWrapper.prototype.follower_atmax = function() {
         return false;
+    };
+
+    /**
+     * Returns the unadjusted reaction value.
+     */
+    CritterWrapper.prototype.reaction_get = function(towards) {
+        return this.obj.reaction;
+    };
+
+    /**
+     * Changes the reaction value of a critter.
+     */
+    CritterWrapper.prototype.reaction_set = function(towards, value) {
+        this.obj.reaction = value;
+    };
+
+    /**
+     * Adjusts the reaction value of a critter by the given delta.
+     */
+    CritterWrapper.prototype.reaction_adj = function(towards, delta) {
+        this.obj.reaction += delta;
     };
 
     /**
@@ -607,7 +638,9 @@ var LegacyScripts = {};
      * @param line The dialog line to start on.
      */
     CritterWrapper.prototype.begin_dialog = function(npc, line) {
+        print("Trying to open dialog.");
         if (conversationDialog) {
+            print("Skipping dialog, because the dialog is already open.");
             /**
              * Thanks to some scripting bugs, begin_dialog can be called multiple times in a row, causing
              * bugs if we replace dialogs...
@@ -874,6 +907,24 @@ var LegacyScripts = {};
         }
 
         return script.san_enter_combat(new CritterWrapper(attachedTo), null);
+    };
+
+    /**
+     * Triggered when the NPC enters a new map.
+     *
+     * @param attachedScript The legacy script. This is a JavaScript object with at least a 'script' property giving
+     *                 the id of the legacy script.
+     * @param attachedTo The object the script is attached to.
+     */
+    LegacyScripts.OnNewMap = function(attachedScript, attachedTo) {
+        var script = getScript(attachedScript.script);
+
+        if (!script) {
+            print("Unknown legacy script: " + attachedScript.script);
+            return false;
+        }
+
+        return script.san_new_map(new CritterWrapper(attachedTo), null);
     };
 
 })();

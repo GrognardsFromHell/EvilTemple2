@@ -85,3 +85,10 @@ var QuestState = {
     Completed: 'completed',
     Botched: 'botched'
 };
+
+var RestingStatus = {
+    Safe: 'safe',
+    PassTimeOnly: 'pass_time_only',
+    Impossible: 'impossible',
+    Dangerous: 'dangerous'
+};

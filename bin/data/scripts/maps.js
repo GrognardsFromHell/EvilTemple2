@@ -103,6 +103,9 @@ var Maps = {
 
             // Reconnect all mobiles back to their prototypes
             map.mobiles.forEach(connectToPrototype);
+            map.mobiles.forEach(function(mobile) {
+                mobile.map = map;
+            });
         });
 
         // Reload the current map
@@ -115,6 +118,8 @@ var Maps = {
             }
 
             Maps.currentMap.reload();
+
+            UtilityBarUi.update();
         }
     }
 

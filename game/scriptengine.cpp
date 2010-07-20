@@ -70,6 +70,7 @@ namespace EvilTemple {
     {
         if (d->engine->hasUncaughtException()) {
             qWarning("Uncaught scripting exception: %s", qPrintable(d->engine->uncaughtException().toString()));
+
             QStringList backtrace = d->engine->uncaughtExceptionBacktrace();
             foreach (QString line, backtrace) {
                 qWarning("    %s", qPrintable(line));

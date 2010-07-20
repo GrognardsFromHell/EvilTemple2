@@ -5,13 +5,36 @@ var JournalUi = {};
 
     var journalDialog = null;
 
+    var questTexts = readJson('quests.js');
+
     JournalUi.show = function() {
         if (journalDialog)
             return;
 
         journalDialog = gameView.addGuiItem("interface/Journal.qml");
         journalDialog.closeClicked.connect(JournalUi.close);
-        journalDialog.quests = Quests.getKnown();
+
+        var knownQuests = Quests.getKnown();
+        var quests = [];
+        for (var k in knownQuests) {
+            var quest = {
+                'id': k,
+                'state': knownQuests[k]
+            };
+            var texts = questTexts[k];
+            if (!texts) {
+                quest.name = 'Unknown quest: ' + k;
+                quest.description = '';
+            } else {
+                quest.name = texts.name;
+                quest.description = texts.description;
+            }
+            quests.push(quest);
+        }
+
+        print("Showing " + objectToString(quests));
+
+        journalDialog.quests = quests;
     };
 
     JournalUi.close = function() {

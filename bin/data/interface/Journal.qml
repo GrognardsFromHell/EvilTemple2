@@ -12,10 +12,14 @@ MovableWindow {
 
     onQuestsChanged: {
         questListModel.clear();
-        for (var questId in quests) {
+        for (var i = 0; i < quests.length; ++i) {
+            var quest = quests[i];
+
             questListModel.append({
                 'questId': questId,
-                'questState': quests[questId]
+                'questState': quest.state,
+                'questName': quest.name,
+                'questDescription': quest.description
             });
         }
     }
@@ -46,20 +50,72 @@ MovableWindow {
 
     Component {
         id: questDelegate
-        Text {
-            text: questId + ': ' + questState
-            color: '#ffffff'
+        Column {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            Text {
+                text: questName
+                color: '#ffffff'
+                font.family: 'Handserif'
+                font.pointSize: 14
+                font.bold: true
+            }
+            Text {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                text: questDescription
+                color: '#ffffff'
+                font.family: 'Fontin'
+                font.bold: false
+                font.pointSize: 12
+                wrapMode: "WrapAtWordBoundaryOrAnywhere"
+            }
         }
     }
 
+    function colorFromSection(section) {
+        switch (section) {
+        case 'mentioned':
+                return 'white';
+        case 'accepted':
+                return 'yellow';
+        case 'completed':
+                return 'green';
+        case 'botched':
+                return 'red';
+        }
+    }
+
+    // The delegate for each section header
+    Component {
+        id: sectionHeading
+        Rectangle {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            height: childrenRect.height + 10
+            color: colorFromSection(section)
+
+            Text {
+                text: section
+                font.bold: true
+                width: parent.width
+                y: 5
+                horizontalAlignment: "AlignHCenter"
+            }
+        }
+    }
     ListView {
         id: questListView
         x: 66
         y: 84
-        width: 271
+        width: 279
         height: 290
         model: questListModel
         delegate: questDelegate
+        clip: true
+        section.property: 'questState'
+        section.delegate: sectionHeading
+        section.criteria: ViewSection.FullString
     }
 
     Button {

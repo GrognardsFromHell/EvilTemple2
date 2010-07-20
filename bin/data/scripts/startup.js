@@ -135,8 +135,8 @@ var BaseObject = {
         if (renderState) {
             gameView.scene.removeNode(renderState.sceneNode);
             delete renderStates[this.renderStateId];
-            this.renderStateId = undefined;
         }
+        this.renderStateId = undefined;
     },
 
     disable: function() {
@@ -340,6 +340,15 @@ var NonPlayerCharacter = {
      * The amount of money held by this NPC, in copper coins.
      */
     money: 0,
+
+    /**
+     * The reaction. Starts @ 50, which is neutral.
+     * Reaction table:
+     * 60 and above - Good
+     * 50 - Neutral (starting here)
+     * 40 and less - Bad
+     */
+    reaction: 50,
 
     doubleClicked: function() {
         /*

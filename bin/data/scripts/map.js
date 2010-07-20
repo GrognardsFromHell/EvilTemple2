@@ -217,8 +217,16 @@ var Map = function(id) {
         Party.getMembers().forEach(function (critter) {
             critter.position = position;
             map.addMobile(critter);
-            // TODO: Fire areaChanged event (NOTE: Not if loading a savegame)
+
+            // Fire the san_new_map events for NPCs
+            if (critter.OnNewMap) {
+                print("Performing new map callback for " + critter.id);
+                LegacyScripts.OnNewMap(critter.OnNewMap, critter);
+            }
+
         }, this);
+
+        // TODO: Figure out if initial heartbeats are triggered before or after the new_area events
 
         // Process heartbeat scripts (Only when CHANGING maps, not when loading from save!)
         for (var i = 0; i < this.mobiles.length; ++i) {
@@ -227,6 +235,8 @@ var Map = function(id) {
                 LegacyScripts.OnFirstHeartbeat(mobile.OnFirstHeartbeat, mobile);
             }
         }
+
+        UtilityBarUi.update();
     };
 
     Map.prototype.leaving = function(newMap, newPosition) {
@@ -238,14 +248,14 @@ var Map = function(id) {
         gameView.scene.clear();
         renderStates = {}; // Clear render states
 
-        var map = this;
-
         // Unlink all party members from this map
         Party.getMembers().forEach(function(member) {
-            map.removeMobile(member);
+            this.removeMobile(member);
         }, this);
 
         gc();
+
+        UtilityBarUi.update();
     };
 
     Map.prototype.persistState = function(mobile) {
@@ -290,7 +300,8 @@ var Map = function(id) {
 
         assertTrue(index != -1, "Mobile is on this map, but not in the mobiles array.");
 
-        this.mobiles.slice(index, 1);
+        var removed = this.mobiles.splice(index, 1);
+        assertTrue(removed.length == 1, "Didn't remove mobile from list.");
         delete mobile['map'];
 
         mobile.removeRenderState();

@@ -10,7 +10,18 @@ function fillQuests(root) {
 
     print("TestMode active");
 
-    var quests = {};
-    quests['quest-6'] = 'completed';
+    var quests = [];
+    quests.push({
+        'id': 'quest-6',
+        'state': 'mentioned',
+        'name': 'Unhappy Tailor',
+        'description': "Jinnerth, the tailor of Hommlet, has asked you to speak with the captain of the militia about joining the town militia."
+    });
+    quests.push({
+        'id': 'quest-16',
+        'state': 'accepted',
+        'name': 'Unhappy Tailor',
+        'description': "Jinnerth, the tailor of Hommlet, has asked you to speak with the captain of the militia about joining the town militia."
+    });
     root.quests = quests;
 }

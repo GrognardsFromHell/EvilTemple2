@@ -12,6 +12,7 @@ Item {
 
     property bool townmapDisabled : false
     property bool journalDisabled : false
+    property string restingStatus : 'pass_time_only'
     // TODO: Time Display
 
     signal openOptions
@@ -19,7 +20,7 @@ Item {
     signal openFormations
     signal openLogbook
     signal openTownmap
-    // TODO: Camping
+    signal openResting
     signal selectAll
 
     /**
@@ -148,7 +149,7 @@ Item {
         }
 
         Button {
-            id: campButton
+            id: passTimeButton
             x: 111
             y: 5
             width: 21
@@ -158,6 +159,45 @@ Item {
             hoverImage: "art/interface/utility_bar_ui/camp_hover.png"
             normalImage: "art/interface/utility_bar_ui/camp.png"
             disabledImage: "art/interface/utility_bar_ui/camp_clock_grey.png"
+            visible: restingStatus == 'pass_time_only'
+        }
+
+        Button {
+            id: campSafeButton
+            x: 111
+            y: 5
+            width: 21
+            height: 43
+            text: ''
+            pressedImage: "art/interface/utility_bar_ui/camp_green_click.png"
+            hoverImage: "art/interface/utility_bar_ui/camp_green_hover.png"
+            normalImage: "art/interface/utility_bar_ui/camp_green.png"
+            disabledImage: "art/interface/utility_bar_ui/camp_grey.png"
+            visible: restingStatus == 'safe'
+        }
+
+        Button {
+            id: campDangerousButton
+            x: 111
+            y: 5
+            width: 21
+            height: 43
+            text: ''
+            pressedImage: "art/interface/utility_bar_ui/camp_yellow_click.png"
+            hoverImage: "art/interface/utility_bar_ui/camp_yellow_hover.png"
+            normalImage: "art/interface/utility_bar_ui/camp_yellow.png"
+            disabledImage: "art/interface/utility_bar_ui/camp_grey.png"
+            visible: restingStatus == 'dangerous'
+        }
+
+        Image {
+            id: campImpossibleImage
+            x: 111
+            y: 5
+            width: 21
+            height: 43
+            source: "../art/interface/utility_bar_ui/camp_red.png"
+            visible: restingStatus == 'impossible'
         }
 
         Button {

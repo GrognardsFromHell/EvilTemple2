@@ -33,6 +33,7 @@ var UtilityBarUi = {};
         utilityBar = gameView.addGuiItem('interface/UtilityBar.qml');
         utilityBar.openTownmap.connect(openTownmap);
         utilityBar.openLogbook.connect(openJournal);
+        this.update();
     };
 
     /**
@@ -42,6 +43,14 @@ var UtilityBarUi = {};
         if (!utilityBar)
             return;
         utilityBar.deleteLater();
+    };
+
+    /**
+     * Updates the state of the utility bar.
+     */
+    UtilityBarUi.update = function() {
+        if (utilityBar)
+            utilityBar.restingStatus = RandomEncounter.getRestingStatus();
     };
 
     // TODO: Replace this with a global gameStarted event
