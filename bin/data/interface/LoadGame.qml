@@ -33,7 +33,7 @@ Rectangle {
     Image {
         id: screenshotView
         anchors.fill: parent
-        fillMode: Image.Stretch
+        fillMode: Image.PreserveAspectFit
         opacity: 0.5
     }
 

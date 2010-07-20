@@ -102,11 +102,34 @@ var LegacyScripts = {};
          */
         timeevent_add: function(callback, callbackArgs, timeout)
         {
-            print("Skipping " + timeout + " time and calling " + callback + " directly with args = " + callbackArgs);
+            var callbackName;
 
-            var thisObj = {};
-            thisObj.__proto__ = LegacyScriptPrototype;
-            callback.apply(thisObj, callbackArgs);
+            // Find the callback on the script object.
+            for (var k in this.script) {
+                if (!this.script.hasOwnProperty(k))
+                    continue;
+
+                if (this.script[k] === callback) {
+                    callbackName = k;
+                    break;
+                }
+            }
+
+            var newCallbackArgs = [];
+
+            callbackArgs.forEach(function (arg) {
+                if (arg instanceof CritterWrapper || arg instanceof ItemWrapper) {
+                    newCallbackArgs.push(arg.obj.id);
+                } else {
+                    newCallbackArgs.push(arg);
+                }
+            });
+
+            if (!callbackName)
+                throw "Couldn't find the callback " + callback + " in legacy script " + this.script.scriptId;
+
+            print("Skipping " + timeout + " time and calling " + callbackName + " on script " + this.script.scriptId
+                    + " directly with args = " + newCallbackArgs);
         },
 
         /**
@@ -154,6 +177,31 @@ var LegacyScripts = {};
     // This fixes a botched vanilla script that has a typo in it.
     GameFacade.timevent_add = GameFacade.timeevent_add;
 
+    // Define a getter for "party"
+    GameFacade.__defineGetter__("party", function() {
+        var result = [];
+        Party.getMembers().forEach(function(member) {
+            result.push(new CritterWrapper(member));
+        });
+        return result;
+    });
+
+    // Replaces the existing script-id for the currently running event
+    GameFacade.__defineSetter__("new_sid", function(val) {
+        var lastCall = this.script.lastCall();
+
+        var attachedTo = lastCall[1];
+        var eventType = lastCall[0];
+
+        if (val == 0) {
+            attachedTo[eventType] = undefined;
+            print("Removing event handler " + eventType + " from obj " + attachedTo.id);
+        } else {
+            attachedTo[eventType].script = val;
+            print("Rewriting event handler " + eventType + " on obj " + attachedTo.id + " to " + val);
+        }
+    });
+
     /*
      Copy all functions from utilities.py over to the legacy prototype.
      */
@@ -191,8 +239,6 @@ var LegacyScripts = {};
         Q_Critter_Can_Find_Traps: 'critter_can_find_traps',
 
         OF_OFF: 'disabled',
-
-        game: GameFacade,
 
         __proto__: UtilityModule,
 
@@ -272,6 +318,24 @@ var LegacyScripts = {};
             proxy.__proto__ = this; // This forces the script to be accessible via the "this" variable
             print("Performing action: " + action);
             proxy.performAction(npc, pc);
+        },
+
+        pushCall: function(name, attachedTo) {
+            if (!this._eventCallStack)
+                this._eventCallStack = [];
+            this._eventCallStack.push([name, attachedTo]);
+        },
+
+        popCall: function(name) {
+            assertTrue(this._eventCallStack && this._eventCallStack.length > 0,
+                       "Trying to pop from empty event stack.");
+            this._eventCallStack.pop();
+        },
+
+        lastCall: function() {
+            assertTrue(this._eventCallStack && this._eventCallStack.length > 0,
+                       "Trying to take last from empty event stack.");
+            return this._eventCallStack[this._eventCallStack.length - 1];
         }
     };
 
@@ -285,6 +349,13 @@ var LegacyScripts = {};
         try {
             var result = eval('(' + readFile(filename) + ')');
             result.__proto__ = LegacyScriptPrototype;
+            result.scriptId = id;
+
+            var privateGame = {};
+            privateGame.__proto__ = GameFacade;
+            privateGame.script = result;
+            result.game = privateGame;
+
             return result;
         } catch(err) {
             print("Unable to read legacy script file " + filename);
@@ -352,6 +423,18 @@ var LegacyScripts = {};
         this.position = obj.position;
 
         this.obj = obj;
+    };
+
+    /**
+     * Checks if any of the characters has an item equipped with the given id.
+     * @param internalId The internal id of the item.
+     */
+    CritterWrapper.prototype.has_wielded = function(internalId) {
+        print("Checking whether " + this.obj.id + " wields an item with int. id " + internalId);
+
+        // TODO When equipment is properly done, this needs work.
+
+        return this.item_find(internalId);
     };
 
     /**
@@ -648,11 +731,6 @@ var LegacyScripts = {};
             return;
         }
 
-        GameFacade.party = [];
-        Party.getMembers().forEach(function(member) {
-            GameFacade.party.push(new CritterWrapper(member));
-        });
-
         var pc = this; // Used by the val scripts
         print("Starting conversation with " + npc.obj.id + " on line " + line);
 
@@ -797,7 +875,12 @@ var LegacyScripts = {};
             return false;
         }
 
-        return script.san_dialog(new CritterWrapper(attachedTo), new CritterWrapper(getTriggerer()));
+        try {
+            script.pushCall("OnDialog", attachedTo);
+            return script.san_dialog(new CritterWrapper(attachedTo), new CritterWrapper(getTriggerer()));
+        } finally {
+            script.popCall();
+        }
     };
 
     /**
@@ -815,7 +898,13 @@ var LegacyScripts = {};
             return false;
         }
 
-        return script.san_join(new CritterWrapper(attachedTo), new CritterWrapper(getTriggerer()));
+        try {
+            script.pushCall("OnJoin", attachedTo);
+            return script.san_join(new CritterWrapper(attachedTo), new CritterWrapper(getTriggerer()));
+        } finally {
+            script.popCall();
+        }
+
     };
 
     /**
@@ -833,7 +922,12 @@ var LegacyScripts = {};
             return false;
         }
 
-        return script.san_disband(new CritterWrapper(attachedTo), new CritterWrapper(getTriggerer()));
+        try {
+            script.pushCall("OnDisband", attachedTo);
+            return script.san_disband(new CritterWrapper(attachedTo), new CritterWrapper(getTriggerer()));
+        } finally {
+            script.popCall();
+        }
     };
 
     /**
@@ -851,7 +945,12 @@ var LegacyScripts = {};
             return false;
         }
 
-        return script.san_use(new CritterWrapper(attachedTo), new CritterWrapper(getTriggerer()));
+        try {
+            script.pushCall("OnUse", attachedTo);
+            return script.san_use(new CritterWrapper(attachedTo), new CritterWrapper(getTriggerer()));
+        } finally {
+            script.popCall();
+        }
     };
 
     /**
@@ -870,7 +969,12 @@ var LegacyScripts = {};
             return false;
         }
 
-        return script.san_first_heartbeat(new CritterWrapper(attachedTo), null);
+        try {
+            script.pushCall("OnFirstHeartbeat", attachedTo);
+            return script.san_first_heartbeat(new CritterWrapper(attachedTo), null);
+        } finally {
+            script.popCall();
+        }
     };
 
     /**
@@ -888,7 +992,12 @@ var LegacyScripts = {};
             return false;
         }
 
-        return script.san_heartbeat(new CritterWrapper(attachedTo), null);
+        try {
+            script.pushCall("OnHeartbeat", attachedTo);
+            return script.san_heartbeat(new CritterWrapper(attachedTo), null);
+        } finally {
+            script.popCall();
+        }
     };
 
     /**
@@ -906,7 +1015,12 @@ var LegacyScripts = {};
             return false;
         }
 
-        return script.san_enter_combat(new CritterWrapper(attachedTo), null);
+        try {
+            script.pushCall("OnEnterCombat", attachedTo);
+            return script.san_enter_combat(new CritterWrapper(attachedTo), null);
+        } finally {
+            script.popCall();
+        }
     };
 
     /**
@@ -924,7 +1038,12 @@ var LegacyScripts = {};
             return false;
         }
 
-        return script.san_new_map(new CritterWrapper(attachedTo), null);
+        try {
+            script.pushCall("OnNewMap", attachedTo);
+            return script.san_new_map(new CritterWrapper(attachedTo), null);
+        } finally {
+            script.popCall();
+        }
     };
 
 })();
