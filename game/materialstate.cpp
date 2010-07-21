@@ -207,6 +207,15 @@ bool MaterialState::createFrom(const Material &material, const RenderStates &sta
 
         // Process uniform bindings
         passState.program->bind();
+
+        int worldMatrixLoc = passState.program->uniformLocation("worldMatrix");
+        if (worldMatrixLoc != -1) {
+            MaterialPassUniformState *state = new MaterialPassUniformState;
+            state->setLocation(worldMatrixLoc);
+            state->setImmutableBinder(states.getStateBinder("World"));
+            passState.uniforms.append(state);
+        }
+
         for (int j = 0; j < pass->uniformBindings().size(); ++j) {
             const MaterialUniformBinding &binding = pass->uniformBindings()[j];
 

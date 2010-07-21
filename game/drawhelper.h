@@ -159,7 +159,18 @@ struct ModelDrawStrategy : public DrawStrategy {
 
             // Draw again for every light affecting this mesh
             foreach (const Light *light, renderStates.activeLights()) {
-                SAFE_GL(glUniform1i(typePos, light->type()));
+                switch (light->type()) {
+                case Light::Directional:
+                    SAFE_GL(glUniform1i(typePos, 1));
+                    break;
+                case Light::Point:
+                    SAFE_GL(glUniform1i(typePos, 2));
+                    break;
+                case Light::Spot:
+                    SAFE_GL(glUniform1i(typePos, 3));
+                    break;
+                }
+
                 SAFE_GL(glUniform4fv(colorPos, 1, light->color().data()));
                 SAFE_GL(glUniform4fv(directionPos, 1, light->direction().data()));
                 SAFE_GL(glUniform4fv(positionPos, 1, light->position().data()));

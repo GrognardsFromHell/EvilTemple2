@@ -10,10 +10,15 @@ namespace EvilTemple {
 Vector4 Light::position() const
 {
     if (mParentNode == NULL) {
+        qDebug("Querying light position, although light has no parent node.");
         return Vector4(0, 0, 0, 1);
     } else {
+        Vector4 pos(0,0,0,1);
+
         const Matrix4 &fullTransform = mParentNode->fullTransform();
-        return fullTransform.column(3);
+
+
+        return fullTransform * pos;
     }
 }
 

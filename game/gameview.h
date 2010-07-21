@@ -24,7 +24,7 @@ class GameView : public QGraphicsView
 {
     Q_OBJECT
     Q_PROPERTY(BackgroundMap *backgroundMap READ backgroundMap)
-    Q_PROPERTY(Scene *scene READ scene)
+    Q_PROPERTY(EvilTemple::Scene *scene READ scene)
     Q_PROPERTY(ClippingGeometry *clippingGeometry READ clippingGeometry)
     Q_PROPERTY(Materials *materials READ materials)
     Q_PROPERTY(ParticleSystems* particleSystems READ particleSystems)

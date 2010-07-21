@@ -175,8 +175,8 @@ public:
         QFile backgroundTexture(filename);
 
         SharedTexture result(new Texture);
-        result->setMagFilter(GL_LINEAR);
-        result->setMinFilter(GL_LINEAR);
+        result->setMagFilter(GL_NEAREST);
+        result->setMinFilter(GL_NEAREST);
         result->setWrapModeS(GL_CLAMP);
         result->setWrapModeT(GL_CLAMP);
         textures.insert(point, result);

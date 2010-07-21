@@ -19,6 +19,7 @@ var Map = function(id) {
     this.name = mapObj.name;
     this.area = mapObj.area;
     this.legacyId = mapObj.legacyId; // This is *OPTIONAL*
+    this.outdoor = mapObj.outdoor;
     this.startPosition = mapObj.startPosition; // This is actually only used by the editor
 
     // Load mobiles and link them to their prototypes
@@ -99,14 +100,17 @@ var Map = function(id) {
      * @param mapObj The map object loaded from a map's map.js
      */
     function loadLights(mapObj) {
-        print("Creating " + mapObj.lights.length + " lights.");
-
         // Create global lighting in form of an infinite-range directional light
         globalLight = new Light(gameView.scene);
         globalLight.range = 10000000000; // The light should be visible anywhere on the map
-        globalLight.type = 1;
-        globalLight.color = [0.962745, 0.964706, 0.965882, 0];
-        globalLight.direction = [-0.632409, -0.774634, 0, 0];
+        globalLight.type = 'Directional';
+        globalLight.color = mapObj.globalLight.color.slice(0, 3); // Ignore alpha
+        globalLight.direction = [
+            mapObj.globalLight.direction[0],
+            mapObj.globalLight.direction[1],
+            mapObj.globalLight.direction[2],
+            0 // ENSURE that this is a normal, and not a position!
+        ];
 
         var sceneNode = gameView.scene.createNode();
         sceneNode.position = [480 * 28, 0, 480 * 28];
@@ -120,11 +124,27 @@ var Map = function(id) {
             sceneNode.position = obj.position;
 
             var light = new Light(gameView.scene);
-            light.type = obj.type;
+            switch (obj.type) {
+                default:
+                case 1:
+                    light.type = 'Point';
+                    break;
+                case 2:
+                    light.type = 'Spot';
+                    continue;
+                case 3:
+                    light.type = 'Directional';
+                    continue;
+            }
+
             light.range = obj.range;
+            light.attenuation = 4 / (obj.range * obj.range);
             // Enable this to see the range of lights
             // light.debugging = true;
             light.color = obj.color;
+
+            print("Light: " + light.color + " Range: " + light.range + " Type: " + light.type);
+
             sceneNode.attachObject(light);
         }
     }
@@ -158,6 +178,13 @@ var Map = function(id) {
         var start = timerReference();
 
         var mapObj = readJson('maps/' + this.id + '/map.js');
+
+        // Reload some of the flags while we're at it
+        this.name = mapObj.name;
+        this.area = mapObj.area;
+        this.legacyId = mapObj.legacyId; // This is *OPTIONAL*
+        this.outdoor = mapObj.outdoor;
+        this.startPosition = mapObj.startPosition; // This is actually only used by the editor
 
         gameView.scrollBoxMinX = mapObj.scrollBox[0];
         gameView.scrollBoxMinY = mapObj.scrollBox[1];
@@ -365,8 +392,15 @@ var Map = function(id) {
 
     /**
      * Updates lighting for this map based on the current game time.
-     */    
+     */
     Map.prototype.updateLighting = function() {
+
+        // This flag is probably *NOT* used. Instead, I guess the existence of a daylight.mes rule should suffice.
+        // TODO: How do we know how to alias this? I.e. the tower top in hommlet has no entry, but uses homletts entry
+        // instead. Same thing for the moathouse top-level
+        if (!this.outdoor) {
+            return;
+        }
 
         var dayBgMapLighting = [
             [6, [162 / 255, 112 / 255, 203 / 255]],
@@ -387,13 +421,19 @@ var Map = function(id) {
             [17, [294 / 255, 204 / 255, 105 / 255]],
             [18, [210 / 255, 93 / 255, 96 / 255]]
         ];
-        
+
         var hour = GameTime.getHourOfDay() + GameTime.getMinuteOfHour() / 60;
 
-        gameView.backgroundMap.color = interpolateColor(hour, dayBgMapLighting);
+        if (this.outdoor) {
+            gameView.backgroundMap.color = interpolateColor(hour, dayBgMapLighting);
+        } else {
+            gameView.backgroundMap.color = [1,1,1];
+        }
 
         if (globalLight) {
-            globalLight.color = interpolateColor(hour, day3dLighting);
+            if (this.outdoor) {
+                globalLight.color = interpolateColor(hour, day3dLighting);
+            }
         }
     };
 

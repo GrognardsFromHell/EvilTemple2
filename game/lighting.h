@@ -20,6 +20,7 @@ Q_PROPERTY(Vector4 direction READ direction WRITE setDirection)
 Q_PROPERTY(float attenuation READ attenuation WRITE setAttenuation)
 Q_PROPERTY(float phi READ phi WRITE setPhi)
 Q_PROPERTY(float theta READ theta WRITE setTheta)
+Q_ENUMS(Type)
 public:
     Light();
 

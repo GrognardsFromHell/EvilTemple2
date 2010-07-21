@@ -793,7 +793,7 @@ namespace Troika
 
                     // the first object that is encountered sets the prototype's render height
                     if (!object.prototype->renderHeight.isDefined()) {
-                        object.prototype->renderHeight.setValue(object.renderHeight6022.value());
+                        object.prototype->renderHeight.setValue(object.renderHeight.value());
                     }
                     if (object.renderHeight == object.prototype->renderHeight)
                         object.renderHeight.clear();

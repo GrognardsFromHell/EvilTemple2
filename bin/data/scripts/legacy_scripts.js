@@ -673,7 +673,7 @@ var LegacyScripts = {};
      * @param skill The skill identifier.
      */
     CritterWrapper.prototype.skill_level_get = function(against, skill) {
-        return 5;
+        return 15;
     };
 
     /**

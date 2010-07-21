@@ -1954,6 +1954,51 @@ namespace EvilTemple {
             : models(_models), materials(_materials)
         {
             mSpriteMaterial = materials->load(":/material/sprite_material.xml");
+
+            // Set a few uniforms that never change
+            GLfloat positionOffsetsSprite[4*4] = {
+                -0.5, 0.5, 0, 0,
+                -0.5, -0.5, 0, 0,
+                0.5, -0.5, 0, 0,
+                0.5, 0.5, 0, 0
+            };
+
+            GLfloat texCoords[4*2] = {
+                0, 0,
+                0, 1,
+                1, 1,
+                1, 0
+            };
+
+            GLfloat positionOffsetsDisc[4*4] = {
+                -1, 0, -1, 0,
+                1, 0, -1, 0,
+                1, 0, 1, 0,
+                -1, 0, 1, 0
+            };
+
+            for (int i = 0; i < mSpriteMaterial->passCount; ++i) {
+                MaterialPassState &pass = mSpriteMaterial->passes[i];
+
+                pass.program->bind();
+
+                int location = pass.program->uniformLocation("positionOffsetsSprite");
+                if (location != -1) {
+                    SAFE_GL(glUniform4fv(location, 4, positionOffsetsSprite));
+                }
+
+                location = pass.program->uniformLocation("texCoords");
+                if (location != -1) {
+                    SAFE_GL(glUniform2fv(location, 4, texCoords));
+                }
+
+                location = pass.program->uniformLocation("positionOffsetsDisc");
+                if (location != -1) {
+                    SAFE_GL(glUniform4fv(location, 4, positionOffsetsDisc));
+                }
+
+                pass.program->unbind();
+            }
         }
 
         bool loadTemplates()

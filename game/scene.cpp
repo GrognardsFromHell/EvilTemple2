@@ -143,10 +143,16 @@ void Scene::render(RenderStates &renderStates)
             // Find all light sources that intersect the bounding volume of the given object
             QList<const Light*> activeLights;
 
+            SceneNode *sceneNode = renderable->parentNode();
+
+            float bbExtent = (sceneNode->worldBoundingBox().maximum() - sceneNode->worldBoundingBox().minimum()).length();
+
             for (int j = 0; j < visibleLights.size(); ++j) {
                 // TODO: This ignores the full position
-                float squaredDistance = (visibleLights[j]->position() - renderable->parentNode()->position()).lengthSquared();
-                if (squaredDistance < visibleLights[j]->range() * visibleLights[j]->range())
+                // Get BB extent:
+
+                float distance = (visibleLights[j]->position() - sceneNode->position()).length();
+                if (distance <= visibleLights[j]->range() + bbExtent)
                     activeLights.append(visibleLights[j]);
             }
 

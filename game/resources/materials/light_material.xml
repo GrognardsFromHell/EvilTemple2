@@ -38,19 +38,21 @@ uniform sampler2D texSampler;
 uniform float attenuation;
 uniform float range;
 
-varying vec2 vposRel;
 varying vec2 texCoord;
 
 void main() {
-  float distance = length(vposRel);
-  float att = distance * distance * 0.001;
+  vec4 texel = texture2D(texSampler, texCoord);
+
+  float distance = range * texel.r;
+  float att = distance * distance * (4 / (range * range));
 
   if (type == 1)
     gl_FragColor = vec4(0.25, 0.25, 0.25, 1);
   else if (type == 2) {
-    gl_FragColor = texture2D(texSampler, texCoord);
-    gl_FragColor.rgb = vec3(1,1,1) / att;
-    gl_FragColor.a = distance / range;
+    if (texel.a <= 0.0001)
+       discard;
+
+    gl_FragColor = vec4(0.25 * texel.g, 0.25 * texel.g, 0.25 * texel.g, 1 / att);
   } else
     gl_FragColor = vec4(1, 1, 1, 1);
 }
