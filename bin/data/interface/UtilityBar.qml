@@ -411,7 +411,44 @@ Item {
     }*/
 
     function getGameDateTooltip(currentTime) {
-        return "CY " + currentTime.year + " " + currentTime.month + " " + currentTime.day
-                    + " " + currentTime.hour + ":" + currentTime.minute
+        // Months in common, as per Wikipedia
+        var months = [
+            'Fireseek',
+            'Readying',
+            'Coldeven',
+            'Planting',
+            'Flocktime',
+            'Wealsun',
+            'Reaping',
+            'Goodmonth',
+            'Harvester',
+            'Patchwall',
+            'Ready\'reat',
+            'Sunsebb'
+            ];
+
+        var time = currentTime.hour + ":";
+        if (currentTime.minute < 10)
+            time += '0';
+        time += currentTime.minute;
+
+        var daySuffix = '';
+        switch (currentTime.day) {
+        case 1:
+            daySuffix = 'st';
+            break;
+        case 2:
+            daySuffix = 'nd';
+            break;
+        case 3:
+            daySuffix = 'rd';
+            break;
+        default:
+            daySuffix = 'th';
+            break;
+        }
+
+        return currentTime.year + " CY " + months[currentTime.month-1] + " " + currentTime.day + daySuffix
+                    + " " + time;
     }
 }
