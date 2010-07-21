@@ -13,7 +13,14 @@ Item {
     property bool townmapDisabled : false
     property bool journalDisabled : false
     property string restingStatus : 'pass_time_only'
-    // TODO: Time Display
+    property variant currentTime : ({
+        year: 0,
+        month: 0,
+        day: 0,
+        hour: 0,
+        minute: 0,
+        second: 0
+    });
 
     signal openOptions
     signal openHelp
@@ -39,7 +46,24 @@ Item {
             gameView.playUiSound('sound/utility_bar_Bling-Sound.wav');
             logbookBlingAnimation.running = true;
         }
+    }
 
+    onCurrentTimeChanged: {
+        if (!currentTime)
+            return;
+
+        // We use minute accuracy
+        var center = (currentTime.hour * 60 + currentTime.minute) / (24 * 60); // Where should it be centered
+
+        // We have to shift by 64 pixels, since time @ pixel 0 is 6 am
+        var left = timeBarContainer.width / 2 + 64 - center * 256;
+
+
+        if (left >= 0) {
+            left -= 256;
+        }
+
+        timeBar.x = left;
     }
 
     Image {
@@ -198,6 +222,11 @@ Item {
             height: 43
             source: "../art/interface/utility_bar_ui/camp_red.png"
             visible: restingStatus == 'impossible'
+            MouseArea {
+                id: campImpossibleMouseArea
+                anchors.fill: parent
+                hoverEnabled: true
+            }
         }
 
         Button {
@@ -247,28 +276,142 @@ Item {
         }
 
         Item {
-            id: timeBar
+            id: timeBarContainer
             x: 53
             y: 49
             width: 117
             height: 21
             clip: true
+            z: 1
             Image {
+                z: 1
+                id: timeBar
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
-                width: 256
+                width: 512
+                anchors.bottomMargin: 0
+                anchors.topMargin: 0
+                fillMode: "TileHorizontally"
                 x: 0
+                y: 0
                 source: "../art/interface/utility_bar_ui/timebar.png"
             }
+            MouseArea {
+                id: timeBarMouseArea
+                anchors.fill: parent
+                hoverEnabled: true
+            }
+        }
+
+        Tooltip {
+            shown: timeBarMouseArea.containsMouse
+            anchors.top: timeBarContainer.bottom
+            anchors.horizontalCenter: timeBarContainer.horizontalCenter
+            text: getGameDateTooltip(currentTime)
+        }
+
+        Tooltip {
+            text: 'Main Menu'
+            shown: optionsButton.containsMouse
+            anchors.top: optionsButton.bottom
+            anchors.horizontalCenter: optionsButton.horizontalCenter
+        }
+
+        Tooltip {
+            text: 'Townmap'
+            shown: townmapButton.containsMouse
+            anchors.top: townmapButton.bottom
+            anchors.horizontalCenter: townmapButton.horizontalCenter
+            z: 10000
+        }
+
+        Tooltip {
+            text: 'You Cannot Rest Here'
+            shown: campImpossibleMouseArea.containsMouse
+            anchors.top: campImpossibleMouseArea.bottom
+            anchors.horizontalCenter: campImpossibleMouseArea.horizontalCenter
+        }
+
+        Tooltip {
+            text: 'Rest Here (Safe)'
+            shown: campSafeButton.containsMouse
+            anchors.top: campSafeButton.bottom
+            anchors.horizontalCenter: campSafeButton.horizontalCenter
+        }
+
+        Tooltip {
+            text: 'Pass Time'
+            shown: passTimeButton.containsMouse
+            anchors.top: passTimeButton.bottom
+            anchors.horizontalCenter: passTimeButton.horizontalCenter
+        }
+
+        Tooltip {
+            text: 'Select All'
+            shown: selectAllButton.containsMouse
+            anchors.top: selectAllButton.bottom
+            anchors.horizontalCenter: selectAllButton.horizontalCenter
+        }
+
+        Tooltip {
+            text: 'Rest Here (Dangerous)'
+            shown: campDangerousButton.containsMouse
+            anchors.top: campDangerousButton.bottom
+            anchors.horizontalCenter: campDangerousButton.horizontalCenter
+        }
+
+        Tooltip {
+            text: 'Formation'
+            shown: formationButton.containsMouse
+            anchors.top: formationButton.bottom
+            anchors.horizontalCenter: formationButton.horizontalCenter
+        }
+
+        Tooltip {
+            text: 'Help'
+            shown: helpButton.containsMouse
+            anchors.top: helpButton.bottom
+            anchors.horizontalCenter: helpButton.horizontalCenter
+        }
+
+        Tooltip {
+            text: 'Journal'
+            shown: logbookButton.containsMouse
+            anchors.top: logbookButton.bottom
+            anchors.horizontalCenter: logbookButton.horizontalCenter
         }
 
         Image {
             id: timeBarArrow
             x: 105
             y: 60
+            z: 2
             width: 13
             height: 12
             source: "../art/interface/utility_bar_ui/timebar_arrow.png"
         }
+    }
+
+    /* DEBUGGING
+    SequentialAnimation {
+        running: true
+        loops: 24
+
+        ScriptAction {
+            script: {
+                currentTime = {
+                    hour: currentTime.hour + 1,
+                    minute: 0
+                }
+            }
+        }
+        PauseAnimation {
+            duration: 100
+        }
+    }*/
+
+    function getGameDateTooltip(currentTime) {
+        return "CY " + currentTime.year + " " + currentTime.month + " " + currentTime.day
+                    + " " + currentTime.hour + ":" + currentTime.minute
     }
 }

@@ -41,10 +41,12 @@ void main() {
 
 uniform sampler2D texSampler;
 
+uniform vec4 color;
+
 varying vec2 texCoord;
 
 void main() {
-    gl_FragColor = texture2D(texSampler, texCoord);
+    gl_FragColor = color * texture2D(texSampler, texCoord);
     // gl_FragColor = vec4(1, 1, 1, 1);
 }
 ]]>

@@ -12,7 +12,14 @@ Rectangle {
     height: 600
     color: 'black'
 
-    property variant saveGameList
+    property variant saveGameList /*: [
+        {
+          id: 'quicksave',
+          name: 'Quicksave',
+          created: new Date(),
+          screenshot: ''
+        }
+    ]*/
 
     signal closeDialog
     signal loadGame(string id)
@@ -24,8 +31,8 @@ Rectangle {
             saveGameModel.append({
                 saveId: item.id,
                 saveName: item.name,
-                saveScreenshot: item.screenshot,
-                saveCreated: item.created
+                saveCreated: item.created,
+                saveScreenshot: item.screenshot
             });
         });
     }
@@ -39,15 +46,6 @@ Rectangle {
 
     ListModel {
         id: saveGameModel
-        ListElement {
-            saveId: 'some-save-id'
-            saveName: 'Quicksave'
-        }
-        ListElement {
-            saveId: 'some-save-id'
-            saveName: 'Quicksave2'
-            saveCreated: '12345'
-        }
     }
 
     Component {
@@ -98,7 +96,7 @@ Rectangle {
                 font.bold: true
                 font.pointSize: 12
                 color: '#ffffff'
-                text: Utilities.getComfortableTime(saveCreated)
+                text: Utilities.getComfortableTime(model.saveCreated)
             }
 
             onClicked: {

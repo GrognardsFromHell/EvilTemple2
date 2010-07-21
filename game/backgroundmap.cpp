@@ -25,11 +25,12 @@ namespace EvilTemple {
     LEGACY MAP HEIGHT: 71 tiles
 */
 
-class BackgroundMapData
+class BackgroundMapData : public AlignedAllocation
 {
 public:
     BackgroundMapData(const RenderStates &states) : renderStates(states), positionBuffer(QGLBuffer::VertexBuffer),
-        texCoordBuffer(QGLBuffer::VertexBuffer), indexBuffer(QGLBuffer::IndexBuffer), mapOrigin(-8428,-4366)
+        texCoordBuffer(QGLBuffer::VertexBuffer), indexBuffer(QGLBuffer::IndexBuffer), mapOrigin(-8428,-4366),
+        color(1, 1, 1, 1)
     {
         QFile materialFile(":/material/map_material.xml");
 
@@ -50,6 +51,12 @@ public:
         if (!materialState.createFrom(material, renderStates, NULL)) {
             qWarning("Unable to create material state for background map: %s", qPrintable(materialState.error()));
             return;
+        }
+
+        colorLocations.reserve(materialState.passCount);
+        for (int i = 0; i < materialState.passCount; ++i) {
+            int location = materialState.passes[i].program->uniformLocation("color");
+            colorLocations.append(location);
         }
 
         if (!positionBuffer.create()) {
@@ -190,12 +197,15 @@ public:
     QHash<QPoint, bool> tilesPresent;
     typedef QHash<QPoint, SharedTexture> TextureCache;
 
+    Vector4 color;
+
     TextureCache textures;
     QString mapDirectory;
     MaterialState materialState;
     QGLBuffer positionBuffer;
     QGLBuffer texCoordBuffer;
     QGLBuffer indexBuffer;
+    QVector<int> colorLocations;
 
     QPointF mapOrigin;
 };
@@ -253,6 +263,11 @@ void BackgroundMap::render()
             pass.uniforms[j]->bind(); HANDLE_GL_ERROR
         }
 
+        int colorLocation = d->colorLocations[i];
+        if (colorLocation != -1) {
+            SAFE_GL(glUniform4fv(colorLocation, 1, d->color.data()));
+        }
+
         // Bind attributes
         for (int j = 0; j < pass.attributes.size(); ++j) {
             MaterialPassAttributeState &attribute = pass.attributes[j];
@@ -271,7 +286,6 @@ void BackgroundMap::render()
             glEnableVertexAttribArray(attribute.location);
             glVertexAttribPointer(attribute.location, attribute.binding.components(), attribute.binding.type(),
                                   attribute.binding.normalized(), attribute.binding.stride(), (GLvoid*)attribute.binding.offset());
-            HANDLE_GL_ERROR
         }
         glBindBuffer(GL_ARRAY_BUFFER, 0); // Unbind any previously bound buffers
 
@@ -333,6 +347,16 @@ void BackgroundMap::render()
 
     glDepthMask(GL_TRUE);
 
+}
+
+void BackgroundMap::setColor(const Vector4 &color)
+{
+    d->color = color;
+}
+
+const Vector4 &BackgroundMap::color() const
+{
+    return d->color;
 }
 
 }

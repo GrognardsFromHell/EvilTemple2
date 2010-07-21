@@ -49,15 +49,16 @@ var UtilityBarUi = {};
      * Updates the state of the utility bar.
      */
     UtilityBarUi.update = function() {
-        if (utilityBar)
+        if (utilityBar) {
             utilityBar.restingStatus = RandomEncounter.getRestingStatus();
+            utilityBar.currentTime = GameTime.get();
+        }
     };
 
-    // TODO: Replace this with a global gameStarted event
     StartupListeners.add(function() {
-        SaveGames.addLoadedListener(function() {
-            UtilityBarUi.show();
-        });
+        // TODO: Replace this with a global gameStarted event
+        SaveGames.addLoadedListener(UtilityBarUi.show, UtilityBarUi);
+        GameTime.addTimeChangedListener(UtilityBarUi.update, UtilityBarUi);
     });
 
 })();

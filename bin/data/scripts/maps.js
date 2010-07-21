@@ -123,9 +123,17 @@ var Maps = {
         }
     }
 
+    function updateLighting() {
+        // Update the lighting model
+        if (Maps.currentMap) {
+            Maps.currentMap.updateLighting();
+        }
+    }
+
     StartupListeners.add(function() {
         SaveGames.addSavingListener(save);
         SaveGames.addLoadingListener(load);
+        GameTime.addTimeChangedListener(updateLighting);
     });
 
 })();

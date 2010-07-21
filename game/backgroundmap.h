@@ -5,6 +5,9 @@
 #include <QObject>
 #include <QScopedPointer>
 
+#include <gamemath.h>
+using namespace GameMath;
+
 namespace EvilTemple {
 
 class RenderStates;
@@ -14,6 +17,7 @@ class BackgroundMap : public QObject
 {
 Q_OBJECT
 Q_PROPERTY(QString directory READ directory WRITE setDirectory)
+Q_PROPERTY(Vector4 color READ color WRITE setColor)
 public:
     BackgroundMap(const RenderStates &states);
     ~BackgroundMap();
@@ -22,6 +26,9 @@ public:
 
     bool setDirectory(const QString &directory);
     const QString &directory();
+
+    void setColor(const Vector4 &color);
+    const Vector4 &color() const;
 
 private:
     QScopedPointer<BackgroundMapData> d;

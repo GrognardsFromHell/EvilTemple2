@@ -21,17 +21,6 @@ MouseArea {
         width: sourceSize.width
         height: sourceSize.height
         source: '../' + normalImage
-
-        Text {
-            id: label
-            text: 'Button'
-            font.bold: true
-            smooth: true
-            anchors.centerIn: parent
-            color: '#FFFFFF'
-            font.family: 'Handserif'
-            font.pointSize: 14
-        }
     }
 
     Image {
@@ -42,17 +31,6 @@ MouseArea {
         height: sourceSize.height
         source: '../' + hoverImage
         opacity: 0
-
-        Text {
-            id: labelHover
-            text: label.text
-            font.bold: true
-            smooth: true
-            anchors.centerIn: parent
-            color: label.color
-            font.family: 'Handserif'
-            font.pointSize: 14
-        }
     }
 
     Image {
@@ -63,19 +41,6 @@ MouseArea {
         height: sourceSize.height
         source: '../' + pressedImage
         opacity: 0
-
-        Text {
-            id: labelPressed
-            text: label.text
-            font.bold: true
-            smooth: true
-            anchors.centerIn: parent
-            color: label.color
-            font.family: 'Handserif'
-            font.pointSize: 14
-            anchors.horizontalCenterOffset: 2
-            anchors.verticalCenterOffset: 1
-        }
     }
 
     Image {
@@ -86,17 +51,16 @@ MouseArea {
         height: sourceSize.height
         source: '../' + disabledImage
         opacity: 0
+    }
 
-        Text {
-            id: labelDisabled
-            text: label.text
-            font.bold: true
-            smooth: true
-            anchors.centerIn: parent
-            color: '#333333'
-            font.family: 'Handserif'
-            font.pointSize: 14
-        }
+    Text {
+        id: label
+        text: 'Button'
+        font.bold: true
+        anchors.centerIn: image
+        font.family: 'Handserif'
+        font.pointSize: 14
+        color: '#FFFFFF'
     }
 
     states: [
@@ -112,6 +76,10 @@ MouseArea {
                  target: root
                  onClicked: {}
              }
+             PropertyChanges {
+                 target: label
+                 color: '#333333'
+             }
        },
        State {
            id: pressedState
@@ -120,6 +88,11 @@ MouseArea {
             PropertyChanges {
                 target: imagePressed
                 opacity: 1
+            }
+            PropertyChanges {
+                target: label
+                anchors.horizontalCenterOffset: 1
+                anchors.verticalCenterOffset: 1
             }
             StateChangeScript {
                 script: gameView.playUiSound('sound/Interface - Button Down.wav')

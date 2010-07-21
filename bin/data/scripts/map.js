@@ -102,7 +102,7 @@ var Map = function(id) {
         print("Creating " + mapObj.lights.length + " lights.");
 
         // Create global lighting in form of an infinite-range directional light
-        var globalLight = new Light(gameView.scene);
+        globalLight = new Light(gameView.scene);
         globalLight.range = 10000000000; // The light should be visible anywhere on the map
         globalLight.type = 1;
         globalLight.color = [0.962745, 0.964706, 0.965882, 0];
@@ -194,7 +194,7 @@ var Map = function(id) {
         var map = this;
         gameView.addVisualTimer(1000, function() {
             map.heartbeat();
-        });        
+        });
     };
 
     Map.prototype.entering = function(position) {
@@ -325,6 +325,76 @@ var Map = function(id) {
 
         if (Maps.currentMap === this)
             mobile.createRenderState();
+    };
+
+    /**
+     * Interpolates a color value from key-frames color information.
+     * @param hour The current hour, as a decimal.
+     * @param keyframedColorTable The lighting map.
+     */
+    function interpolateColor(hour, keyframedColorTable) {
+        var color;
+        var factor, invFactor;
+
+        if (hour <= keyframedColorTable[0][0]) {
+            color = keyframedColorTable[0][1];
+        } else if (hour >= keyframedColorTable[keyframedColorTable.length - 1][0]) {
+            color = keyframedColorTable[keyframedColorTable.length - 1][1];
+        } else {
+            // Find the previous/next index
+            for (i = 0; i < keyframedColorTable.length - 1; ++i) {
+                if (keyframedColorTable[i + 1][0] >= hour) {
+                    prevTime = keyframedColorTable[i][0];
+                    prevColor = keyframedColorTable[i][1];
+                    nextTime = keyframedColorTable[i + 1][0];
+                    nextColor = keyframedColorTable[i + 1][1];
+                    break;
+                }
+            }
+
+            factor = (hour - prevTime) / (nextTime - prevTime);
+            invFactor = 1 - factor;
+
+            color = [invFactor * prevColor[0] + factor * nextColor[0],
+                invFactor * prevColor[1] + factor * nextColor[1],
+                invFactor * prevColor[2] + factor * nextColor[2]];
+        }
+
+        return color;
+    }
+
+    /**
+     * Updates lighting for this map based on the current game time.
+     */    
+    Map.prototype.updateLighting = function() {
+
+        var dayBgMapLighting = [
+            [6, [162 / 255, 112 / 255, 203 / 255]],
+            [7, [227 / 255, 181 / 255, 111 / 255]],
+            [9, [254 / 255, 234 / 255, 188 / 255]],
+            [12, [255 / 255, 255 / 255, 255 / 255]],
+            [15, [254 / 255, 234 / 255, 188 / 255]],
+            [17, [254 / 255, 164 / 255, 65 / 255]],
+            [18, [170 / 255, 53 / 255, 56 / 255]]
+        ];
+
+        var day3dLighting = [
+            [6, [202 / 255, 152 / 255, 243 / 255]],
+            [7, [267 / 255, 221 / 255, 151 / 255]],
+            [9, [294 / 255, 274 / 255, 228 / 255]],
+            [12, [295 / 255, 295 / 255, 295 / 255]],
+            [15, [294 / 255, 274 / 255, 228 / 255]],
+            [17, [294 / 255, 204 / 255, 105 / 255]],
+            [18, [210 / 255, 93 / 255, 96 / 255]]
+        ];
+        
+        var hour = GameTime.getHourOfDay() + GameTime.getMinuteOfHour() / 60;
+
+        gameView.backgroundMap.color = interpolateColor(hour, dayBgMapLighting);
+
+        if (globalLight) {
+            globalLight.color = interpolateColor(hour, day3dLighting);
+        }
     };
 
 })();
