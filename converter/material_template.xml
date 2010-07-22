@@ -125,12 +125,12 @@ void main(void)
   <pass>
     <shader>
       <vertexShader>
-        <include file=":/material/shadow.frag" />
+        <include file=":/material/shadow.vert" />
         <code></code>
       </vertexShader>
 
       <fragmentShader>
-        <include file=":/material/shadow.vert" />
+        <include file=":/material/shadow.frag" />
           <code></code>
       </fragmentShader>
 
