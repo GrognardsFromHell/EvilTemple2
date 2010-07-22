@@ -1,14 +1,13 @@
 
 vec2 textureDriftUV(vec2 texCoordsIn, float t, float speedU, float speedV) {
-    vec2 result;
-    result.x = fract(texCoordsIn.x - t * speedU);
-    result.y = fract(texCoordsIn.y - t * speedV);
-    return result;
+    float x = texCoordsIn.x + t * speedU;
+    float y = texCoordsIn.y - t * speedV;
+    return vec2(x, y);
 }
 
 vec2 textureDriftU(vec2 texCoordsIn, float t, float speed) {
     vec2 result;
-    result.x = fract(texCoordsIn.x - speed * t);
+    result.x = texCoordsIn.x + speed * t;
     result.y = texCoordsIn.y;
     return result;
 }
@@ -16,7 +15,7 @@ vec2 textureDriftU(vec2 texCoordsIn, float t, float speed) {
 vec2 textureDriftV(vec2 texCoordsIn, float t, float speed) {
     vec2 result;
     result.x = texCoordsIn.x;
-    result.y = fract(texCoordsIn.y - speed * t);
+    result.y = texCoordsIn.y - speed * t;
     return result;
 }
 

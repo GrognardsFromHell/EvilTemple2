@@ -127,7 +127,9 @@ OTHER_FILES += \
     resources/materials/selection_material.xml \
     resources/materials/behindwalls_material.xml \
     ../bin/data/scripts/walking.js \
-    ../bin/data/scripts/mobileInfo.js
+    ../bin/data/scripts/mobileInfo.js \
+    resources/materials/shadow.vert \
+    resources/materials/shadow.frag
 
 INCLUDEPATH += .
 

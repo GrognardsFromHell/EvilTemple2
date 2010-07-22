@@ -39,7 +39,7 @@ var WalkJobs = {
                     return;
                 }
                 this.driven = 0;
-                this.init(this.path[this.currentPathNode], this.path[this.currentPathNode + 1]);
+                this.init(this.path[this.currentPathNode], this.path[this.currentPathNode + 1]);    
             }
 
             var obj = this;

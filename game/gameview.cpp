@@ -548,8 +548,6 @@ namespace EvilTemple {
                 elapsedSeconds = 0.1;
 
             float texAnimTime = d->renderStates.textureAnimationTime() + elapsedSeconds;
-            while (texAnimTime > 60)
-                texAnimTime -= 60;
 
             d->renderStates.setTextureAnimationTime(texAnimTime);
 

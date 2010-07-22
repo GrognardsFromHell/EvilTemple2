@@ -119,9 +119,9 @@ void Scene::render(RenderStates &renderStates)
 
     const Renderable::Category renderOrder[Renderable::Count] = {
         Renderable::ClippingGeometry,
-        Renderable::StaticGeometry,
         Renderable::Default,
         Renderable::Lights,
+        Renderable::StaticGeometry,
         Renderable::DebugOverlay
     };
 
@@ -150,8 +150,6 @@ void Scene::render(RenderStates &renderStates)
 
             for (int j = 0; j < visibleLights.size(); ++j) {
                 // TODO: This ignores the full position
-                // Get BB extent:
-
                 float distance = (visibleLights[j]->position() - sceneNode->position()).length();
                 if (distance <= visibleLights[j]->range() + bbExtent)
                     activeLights.append(visibleLights[j]);

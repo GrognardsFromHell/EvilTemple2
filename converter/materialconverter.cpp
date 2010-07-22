@@ -190,7 +190,7 @@ public:
 
             if (material->glossmap().isNull()) {
                 // Use a constant material color if no lighting is enabled
-                pixelTerm.append("gl_FragColor *= lighting(shininess, materialColor);\n");
+                pixelTerm.append("gl_FragColor.xyz *= lighting(shininess, materialColor).xyz;\n");
             } else {
                 int textureId = getTexture(material->glossmap()); // This forces the texture to be loaded -> ok
 
@@ -203,7 +203,7 @@ public:
 
                 samplerUniforms.append(QString("<uniform name=\"texSamplerGlossmap\" semantic=\"Texture%2\" />").arg(samplersUsed++));
 
-                pixelTerm.append("gl_FragColor *= lightingGlossmap(shininess, materialColor, texSamplerGlossmap, texCoord);\n");
+                pixelTerm.append("gl_FragColor.xyz *= lightingGlossmap(shininess, materialColor, texSamplerGlossmap, texCoord).xyz;\n");
             }
 
             useNormals = true;
