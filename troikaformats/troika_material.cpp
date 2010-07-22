@@ -1,6 +1,4 @@
 
-#include <GL/glew.h>
-
 #include "troika_material.h"
 #include "virtualfilesystem.h"
 #include "constants.h"
@@ -14,23 +12,14 @@ namespace Troika {
         disableLighting(false),
         disableDepthTest(false),
         linearFiltering(false),
-        disableAlphaBlending(false),
-        sourceBlendFactor(GL_SRC_ALPHA),
-        destBlendFactor(GL_ONE_MINUS_SRC_ALPHA),
         disableDepthWrite(false),
+        mBlendType(Alpha),
         mSpecularPower(50),
+        mRecalculateNormals(false),
         color(255, 255, 255, 255) {
     }
 
     Material::~Material() {
-    }
-
-    bool Material::hitTest(float u, float v)
-    {
-        Q_UNUSED(u);
-        Q_UNUSED(v);
-
-        return true;
     }
 
     Material *Material::create(VirtualFileSystem *vfs, const QString &filename) {
@@ -100,10 +89,8 @@ namespace Troika {
                 return false; // More arguments than needed
             }
 
-            QByteArray data = vfs->openFile(texture);
-            if (!data.isNull()) {
-                textureStages[unit].filename = texture;
-                //textureStages[unit].image.loadFromData(data, "tga");
+            if (vfs->exists(texture)) {
+                textureStages[unit].setFilename(texture);
             } else {
                 qWarning("Unknown texture %s referenced in %s.", qPrintable(texture), qPrintable(name()));
             }
@@ -139,61 +126,19 @@ namespace Troika {
                 return false;
 
             TextureStageInfo &stage = textureStages[unit];
-            QString type = args[1];
+            QString type = args[1].toLower();
 
-            if (!type.compare("modulate", Qt::CaseInsensitive))
-            {
-                // Reset to default parameters
-                stage.colorOp = GL_MODULATE;
-                stage.alphaOp = GL_MODULATE;
-                stage.colorArg0 = GL_TEXTURE;
-                stage.colorOperand0 = GL_SRC_COLOR;
-                stage.alphaArg0 = GL_TEXTURE;
-                stage.alphaOperand0 = GL_SRC_ALPHA;
-                stage.colorArg1 = GL_PREVIOUS;
-                stage.colorOperand1 = GL_SRC_COLOR;
-                stage.alphaArg1 = GL_PREVIOUS;
-                stage.alphaOperand1 = GL_SRC_ALPHA;
-                stage.blendType = TextureStageInfo::Modulate;
-            }
-            else if (!type.compare("add", Qt::CaseInsensitive))
-            {
-                stage.blendType = TextureStageInfo::Add;
-            }
-            else if (!type.compare("texturealpha", Qt::CaseInsensitive))
-            {
-                stage.blendType = TextureStageInfo::TextureAlpha;
-            }
-            else if (!type.compare("currentalpha", Qt::CaseInsensitive))
-            {
-                stage.colorOp = GL_INTERPOLATE;
-
-                stage.alphaOp = GL_REPLACE;
-                stage.alphaArg0 = GL_PRIMARY_COLOR;
-                stage.blendType = TextureStageInfo::CurrentAlpha;
-            }
-            else if (!type.compare("currentalphaadd", Qt::CaseInsensitive))
-            {
-                /*
-                TODO: This doesn't match ToEE's behaviour. I suppose this behaviour
-                    is only possible with a pixelshader in opengl.
-
-                 The following are the original commands used in ToEE:
-                 material.Stages[unit].ColorOp = TextureOperation.ModulateAlphaAddColor;
-                 material.Stages[unit].AlphaOp = TextureOperation.SelectArg2;
-                 material.Stages[unit].ColorArg1 = TextureArgument.Current;
-                 material.Stages[unit].ColorArg2 = TextureArgument.Texture;
-                 material.Stages[unit].AlphaArg1 = TextureArgument.Current;
-                 material.Stages[unit].AlphaArg2 = TextureArgument.Diffuse;*/
-                stage.colorOp = GL_INTERPOLATE;
-
-                stage.alphaOp = GL_REPLACE;
-                stage.alphaArg0 = GL_PRIMARY_COLOR;
-
-                stage.blendType = TextureStageInfo::CurrentAlphaAdd;
-            }
-            else
-            {
+            if (type == "modulate") {
+                stage.setBlendType(TextureStageInfo::Modulate);
+            } else if (type == "add") {
+                stage.setBlendType(TextureStageInfo::Add);
+            } else if (type == "texturealpha") {
+                stage.setBlendType(TextureStageInfo::TextureAlpha);
+            } else if (type == "currentalpha") {
+                stage.setBlendType(TextureStageInfo::CurrentAlpha);
+            } else if (type == "currentalphaadd") {
+                stage.setBlendType(TextureStageInfo::CurrentAlphaAdd);
+            } else {
                 qWarning("Unknown blend type for texture stage %d: %s", unit, qPrintable(type));
                 return false;
             }
@@ -202,8 +147,7 @@ namespace Troika {
 
         } else if (!command.compare("Speed", Qt::CaseInsensitive)) {
             // Sets both U&V speed for all stages
-            if (args.size() == 1)
-            {
+            if (args.size() == 1) {
                 bool ok;
                 float speed = args[0].toFloat(&ok);
 
@@ -212,15 +156,13 @@ namespace Troika {
                     return false;
                 }
 
-                for (int i = 0; i < LegacyTextureStages; ++i)
-                {
-                    textureStages[i].speedu = textureStages[i].speedv = speed;
+                for (int i = 0; i < LegacyTextureStages; ++i) {
+                    textureStages[i].setSpeedU(speed);
+                    textureStages[i].setSpeedV(speed);
                 }
 
                 return true;
-            }
-            else
-            {
+            } else {
                 qWarning("Invalid arguments for texture command %s", qPrintable(command));
                 return false;
             }
@@ -267,9 +209,9 @@ namespace Troika {
                 }
 
                 if (!command.compare("SpeedU", Qt::CaseInsensitive))
-                    textureStages[stage].speedu = speed;
+                    textureStages[stage].setSpeedU(speed);
                 else
-                    textureStages[stage].speedv = speed;
+                    textureStages[stage].setSpeedV(speed);
 
                 return true;
             }
@@ -293,18 +235,18 @@ namespace Troika {
                     return false;
                 }
 
-                QString type = args[1];
+                QString type = args[1].toLower();
 
-                if (!type.compare("Mesh", Qt::CaseInsensitive))
-                    textureStages[stage].transformType = TextureStageInfo::None;
-                else if (!type.compare("Drift", Qt::CaseInsensitive))
-                    textureStages[stage].transformType = TextureStageInfo::Drift;
-                else if (!type.compare("Swirl", Qt::CaseInsensitive))
-                    textureStages[stage].transformType = TextureStageInfo::Swirl;
-                else if (!type.compare("Wavey", Qt::CaseInsensitive))
-                    textureStages[stage].transformType = TextureStageInfo::Wavey;
-                else if (!type.compare("Environment", Qt::CaseInsensitive))
-                    textureStages[stage].transformType = TextureStageInfo::Environment;
+                if (type == "mesh")
+                    textureStages[stage].setUvType(TextureStageInfo::Mesh);
+                else if (type == "drift")
+                    textureStages[stage].setUvType(TextureStageInfo::Drift);
+                else if (type == "swirl")
+                    textureStages[stage].setUvType(TextureStageInfo::Swirl);
+                else if (type == "wavey")
+                    textureStages[stage].setUvType(TextureStageInfo::Wavey);
+                else if (type == "environment")
+                    textureStages[stage].setUvType(TextureStageInfo::Environment);
                 else
                     return false;
 
@@ -318,18 +260,16 @@ namespace Troika {
 
         } else if (!command.compare("MaterialBlendType", Qt::CaseInsensitive)) {
             if (args.size() == 1) {
-                QString type = args[0];
+                QString type = args[0].toLower();
 
-                if (!type.compare("none", Qt::CaseInsensitive)) {
-                    disableAlphaBlending = true;
-                } else if (!type.compare("alpha", Qt::CaseInsensitive)) {
-                    disableAlphaBlending = false;
-                } else if (!type.compare("add", Qt::CaseInsensitive)) {
-                    sourceBlendFactor = GL_ONE;
-                    destBlendFactor = GL_ONE;
-                } else if (!type.compare("alphaadd", Qt::CaseInsensitive)) {
-                    sourceBlendFactor = GL_SRC_ALPHA;
-                    destBlendFactor = GL_ONE;
+                if (type == "none") {
+                    mBlendType = None;
+                } else if (type == "alpha") {
+                    mBlendType = Alpha;
+                } else if (type == "add") {
+                    mBlendType = Add;
+                } else if (type == "alphaadd") {
+                    mBlendType = AlphaAdd;
                 } else {
                     qWarning("Unknown MaterialBlendType type: %s", qPrintable(type));
                     return false;
@@ -343,7 +283,9 @@ namespace Troika {
         } else if (!command.compare("Double", Qt::CaseInsensitive)) {
             disableFaceCulling = true;
             return true;
-        } else if (!command.compare("notlit", Qt::CaseInsensitive)) {
+        } else if (!command.compare("notlit", Qt::CaseInsensitive)
+            || !command.compare("notlite", Qt::CaseInsensitive)) {
+            // We also compare against notlite, since it's a very common mistake in the vanilla MDFs
             disableLighting = true;
             return true;
         } else if (!command.compare("DisableZ", Qt::CaseInsensitive)) {
@@ -361,6 +303,9 @@ namespace Troika {
             return true;
         } else if (!command.compare("Textured", Qt::CaseInsensitive)) {
             // Unused
+            return true;
+        } else if (!command.compare("RecalculateNormals", Qt::CaseInsensitive)) {
+            mRecalculateNormals = true;
             return true;
         } else if (!command.compare("Color", Qt::CaseInsensitive)) {
             if (args.count() != 4) {
@@ -392,65 +337,4 @@ namespace Troika {
             return false; // Unknown command
         }
     }
-
-    TextureStageInfo::TextureStageInfo()
-    {
-       transformType = None;
-       speedu = 0;
-       speedv = 0;
-
-       blendType = Modulate;
-
-       // By default modulation takes place (Texture Color * Fragment Color for first stage)
-       colorOp = GL_MODULATE;
-       alphaOp = GL_MODULATE;
-
-       // Argument 1 of multi texturing equations are the texture's color/alpha
-       colorArg0 = GL_TEXTURE;
-       colorOperand0 = GL_SRC_COLOR;
-
-       alphaArg0 = GL_TEXTURE;
-       alphaOperand0 = GL_SRC_ALPHA;
-
-       // Argument 2 of multi texturing equations are the previous texture's color/alpha
-       colorArg1 = GL_PREVIOUS;
-       colorOperand1 = GL_SRC_COLOR;
-
-       alphaArg1 = GL_PREVIOUS;
-       alphaOperand1 = GL_SRC_ALPHA;
-    }
-
-    void TextureStageInfo::updateTransform(float elapsedSeconds)
-    {
-        switch (transformType)
-        {
-        case Drift:
-            transformMatrix.translate(- elapsedSeconds * speedu, - elapsedSeconds * speedv);
-            break;
-
-        case Swirl:
-            {
-                elapsedSeconds *= 1000;
-                float rotation = - (elapsedSeconds*speedu*60*1.0471976e-4f)*0.1f;
-                transformMatrix.translate(-.5, -.5);
-                transformMatrix.rotate(rad2deg(rotation), 0, 0, 1);
-                transformMatrix.translate(.5, .5);
-                break;
-            }
-
-
-        case Wavey:
-            {
-                float udrift = (elapsedSeconds*speedu);
-                float vdrift = (elapsedSeconds*speedv);
-
-                transformMatrix.translate(- udrift - cos(udrift*2*Pi), - vdrift - cos(vdrift*2*Pi));
-            }
-            break;
-
-        default:
-            break;
-        }
-    }
-
 }

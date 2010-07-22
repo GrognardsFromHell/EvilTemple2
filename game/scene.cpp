@@ -117,25 +117,26 @@ void Scene::render(RenderStates &renderStates)
         d->sceneNodes[i]->addVisibleObjects(viewFrustum, &d->renderQueue);
     }
 
-    const RenderQueue::Category renderOrder[RenderQueue::Count] = {
-        RenderQueue::ClippingGeometry,
-        RenderQueue::Default,
-        RenderQueue::Lights,
-        RenderQueue::DebugOverlay
+    const Renderable::Category renderOrder[Renderable::Count] = {
+        Renderable::ClippingGeometry,
+        Renderable::StaticGeometry,
+        Renderable::Default,
+        Renderable::Lights,
+        Renderable::DebugOverlay
     };
 
     // Find all light sources that are visible.
     QList<const Light*> visibleLights;
 
-    foreach (Renderable *lightCanidate, d->renderQueue.queuedObjects(RenderQueue::Lights)) {
+    foreach (Renderable *lightCanidate, d->renderQueue.queuedObjects(Renderable::Lights)) {
         Light *light = qobject_cast<Light*>(lightCanidate);
         if (light) {
             visibleLights.append(light);
         }
     }
 
-    for (int catOrder = 0; catOrder < RenderQueue::Count; ++catOrder) {
-        RenderQueue::Category category = renderOrder[catOrder];
+    for (int catOrder = 0; catOrder < Renderable::Count; ++catOrder) {
+        Renderable::Category category = renderOrder[catOrder];
         const QList<Renderable*> &renderables = d->renderQueue.queuedObjects(category);
         for (int i = 0; i < renderables.size(); ++i) {
             Renderable *renderable = renderables.at(i);
@@ -178,7 +179,7 @@ void Scene::render(RenderStates &renderStates)
     glClear(GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
 
-    const QList<Renderable*> &clippingRenderables = d->renderQueue.queuedObjects(RenderQueue::ClippingGeometry);
+    const QList<Renderable*> &clippingRenderables = d->renderQueue.queuedObjects(Renderable::ClippingGeometry);
 
     for (int i = 0; i < clippingRenderables.size(); ++i) {
         Renderable *renderable = clippingRenderables.at(i);
@@ -192,7 +193,7 @@ void Scene::render(RenderStates &renderStates)
     glDepthFunc(GL_GEQUAL); // Flip depth-test so primitives are drawn when depth-test fails
     glDepthMask(GL_FALSE); // But don't actually modify the depth-buffer
 
-    const QList<Renderable*> &defaultRenderables = d->renderQueue.queuedObjects(RenderQueue::Default);
+    const QList<Renderable*> &defaultRenderables = d->renderQueue.queuedObjects(Renderable::Default);
 
     for (int i = 0; i < defaultRenderables.size(); ++i) {
         ModelInstance *renderable = qobject_cast<ModelInstance*>(defaultRenderables.at(i));

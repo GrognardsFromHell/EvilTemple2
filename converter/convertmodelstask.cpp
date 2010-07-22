@@ -405,7 +405,7 @@ static void writeDebugBoneHierarchy(QTextStream &stream,
 
 bool ConvertModelsTask::writeModel(IFileWriter *output, Troika::MeshModel *model, QDataStream &stream)
 {
-    const bool external = false;
+    const bool external = true;
 
     ModelWriter writer(stream);
 

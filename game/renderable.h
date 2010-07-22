@@ -9,7 +9,6 @@
 #include <QMouseEvent>
 
 #include "renderstates.h"
-#include "renderqueue.h"
 
 #include <gamemath.h>
 using namespace GameMath;
@@ -26,9 +25,20 @@ Q_PROPERTY(Box3d boundingBox READ boundingBox)
 // Q_PROPERTY(Matrix4 worldTransform READ worldTransform)
 Q_PROPERTY(SceneNode* parentNode READ parentNode)
 Q_PROPERTY(bool animated READ isAnimated WRITE setAnimated)
-// Q_PROPERTY(uint renderCategory READ renderCategory WRITE setRenderCategory)
+Q_PROPERTY(Category renderCategory READ renderCategory WRITE setRenderCategory)
 Q_PROPERTY(bool debugging READ isDebugging WRITE setDebugging)
+Q_ENUMS(Category)
 public:
+
+    enum Category {
+        Default = 0,
+        ClippingGeometry,
+        Lights,
+        DebugOverlay,
+        StaticGeometry,
+        Count
+    };
+
     Renderable();
     virtual ~Renderable();
 
@@ -52,8 +62,8 @@ public:
     virtual void mouseLeaveEvent(QMouseEvent *mouseEvent);
     virtual void mouseDoubleClickEvent(QMouseEvent *mouseEvent);
 
-    RenderQueue::Category renderCategory() const;
-    void setRenderCategory(RenderQueue::Category category);
+    Category renderCategory() const;
+    void setRenderCategory(Category category);
 
     void setDebugging(bool debugging);
     bool isDebugging() const;
@@ -72,7 +82,7 @@ protected:
     SceneNode *mParentNode;
     bool mAnimated;
     bool mDebugging;
-    RenderQueue::Category mRenderCategory; // In which category should the content of this node be rendered.
+    Category mRenderCategory; // In which category should the content of this node be rendered.
 
 private:
     Q_DISABLE_COPY(Renderable)
@@ -109,14 +119,14 @@ inline SceneNode *Renderable::parentNode() const
     return mParentNode;
 }
 
-inline RenderQueue::Category Renderable::renderCategory() const
+inline Renderable::Category Renderable::renderCategory() const
 {
     return mRenderCategory;
 }
 
-inline void Renderable::setRenderCategory(RenderQueue::Category category)
+inline void Renderable::setRenderCategory(Category category)
 {
-    Q_ASSERT(category >= RenderQueue::Default && category <= RenderQueue::Count);
+    Q_ASSERT(category >= Default && category <= Count);
     mRenderCategory = category;
 }
 

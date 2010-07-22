@@ -194,6 +194,19 @@ bool MaterialPass::load(const QDomElement &passElement)
         }
     }
 
+    QDomElement alphaTestElement = passElement.firstChildElement("alphaTest");
+    if (!alphaTestElement.isNull()) {
+        QString enabled = alphaTestElement.text();
+
+        if (enabled == "false") {
+            SharedMaterialRenderState renderState(new MaterialDisableState(GL_ALPHA_TEST));
+            mRenderStates.append(renderState);
+        } else if (enabled == "true") {
+            SharedMaterialRenderState renderState(new MaterialEnableState(GL_ALPHA_TEST));
+            mRenderStates.append(renderState);
+        }
+    }
+
     QDomElement stencilTestElement = passElement.firstChildElement("stencilTest");
     if (!stencilTestElement.isNull()) {
         QString stencilTest = stencilTestElement.text();

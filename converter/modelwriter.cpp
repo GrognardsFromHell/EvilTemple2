@@ -370,11 +370,27 @@ void ModelWriter::writeBoundingVolumes(const Troika::MeshModel *model)
     finishChunk();
 }
 
-void ModelWriter::writeFaces(const QList<QSharedPointer<Troika::FaceGroup> > &faceGroups, const QHash<QString,int> &materialMapping)
+enum FacesFlags {
+    FacesFlag_RecalculateNormals = 1
+};
+
+void ModelWriter::writeFaces(const QList<QSharedPointer<Troika::FaceGroup> > &faceGroups,
+                             const QHash<QString,int> &materialMapping)
 {
     startChunk(Faces, true);
 
-    stream << (uint)faceGroups.size() << RESERVED << RESERVED << RESERVED;
+    uint flags = 0;
+
+    // If any of the materials has the "recalculate normals" flags set, set it here
+    foreach (const QSharedPointer<Troika::FaceGroup> &faceGroup, faceGroups) {
+        if (faceGroup->material()) {
+            if (faceGroup->material()->isRecalculateNormals()) {
+                flags |= FacesFlag_RecalculateNormals;
+            }
+        }
+    }
+
+    stream << (uint)faceGroups.size() << flags << RESERVED << RESERVED;
 
     foreach (const QSharedPointer<Troika::FaceGroup> &faceGroup, faceGroups) {
         int materialId = -1;

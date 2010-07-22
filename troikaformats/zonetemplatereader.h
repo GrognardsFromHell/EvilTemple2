@@ -55,7 +55,7 @@ namespace Troika
         GameObject *readMobile(const QString &filename);
         bool readClippingMeshFiles(); // Loads clipping.cgf
         bool readClippingMeshInstances(); // Loads dag files + clipping.cif
-        bool readGlobalLight(); // Loads global.lit
+        bool readGlobalLight(); // Loads global.lit + daylight.mes
 
         VirtualFileSystem *vfs;
         Prototypes *prototypes;

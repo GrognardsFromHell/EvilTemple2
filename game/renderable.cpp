@@ -12,7 +12,7 @@ uint getActiveRenderables()
 }
 
 Renderable::Renderable()
-    : mParentNode(NULL), mRenderCategory(RenderQueue::Default), mDebugging(false)
+    : mParentNode(NULL), mRenderCategory(Default), mDebugging(false)
 {
     activeRenderables++;
 }

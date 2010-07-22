@@ -1,6 +1,7 @@
 #ifndef RENDERQUEUE_H
 #define RENDERQUEUE_H
 
+#include "renderable.h"
 #include "renderstates.h"
 
 namespace EvilTemple {
@@ -13,36 +14,32 @@ class Renderable;
 class RenderQueue
 {
 public:
-    enum Category {
-        Default = 0,
-        ClippingGeometry,
-        Lights,
-        DebugOverlay,
-        Count
-    };
+    void addRenderable(Renderable::Category category, Renderable *renderable);
 
-    void addRenderable(Category category, Renderable *renderable);
-
-    const QList<Renderable*> queuedObjects(Category category) const;
+    const QList<Renderable*> queuedObjects(Renderable::Category category) const;
     void clear();
 private:
-    QList<Renderable*> mQueuedObjects[Count];
+    QList<Renderable*> mQueuedObjects[Renderable::Count];
 };
 
-inline void RenderQueue::addRenderable(Category category, Renderable *renderable)
+inline void RenderQueue::addRenderable(Renderable::Category category, Renderable *renderable)
 {
-    mQueuedObjects[category].append(renderable);
+    if (category < Renderable::Count) {
+        mQueuedObjects[category].append(renderable);
+    } else {
+        qWarning("Invalid render category.");
+    }
 }
 
-inline const QList<Renderable*> RenderQueue::queuedObjects(RenderQueue::Category category) const
+inline const QList<Renderable*> RenderQueue::queuedObjects(Renderable::Category category) const
 {
-    Q_ASSERT(category >= Default && category < Count);
+    Q_ASSERT(category >= Renderable::Default && category < Renderable::Count);
     return mQueuedObjects[category];
 }
 
 inline void RenderQueue::clear()
 {
-    for (int i = Default; i < Count; ++i)
+    for (int i = Renderable::Default; i < Renderable::Count; ++i)
         mQueuedObjects[i].clear();
 }
 

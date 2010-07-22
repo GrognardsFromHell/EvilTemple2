@@ -105,6 +105,9 @@ var BaseObject = {
         modelInstance.drawBehindWalls = this.drawBehindWalls;
         updateEquipment(this, modelInstance);
         modelInstance.animationEvent.connect(this, handleAnimationEvent);
+        if (this.prototype == 'StaticGeometry') {
+            modelInstance.renderCategory = 'StaticGeometry';
+        }
 
         // Store render state with the object
         var renderState = {

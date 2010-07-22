@@ -145,7 +145,8 @@ namespace EvilTemple {
             float invSin = static_cast<float>( ( 1.0f / sin( static_cast<double>( acos ) ) ) );
 
             inverse = ( static_cast<float>( sin( static_cast<double>( (1.0f - t) * acos ) ) ) ) * invSin;
-            opposite = flag ? ( ( static_cast<float>( -sin( static_cast<double>( t * acos ) ) ) ) * invSin ) : ( ( static_cast<float>( sin( static_cast<double>( t * acos ) ) ) ) * invSin );
+            opposite = flag ? ( ( static_cast<float>( -sin( static_cast<double>( t * acos ) ) ) ) * invSin )
+                : ( ( static_cast<float>( sin( static_cast<double>( t * acos ) ) ) ) * invSin );
         }
 
         return inverse * a + opposite * b;
@@ -529,6 +530,11 @@ namespace EvilTemple {
 
         const QStringList &placeholders() const;
 
+        /**
+          Indicates that this model needs its normals recalculated after it was animated.
+          */
+        bool needsNormalsRecalculated() const;
+
     private:
         typedef QHash<QString, const Animation*> AnimationMap;
 
@@ -544,6 +550,8 @@ namespace EvilTemple {
 
         QStringList mPlaceholders;
 
+        bool mNeedsNormalsRecalculated;
+
         AlignedPointer boneAttachmentData;
         AlignedPointer vertexData;
         AlignedPointer faceData;
@@ -558,6 +566,11 @@ namespace EvilTemple {
 
         QString mError;
     };
+
+    inline bool Model::needsNormalsRecalculated() const
+    {
+        return mNeedsNormalsRecalculated;
+    }
 
     inline const QStringList &Model::placeholders() const
     {

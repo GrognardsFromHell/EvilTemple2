@@ -33,7 +33,7 @@ namespace EvilTemple {
     Model::Model()
         : mAnimations((Animation*)0), positions(0), normals(0), texCoords(0), vertices(0), textureData(0), faces(0),
         attachments(0), mRadius(std::numeric_limits<float>::infinity()), mRadiusSquared(std::numeric_limits<float>::infinity()),
-        materialState((MaterialState*)0), faceGroups((FaceGroup*)NULL)
+        materialState((MaterialState*)0), faceGroups((FaceGroup*)NULL), mNeedsNormalsRecalculated(false)
     {
         activeModels++;
     }
@@ -379,9 +379,13 @@ namespace EvilTemple {
     struct FacesHeader
     {
         uint groups;
-        uint reserved1;
+        uint flags;
         uint reserved2;
         uint reserved3;
+    };
+
+    enum FacesFlags {
+        FacesFlag_RecalculateNormals = 1
     };
 
     struct FaceGroupHeader
@@ -395,6 +399,12 @@ namespace EvilTemple {
     void Model::loadFaceData()
     {
         const FacesHeader *header = reinterpret_cast<FacesHeader*>(faceData.data());
+
+        if (header->flags & FacesFlag_RecalculateNormals) {
+            mNeedsNormalsRecalculated = true;
+        } else {
+            mNeedsNormalsRecalculated = false;
+        }
 
         faces = header->groups;
         faceGroups.reset(new FaceGroup[faces]);

@@ -167,13 +167,12 @@ void createMaterials(Troika::VirtualFileSystem *vfs, QDomDocument &document, QDo
         for (int i = 0; i < Troika::LegacyTextureStages; ++i) {
             // Ensure that the image for this stage is properly dumped later on
             const Troika::TextureStageInfo *stage = material->getTextureStage(i);
-            if (stage->image.isNull())
-                continue;
 
-            if (!images.contains(stage->filename))
-                images[stage->filename] = stage->image;
+            // TODO: This won't work anymore
+            //if (!images.contains(stage->filename()))
+            //    images[stage->filename] = stage->image;
 
-            QString mangledName = stage->filename;
+            QString mangledName = stage->filename();
             mangleImageName(mangledName);
 
             // Create the surface itself

@@ -216,7 +216,7 @@ public:
             ClippingGeometryInstance *instance = new ClippingGeometryInstance;
             instance->setMesh(meshes[meshIndex]);
             instance->setMaterial(&mClippingMaterial);
-            instance->setRenderCategory(RenderQueue::ClippingGeometry);
+            instance->setRenderCategory(Renderable::ClippingGeometry);
 
             SceneNode *node = scene->createNode();
             instance->setParent(node);

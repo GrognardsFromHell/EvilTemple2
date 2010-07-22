@@ -238,6 +238,36 @@ namespace EvilTemple {
         glBindBuffer(GL_ARRAY_BUFFER, positionBuffer->bufferId());
         glBufferData(GL_ARRAY_BUFFER, sizeof(Vector4) * model->vertices, transformedPositions, GL_STREAM_DRAW);
 
+        // This is extremely costly. Accurately recomputing the normals for each vertex
+        if (model->needsNormalsRecalculated()) {
+            for (int i = 0; i < model->vertices; ++i) {
+                Vector4 averagedNormal(0, 0, 0, 0);
+                Vector4 thisPos = transformedPositions[i];
+
+                // Find all faces that use this vertex
+                for (int j = 0; j < model->faces; ++j) {
+                    const FaceGroup &faceGroup = model->faceGroups[j];
+
+                    for (int k = 0; k < faceGroup.indices.size(); k += 3) {
+                        int index1 = faceGroup.indices[k+2];
+                        int index2 = faceGroup.indices[k+1];
+                        int index3 = faceGroup.indices[k];
+
+                        if (index1 == i) {
+                            averagedNormal += (transformedPositions[index2] - thisPos).cross(transformedPositions[index3] - thisPos);
+                        } else if (index2 == i) {
+                            averagedNormal += (transformedPositions[index3] - thisPos).cross(transformedPositions[index1] - thisPos);
+                        } else if (index3 == i) {
+                            averagedNormal += (transformedPositions[index1] - thisPos).cross(transformedPositions[index2] - thisPos);
+                        }
+                    }
+                }
+
+                averagedNormal.setW(0);
+                transformedNormals[i] = averagedNormal.normalized();
+            }
+        }
+
         glBindBuffer(GL_ARRAY_BUFFER, normalBuffer->bufferId());
         glBufferData(GL_ARRAY_BUFFER, sizeof(Vector4) * model->vertices, transformedNormals, GL_STREAM_DRAW);
     }
@@ -284,45 +314,6 @@ namespace EvilTemple {
             animateVertices(mAddMeshes[i], mTransformedPositionsAddMeshes[i], mTransformedNormalsAddMeshes[i], mPositionBufferAddMeshes[i], mNormalBufferAddMeshes[i],
                             &mAddMeshBoneMapping[i]);
         }
-
-
-        // This is extremely costly. Accurately recomputing the normals for each vertex
-        /*
-        const Model *model = mModel.data();
-
-        for (int i = 0; i < model->vertices; ++i) {
-            QVector<Vector4> influences;
-            Vector4 thisPos = mTransformedPositions[i];
-
-            // Find all faces that use this vertex
-            for (int j = 0; j < model->faces; ++j) {
-                const FaceGroup &faceGroup = model->faceGroups[j];
-
-                for (int k = 0; k < faceGroup.elementCount; k += 3) {
-                    int index1 = faceGroup.indices[k];
-                    int index2 = faceGroup.indices[k+1];
-                    int index3 = faceGroup.indices[k+2];
-
-                    if (index1 == i) {
-                        influences.append((mTransformedPositions[index2] - thisPos).cross(mTransformedPositions[index3] - thisPos).normalized());
-                    } else if (index2 == i) {
-                        influences.append((mTransformedPositions[index3] - thisPos).cross(mTransformedPositions[index1] - thisPos).normalized());
-                    } else if (index3 == i) {
-                        influences.append((mTransformedPositions[index1] - thisPos).cross(mTransformedPositions[index2] - thisPos).normalized());
-                    }
-                }
-            }
-
-            if (influences.isEmpty())
-                continue;
-
-            float weight = 1 / (float)influences.size();
-            Vector4 result = weight * influences[0];
-            for (int j = 1; j < influences.size(); ++j) {
-                result += weight * influences[j];
-            }
-            mTransformedNormals[i] = result;
-        }*/
     }
 
     struct ModelInstanceDrawStrategy : public ModelDrawStrategy {

@@ -268,6 +268,26 @@ static QVariant toVariant(IConversionService *service, GameObject *object, QVari
     return objectMap;
 }
 
+static QVariantList convertLightingKeyframes(const QList<LightKeyframe> &keyframes)
+{
+    QVariantList result;
+
+    foreach (const LightKeyframe &keyframe, keyframes) {
+        QVariantList color;
+        color.append(QVariant::fromValue<double>(keyframe.red));
+        color.append(QVariant::fromValue<double>(keyframe.green));
+        color.append(QVariant::fromValue<double>(keyframe.blue));
+
+        QVariantList frameList;
+        frameList.append(keyframe.hour);
+        frameList.append(QVariant(color));
+
+        result.append(QVariant(frameList));
+    }
+
+    return result;
+}
+
 void ConvertMapsTask::convertStaticObjects(ZoneTemplate *zoneTemplate, IFileWriter *writer)
 {
     QVariantMap mapObject;
@@ -298,17 +318,32 @@ void ConvertMapsTask::convertStaticObjects(ZoneTemplate *zoneTemplate, IFileWrit
         mapObject["movie"] = zoneTemplate->movie();
     mapObject["outdoor"] = zoneTemplate->isOutdoor();
     mapObject["unfogged"] = zoneTemplate->isUnfogged();
-    mapObject["dayNightTransfer"] = zoneTemplate->hasDayNightTransfer();
-    mapObject["allowsBedrest"] = zoneTemplate->allowsBedrest();
+    // This is simply not used by us anymore
+    // mapObject["dayNightTransfer"] = zoneTemplate->hasDayNightTransfer();
+    // The scripts ignore this flag anyway. We should insert map-specific code instead.
+    // mapObject["allowsBedrest"] = zoneTemplate->allowsBedrest();
     mapObject["menuMap"] = zoneTemplate->isMenuMap();
     mapObject["tutorialMap"] = zoneTemplate->isTutorialMap();
     mapObject["clippingGeometry"] = zoneTemplate->directory() + "clipping.dat";
     mapObject["regions"] = zoneTemplate->directory() + "regions.dat";
 
-    Light globalLight = zoneTemplate->globalLight();
     QVariantMap globalLightMap;
-    globalLightMap["color"] = QVariantList() << globalLight.r / 255.0 << globalLight.g / 255.0 << globalLight.b / 255.0 << 0;
+
+    if (!zoneTemplate->lightingKeyframesDay2d().isEmpty()
+        && !zoneTemplate->lightingKeyframesDay3d().isEmpty()
+        && !zoneTemplate->lightingKeyframesNight2d().isEmpty()
+        && !zoneTemplate->lightingKeyframesNight3d().isEmpty()) {
+
+        globalLightMap["day2dKeyframes"] = convertLightingKeyframes(zoneTemplate->lightingKeyframesDay2d());
+        globalLightMap["night2dKeyframes"] = convertLightingKeyframes(zoneTemplate->lightingKeyframesNight2d());
+        globalLightMap["day3dKeyframes"] = convertLightingKeyframes(zoneTemplate->lightingKeyframesDay3d());
+        globalLightMap["night3dKeyframes"] = convertLightingKeyframes(zoneTemplate->lightingKeyframesNight3d());
+    }
+
+    Light globalLight = zoneTemplate->globalLight();
+    globalLightMap["color"] = QVariantList() << globalLight.r / 255.0 << globalLight.g / 255.0 << globalLight.b / 255.0;
     globalLightMap["direction"] = QVariantList() << globalLight.dirX << globalLight.dirY << globalLight.dirZ;
+
     mapObject["globalLight"] = globalLightMap;
 
     QVariantList lightList;
@@ -528,7 +563,7 @@ void convertClippingMeshes(IConversionService *service, ZoneTemplate *zoneTempla
                 Vector4 vertex = scaledVertices[j];
                 boundingBox.merge(vertex);
                 vertex.setW(0);
-                originDistanceSquared = qMax<float>(originDistanceSquared, vertex.lengthSquared());
+                originDistanceSquared = qMax<double>(originDistanceSquared, vertex.lengthSquared());
             }
 
             float originDistance = sqrt(originDistanceSquared);

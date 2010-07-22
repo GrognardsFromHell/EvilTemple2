@@ -487,6 +487,71 @@ namespace Troika
         return true;
     }
 
+    static void readDaylightMes(const QHash<uint, QString> &daylightEntries,
+                                uint baseId,
+                                QList<LightKeyframe> &keyframesDay,
+                                QList<LightKeyframe> &keyframesNight)
+    {
+
+        for (int i = 0; i < 24; ++i) {
+            uint entryId = baseId + i;
+
+            if (!daylightEntries.contains(entryId))
+                continue;
+;
+            QVector<uint> numbers;
+            bool entryInvalid = false;
+            foreach (const QString &part, daylightEntries[entryId].split(',')) {
+                bool ok;
+                numbers.append(part.toUInt(&ok));
+                if (!ok) {
+                    entryInvalid = true;
+                }
+            }
+
+            LightKeyframe keyframe;
+            keyframe.hour = i;
+            if (i != 6 && i != 18) {
+                if (numbers.size() != 3) {
+                    entryInvalid = true;
+                } else {
+                    keyframe.red = numbers[0] / 255.0f;
+                    keyframe.green = numbers[1] / 255.0f;
+                    keyframe.blue = numbers[2] / 255.0f;
+
+                    if (i < 6 || i > 18)
+                        keyframesNight.append(keyframe);
+                    else
+                        keyframesDay.append(keyframe);
+                }
+            } else if (i == 6) {
+                keyframe.red = numbers[0] / 255.0f;
+                keyframe.green = numbers[1] / 255.0f;
+                keyframe.blue = numbers[2] / 255.0f;
+                keyframesNight.append(keyframe);
+
+                keyframe.red = numbers[3] / 255.0f;
+                keyframe.green = numbers[4] / 255.0f;
+                keyframe.blue = numbers[5] / 255.0f;
+                keyframesDay.append(keyframe);
+            } else if (i == 18) {
+                keyframe.red = numbers[0] / 255.0f;
+                keyframe.green = numbers[1] / 255.0f;
+                keyframe.blue = numbers[2] / 255.0f;
+                keyframesDay.append(keyframe);
+
+                keyframe.red = numbers[3] / 255.0f;
+                keyframe.green = numbers[4] / 255.0f;
+                keyframe.blue = numbers[5] / 255.0f;
+                keyframesNight.append(keyframe);
+            }
+
+            if (entryInvalid) {
+                qWarning("Daylight.mes contains invalid entry %d.", entryId);
+            }
+        }
+    }
+
     bool ZoneTemplateReader::readGlobalLight()
     {
         QByteArray data = vfs->openFile(mapDirectory + "global.lit");
@@ -517,11 +582,42 @@ namespace Troika
         globalLight.dirY = lightDir.y();
         globalLight.dirZ = lightDir.z();
 
+        // NOTE: global.lit direction is entirely ignored by ToEE and replaced by a hardcoded sunlight direction
+        // This is the normalized form of it:
+        globalLight.dirX = -0.6324093645670703858428703903848;
+        globalLight.dirY = -0.77463436252716949786709498111783;
+        globalLight.dirZ = 0;
+
         if (globalLight.type != 3) {
             qWarning("Found a non-directional global light.");
         }
 
         zoneTemplate->setGlobalLight(globalLight);
+
+        QHash<uint, QString> daylightEntries = MessageFile::parse(vfs->openFile("rules/daylight.mes"));
+
+        // Try to find all the entries for our map
+        QList<LightKeyframe> keyframesDay2d;
+        QList<LightKeyframe> keyframesNight2d;
+        QList<LightKeyframe> keyframesDay3d;
+        QList<LightKeyframe> keyframesNight3d;
+
+        readDaylightMes(daylightEntries, zoneTemplate->id() * 100, keyframesDay2d, keyframesNight2d);
+        readDaylightMes(daylightEntries, zoneTemplate->id() * 100 + 24, keyframesDay3d, keyframesNight3d);
+
+        uint nonEmptySets = keyframesDay2d.isEmpty() ? 0 : 1;
+        nonEmptySets += keyframesDay3d.isEmpty() ? 0 : 1;
+        nonEmptySets += keyframesNight2d.isEmpty() ? 0 : 1;
+        nonEmptySets += keyframesNight3d.isEmpty() ? 0 : 1;
+
+        if (nonEmptySets == 4) {
+            zoneTemplate->setLightingKeyframesDay(keyframesDay2d, keyframesDay3d);
+            zoneTemplate->setLightingKeyframesNight(keyframesNight2d, keyframesNight3d);
+        } else if (nonEmptySets > 0) {
+            qWarning("Map %d has %d non-empty daylight.mes sets. Should be either 4 or 0.", zoneTemplate->id(),
+                     nonEmptySets);
+        }
+
         return true;
     }
 

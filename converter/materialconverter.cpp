@@ -96,16 +96,16 @@ public:
         for (int i = 0; i < LegacyTextureStages; ++i) {
             const TextureStageInfo *textureStage = material->getTextureStage(i);
 
-            if (textureStage->filename.isEmpty())
+            if (textureStage->filename().isEmpty())
                 continue;
 
             QString samplerName = QString("texSampler%1").arg(samplersUsed);
 
-            int textureId = getTexture(textureStage->filename); // This forces the texture to be loaded -> ok
+            int textureId = getTexture(textureStage->filename()); // This forces the texture to be loaded -> ok
 
             samplers.append(QString("uniform sampler2D %1;\n").arg(samplerName));
             if (external) {
-                textureDefs.append(QString("<textureSampler texture=\"%1\"/>\n").arg(getNewTextureFilename(textureStage->filename)));
+                textureDefs.append(QString("<textureSampler texture=\"%1\"/>\n").arg(getNewTextureFilename(textureStage->filename())));
             } else {
                 textureDefs.append(QString("<textureSampler texture=\"#%1\"/>\n").arg(textureId));
             }
@@ -118,18 +118,18 @@ public:
              The texel on the texture of this texture stage may be retrieved from texture coordinates that
              are transformed (animated) first.
              */
-            switch (textureStage->transformType) {
-            case TextureStageInfo::None:
+            switch (textureStage->uvType()) {
+            case TextureStageInfo::Mesh:
                 pixelTerm.append(QString("texel = texture2D(%1, texCoord);\n").arg(samplerName));
                 break;
             case TextureStageInfo::Drift:
                 textureAnimation = true;
-                if (textureStage->speedu > 0 && textureStage->speedv > 0) {
-                    pixelTerm.append(QString("texel = texture2D(%1, textureDriftUV(texCoord, t, %2, %3));\n").arg(samplerName).arg(textureStage->speedu).arg(textureStage->speedv));
-                } else if (textureStage->speedu > 0) {
-                    pixelTerm.append(QString("texel = texture2D(%1, textureDriftU(texCoord, t, %2));\n").arg(samplerName).arg(textureStage->speedu));
+                if (textureStage->speedU() != 0 && textureStage->speedV() != 0) {
+                    pixelTerm.append(QString("texel = texture2D(%1, textureDriftUV(texCoord, t, %2, %3));\n").arg(samplerName).arg(textureStage->speedU()).arg(textureStage->speedV()));
+                } else if (textureStage->speedU() > 0) {
+                    pixelTerm.append(QString("texel = texture2D(%1, textureDriftU(texCoord, t, %2));\n").arg(samplerName).arg(textureStage->speedU()));
                 } else {
-                    pixelTerm.append(QString("texel = texture2D(%1, textureDriftV(texCoord, t, %2));\n").arg(samplerName).arg(textureStage->speedv));
+                    pixelTerm.append(QString("texel = texture2D(%1, textureDriftV(texCoord, t, %2));\n").arg(samplerName).arg(textureStage->speedV()));
                 }
                 break;
             case TextureStageInfo::Swirl:
@@ -137,17 +137,17 @@ public:
                  Since swirl rotates, there is not much sense to use two different speed settings.
                  */
                 textureAnimation = true;
-                Q_ASSERT(textureStage->speedu == textureStage->speedv);
-                pixelTerm.append(QString("texel = texture2D(%1, textureSwirl(texCoord, t, %2));\n").arg(samplerName).arg(textureStage->speedu));
+                Q_ASSERT(textureStage->speedU() == textureStage->speedV());
+                pixelTerm.append(QString("texel = texture2D(%1, textureSwirl(texCoord, t, %2));\n").arg(samplerName).arg(textureStage->speedU()));
                 break;
             case TextureStageInfo::Wavey:
                 textureAnimation = true;
-                if (textureStage->speedu > 0 && textureStage->speedv > 0) {
-                    pixelTerm.append(QString("texel = texture2D(%1, textureWaveyUV(texCoord, t, %2, %3));\n").arg(samplerName).arg(textureStage->speedu).arg(textureStage->speedv));
-                } else if (textureStage->speedu > 0) {
-                    pixelTerm.append(QString("texel = texture2D(%1, textureWaveyU(texCoord, t, %2));\n").arg(samplerName).arg(textureStage->speedu));
+                if (textureStage->speedU() != 0 && textureStage->speedV() != 0) {
+                    pixelTerm.append(QString("texel = texture2D(%1, textureWaveyUV(texCoord, t, %2, %3));\n").arg(samplerName).arg(textureStage->speedU()).arg(textureStage->speedV()));
+                } else if (textureStage->speedU() != 0) {
+                    pixelTerm.append(QString("texel = texture2D(%1, textureWaveyU(texCoord, t, %2));\n").arg(samplerName).arg(textureStage->speedU()));
                 } else {
-                    pixelTerm.append(QString("texel = texture2D(%1, textureWaveyV(texCoord, t, %2));\n").arg(samplerName).arg(textureStage->speedv));
+                    pixelTerm.append(QString("texel = texture2D(%1, textureWaveyV(texCoord, t, %2));\n").arg(samplerName).arg(textureStage->speedV()));
                 }
                 break;
             case TextureStageInfo::Environment:
@@ -156,10 +156,10 @@ public:
                 pixelTerm.append(QString("texel = texture2D(%1, sphereMapping());\n").arg(samplerName));
                 break;
             default:
-                qFatal("Invalid setting for texture stage transform: %d.", textureStage->transformType);
+                qFatal("Invalid setting for texture stage transform: %d.", textureStage->uvType());
             }
 
-            switch (textureStage->blendType) {
+            switch (textureStage->blendType()) {
             case TextureStageInfo::Modulate:
                 pixelTerm.append("gl_FragColor = gl_FragColor * texel;\n");
                 break;
@@ -179,18 +179,18 @@ public:
             }
         }
 
+        // Use a constant material color if no lighting is enabled
+        pixelTerm.prepend("gl_FragColor = materialColor;\n");
+
         if (material->isLightingDisabled()) {
             QRegExp lightingBlocks("\\{\\{LIGHTING_ON\\}\\}.+\\{\\{\\/LIGHTING_ON\\}\\}");
             lightingBlocks.setMinimal(true);
             materialFile.replace(lightingBlocks, "");
-
-            // Use a constant material color if no lighting is enabled
-            pixelTerm.prepend("gl_FragColor = materialColor;\n");
         } else {
 
             if (material->glossmap().isNull()) {
                 // Use a constant material color if no lighting is enabled
-                pixelTerm.prepend("gl_FragColor = lighting(shininess, materialColor);\n");
+                pixelTerm.append("gl_FragColor *= lighting(shininess, materialColor);\n");
             } else {
                 int textureId = getTexture(material->glossmap()); // This forces the texture to be loaded -> ok
 
@@ -203,7 +203,7 @@ public:
 
                 samplerUniforms.append(QString("<uniform name=\"texSamplerGlossmap\" semantic=\"Texture%2\" />").arg(samplersUsed++));
 
-                pixelTerm.prepend("gl_FragColor = lightingGlossmap(shininess, materialColor, texSamplerGlossmap, texCoord);\n");
+                pixelTerm.append("gl_FragColor *= lightingGlossmap(shininess, materialColor, texSamplerGlossmap, texCoord);\n");
             }
 
             useNormals = true;
@@ -248,40 +248,41 @@ public:
         materialFile.replace("{{SAMPLER_UNIFORMS}}", samplerUniforms);
         materialFile.replace("{{TEXTURES}}", textureDefs);
         materialFile.replace("{{CULL_FACE}}", material->isFaceCullingDisabled() ? "false" : "true");
-        materialFile.replace("{{BLEND}}", material->isAlphaBlendingDisabled() ? "false" : "true");
+        if (material->blendType() != Material::None)
+            materialFile.replace("{{BLEND}}", "true");
+        else
+            materialFile.replace("{{BLEND}}", "false");
         materialFile.replace("{{DEPTH_WRITE}}", material->isDepthWriteDisabled() ? "false" : "true");
         materialFile.replace("{{DEPTH_TEST}}", material->isDepthTestDisabled() ? "false" : "true");
         materialFile.replace("{{SPECULAR_POWER}}", QString("%1").arg(material->specularPower()));
 
-        QString blendFactor;
-        switch (material->getSourceBlendFactor()) {
-        case GL_ZERO:
-            blendFactor = "zero";
+        QString srcFactor, destFactor, alphaTest;
+        switch (material->blendType()) {
+        case Material::None:
+            srcFactor = "one";
+            destFactor = "zero";
+            alphaTest = "false";
             break;
-        case GL_ONE:
-            blendFactor = "one";
+        case Material::Alpha:
+            srcFactor = "srcAlpha";
+            destFactor = "oneMinusSrcAlpha";
+            alphaTest = "true";
             break;
-        case GL_SRC_ALPHA:
-            blendFactor = "srcAlpha";
+        case Material::Add:
+            srcFactor = "one";
+            destFactor = "one";
+            alphaTest = "true";
+            break;
+        case Material::AlphaAdd:
+            srcFactor = "srcAlpha";
+            destFactor = "one";
+            alphaTest = "true";
             break;
         }
-        materialFile.replace("{{BLEND_SRC}}", blendFactor);
 
-        switch (material->getDestBlendFactor()) {
-        case GL_ZERO:
-            blendFactor = "zero";
-            break;
-        case GL_ONE:
-            blendFactor = "one";
-            break;
-        case GL_SRC_ALPHA:
-            blendFactor = "srcAlpha";
-            break;
-        case GL_ONE_MINUS_SRC_ALPHA:
-            blendFactor = "oneMinusSrcAlpha";
-            break;
-        }
-        materialFile.replace("{{BLEND_DEST}}", blendFactor);
+        materialFile.replace("{{BLEND_SRC}}", srcFactor);
+        materialFile.replace("{{BLEND_DEST}}", destFactor);
+        materialFile.replace("{{ALPHA_TEST}}", alphaTest);
 
         HashedData materialScriptData(materialFile.toUtf8());
         materialScripts.insert(getNewMaterialFilename(material->name()), materialScriptData);

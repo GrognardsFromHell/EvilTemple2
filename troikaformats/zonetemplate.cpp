@@ -49,7 +49,19 @@ namespace Troika
         QBox3D scrollBox;
         QString directory;
         QString name;
-                Light globalLight;
+
+        /**
+          Global lighting, globalLight is read from global.lit,
+          while the following four lists are compiled from daylight.mes.
+
+          If any daylight transition is set, globalLight is only used for its
+          lighting direction.
+          */
+        Light globalLight;
+        QList<LightKeyframe> lightingKeyframesDay2d;
+        QList<LightKeyframe> lightingKeyframesDay3d;
+        QList<LightKeyframe> lightingKeyframesNight2d;
+        QList<LightKeyframe> lightingKeyframesNight3d;
     };
 
     ZoneTemplate::ZoneTemplate(quint32 id, QObject *parent) :
@@ -277,6 +289,40 @@ namespace Troika
     const QList<TileSector> &ZoneTemplate::tileSectors() const
     {
         return d_ptr->tileSectors;
+    }
+
+    const QList<LightKeyframe> &ZoneTemplate::lightingKeyframesDay2d() const
+    {
+        return d_ptr->lightingKeyframesDay2d;
+    }
+
+    const QList<LightKeyframe> &ZoneTemplate::lightingKeyframesDay3d() const
+    {
+        return d_ptr->lightingKeyframesDay3d;
+    }
+
+    void ZoneTemplate::setLightingKeyframesDay(const QList<LightKeyframe> &keyframes2d,
+                                 const QList<LightKeyframe> &keyframes3d)
+    {
+        d_ptr->lightingKeyframesDay2d = keyframes2d;
+        d_ptr->lightingKeyframesDay3d = keyframes3d;
+    }
+
+    const QList<LightKeyframe> &ZoneTemplate::lightingKeyframesNight2d() const
+    {
+        return d_ptr->lightingKeyframesNight2d;
+    }
+
+    const QList<LightKeyframe> &ZoneTemplate::lightingKeyframesNight3d() const
+    {
+        return d_ptr->lightingKeyframesNight3d;
+    }
+
+    void ZoneTemplate::setLightingKeyframesNight(const QList<LightKeyframe> &keyframes2d,
+                                 const QList<LightKeyframe> &keyframes3d)
+    {
+        d_ptr->lightingKeyframesNight2d = keyframes2d;
+        d_ptr->lightingKeyframesNight3d = keyframes3d;
     }
 
 }

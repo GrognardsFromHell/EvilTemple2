@@ -111,6 +111,7 @@ void main(void)
     {{TEXTURES}}
 
     <cullFace>{{CULL_FACE}}</cullFace>
+    <alphaTest>{{ALPHA_TEST}}</alphaTest>
     <blend>{{BLEND}}</blend>
     <blendFunc src="{{BLEND_SRC}}" dest="{{BLEND_DEST}}" />
     <depthWrite>{{DEPTH_WRITE}}</depthWrite>

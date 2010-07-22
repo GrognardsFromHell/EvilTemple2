@@ -86,6 +86,16 @@ namespace Troika
         SectorTile tiles[SectorSidelength][SectorSidelength];
     };
 
+    /**
+      A keyframe entry used for day/night transfer lighting.
+      */
+    struct LightKeyframe {
+        uint hour;
+        float red;
+        float green;
+        float blue;
+    };
+
     class TROIKAFORMATS_EXPORT ZoneTemplate : public QObject
     {
         Q_OBJECT
@@ -175,6 +185,21 @@ namespace Troika
         void addMobile(GameObject *gameObject);
 
         void addTileSector(const TileSector &tileSector);
+
+        /**
+          The following methods map the data from rules\daylight.mes
+          */
+        const QList<LightKeyframe> &lightingKeyframesDay2d() const;
+        const QList<LightKeyframe> &lightingKeyframesDay3d() const;
+
+        void setLightingKeyframesDay(const QList<LightKeyframe> &keyframes2d,
+                                     const QList<LightKeyframe> &keyframes3d);
+
+        const QList<LightKeyframe> &lightingKeyframesNight2d() const;
+        const QList<LightKeyframe> &lightingKeyframesNight3d() const;
+
+        void setLightingKeyframesNight(const QList<LightKeyframe> &keyframes2d,
+                                     const QList<LightKeyframe> &keyframes3d);
 
     private:
         QScopedPointer<ZoneTemplateData> d_ptr;

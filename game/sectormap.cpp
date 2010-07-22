@@ -49,7 +49,7 @@ namespace EvilTemple {
         mPortalVertexBuffer(QGLBuffer::VertexBuffer),
         mBuffersInvalid(true)
     {
-        mRenderCategory = RenderQueue::DebugOverlay;
+        mRenderCategory = Renderable::DebugOverlay;
         mBoundingBox.setToInfinity();
     }
 

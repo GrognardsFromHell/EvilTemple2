@@ -97,6 +97,7 @@ public:
     void setDirection(const Vector4 &direction)
     {
         mDirection = direction;
+        mDirection.setW(0); // Ensure that direction is a normal.
     }
 
     void render(RenderStates &renderStates, MaterialState *overrideMaterial);
@@ -126,7 +127,7 @@ private:
 inline Light::Light() : mType(Directional), mRange(0), mPhi(0), mTheta(0),
                         mAttenuation(1), mDirection(0, 0, 0, 0), mColor(0,0,0,0)
 {
-    setRenderCategory(RenderQueue::Lights);
+    setRenderCategory(Lights);
 }
 
 }

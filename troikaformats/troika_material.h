@@ -5,7 +5,6 @@
 
 #include <QString>
 #include <QGLContext>
-#include <QtOpenGL>
 
 namespace Troika {
 
@@ -16,14 +15,17 @@ namespace Troika {
       */
     const int LegacyTextureStages = 3;
 
+    /**
+      Describes a texturing stage declaration in a legacy material file.
+      */
     class TROIKAFORMATS_EXPORT TextureStageInfo {
     public:
         /**
           Transforms used for texture coordinates.
           */
-        enum TransformType
+        enum UvType
         {
-            None = 0, // No texture matrix is used
+            Mesh = 0, // No texture matrix is used
             Drift, // Texture coordinate drifts linearily (Translation along one axis)
             Swirl, // Texture coordinates rotate
             Wavey, // Like drift but with a cosine/sine acceleration pattern
@@ -39,41 +41,121 @@ namespace Troika {
             CurrentAlphaAdd
         };
 
-        BlendType blendType;
-
-        QString filename;
-        QImage image;
-
-        GLenum colorOp;
-        GLenum alphaOp;
-
-        GLenum colorArg0;
-        GLenum colorOperand0;
-
-        GLenum alphaArg0;
-        GLenum alphaOperand0;
-
-        GLenum colorArg1;
-        GLenum colorOperand1;
-
-        GLenum alphaArg1;
-        GLenum alphaOperand1;
-
         /**
-          Texture transform speed.
+          Constructs a new texture stage with the following default values:
+          - blendType is set to Modulate
+          - filename is null
+          - uvType is Mesh
+          - speedU is 1
+          - speedV is 0
           */
-        float speedu, speedv;
-        TransformType transformType;
-        QMatrix4x4 transformMatrix;
-
         TextureStageInfo();
 
-        void updateTransform(float elapsedSeconds);
+        /**
+          Returns the blending type for multi-texturing that is applied to this texture stage.
+          */
+        BlendType blendType() const;
+
+        void setBlendType(BlendType blendType);
+
+        /**
+          Returns the filename of the texture that is used in this stage.
+          */
+        const QString &filename() const;
+
+        void setFilename(const QString &filename);
+
+        /**
+          Returns the type of UV coordinates for this texture stage.
+          */
+        UvType uvType() const;
+
+        void setUvType(UvType uvType);
+
+        /**
+          If the UV coordinates are animated, this returns the number of loops per minute
+          for this texture's U coordinates.
+          */
+        float speedU() const;
+
+        void setSpeedU(float speed);
+
+        /**
+          If the UV coordinates are animated, this returns the number of loops per minute
+          for this texture's V coordinates.
+          */
+        float speedV() const;
+
+        void setSpeedV(float speed);
+
+    private:
+        BlendType mBlendType;
+        QString mFilename;
+        UvType mUvType;
+        float mSpeedU, mSpeedV;
     };
+
+    inline TextureStageInfo::TextureStageInfo()
+        : mBlendType(Modulate),
+        mUvType(Mesh),
+        mSpeedU(1),
+        mSpeedV(1)
+    {
+    }
+
+    inline TextureStageInfo::BlendType TextureStageInfo::blendType() const
+    {
+        return mBlendType;
+    }
+
+    inline void TextureStageInfo::setBlendType(BlendType blendType)
+    {
+        mBlendType = blendType;
+    }
+
+    inline const QString &TextureStageInfo::filename() const
+    {
+        return mFilename;
+    }
+
+    inline void TextureStageInfo::setFilename(const QString &filename)
+    {
+        mFilename = filename;
+    }
+
+    inline TextureStageInfo::UvType TextureStageInfo::uvType() const
+    {
+        return mUvType;
+    }
+
+    inline void TextureStageInfo::setUvType(UvType uvType)
+    {
+        mUvType = uvType;
+    }
+
+    inline float TextureStageInfo::speedU() const
+    {
+        return mSpeedU;
+    }
+
+    inline void TextureStageInfo::setSpeedU(float speed)
+    {
+        mSpeedU = speed;
+    }
+
+    inline float TextureStageInfo::speedV() const
+    {
+        return mSpeedV;
+    }
+
+    inline void TextureStageInfo::setSpeedV(float speed)
+    {
+        mSpeedV = speed;
+    }
 
     // Interface for Materials
     class TROIKAFORMATS_EXPORT Material
-    {    
+    {
     public:
 
         enum Type {
@@ -82,17 +164,15 @@ namespace Troika {
             Placeholder
         };
 
+        enum BlendType {
+            None,
+            Alpha,
+            Add,
+            AlphaAdd
+        };
+
         explicit Material(Type type, const QString &name);
         virtual ~Material();
-
-        /**
-            Checks whether the given texture coordinates are transparent or not.
-            The default implementation always returns true. Re-implement this method
-            if your material has transparent parts that should be click-through.
-
-            @returns True if the texture coordinates on this material are a hit.
-        */
-        virtual bool hitTest(float u, float v);
 
         const QString &name() const {
             return _name;
@@ -100,6 +180,10 @@ namespace Troika {
 
         Type type() const {
             return mType;
+        }
+
+        BlendType blendType() const {
+            return mBlendType;
         }
 
         static Material *create(VirtualFileSystem *vfs, const QString &filename);
@@ -120,20 +204,8 @@ namespace Troika {
             return linearFiltering;
         }
 
-        bool isAlphaBlendingDisabled() const {
-            return disableAlphaBlending;
-        }
-
         bool isDepthWriteDisabled() const {
             return disableDepthWrite;
-        }
-
-        GLenum getSourceBlendFactor() const {
-            return sourceBlendFactor;
-        }
-
-        GLenum getDestBlendFactor() const {
-            return destBlendFactor;
         }
 
         const QColor &getColor() const {
@@ -152,6 +224,10 @@ namespace Troika {
             return mGlossmap;
         }
 
+        bool isRecalculateNormals() const {
+            return mRecalculateNormals;
+        }
+
     private:
         QString _name;
         Type mType;
@@ -162,10 +238,9 @@ namespace Troika {
         bool disableDepthTest;
         bool disableDepthWrite;
         bool linearFiltering;
-        bool disableAlphaBlending;
-        GLenum sourceBlendFactor;
-        GLenum destBlendFactor;
         QColor color;
+        BlendType mBlendType;
+        bool mRecalculateNormals;
         float mSpecularPower;
         QString mGlossmap;
 

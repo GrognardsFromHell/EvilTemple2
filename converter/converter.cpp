@@ -267,9 +267,9 @@ public:
               << new ConvertParticleSystemsTask(this)
               << new ConvertTranslationsTask(this)
               << new ConvertMapsTask(this)
-              << new ConvertSoundsTask(this)
-              << new ConvertMoviesTask(this)
-              << new ConvertInterfaceTask(this)
+              //<< new ConvertSoundsTask(this)
+              //<< new ConvertMoviesTask(this)
+              //<< new ConvertInterfaceTask(this)
               << new ConvertModelsTask(this)
               ;
 
