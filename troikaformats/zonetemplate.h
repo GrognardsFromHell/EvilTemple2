@@ -1,7 +1,6 @@
 #ifndef ZONETEMPLATE_H
 #define ZONETEMPLATE_H
 
-
 #include <gamemath.h>
 using namespace GameMath;
 
@@ -84,6 +83,9 @@ namespace Troika
         uint x;
         uint y;
         SectorTile tiles[SectorSidelength][SectorSidelength];
+
+        bool hasNegativeHeight;
+        uchar negativeHeight[192][192];
     };
 
     /**

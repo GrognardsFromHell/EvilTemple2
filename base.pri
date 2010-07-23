@@ -1,6 +1,6 @@
 
 CONFIG += debug_and_release
-DESTDIR += ../bin/
+DESTDIR = $${PWD}/bin/
 
 CONFIG(debug, debug|release) {
  TARGET = $$join(TARGET,,,_d)
@@ -10,7 +10,7 @@ CONFIG(debug, debug|release) {
 }
 
 # All libraries reside in the target dir
-LIBS += -L../bin/
+LIBS += -L$${PWD}/bin/
 
 # Add game libraries
 contains(TEMPLE_LIBS,qt3d) {
@@ -68,7 +68,7 @@ contains(TEMPLE_LIBS,glew) {
 }
 
 contains(TEMPLE_LIBS,troikaformats) {
-    INCLUDEPATH += ../troikaformats
+    INCLUDEPATH += $${PWD}/troikaformats
     CONFIG(debug, debug|release) {
         LIBS += -ltroikaformats_d
     } else {

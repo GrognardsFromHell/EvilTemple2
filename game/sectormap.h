@@ -62,6 +62,8 @@ public slots:
 
     bool createDebugView() const;
 
+    bool createDebugLayer(const QString &layerName) const;
+
     QVector<Vector4> findPath(const Vector4 &start, const Vector4 &end) const;
 
     bool hasLineOfSight(const Vector4 &from, const Vector4 &to) const;

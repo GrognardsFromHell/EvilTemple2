@@ -283,7 +283,52 @@ namespace Troika
         uint sectorY = (sectorId >> 26) & 0x3F;
         uint sectorX = sectorId & 0xFF;
 
-        return readSectorLights(stream) && readSectorTiles(sectorX, sectorY, stream) && readSectorObjects(stream);
+        TileSector sector;
+        sector.x = sectorX;
+        sector.y = sectorY;
+        sector.hasNegativeHeight = false;
+        memset(sector.negativeHeight, 0, sizeof(sector.negativeHeight));
+
+        if (!readSectorLights(stream) || !readSectorTiles(&sector, stream) || !readSectorObjects(stream))
+            return false;
+
+        // Try reading a HSD file for the sector.
+        QString hsdFilename = zoneTemplate->directory() + "hsd" + QString::number(sectorId) + ".hsd";
+
+        QByteArray hsdData = vfs->openFile(hsdFilename);
+
+        if (!hsdData.isNull()) {
+            QDataStream stream(hsdData);
+            stream.setByteOrder(QDataStream::LittleEndian);
+
+            uint version;
+            stream >> version;
+
+            if (version != 2) {
+                qWarning("HSD file %s has version tag other than 2.", qPrintable(hsdFilename));
+            } else {
+                sector.hasNegativeHeight = false;
+
+                for (int y = 0; y < SectorSidelength; ++y) {
+                    for (int x = 0; x < SectorSidelength; ++x) {
+                        for (int ty = 0; ty < 3; ++ty) {
+                            for (int tx = 0; tx < 3; ++tx) {
+                                stream >> sector.negativeHeight[x*3 + tx][y*3 + ty];
+
+                                // For several sectors, there are *only* zeros
+                                if (sector.negativeHeight[x+3 + tx][y*3 + ty] != 0) {
+                                    sector.hasNegativeHeight = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        zoneTemplate->addTileSector(sector);
+
+        return true;
     }
 
     bool ZoneTemplateReader::readSectorLights(QDataStream &stream)
@@ -349,25 +394,17 @@ namespace Troika
         return true;
     }
 
-    bool ZoneTemplateReader::readSectorTiles(uint x, uint y, QDataStream &stream)
+    bool ZoneTemplateReader::readSectorTiles(TileSector *sector, QDataStream &stream)
     {
-        TileSector sector;
-        sector.x = x;
-        sector.y = y;
-
-        for (int y = 0; y < SectorSidelength; ++y)
-        {
-            for (int x = 0; x < SectorSidelength; ++x)
-            {
-                SectorTile &tile = sector.tiles[x][y];
+        for (int y = 0; y < SectorSidelength; ++y) {
+            for (int x = 0; x < SectorSidelength; ++x) {
+                SectorTile &tile = sector->tiles[x][y];
                 stream >> tile.footstepsSound >> tile.unknown1[0] >> tile.unknown1[1] >> tile.unknown1[2]
                         >> tile.bitfield >> tile.unknown2;
             }
         }
 
-        zoneTemplate->addTileSector(sector);
-
-        return true;
+        return stream.status() == QDataStream::Ok;
     }
 
     bool ZoneTemplateReader::readSectorObjects(QDataStream &stream)

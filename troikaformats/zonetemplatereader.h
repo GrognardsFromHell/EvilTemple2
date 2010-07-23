@@ -49,7 +49,7 @@ namespace Troika
         bool readSectors(); // Loads *.sec
         bool readSector(const QString &filename);
         bool readSectorLights(QDataStream &stream);
-        bool readSectorTiles(uint x, uint y, QDataStream &stream);
+        bool readSectorTiles(TileSector *sector, QDataStream &stream);
         bool readSectorObjects(QDataStream &stream);
         bool readMobiles(); // Loads *.mob
         GameObject *readMobile(const QString &filename);

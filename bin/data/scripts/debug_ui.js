@@ -81,7 +81,7 @@ function handleDebugEvent(name) {
     } else if (name == 'openConsole') {
         showConsoleWindow();
     } else if (name == 'navmeshOverlay') {
-        gameView.sectorMap.createDebugView();
+        gameView.sectorMap.createDebugView();        
     }
 }
 

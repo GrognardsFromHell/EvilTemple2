@@ -66,9 +66,6 @@ namespace EvilTemple {
 
     void Sector::render(RenderStates &renderStates, MaterialState *overrideMaterial)
     {
-        if (!mNavigationMesh)
-            return;
-
         glDisable(GL_DEPTH_TEST);
         glDisable(GL_CULL_FACE);
 
@@ -80,64 +77,67 @@ namespace EvilTemple {
         glMatrixMode(GL_MODELVIEW);
         glLoadMatrixf(renderStates.worldViewMatrix().data());
 
-        if (mBuffersInvalid) {
-            buildBuffers();
-            mBuffersInvalid = false;
-        }
-
-        mVertexBuffer.bind();
-        glEnableClientState(GL_VERTEX_ARRAY);
-        glVertexPointer(3, GL_FLOAT, 0, 0);
-        mColorBuffer.bind();
-        glEnableClientState(GL_COLOR_ARRAY);
-        glColorPointer(4, GL_UNSIGNED_BYTE, 0, 0);
-        mIndexBuffer.bind();
-        glDrawElements(GL_QUADS, 4 * mNavigationMesh->rectangles().size(), GL_UNSIGNED_INT, 0);
-        mIndexBuffer.release();
-
-        glDisableClientState(GL_COLOR_ARRAY);
-
-        mPortalVertexBuffer.bind();
-        glEnableClientState(GL_VERTEX_ARRAY);
-        glVertexPointer(3, GL_FLOAT, 0, 0);
-        glPointSize(2);
-        glColor3f(0.1, 0.1f, 0.8f);
-        glDrawArrays(GL_POINTS, 0, mNavigationMesh->portals().size());
-        glDisableClientState(GL_VERTEX_ARRAY);
-
-        /*
-        glBegin(GL_QUADS);
-        foreach (const TaggedRegion &region, mLayer) {
-            QString type = region.tag.toString();
-
-            if (type == "dirt") {
-                glColor4f(89 / 255.0, 82 / 255.0, 49 / 255.0, 0.5f);
-            } else if (type == "grass") {
-                glColor4f(98 / 255.0, 164 / 255.0, 50 / 255.0, 0.5f);
-            } else if (type == "water") {
-                glColor4f(44 / 255.0, 89 / 255.0, 255 / 255.0, 0.5f);
-            } else if (type == "deepWater") {
-                glColor4f(32 / 255.0, 57 / 255.0, 153 / 255.0, 0.5f);
-            } else if (type == "ice") {
-                glColor4f(132 / 255.0, 251 / 255.0, 255 / 255.0, 0.5f);
-            } else if (type == "fire") {
-                glColor4f(252 / 255.0, 130 / 255.0, 0 / 255.0, 0.5f);
-            } else if (type == "wood") {
-                glColor4f(166 / 255.0, 139 / 255.0, 102 / 255.0, 0.5f);
-            } else if (type == "stone") {
-                glColor4f(80 / 255.0, 80 / 255.0, 80 / 255.0, 0.5f);
-            } else if (type == "metal") {
-                glColor4f(179 / 255.0, 179 / 255.0, 179 / 255.0, 0.5f);
-            } else {
-                glColor4f(1, 0, 0, 0.5f);
+        if (mNavigationMesh) {
+            if (mBuffersInvalid) {
+                buildBuffers();
+                mBuffersInvalid = false;
             }
 
-            glVertex3f(region.topLeft.x(), 0, region.topLeft.z());
-            glVertex3f(region.topLeft.x(), 0, region.bottomRight.z());
-            glVertex3f(region.bottomRight.x(), 0, region.bottomRight.z());
-            glVertex3f(region.bottomRight.x(), 0, region.topLeft.z());
+            mVertexBuffer.bind();
+            glEnableClientState(GL_VERTEX_ARRAY);
+            glVertexPointer(3, GL_FLOAT, 0, 0);
+            mColorBuffer.bind();
+            glEnableClientState(GL_COLOR_ARRAY);
+            glColorPointer(4, GL_UNSIGNED_BYTE, 0, 0);
+            mIndexBuffer.bind();
+            glDrawElements(GL_QUADS, 4 * mNavigationMesh->rectangles().size(), GL_UNSIGNED_INT, 0);
+            mIndexBuffer.release();
+
+            glDisableClientState(GL_COLOR_ARRAY);
+
+            mPortalVertexBuffer.bind();
+            glEnableClientState(GL_VERTEX_ARRAY);
+            glVertexPointer(3, GL_FLOAT, 0, 0);
+            glPointSize(2);
+            glColor3f(0.1, 0.1f, 0.8f);
+            glDrawArrays(GL_POINTS, 0, mNavigationMesh->portals().size());
+            glDisableClientState(GL_VERTEX_ARRAY);
         }
-        glEnd();*/
+
+        if (!mLayer.isEmpty()) {
+            glBegin(GL_QUADS);
+            foreach (const TaggedRegion &region, mLayer) {
+                QString type = region.tag.toString();
+
+                if (type == "dirt") {
+                    glColor4f(89 / 255.0, 82 / 255.0, 49 / 255.0, 0.5f);
+                } else if (type == "grass") {
+                    glColor4f(98 / 255.0, 164 / 255.0, 50 / 255.0, 0.5f);
+                } else if (type == "water") {
+                    glColor4f(44 / 255.0, 89 / 255.0, 255 / 255.0, 0.5f);
+                } else if (type == "deepWater") {
+                    glColor4f(32 / 255.0, 57 / 255.0, 153 / 255.0, 0.5f);
+                } else if (type == "ice") {
+                    glColor4f(132 / 255.0, 251 / 255.0, 255 / 255.0, 0.5f);
+                } else if (type == "fire") {
+                    glColor4f(252 / 255.0, 130 / 255.0, 0 / 255.0, 0.5f);
+                } else if (type == "wood") {
+                    glColor4f(166 / 255.0, 139 / 255.0, 102 / 255.0, 0.5f);
+                } else if (type == "stone") {
+                    glColor4f(80 / 255.0, 80 / 255.0, 80 / 255.0, 0.5f);
+                } else if (type == "metal") {
+                    glColor4f(179 / 255.0, 179 / 255.0, 179 / 255.0, 0.5f);
+                } else {
+                    glColor4f(1, 0, 0, 0.5f);
+                }
+
+                glVertex3f(region.topLeft.x(), 0, region.topLeft.z());
+                glVertex3f(region.topLeft.x(), 0, region.bottomRight.z());
+                glVertex3f(region.bottomRight.x(), 0, region.bottomRight.z());
+                glVertex3f(region.bottomRight.x(), 0, region.topLeft.z());
+            }
+            glEnd();
+        }
 
         glEnable(GL_CULL_FACE);
         glEnable(GL_DEPTH_TEST);
@@ -276,6 +276,7 @@ namespace EvilTemple {
                 TaggedRegion &region = layer[i];
                 stream >> region;
             }
+            qDebug("Loaded region layer %s.", qPrintable(layerName));
             d->regionLayers[layerName] = layer;
         }
 
@@ -290,7 +291,19 @@ namespace EvilTemple {
         if (d->scene && d->mesh) {
             Sector *sector = new Sector;
             sector->setNavigationMesh(d->mesh);
-            sector->setLayer(d->regionLayers["groundMaterial"]);
+
+            SceneNode *node = d->scene->createNode();
+            node->attachObject(sector);
+        }
+
+        return true;
+    }
+
+    bool SectorMap::createDebugLayer(const QString &layerName) const
+    {
+        if (d->scene && d->regionLayers.contains(layerName)) {
+            Sector *sector = new Sector;
+            sector->setLayer(d->regionLayers[layerName]);
 
             SceneNode *node = d->scene->createNode();
             node->attachObject(sector);

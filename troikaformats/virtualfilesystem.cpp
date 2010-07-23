@@ -1,6 +1,7 @@
 #include <QSet>
 
 #include "virtualfilesystem.h"
+#include "troikaarchive.h"
 
 namespace Troika {
 
@@ -56,6 +57,23 @@ QStringList VirtualFileSystem::listAllFiles(const QString &filter)
     }
 
     return result.toSet().toList();
+}
+
+void VirtualFileSystem::loadDefaultArchives(const QString &basePath)
+{
+    // Add base archives
+    for (int i = 1; i <= 4; ++i) {
+        QString archivePath = QString("%1ToEE%2.dat").arg(basePath).arg(i);
+
+        if (QFile::exists(archivePath)) {
+            qDebug("Adding archive %s", qPrintable(archivePath));
+            add(new Troika::TroikaArchive(archivePath, this));
+        }
+    }
+
+    QString modulePath = QString("%1modules%2ToEE.dat").arg(basePath).arg(QDir::separator());
+    qDebug("Adding archive %s", qPrintable(modulePath));
+    add(new Troika::TroikaArchive(modulePath, this));
 }
 
 }

@@ -103,6 +103,10 @@ struct ProcessedSector {
     bool flyable[SectorSideLength][SectorSideLength];
     bool cover[SectorSideLength][SectorSideLength];
 
+    uchar negativeHeight[SectorSideLength][SectorSideLength];
+
+    bool hasNegativeHeight;
+
     /**
           Indicates whether any tile in this sector is reachable.
           */
@@ -117,9 +121,10 @@ struct ProcessedSector {
 };
 
 inline ProcessedSector::ProcessedSector()
-    : anyReachable(false)
+    : anyReachable(false), hasNegativeHeight(false)
 {
     memset(reachable, 0, sizeof(reachable));
+    memset(negativeHeight, 0, sizeof(negativeHeight));
 }
 
 enum TileFlags
@@ -664,6 +669,15 @@ struct FootstepSoundPredicate
     }
 };
 
+template<uchar height>
+struct HeightPredicate
+{
+    static bool include(ProcessedSector *sector, int x, int y)
+    {
+        return sector->negativeHeight[x][y] == height;
+    }
+};
+
 template<typename InclusionPredicate>
 static void findRectangles(QVector<ProcessedSector> &sectors, QList<QRect> &rectangles)
 {
@@ -762,6 +776,100 @@ static void findRectangles(QVector<ProcessedSector> &sectors, QList<QRect> &rect
 
     // 2nd merge on all rectangles
     mergeRectangles(rectangles, 1);
+}
+
+static void findHeightZones(QVector<ProcessedSector> &sectors, QList<QRect> &rectangles)
+{
+    // Reset the used flag for every tile
+    for (int i = 0; i < sectors.size(); ++i) {
+        ProcessedSector *sector = sectors.data() + i;
+        memset(sector->used, 0, sizeof(sector->used));
+    }
+
+    for (int si = 0; si < sectors.size(); ++si) {
+        ProcessedSector *sector = sectors.data() + si;
+
+        QList<QRect> sectorRectangles;
+        QRect rect;
+
+        forever {
+            bool foundTile = false;
+
+            // Try to find an unprocessed tile
+            for (int x = 0; x < SectorSideLength; ++x) {
+                for (int y = 0; y < SectorSideLength; ++y) {
+                    if (!sector->used[x][y] && sector->negativeHeight[x][y] > 0) {
+                        rect = QRect(x, y, 1, 1);
+                        sector->used[x][y] = true;
+                        foundTile = true;
+                        break;
+                    }
+                }
+                if (foundTile)
+                    break;
+            }
+
+            if (!foundTile)
+                break;
+
+            forever {
+                int right = rect.x() + rect.width();
+                int bottom = rect.y() + rect.height();
+
+                // Try expanding the rectangle by one in every direction
+                while (right < SectorSideLength) {
+                    bool expanded = true;
+                    for (int y = rect.top(); y < bottom; ++y) {
+                        if (sector->used[right][y] || !sector->negativeHeight[right][y]) {
+                            expanded = false;
+                            break;
+                        }
+                    }
+
+                    if (expanded) {
+                        // Mark as used
+                        for (int y = rect.top(); y < bottom; ++y) {
+                            sector->used[right][y] = true;
+                        }
+                        rect.setWidth(rect.width() + 1);
+                        right++;
+                    } else {
+                        break;
+                    }
+                }
+
+                while (bottom < SectorSideLength) {
+                    bool expanded = true;
+                    for (int x = rect.left(); x < right; ++x) {
+                        if (sector->used[x][bottom] || !sector->negativeHeight[x][bottom]) {
+                            expanded = false;
+                            break;
+                        }
+                    }
+
+                    if (expanded) {
+                        // Mark as used
+                        for (int x = rect.left(); x < right; ++x) {
+                            sector->used[x][bottom] = true;
+                        }
+                        rect.setHeight(rect.height() + 1);
+                        bottom++;
+                    } else {
+                        break;
+                    }
+                }
+
+                break; // No further expansion was possible
+            }
+
+            int sectorX = sector->origin.x();
+            int sectorY = sector->origin.y();
+            sectorRectangles.append(QRect(sectorX + rect.x(), sectorY + rect.y(), rect.width(), rect.height()));
+        }
+
+
+        rectangles.append(sectorRectangles);
+    }
 }
 
 static void findPortals(QList<NavMeshRect*> &rectangles, QList<NavMeshPortal*> &portals)
@@ -968,6 +1076,31 @@ static void buildSoundLayer(QVector<ProcessedSector> &sectors, RegionLayer &laye
     buildSoundRegions<11>(sectors, layer, "marsh");
 }
 
+static void buildNegativeHeightRegions(QVector<ProcessedSector> &sectors, RegionLayer &layer)
+{
+    QList<QRect> rectangles;
+
+    findHeightZones(sectors, rectangles);
+
+    foreach (const QRect &rect, rectangles) {
+        uint left = rect.left() * (PixelPerWorldTile / 3);
+        uint right = (rect.right() + 1) * (PixelPerWorldTile / 3);
+        uint top = rect.top() * (PixelPerWorldTile / 3);
+        uint bottom = (rect.bottom() + 1) * (PixelPerWorldTile / 3);
+
+        TaggedRegion region;
+        region.topLeft = Vector4(left, 0, top, 1);
+        region.bottomRight = Vector4(right, 0, bottom, 1);
+
+        region.center = 0.5f * (region.topLeft + region.bottomRight);
+        region.center.setW(1);
+
+        region.tag = QVariant(0x22);
+
+        layer.append(region);
+    }
+}
+
 static void writeNavigationMesh(QDataStream &stream,
                                 const QList<NavMeshRect*> &rectangles,
                                 const QList<NavMeshPortal*> &portals)
@@ -1012,7 +1145,7 @@ QByteArray NavigationMeshBuilder::build(const Troika::ZoneTemplate *tpl, const Q
     sectors.resize(tpl->tileSectors().size());
 
     qDebug("Generating navigation mesh for %s with %d sectors and %d start locations.",
-           qPrintable(tpl->directory()), tpl->tileSectors().size(), startPositions.size());
+    qPrintable(tpl->directory()), tpl->tileSectors().size(), startPositions.size());
 
     for (int i = 0; i < tpl->tileSectors().size(); ++i) {
         const Troika::TileSector &troikaSector = tpl->tileSectors()[i];
@@ -1020,6 +1153,11 @@ QByteArray NavigationMeshBuilder::build(const Troika::ZoneTemplate *tpl, const Q
         ProcessedSector *sector = sectors.data() + i;
         memset(sector->visited, 0, sizeof(sector->visited));
         memset(sector->used, 0, sizeof(sector->used));
+
+        sector->hasNegativeHeight = troikaSector.hasNegativeHeight;
+        for (int x = 0; x < SectorSideLength; ++x)
+            for (int y = 0; y < SectorSideLength; ++y)
+                sector->negativeHeight[x][y] = troikaSector.negativeHeight[x][y];
 
         sector->origin = QPoint(troikaSector.x * SectorSideLength, troikaSector.y * SectorSideLength);
 
@@ -1126,6 +1264,10 @@ QByteArray NavigationMeshBuilder::build(const Troika::ZoneTemplate *tpl, const Q
     Q_ASSERT(validatePortals(rectangles, portals));
 
     writeNavigationMesh(stream, rectangles, portals);
+
+    RegionLayer waterLayer;
+    buildNegativeHeightRegions(sectors, waterLayer);
+    writeRegionLayer(stream, "water", waterLayer);
 
     RegionLayer soundLayer;
     buildSoundLayer(sectors, soundLayer);

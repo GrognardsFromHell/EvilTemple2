@@ -83,6 +83,19 @@ var BaseObject = {
         renderStates[this.renderStateId] = renderState;
     },
 
+    getWaterDepth: function() {
+        // Auto move the object down if it's in a water-region
+        if (this.prototype != 'StaticGeometry') {
+            var depth = gameView.sectorMap.regionTag("water", this.position);
+
+            if (depth !== undefined) {
+                return depth;
+            }
+        }
+
+        return 0;
+    },
+
     createRenderState: function() {
         if (this.dontDraw || this.disabled)
             return;
@@ -93,7 +106,9 @@ var BaseObject = {
 
         var sceneNode = gameView.scene.createNode();
         sceneNode.interactive = this.interactive;
-        sceneNode.position = this.position;
+        var pos = this.position;
+        pos[1] -= this.getWaterDepth();
+        sceneNode.position = pos;
         sceneNode.rotation = rotationFromDegrees(this.rotation);
         var scale = this.scale / 100.0;
         sceneNode.scale = [scale, scale, scale];

@@ -18,12 +18,13 @@ var WalkJobs = {
             if (completion < 1) {
                 var pos = this.path[this.currentPathNode];
                 var dx = this.direction[0] * completion;
-                var dy = this.direction[1] * completion;
                 var dz = this.direction[2] * completion;
 
-                var position = [pos[0] + dx, pos[1] + dy, pos[2] + dz];
-                this.sceneNode.position = position;
+                var position = [pos[0] + dx, 0, pos[2] + dz];
                 this.obj.position = position;
+
+                position[1] -= this.obj.getWaterDepth(); // Depth is DISPLAY ONLY
+                this.sceneNode.position = position;
             } else {
                 this.currentPathNode += 1;
                 if (this.currentPathNode + 1 >= this.path.length) {
@@ -39,7 +40,7 @@ var WalkJobs = {
                     return;
                 }
                 this.driven = 0;
-                this.init(this.path[this.currentPathNode], this.path[this.currentPathNode + 1]);    
+                this.init(this.path[this.currentPathNode], this.path[this.currentPathNode + 1]);
             }
 
             var obj = this;
@@ -121,7 +122,7 @@ function walkTo(obj, to) {
         }
     }
 
-    var path = gameView.sectorMap.findPath(sceneNode.position, to);
+    var path = gameView.sectorMap.findPath(obj.position, to);
 
     if (path.length == 0)
         return false;

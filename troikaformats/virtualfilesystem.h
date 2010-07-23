@@ -34,6 +34,8 @@ public:
     QStringList listFiles(const QString &path, const QString &filter = "*");
     QStringList listAllFiles(const QString &filenameFilter);
 
+    void loadDefaultArchives(const QString &basepath);
+
 signals:
 
 public slots:
@@ -43,7 +45,7 @@ public slots:
 private:
     QList<Handler> handler;
 
-    Q_DISABLE_COPY(VirtualFileSystem)    
+    Q_DISABLE_COPY(VirtualFileSystem)
 };
 
 }
