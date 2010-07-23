@@ -118,6 +118,7 @@ void Scene::render(RenderStates &renderStates)
     }
 
     const Renderable::Category renderOrder[Renderable::Count] = {
+        Renderable::Background,
         Renderable::ClippingGeometry,
         Renderable::Default,
         Renderable::Lights,

@@ -310,7 +310,7 @@ void ConvertMapsTask::convertStaticObjects(ZoneTemplate *zoneTemplate, IFileWrit
         mapObject["dayBackground"] = getNewBackgroundMapFolder(zoneTemplate->dayBackground()->directory());
     }
     if (zoneTemplate->nightBackground()) {
-        mapObject["nightBackground"] = getNewBackgroundMapFolder(zoneTemplate->dayBackground()->directory());
+        mapObject["nightBackground"] = getNewBackgroundMapFolder(zoneTemplate->nightBackground()->directory());
     }
     QVector3D startPos(zoneTemplate->startPosition().x(), 0, zoneTemplate->startPosition().y());
     mapObject["startPosition"] = vectorToList(startPos);

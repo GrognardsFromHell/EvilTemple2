@@ -22,6 +22,8 @@ var Map = function(id) {
     this.outdoor = mapObj.outdoor;
     this.startPosition = mapObj.startPosition; // This is actually only used by the editor
     this.globalLighting = mapObj.globalLight;
+    this.dayBackground = mapObj.dayBackground;
+    this.nightBackground = mapObj.nightBackground;
 
     // Load mobiles and link them to their prototypes
     this.mobiles = readJson(mapObj.mobiles);
@@ -100,17 +102,21 @@ var Map = function(id) {
      * Loads the lights from a map object.
      * @param mapObj The map object loaded from a map's map.js
      */
-    function loadLights(mapObj) {
+    function loadLights(map, mapObj) {
         // Create global lighting in form of an infinite-range directional light
-        globalLight = new Light(gameView.scene);
+        var globalLight = new Light(gameView.scene);
         globalLight.range = 10000000000; // The light should be visible anywhere on the map
         globalLight.type = 'Directional';
         globalLight.color = mapObj.globalLight.color.slice(0, 3); // The color is actually used
         globalLight.direction = [-0.6324094, -0.7746344, 0]; // the direction is fixed for *all* maps, regardless of lighting.
-
         var sceneNode = gameView.scene.createNode();
+
         sceneNode.position = [480 * 28, 0, 480 * 28];
         sceneNode.attachObject(globalLight);
+
+        map.renderGlobalLight = globalLight;
+
+        print("Creating " + mapObj.lights.length + " lights.");
 
         for (var i = 0; i < mapObj.lights.length; ++i) {
             var obj = mapObj.lights[i];
@@ -169,6 +175,8 @@ var Map = function(id) {
     }
 
     Map.prototype.reload = function() {
+        var map = this; // For closures
+
         var start = timerReference();
 
         var mapObj = readJson('maps/' + this.id + '/map.js');
@@ -186,7 +194,19 @@ var Map = function(id) {
         gameView.scrollBoxMaxX = mapObj.scrollBox[2];
         gameView.scrollBoxMaxY = mapObj.scrollBox[3];
 
-        gameView.backgroundMap.directory = mapObj.dayBackground;
+        this.dayBackground = mapObj.dayBackground;
+        this.nightBackground = mapObj.nightBackground;
+
+        var backgroundMap = new BackgroundMap(gameView.scene);
+        if (GameTime.isNighttime() && this.nightBackground) {
+            backgroundMap.directory = mapObj.nightBackground;
+        } else {
+            backgroundMap.directory = mapObj.dayBackground;            
+        }
+        this.renderBackgroundMap = backgroundMap;
+
+        var backgroundMapNode = gameView.scene.createNode();
+        backgroundMapNode.attachObject(backgroundMap);
 
         var scene = gameView.scene;
 
@@ -194,7 +214,7 @@ var Map = function(id) {
 
         gameView.sectorMap.load('maps/' + this.id + '/regions.dat');
 
-        loadLights(mapObj);
+        loadLights(this, mapObj);
         loadParticleSystems(mapObj);
         loadStaticObjects(mapObj);
 
@@ -213,7 +233,6 @@ var Map = function(id) {
         var elapsed = timerReference() - start;
         print("Loaded map in " + elapsed + " ms.");
 
-        var map = this;
         gameView.addVisualTimer(1000, function() {
             map.heartbeat();
         });
@@ -264,6 +283,9 @@ var Map = function(id) {
     Map.prototype.leaving = function(newMap, newPosition) {
         print("Party is leaving map " + this.name + " (" + this.id + ")");
 
+        delete this['renderBackgroundMap'];
+        delete this['renderGlobalLight'];
+
         if (currentSelection)
             currentSelection.setSelected(false);
 
@@ -287,6 +309,9 @@ var Map = function(id) {
         for (var k in this) {
             if (!this.hasOwnProperty(k) || this[k] instanceof Function)
                 continue; // Skip prototype properties and functions
+
+            if (k == 'renderGlobalLight' || k == 'renderBackgroundMap')
+                continue; // Render states should be skipped
 
             if (k == 'mobiles')
                 continue; // Skip mobiles, handled separately
@@ -394,16 +419,49 @@ var Map = function(id) {
         // TODO: How do we know how to alias this? I.e. the tower top in hommlet has no entry, but uses homletts entry
         // instead. Same thing for the moathouse top-level
         if (!this.globalLighting.day2dKeyframes) {
-            gameView.backgroundMap.color = [1, 1, 1];
+            this.renderBackgroundMap.color = [1, 1, 1];
             return;
+        }
+
+        var keyframes2d, keyframes3d;
+
+        if (GameTime.isDaytime()) {
+            print("Using daytime keyframes.");
+            keyframes2d = this.globalLighting.day2dKeyframes;
+            keyframes3d = this.globalLighting.day3dKeyframes;
+        } else {
+            print("Using nighttime keyframes.");
+            keyframes2d = this.globalLighting.night2dKeyframes;
+            keyframes3d = this.globalLighting.night3dKeyframes;
         }
 
         var hour = GameTime.getHourOfDay() + GameTime.getMinuteOfHour() / 60;
 
-        gameView.backgroundMap.color = interpolateColor(hour, this.globalLighting.day2dKeyframes);
+        this.renderBackgroundMap.color = interpolateColor(hour, keyframes2d);
+        this.renderGlobalLight.color = interpolateColor(hour, keyframes3d);
+    };
 
-        if (globalLight) {
-            globalLight.color = interpolateColor(hour, this.globalLighting.day3dKeyframes);
+    /**
+     * Update the day/night cycle.
+     * @param oldHour The hour we're coming from.
+     */
+    Map.prototype.updateDayNight = function(oldHour) {
+        var newHour = GameTime.getHourOfDay();
+        print("New Hour: " + newHour + " Old Hour: " + oldHour);
+
+        var oldHourWasNight = oldHour < 6 || oldHour >= 18;
+        var newHourIsNight = newHour < 6 || newHour >= 18;
+
+        if (oldHourWasNight && !newHourIsNight) {
+            print("TRANSITION NIGHT->DAY");
+            print("Switching background map to: " + this.dayBackground);
+            this.renderBackgroundMap.directory = this.dayBackground;            
+        } else if (!oldHourWasNight && newHourIsNight) {
+            print("TRANSITION DAY->NIGHT");
+            if (this.nightBackground) {
+                print("Switching background map to: " + this.nightBackground);
+                this.renderBackgroundMap.directory = this.nightBackground;
+            }
         }
     };
 

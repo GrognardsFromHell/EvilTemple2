@@ -13,6 +13,7 @@ var GameTime = {};
     var currentYear = 0;
 
     var timeChangedListeners = new ListenerQueue;
+    var hourChangedListeners = new ListenerQueue;
 
     var SecondsPerMinute = 60;
     var MinutesPerHour = 60;
@@ -43,6 +44,15 @@ var GameTime = {};
     };
 
     /**
+     * Adds a listener that is called when the our of the day changes.
+     * @param callback The callback to register.
+     * @param thisObj The this object for the callback.
+     */
+    GameTime.addHourChangedListener = function(callback, thisObj) {
+        hourChangedListeners.append(callback, thisObj);
+    };
+
+    /**
      * Removes a previously registered time change listener.
      * @param callback
      * @param thisObj
@@ -62,6 +72,8 @@ var GameTime = {};
      * @param second The second of the hour (0-59) (Default: 0)
      */
     GameTime.set = function(year, month, day, hour, minute, second) {
+        var oldHour = this.getHourOfDay();
+
         if (second === undefined)
             second = 0;
         if (minute === undefined)
@@ -84,6 +96,10 @@ var GameTime = {};
         normalizeTime();
 
         timeChangedListeners.notify();
+
+        if (oldHour != this.getHourOfDay()) {
+            hourChangedListeners.notify(oldHour);
+        }
     };
 
     /**
@@ -116,10 +132,16 @@ var GameTime = {};
      * @param seconds The number of seconds to progress game time by.
      */
     GameTime.addTime = function(seconds) {
+        var oldHour = this.getHourOfDay();
+
         secondOfTheYear += seconds;
         normalizeTime();
 
         timeChangedListeners.notify();
+
+        if (oldHour != this.getHourOfDay()) {
+            hourChangedListeners.notify(oldHour);
+        }
     };
 
     GameTime.getSecondOfMinute = function() {
@@ -152,6 +174,16 @@ var GameTime = {};
 
     GameTime.stop = function() {
         // Stop game-time (i.e. in combat/game pause)
+    };
+
+    GameTime.isDaytime = function() {
+        var hour = this.getHourOfDay();
+        return hour >= 6 && hour < 18;
+    };
+
+    GameTime.isNighttime = function() {
+        var hour = this.getHourOfDay();
+        return hour < 6 || hour >= 18;
     };
 
     function load(payload) {

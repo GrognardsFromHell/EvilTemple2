@@ -28,37 +28,14 @@ namespace EvilTemple {
 class BackgroundMapData : public AlignedAllocation
 {
 public:
-    BackgroundMapData(const RenderStates &states) : renderStates(states), positionBuffer(QGLBuffer::VertexBuffer),
-        texCoordBuffer(QGLBuffer::VertexBuffer), indexBuffer(QGLBuffer::IndexBuffer), mapOrigin(-8428,-4366),
-        color(1, 1, 1, 1)
+    BackgroundMapData()
+        : positionBuffer(QGLBuffer::VertexBuffer),
+        texCoordBuffer(QGLBuffer::VertexBuffer),
+        indexBuffer(QGLBuffer::IndexBuffer),
+        mapOrigin(-8428, -4366),
+        color(1, 1, 1, 1),
+        initialized(false)
     {
-        QFile materialFile(":/material/map_material.xml");
-
-        if (!materialFile.open(QIODevice::ReadOnly)) {
-            qWarning("Unable to open map material.");
-            return;
-        }
-
-        Material material;
-
-        if (!material.loadFromData(materialFile.readAll())) {
-            qWarning("Unable to parse material file.");
-            return;
-        }
-
-        materialFile.close();
-
-        if (!materialState.createFrom(material, renderStates, NULL)) {
-            qWarning("Unable to create material state for background map: %s", qPrintable(materialState.error()));
-            return;
-        }
-
-        colorLocations.reserve(materialState.passCount);
-        for (int i = 0; i < materialState.passCount; ++i) {
-            int location = materialState.passes[i].program->uniformLocation("color");
-            colorLocations.append(location);
-        }
-
         if (!positionBuffer.create()) {
             qWarning("Unableto create position buffer.");
         }
@@ -92,6 +69,43 @@ public:
         }
         indexBuffer.allocate(indices, sizeof(indices));
         indexBuffer.release();
+
+        boundingBox.setToInfinity();
+    }
+
+    void initialize(const RenderStates &renderStates)
+    {
+        if (initialized)
+            return;
+
+        initialized = true;
+
+        QFile materialFile(":/material/map_material.xml");
+
+        if (!materialFile.open(QIODevice::ReadOnly)) {
+            qWarning("Unable to open map material.");
+            return;
+        }
+
+        Material material;
+
+        if (!material.loadFromData(materialFile.readAll())) {
+            qWarning("Unable to parse material file.");
+            return;
+        }
+
+        materialFile.close();
+
+        if (!materialState.createFrom(material, renderStates, NULL)) {
+            qWarning("Unable to create material state for background map: %s", qPrintable(materialState.error()));
+            return;
+        }
+
+        colorLocations.reserve(materialState.passCount);
+        for (int i = 0; i < materialState.passCount; ++i) {
+            int location = materialState.passes[i].program->uniformLocation("color");
+            colorLocations.append(location);
+        }
     }
 
     bool setMapDirectory(const QString &mapDirectory)
@@ -192,13 +206,12 @@ public:
         return result;
     }
 
-    const RenderStates &renderStates;
-
     QHash<QPoint, bool> tilesPresent;
     typedef QHash<QPoint, SharedTexture> TextureCache;
 
     Vector4 color;
 
+    bool initialized;
     TextureCache textures;
     QString mapDirectory;
     MaterialState materialState;
@@ -207,11 +220,14 @@ public:
     QGLBuffer indexBuffer;
     QVector<int> colorLocations;
 
+    Box3d boundingBox;
+
     QPointF mapOrigin;
 };
 
-BackgroundMap::BackgroundMap(const RenderStates &states) : d(new BackgroundMapData(states))
+BackgroundMap::BackgroundMap() : d(new BackgroundMapData)
 {
+    setRenderCategory(Background);
 }
 
 BackgroundMap::~BackgroundMap()
@@ -229,24 +245,22 @@ bool BackgroundMap::setDirectory(const QString &directory)
     return d->setMapDirectory(directory);
 }
 
-#define HANDLE_GL_ERROR handleGlError(__FILE__, __LINE__);
-    inline static void handleGlError(const char *file, int line) {
-        QString error;
-
-        GLenum glErr = glGetError();
-        while (glErr != GL_NO_ERROR) {
-            error.append(QString::fromLatin1((char*)gluErrorString(glErr)));
-            error.append('\n');
-            glErr = glGetError();
-        }
-
-        if (error.length() > 0) {
-            qWarning("OpenGL error @ %s:%d: %s", file, line, qPrintable(error));
-        }
-    }
-
-void BackgroundMap::render()
+void BackgroundMap::setColor(const Vector4 &color)
 {
+    d->color = color;
+}
+
+const Vector4 &BackgroundMap::color() const
+{
+    return d->color;
+}
+
+void BackgroundMap::render(RenderStates &renderStates, MaterialState *overrideMaterial)
+{
+    Q_UNUSED(overrideMaterial);
+
+    d->initialize(renderStates);
+
     MaterialState *material = &d->materialState;
 
     glDepthMask(GL_FALSE);
@@ -254,13 +268,13 @@ void BackgroundMap::render()
     for (int i = 0; i < material->passCount; ++i) {
         MaterialPassState &pass = material->passes[i];
 
-        pass.program->bind(); HANDLE_GL_ERROR
+        pass.program->bind();
 
         glActiveTexture(GL_TEXTURE0);
 
         // Bind uniforms
         for (int j = 0; j < pass.uniforms.size(); ++j) {
-            pass.uniforms[j]->bind(); HANDLE_GL_ERROR
+            pass.uniforms[j]->bind();
         }
 
         int colorLocation = d->colorLocations[i];
@@ -289,7 +303,7 @@ void BackgroundMap::render()
         }
         glBindBuffer(GL_ARRAY_BUFFER, 0); // Unbind any previously bound buffers
 
-        d->indexBuffer.bind(); HANDLE_GL_ERROR
+        d->indexBuffer.bind();
 
         int tileLocation = pass.program->uniformLocation("tilePos");
 
@@ -301,7 +315,7 @@ void BackgroundMap::render()
             (without translation, meaning -> absolute coordinates), and relate it to the origin
             of the current map in the same coordinate space.
          */
-        const Box2d &screenViewport = d->renderStates.screenViewport();
+        const Box2d &screenViewport = renderStates.screenViewport();
 
         int left = screenViewport.left() - d->mapOrigin.x();
         int top = screenViewport.top() + d->mapOrigin.y();
@@ -324,17 +338,17 @@ void BackgroundMap::render()
 
                 const SharedTexture &texture = d->loadTexture(QPoint(x,y));
                 texture->bind();
-                glUniform1iv(tileLocation, 2, tilePosition); HANDLE_GL_ERROR
-                glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0); HANDLE_GL_ERROR
+                glUniform1iv(tileLocation, 2, tilePosition);
+                glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
             }
         }
 
-        d->indexBuffer.release(); HANDLE_GL_ERROR
+        d->indexBuffer.release();
 
         // Unbind attributes
         for (int j = 0; j < pass.attributes.size(); ++j) {
             MaterialPassAttributeState &attribute = pass.attributes[j];
-            glDisableVertexAttribArray(attribute.location); HANDLE_GL_ERROR
+            glDisableVertexAttribArray(attribute.location);
         }
 
         glBindTexture(GL_TEXTURE_2D, 0);
@@ -346,17 +360,12 @@ void BackgroundMap::render()
     }
 
     glDepthMask(GL_TRUE);
-
 }
 
-void BackgroundMap::setColor(const Vector4 &color)
+const Box3d &BackgroundMap::boundingBox()
 {
-    d->color = color;
-}
-
-const Vector4 &BackgroundMap::color() const
-{
-    return d->color;
+    return d->boundingBox;
 }
 
 }
+

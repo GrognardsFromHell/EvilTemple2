@@ -1,6 +1,8 @@
 #ifndef BACKGROUNDMAP_H
 #define BACKGROUNDMAP_H
 
+#include "renderable.h"
+
 #include <QMetaType>
 #include <QObject>
 #include <QScopedPointer>
@@ -13,16 +15,18 @@ namespace EvilTemple {
 class RenderStates;
 class BackgroundMapData;
 
-class BackgroundMap : public QObject
+class BackgroundMap : public Renderable
 {
 Q_OBJECT
 Q_PROPERTY(QString directory READ directory WRITE setDirectory)
 Q_PROPERTY(Vector4 color READ color WRITE setColor)
 public:
-    BackgroundMap(const RenderStates &states);
+    BackgroundMap();
     ~BackgroundMap();
 
-    void render();
+    void render(RenderStates &renderStates, MaterialState *overrideMaterial = NULL);
+
+    const Box3d &boundingBox();
 
     bool setDirectory(const QString &directory);
     const QString &directory();

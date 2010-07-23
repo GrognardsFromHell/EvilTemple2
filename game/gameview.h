@@ -11,7 +11,6 @@
 namespace EvilTemple {
 
 class GameViewData;
-class BackgroundMap;
 class Scene;
 class ClippingGeometry;
 class Materials;
@@ -23,7 +22,6 @@ class Models;
 class GameView : public QGraphicsView
 {
     Q_OBJECT
-    Q_PROPERTY(BackgroundMap *backgroundMap READ backgroundMap)
     Q_PROPERTY(EvilTemple::Scene *scene READ scene)
     Q_PROPERTY(ClippingGeometry *clippingGeometry READ clippingGeometry)
     Q_PROPERTY(Materials *materials READ materials)
@@ -50,7 +48,6 @@ public:
 
     QDeclarativeEngine *uiEngine();
 
-    BackgroundMap *backgroundMap() const;
     Scene *scene() const;
     ClippingGeometry *clippingGeometry() const;
     Materials *materials() const;

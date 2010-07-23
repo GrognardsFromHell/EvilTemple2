@@ -130,10 +130,17 @@ var Maps = {
         }
     }
 
+    function updateDayNight(oldHour) {
+        if (Maps.currentMap) {
+            Maps.currentMap.updateDayNight(oldHour);
+        }
+    }
+
     StartupListeners.add(function() {
         SaveGames.addSavingListener(save);
         SaveGames.addLoadingListener(load);
         GameTime.addTimeChangedListener(updateLighting);
+        GameTime.addHourChangedListener(updateDayNight);
     });
 
 })();

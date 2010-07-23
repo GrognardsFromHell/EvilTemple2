@@ -13,7 +13,6 @@
 #include "renderstates.h"
 #include "modelfile.h"
 #include "modelinstance.h"
-#include "backgroundmap.h"
 
 #include "clippinggeometry.h"
 #include "particlesystem.h"
@@ -142,7 +141,7 @@ namespace EvilTemple {
     Q_OBJECT
     public:
         GameViewData(GameView *view)
-            : q(view), backgroundMap(renderStates),
+            : q(view),
             clippingGeometry(renderStates), dragging(false), lightDebugger(renderStates),
             materials(renderStates), sectorMap(&scene), models(&materials, renderStates),
             particleSystems(&models, &materials), scene(&materials), lastAudioEnginePosition(0, 0, 0, 1),
@@ -335,8 +334,6 @@ namespace EvilTemple {
         QPointer<Renderable> lastMouseOverRenderable;
 
         LightDebugRenderer lightDebugger;
-
-        BackgroundMap backgroundMap;
 
         ClippingGeometry clippingGeometry;
 
@@ -534,8 +531,6 @@ namespace EvilTemple {
         glClearColor(0, 0, 0, 0);
         glClearStencil(1);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
-
-        d->backgroundMap.render();
 
         if (!d->sceneTimer.isValid()) {
             d->sceneTimer.start();
@@ -776,11 +771,6 @@ namespace EvilTemple {
     Scene *GameView::scene() const
     {
         return &d->scene;
-    }
-
-    BackgroundMap *GameView::backgroundMap() const
-    {
-        return &d->backgroundMap;
     }
 
     ClippingGeometry *GameView::clippingGeometry() const

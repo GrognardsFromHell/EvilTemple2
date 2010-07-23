@@ -270,6 +270,7 @@ namespace EvilTemple {
         global.setProperty("ModelInstance", engine->newFunction(renderableCtor<ModelInstance>));
         global.setProperty("Light", engine->newFunction(renderableCtor<Light>));
         global.setProperty("LineRenderable", engine->newFunction(renderableCtor<LineRenderable>));
+        global.setProperty("BackgroundMap", engine->newFunction(renderableCtor<BackgroundMap>));
         global.setProperty("SelectionCircle", engine->newFunction(selectionCircleCtor));
 
         // Register scriptable objects
