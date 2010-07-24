@@ -265,6 +265,11 @@ void BackgroundMap::render(RenderStates &renderStates, MaterialState *overrideMa
 
     glDepthMask(GL_FALSE);
 
+    if (d->color.w() < 1) {
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    }
+
     for (int i = 0; i < material->passCount; ++i) {
         MaterialPassState &pass = material->passes[i];
 
@@ -357,6 +362,10 @@ void BackgroundMap::render(RenderStates &renderStates, MaterialState *overrideMa
 
         // Clean the cache
         d->cleanCache(firstVisibleX, firstVisibleY, lastVisibleX, lastVisibleY);
+    }
+
+    if (d->color.w() < 1) {
+        glDisable(GL_BLEND);
     }
 
     glDepthMask(GL_TRUE);

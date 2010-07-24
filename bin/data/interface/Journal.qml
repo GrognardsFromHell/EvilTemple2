@@ -10,6 +10,8 @@ MovableWindow {
 
     property variant quests
 
+    property variant reputations
+
     onQuestsChanged: {
         questListModel.clear();
         for (var i = 0; i < quests.length; ++i) {
@@ -20,6 +22,20 @@ MovableWindow {
                 'questState': quest.state,
                 'questName': quest.name,
                 'questDescription': quest.description
+            });
+        }
+    }
+
+    onReputationsChanged: {
+        reputationListModel.clear();
+        for (var i = 0; i < reputations.length; ++i) {
+            var reputation = reputations[i];
+
+            reputationListModel.append({
+                'reputationId': reputation.id,
+                'reputationName': reputation.name,
+                'reputationDescription': reputation.description,
+                'reputationEffect': reputation.effect
             });
         }
     }
@@ -104,6 +120,7 @@ MovableWindow {
             }
         }
     }
+
     ListView {
         id: questListView
         x: 66
@@ -116,6 +133,64 @@ MovableWindow {
         section.property: 'questState'
         section.delegate: sectionHeading
         section.criteria: ViewSection.FullString
+    }
+
+    ListModel {
+        id: reputationListModel
+    }
+
+    Component {
+        id: reputationDelegate
+        Column {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            Text {
+                text: reputationName
+                color: '#ffffff'
+                font.family: 'Handserif'
+                font.pointSize: 14
+                font.bold: true
+            }
+            Text {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                text: reputationDescription
+                color: '#ffffff'
+                font.family: 'Fontin'
+                font.bold: false
+                font.pointSize: 12
+                wrapMode: "WrapAtWordBoundaryOrAnywhere"
+            }
+            Item {
+                height: 10
+                anchors.left: parent.left
+                anchors.right: parent.right
+            }
+            Text {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                text: reputationEffect
+                color: '#ffffff'
+                font.family: 'Fontin'
+                font.italic: true
+                font.bold: false
+                font.pointSize: 12
+                wrapMode: "WrapAtWordBoundaryOrAnywhere"
+            }
+        }
+    }
+
+
+    ListView {
+        id: reputationListView
+        x: 405
+        y: 84
+        width: 279
+        height: 290
+        model: reputationListModel
+        delegate: reputationDelegate
+        clip: true
+        spacing: 10
     }
 
     Button {

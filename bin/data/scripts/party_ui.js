@@ -19,21 +19,15 @@ var PartyUi = {};
         }
 
         switch (action) {
-            case "select":
-                if (currentSelection && currentSelection != target)
-                    currentSelection.setSelected(false);
-                currentSelection = target;
-                target.setSelected(true);
-                PartyUi.update();
+            case "select_and_center":
+                Selection.clear(); // Clear the previous selection
+                Selection.add([target]);
+                gameView.centerOnWorld(target.position);
                 break;
 
-            case "select_and_center":
-                if (currentSelection && currentSelection != target)
-                    currentSelection.setSelected(false);
-                currentSelection = target;
-                target.setSelected(true);
-                gameView.centerOnWorld(target.position);
-                PartyUi.update();
+            case "select":
+                Selection.clear(); // Clear the previous selection
+                Selection.add([target]);
                 break;
 
             case "charsheet":
@@ -64,7 +58,7 @@ var PartyUi = {};
     function getModel(critter) {
         return {
             portrait: getPortrait(critter.portrait, Portrait_Medium),
-            selected: currentSelection == critter
+            selected: Selection.isSelected(critter)
         };
     }
 
@@ -97,6 +91,7 @@ var PartyUi = {};
             PartyUi.show();
             PartyUi.update();
         });
+        Selection.addChangeListener(PartyUi.update);
     });
 
 })();

@@ -73,11 +73,11 @@ public slots:
     virtual void elapseTime(float secondsElapsed);
 
 signals:
-    void mousePressed(int button, int buttons);
-    void mouseReleased(int button, int buttons);
-    void mouseDoubleClicked(int button, int buttons);
-    void mouseEnter(int buttons);
-    void mouseLeave(int buttons);
+    void mousePressed(QMouseEvent *event);
+    void mouseReleased(QMouseEvent *event);
+    void mouseDoubleClicked(QMouseEvent *event);
+    void mouseEnter(QMouseEvent *event);
+    void mouseLeave(QMouseEvent *event);
 
 protected:
     SceneNode *mParentNode;

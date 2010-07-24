@@ -1,4 +1,3 @@
-
 // Constants for mouse buttons
 var Mouse = {
     NoButton: 0,
@@ -21,7 +20,7 @@ var Reaction = {
 };
 
 /*
-    Equipment slot constants
+ Equipment slot constants
  */
 var Slot_Helm = 200;
 var Slot_Neck = 201;
@@ -46,6 +45,16 @@ var Slot_Lockpicks = 215;
 var Female = 'female';
 var Male = 'male';
 
+/**
+ * Keyboard modifiers.
+ */
+var KeyModifiers = {
+    Shift: 0x02000000,
+    Control: 0x04000000,
+    Alt: 0x08000000,
+    Meta: 0x10000000,
+    Keypad: 0x20000000
+};
 
 /**
  * Alignments can be checked via the == operator, but no numeric relation should be assumed.

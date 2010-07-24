@@ -24,6 +24,7 @@ public:
 
     const Matrix4 &worldMatrix() const;
     const Matrix4 &viewMatrix() const;
+    const Matrix4 &viewInverseMatrix() const;
     const Matrix4 &projectionMatrix() const;
 
     void setWorldMatrix(const Matrix4 &worldMatrix);
@@ -166,6 +167,11 @@ inline void RenderStates::setProjectionMatrix(const Matrix4 &projectionMatrix)
 inline const Matrix4 &RenderStates::worldViewMatrix() const
 {
     return mWorldViewMatrix;
+}
+
+inline const Matrix4 &RenderStates::viewInverseMatrix() const
+{
+    return mViewInverseMatrix;
 }
 
 inline const Matrix4 &RenderStates::worldViewProjectionMatrix() const

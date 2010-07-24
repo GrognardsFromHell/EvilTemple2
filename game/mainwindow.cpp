@@ -1,7 +1,7 @@
 
 #include <GL/glew.h>
 
-#include <QCoreApplication>
+#include <QApplication>
 #include <QEventLoop>
 #include <QGraphicsView>
 #include <QGLWidget>
@@ -242,6 +242,14 @@ namespace EvilTemple {
                 d_ptr->profilerDialog->show();
             }
         } else {
+            QApplication *instance = (QApplication*)QApplication::instance();
+
+            if (!instance->focusWidget()) {
+                qDebug("KEY PRESS WITHOUT FOCUS");
+            } else {
+                qDebug("MW %s %s", qPrintable(instance->focusWidget()->objectName()), instance->focusWidget()->metaObject()->className());
+            }
+
             QScriptValue scriptEvent = d_ptr->game.scriptEngine()->engine()->newObject();
             scriptEvent.setProperty("key", QScriptValue(e->key()));
             scriptEvent.setProperty("text", QScriptValue(e->text()));

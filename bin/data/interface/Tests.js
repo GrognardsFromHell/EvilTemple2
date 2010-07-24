@@ -24,4 +24,13 @@ function fillQuests(root) {
         'description': "Jinnerth, the tailor of Hommlet, has asked you to speak with the captain of the militia about joining the town militia."
     });
     root.quests = quests;
+
+    var reputations = [];
+    reputations.push({
+        id: '123',
+        name: 'Reaver',
+        description: 'asdf',
+        effect: 'bcdf'
+    });
+    root.reputations = reputations;
 }

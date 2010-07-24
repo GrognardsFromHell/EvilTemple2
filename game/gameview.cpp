@@ -147,7 +147,8 @@ namespace EvilTemple {
             particleSystems(&models, &materials), scene(&materials), lastAudioEnginePosition(0, 0, 0, 1),
             scrollingDisabled(false),
             mPlayingVideo(false),
-            mVideoPlayerThread(&mVideoPlayer)
+            mVideoPlayerThread(&mVideoPlayer),
+            wasScrolling(false)
         {
             connect(&uiEngine, SIGNAL(warnings(QList<QDeclarativeError>)), SLOT(uiWarnings(QList<QDeclarativeError>)));
 
@@ -374,6 +375,8 @@ namespace EvilTemple {
             renderStates.setProjectionMatrix(projectionMatrix);
         }
 
+        void handleMouseScrolling();
+
         void pollVisualTimers();
 
     public slots:
@@ -406,11 +409,72 @@ namespace EvilTemple {
 
     private:
         GameView *q;
+        bool wasScrolling;
+        QElapsedTimer lastScrollEvent;
     };
 
     void VideoPlayerThread::run()
     {
         mPlayer->play();
+    }
+
+    void GameViewData::handleMouseScrolling()
+    {
+        if (dragging || scrollingDisabled || !q->underMouse() || uiScene.itemAt(lastPoint)) {
+            wasScrolling = false;
+            return;
+        }
+
+        float threshold = 0.05; // 5% of the visible area should be sufficient for scrolling
+        float xThreshold = threshold * q->width();
+        float yThreshold = threshold * q->height();
+
+        QPoint direction;
+
+        if (lastPoint.x() <= xThreshold) {
+            direction += (1 - lastPoint.x() / xThreshold) * 50 * QPoint(-1, 0);
+        }
+        if (lastPoint.y() <= yThreshold) {
+            direction += (1 - lastPoint.y() / yThreshold) * 50 * QPoint(0, -1);
+        }
+        if (lastPoint.x() >= q->width() - xThreshold) {
+            float f = 1 - (q->width() - lastPoint.x()) / xThreshold;
+            direction += f * 50 * QPoint(1, 0);
+        }
+        if (lastPoint.y() >= q->height() - yThreshold) {
+            float f = 1 - (q->height() - lastPoint.y()) / yThreshold;
+            direction += f * 50 * QPoint(0, 1);
+        }
+
+        if (direction.isNull()) {
+            wasScrolling = false;
+            return;
+        }
+
+        QElapsedTimer now;
+        now.start();
+
+        if (wasScrolling && !direction.isNull()) {
+            qint64 msecsElapsed = lastScrollEvent.msecsTo(now);
+
+            // The timer resolution may be too coarse to scroll in very short increments, so we assume the speed
+            // in relation to 25ms
+            if (msecsElapsed >= 25) {
+                float factor = msecsElapsed / 25.0f;
+
+                Vector4 worldPos1 = worldPositionFromScreen(QPoint());
+                Vector4 worldPos2 = worldPositionFromScreen(factor * direction);
+
+                q->centerOnWorld(q->worldCenter() + (worldPos2 - worldPos1));
+
+                lastScrollEvent = now;
+            }
+        }
+
+        if (!wasScrolling) {
+            lastScrollEvent = now;
+            wasScrolling = true;
+        }
     }
 
     void GameViewData::pollVisualTimers()
@@ -514,6 +578,8 @@ namespace EvilTemple {
 
             return;
         }
+
+        d->handleMouseScrolling();
 
         // Update the audio engine state if necessary
         d->updateListenerPosition();
@@ -722,7 +788,7 @@ namespace EvilTemple {
                     renderable->mouseReleaseEvent(evt);
                 } else {
                     Vector4 worldPosition = d->worldPositionFromScreen(evt->pos());
-                    emit worldClicked(evt->button(), evt->buttons(), worldPosition);
+                    emit worldClicked(evt, worldPosition);
                 }
             }
             d->dragging = false;
@@ -748,7 +814,7 @@ namespace EvilTemple {
                 renderable->mouseDoubleClickEvent(evt);
             } else {
                 Vector4 worldPosition = d->worldPositionFromScreen(evt->pos());
-                emit worldDoubleClicked(evt->button(), evt->buttons(), worldPosition);
+                emit worldDoubleClicked(evt, worldPosition);
             }
         }
     }
@@ -928,6 +994,41 @@ namespace EvilTemple {
 
         QPixmap cursor(filename);
         setCursor(QCursor(cursor, 2, 2));
+    }
+
+    void GameView::keyPressEvent(QKeyEvent *event)
+    {
+        // If nothing in the scene has focus, process the event here
+        if (!QGraphicsView::scene() || !QGraphicsView::scene()->focusItem()) {
+            QPoint direction;
+
+            switch (event->key()) {
+            case Qt::Key_Left:
+                direction += QPoint(-1, 0);
+                break;
+            case Qt::Key_Right:
+                direction += QPoint(1, 0);
+                break;
+            case Qt::Key_Up:
+                direction += QPoint(0, -1);
+                break;
+            case Qt::Key_Down:
+                direction += QPoint(0, 1);
+                break;
+            }
+
+            if (!direction.isNull()) {
+                direction *= 50;
+
+                Vector4 worldPos1 = d->worldPositionFromScreen(QPoint());
+                Vector4 worldPos2 = d->worldPositionFromScreen(direction);
+
+                centerOnWorld(worldCenter() + (worldPos2 - worldPos1));
+                return;
+            }
+        }
+
+        QGraphicsView::keyPressEvent(event);
     }
 
 }

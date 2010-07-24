@@ -159,6 +159,7 @@ var Map = function(id) {
 
         var i;
         var obj;
+        var sceneNode;
 
         for (i = 0; i < mapObj.particleSystems.length; ++i) {
             obj = mapObj.particleSystems[i];
@@ -201,7 +202,7 @@ var Map = function(id) {
         if (GameTime.isNighttime() && this.nightBackground) {
             backgroundMap.directory = mapObj.nightBackground;
         } else {
-            backgroundMap.directory = mapObj.dayBackground;            
+            backgroundMap.directory = mapObj.dayBackground;
         }
         this.renderBackgroundMap = backgroundMap;
 
@@ -285,9 +286,6 @@ var Map = function(id) {
 
         delete this['renderBackgroundMap'];
         delete this['renderGlobalLight'];
-
-        if (currentSelection)
-            currentSelection.setSelected(false);
 
         gameView.scene.clear();
         renderStates = {}; // Clear render states
@@ -382,6 +380,8 @@ var Map = function(id) {
     function interpolateColor(hour, keyframedColorTable) {
         var color;
         var factor, invFactor;
+        var i;
+        var prevTime, prevColor, nextTime, nextColor;
 
         if (hour <= keyframedColorTable[0][0]) {
             color = keyframedColorTable[0][1];
@@ -411,9 +411,73 @@ var Map = function(id) {
     }
 
     /**
+     * This map fading is a huge mess and definetly needs to be refactored.
+     * Some pointers:
+     * Either modify the background map class in a way that allows direct cross-fading between
+     * two maps, or move this into a separate javascript class (MapCrossFader?).
+     * Also something that needs to be considered: What happens, if during a cross-fade,
+     * time is passed, and another cross-fade needs to happen?
+     * Also: This could probably/possibly be moved into updateLighting, and the transition be stretched
+     * out across 15-30 ingame minutes to make it seem more natural.
+     */
+
+    var fadingOutMap;
+    var fadingOutMapNode;
+    var fadingStart;
+    var fading3dStartColor;
+    var fading3dEndColor;
+    var fadingDuration = 1000;
+
+    function getForegroundFade() {
+        if (!fadingStart)
+            return 1;
+
+        var now = timerReference();
+        return (now - fadingStart) / fadingDuration;
+    }
+
+    function mapFade() {
+        var now = timerReference();
+
+        if (now >= fadingStart + fadingDuration) {
+            fadingStart = undefined;
+            gameView.scene.removeNode(fadingOutMapNode);
+            fadingOutMapNode = null;
+            fadingOutMap = null;
+            Maps.currentMap.updateLighting();
+            return;
+        }
+
+        var factor = (now - fadingStart) / fadingDuration;
+        print("Fade factor: " + factor);
+
+        var color = Maps.currentMap.renderBackgroundMap.color;
+
+        // Fade between day/night background map
+        Maps.currentMap.renderBackgroundMap.color = [ color[0], color[1], color[2], factor ];
+        color = fadingOutMap.color;
+        fadingOutMap.color = [ color[0], color[1], color[2], 1 - factor ];
+
+        // Interpolate between 3d colors
+        var diff = [ fading3dEndColor[0] - fading3dStartColor[0],
+                     fading3dEndColor[1] - fading3dStartColor[1],
+                     fading3dEndColor[2] - fading3dStartColor[2] ];
+
+        Maps.currentMap.renderGlobalLight.color = [
+                                        fading3dStartColor[0] + factor * diff[0],
+                                        fading3dStartColor[1] + factor * diff[1],
+                                        fading3dStartColor[2] + factor * diff[2]
+                                       ];
+
+        gameView.addVisualTimer(50, mapFade);
+    }
+
+    /**
      * Updates lighting for this map based on the current game time.
      */
     Map.prototype.updateLighting = function() {
+        if (fadingStart)
+            return; // No lighting updates while cross-fading is in effect
 
         // This flag is probably *NOT* used. Instead, I guess the existence of a daylight.mes rule should suffice.
         // TODO: How do we know how to alias this? I.e. the tower top in hommlet has no entry, but uses homletts entry
@@ -426,18 +490,22 @@ var Map = function(id) {
         var keyframes2d, keyframes3d;
 
         if (GameTime.isDaytime()) {
-            print("Using daytime keyframes.");
             keyframes2d = this.globalLighting.day2dKeyframes;
             keyframes3d = this.globalLighting.day3dKeyframes;
         } else {
-            print("Using nighttime keyframes.");
             keyframes2d = this.globalLighting.night2dKeyframes;
             keyframes3d = this.globalLighting.night3dKeyframes;
         }
 
+        if (!keyframes2d || !keyframes3d) {
+            print("Map has underspecified lighting keyframes: " + this.id);
+        }
+
         var hour = GameTime.getHourOfDay() + GameTime.getMinuteOfHour() / 60;
 
-        this.renderBackgroundMap.color = interpolateColor(hour, keyframes2d);
+        var color = interpolateColor(hour, keyframes2d).slice(0);
+        color[3] = getForegroundFade();
+        this.renderBackgroundMap.color = color;
         this.renderGlobalLight.color = interpolateColor(hour, keyframes3d);
     };
 
@@ -454,13 +522,55 @@ var Map = function(id) {
 
         if (oldHourWasNight && !newHourIsNight) {
             print("TRANSITION NIGHT->DAY");
-            print("Switching background map to: " + this.dayBackground);
-            this.renderBackgroundMap.directory = this.dayBackground;            
+            // No background fade is necessary if there's no night background
+            if (this.nightBackground) {
+                fadingOutMap = new BackgroundMap(gameView.scene);
+                fadingOutMap.directory = this.nightBackground;
+                if (this.globalLighting.night2dKeyframes)
+                    fadingOutMap.color = interpolateColor(newHour, this.globalLighting.night2dKeyframes);
+                fadingOutMapNode = gameView.scene.createNode();
+                fadingOutMapNode.attachObject(fadingOutMap);
+                fadingStart = timerReference();
+
+                if (this.globalLighting.night3dKeyframes)
+                    fading3dStartColor = interpolateColor(newHour, this.globalLighting.night3dKeyframes);
+                else
+                    fading3dStartColor = this.globalLighting.color;
+                if (this.globalLighting.day3dKeyframes)
+                    fading3dEndColor = interpolateColor(newHour, this.globalLighting.day3dKeyframes);
+                else
+                    fading3dEndColor = this.globalLighting.color;
+
+                print("Switching background map to: " + this.dayBackground);
+                this.renderBackgroundMap.directory = this.dayBackground;
+                this.updateLighting();
+                gameView.addVisualTimer(50, mapFade);
+            }
         } else if (!oldHourWasNight && newHourIsNight) {
             print("TRANSITION DAY->NIGHT");
             if (this.nightBackground) {
                 print("Switching background map to: " + this.nightBackground);
+
+                fadingOutMap = new BackgroundMap(gameView.scene);
+                fadingOutMap.directory = this.dayBackground;
+                if (this.globalLighting.day2dKeyframes)
+                    fadingOutMap.color = interpolateColor(newHour, this.globalLighting.day2dKeyframes);
+                fadingOutMapNode = gameView.scene.createNode();
+                fadingOutMapNode.attachObject(fadingOutMap);
+                fadingStart = timerReference();
+
+                if (this.globalLighting.day3dKeyframes)
+                    fading3dStartColor = interpolateColor(newHour, this.globalLighting.day3dKeyframes);
+                else
+                    fading3dStartColor = this.globalLighting.color;
+                if (this.globalLighting.night3dKeyframes)
+                    fading3dEndColor = interpolateColor(newHour, this.globalLighting.night3dKeyframes);
+                else
+                    fading3dEndColor = this.globalLighting.color;
+
                 this.renderBackgroundMap.directory = this.nightBackground;
+                this.updateLighting();
+                gameView.addVisualTimer(50, mapFade);
             }
         }
     };

@@ -1,4 +1,3 @@
-
 var JournalUi = {};
 
 (function() {
@@ -6,6 +5,8 @@ var JournalUi = {};
     var journalDialog = null;
 
     var questTexts = readJson('quests.js');
+
+    var reputationsTexts = readJson('reputations.js');
 
     JournalUi.show = function() {
         if (journalDialog)
@@ -31,10 +32,19 @@ var JournalUi = {};
             }
             quests.push(quest);
         }
-
-        print("Showing " + objectToString(quests));
-
         journalDialog.quests = quests;
+
+        var reputations = [];
+        Reputation.getActive().forEach(function (reputationId) {
+            reputations.push({
+                id: reputationId,
+                name: reputationsTexts[reputationId].name,
+                description: reputationsTexts[reputationId].description,
+                effect: reputationsTexts[reputationId].effect
+            });
+        });
+
+        journalDialog.reputations = reputations;
     };
 
     JournalUi.close = function() {

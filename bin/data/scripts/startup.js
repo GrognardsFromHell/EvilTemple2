@@ -2,13 +2,12 @@ var models; // Will be aliased to gameView.models
 
 var jumppoints = {};
 
-var currentSelection = null;
-
 // Registry for render states.
 var renderStates = {};
 var globalRenderStateId = 0;
 
 // Base object for all prototypes
+//noinspection JSUnusedLocalSymbols
 var BaseObject = {
     scale: 100,
     rotation: 0,
@@ -101,12 +100,12 @@ var BaseObject = {
             return;
 
         if (this.renderStateId) {
-            print("Warning: Possibly re-creating render state for an object that already has one.");
+            print("Warning: Possibly re-creating render state for an object that already has one: " + this.id);
         }
 
         var sceneNode = gameView.scene.createNode();
         sceneNode.interactive = this.interactive;
-        var pos = this.position;
+        var pos = this.position.slice(0); // Create a copy
         pos[1] -= this.getWaterDepth();
         sceneNode.position = pos;
         sceneNode.rotation = rotationFromDegrees(this.rotation);
@@ -139,6 +138,10 @@ var BaseObject = {
                 selectionCircle.radius = this.radius;
 
             selectionCircle.color = this.getReactionColor();
+
+            // TODO: This may be a bit slow for every interactive object.
+            if (Selection.isSelected(this))
+                selectionCircle.selected = true;
 
             sceneNode.attachObject(selectionCircle);
 
@@ -194,7 +197,7 @@ var BaseObject = {
         modelInstance.mouseLeave.connect(this, this.mouseLeave);
     },
 
-    mouseEnter: function(buttons) {
+    mouseEnter: function(event) {
         var renderState = this.getRenderState();
         if (renderState)
             renderState.selectionCircle.hovering = true;
@@ -204,7 +207,7 @@ var BaseObject = {
         }
     },
 
-    mouseLeave: function(buttons) {
+    mouseLeave: function(event) {
         var renderState = this.getRenderState();
         if (renderState)
             renderState.selectionCircle.hovering = false;
@@ -218,26 +221,32 @@ var BaseObject = {
             renderState.selectionCircle.selected = selected;
     },
 
-    clicked: function(button, buttons) {
+    clicked: function(event) {
         /**
          * Shows a mobile info dialog if right-clicked on, selects the mobile
          * if left-clicked on.
          */
-        if (button == Mouse.RightButton) {
+        if (event.button == Mouse.RightButton) {
             var renderState = this.getRenderState();
             if (renderState)
                 showMobileInfo(this, renderState.modelInstance);
-        } else if (button == Mouse.LeftButton) {
-            if (currentSelection != null)
-                currentSelection.setSelected(false);
-
-            currentSelection = this;
-
-            this.setSelected(true);
+        } else if (event.button == Mouse.LeftButton) {
+            if (Party.isMember(this)) {
+                if (event.modifiers & KeyModifiers.Shift) {
+                    if (Selection.isSelected(this)) {
+                        Selection.remove([this]);
+                    } else {
+                        Selection.add([this]);
+                    }
+                } else {
+                    Selection.clear();
+                    Selection.add([this]);
+                }
+            }
         }
     },
 
-    doubleClicked: function() {
+    doubleClicked: function(event) {
     },
 
     getReactionColor: function() {
@@ -248,8 +257,8 @@ var BaseObject = {
 var Item = {
     __proto__: BaseObject,
 
-    doubleClicked: function(button) {
-        if (button == Mouse.LeftButton) {
+    doubleClicked: function(event) {
+        if (event.button == Mouse.LeftButton) {
             if (this.OnUse) {
                 LegacyScripts.OnUse(this.OnUse, this);
             }
@@ -270,10 +279,10 @@ var Container = {
      */
     money: 0,
 
-    clicked: function(button) {
-        if (button == Mouse.LeftButton) {
+    clicked: function(event) {
+        if (event.button == Mouse.LeftButton) {
             showInventory(this);
-        } else if (button == Mouse.RightButton) {
+        } else if (event.button == Mouse.RightButton) {
             var renderState = this.getRenderState();
             if (renderState)
                 showMobileInfo(this, renderState.modelInstance);
@@ -285,10 +294,10 @@ var Portal = {
     __proto__: Item,
     interactive: true,
     open: false, // All doors are shut by default
-    clicked: function(button) {
+    clicked: function(event) {
         var renderState = this.getRenderState();
 
-        if (button == Mouse.LeftButton) {
+        if (event.button == Mouse.LeftButton) {
             if (this.open) {
                 print("Closing door.");
                 renderState.modelInstance.playAnimation('close', false);
@@ -301,7 +310,7 @@ var Portal = {
                 renderState.modelInstance.idleAnimation = 'open_idle';
             }
             this.open = !this.open;
-        } else if (button == Mouse.RightButton) {
+        } else if (event.button == Mouse.RightButton) {
             if (renderState)
                 showMobileInfo(this, renderState.modelInstance);
         }
@@ -311,7 +320,7 @@ var Portal = {
 var MapChanger = {
     __proto__: BaseObject,
     interactive: true,
-    clicked: function() {
+    clicked: function(event) {
         var jumpPoint = jumppoints[this.teleportTarget];
 
         var newMap = Maps.mapsById[jumpPoint.map];
@@ -368,7 +377,7 @@ var NonPlayerCharacter = {
      */
     reaction: 50,
 
-    doubleClicked: function() {
+    doubleClicked: function(event) {
         /*
          If there's a OnDialog script associated, trigger the event in the legacy script system.
          */
@@ -448,7 +457,7 @@ function selectWorldTarget(callback) {
 function setupWorldClickHandler() {
     var firstClick = undefined;
 
-    gameView.worldClicked.connect(function(button, buttons, worldPosition) {
+    gameView.worldClicked.connect(function(event, worldPosition) {
         if (worldClickCallback != null) {
             var callback = worldClickCallback;
             worldClickCallback = null;
@@ -456,11 +465,19 @@ function setupWorldClickHandler() {
             return;
         }
 
+        // Clear the selection if right-clicked
+        if (event.button == Mouse.RightButton) {
+            Selection.clear();
+            return;
+        }
+
         var color;
         var material = gameView.sectorMap.regionTag("groundMaterial", worldPosition);
 
-        if (currentSelection != null) {
-            walkTo(currentSelection, worldPosition);
+        if (!Selection.isEmpty()) {
+            Selection.get().forEach(function(mobile) {
+                walkTo(mobile, worldPosition);
+            });
             return;
         }
 
@@ -505,8 +522,8 @@ function setupWorldClickHandler() {
         }
     });
 
-    gameView.worldDoubleClicked.connect(function(button, buttons, worldPosition) {
-        print("Doubleclicked: " + button);
+    gameView.worldDoubleClicked.connect(function(event, worldPosition) {
+        print("Doubleclicked: " + objectToString(event));
         gameView.centerOnWorld(worldPosition);
     });
 }

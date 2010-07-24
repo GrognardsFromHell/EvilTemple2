@@ -117,9 +117,14 @@ var LegacyScripts = {};
 
             var newCallbackArgs = [];
 
+            // Some single-argument calls forgot to include the , at the end of a single-value tuple.
+            if (!(callbackArgs instanceof Array)) {
+                callbackArgs = [callbackArgs];
+            }
+
             callbackArgs.forEach(function (arg) {
                 if (arg instanceof CritterWrapper || arg instanceof ItemWrapper) {
-                    newCallbackArgs.push(arg.obj.id);
+                    newCallbackArgs.push(arg.obj); // Unwrap arguments / rewrap later
                 } else {
                     newCallbackArgs.push(arg);
                 }
@@ -128,8 +133,9 @@ var LegacyScripts = {};
             if (!callbackName)
                 throw "Couldn't find the callback " + callback + " in legacy script " + this.script.scriptId;
 
-            print("Skipping " + timeout + " time and calling " + callbackName + " on script " + this.script.scriptId
-                    + " directly with args = " + newCallbackArgs);
+            TimedEvents.add(timeout / 1000, 'LegacyScripts.invoke', [this.script.scriptId, callbackName, newCallbackArgs]);
+            print("Added timer in " + timeout + " Callback: " + callbackName + " on script " + this.script.scriptId
+                    + " with args = " + newCallbackArgs);
         },
 
         /**
@@ -328,13 +334,13 @@ var LegacyScripts = {};
 
         popCall: function(name) {
             assertTrue(this._eventCallStack && this._eventCallStack.length > 0,
-                       "Trying to pop from empty event stack.");
+                    "Trying to pop from empty event stack.");
             this._eventCallStack.pop();
         },
 
         lastCall: function() {
             assertTrue(this._eventCallStack && this._eventCallStack.length > 0,
-                       "Trying to take last from empty event stack.");
+                    "Trying to take last from empty event stack.");
             return this._eventCallStack[this._eventCallStack.length - 1];
         }
     };
@@ -1044,6 +1050,31 @@ var LegacyScripts = {};
         } finally {
             script.popCall();
         }
+    };
+
+    LegacyScripts.invoke = function(scriptId, funcName, args) {
+        var script = getScript(scriptId);
+
+        if (!script) {
+            print("Cannot invoke ' + funcName + ' on unknown script: " + scriptId);
+            return false;
+        }
+
+        var callbackFunc = script[funcName];
+
+        if (!callbackFunc || !(callbackFunc instanceof Function)) {
+            print("Missing ' + funcName + ' in script: " + scriptId);
+            return false;
+        }
+
+        // Process args
+        for (var i = 0; i < args.length; ++i) {
+            if (args[i].type == 'NonPlayerCharacter' || args[i].type == 'PlayerCharacter') {
+                args[i] = new CritterWrapper(args[i]);
+            }
+        }
+
+        return callbackFunc.apply(script, args);
     };
 
 })();

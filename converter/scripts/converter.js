@@ -57,6 +57,7 @@ function postprocess(prototypes) {
 
         processLegacyMapList();
         processJumpPoints();
+        processReputations();
         processAddMeshes();
         processPortraits();
         processInventory();
@@ -250,6 +251,27 @@ function processJumpPoints() {
 
         var result = JSON.stringify(jumppoints);
         addFile('jumppoints.js', result, 9);
+}
+
+function processReputations() {
+    var records = readMes('mes/gamereplog.mes');
+
+    var reputations = {};
+
+    for (var i = 0; i < 1000; ++i) {
+        var name = records[i];
+        if (!name)
+            continue;
+
+        reputations[i] = {
+            'name': name,
+            'description': records[1000 + i],
+            'effect': records[2000 + i]
+        };
+    }
+
+    var result = JSON.stringify(reputations);
+    addFile('reputations.js', result, 9);
 }
 
 function processPortraits() {

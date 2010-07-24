@@ -133,8 +133,8 @@ namespace EvilTemple {
         qScriptRegisterMetaType(engine, qobjectToScriptValue<T>, qobjectFromScriptValue<T>);
     }
 
-     static QScriptValue readFile(QScriptContext *context, QScriptEngine *engine)
-     {
+    static QScriptValue readFile(QScriptContext *context, QScriptEngine *engine)
+    {
         QScriptValue filename = context->argument(0);
         QFile file(filename.toString());
 
@@ -143,10 +143,10 @@ namespace EvilTemple {
         }
 
         return QScriptValue(QString::fromUtf8(file.readAll()));
-     }
+    }
 
-     static QScriptValue writeFile(QScriptContext *context, QScriptEngine *engine)
-     {
+    static QScriptValue writeFile(QScriptContext *context, QScriptEngine *engine)
+    {
         QString filename = context->argument(0).toString();
         QString content = context->argument(1).toString();
 
@@ -158,71 +158,91 @@ namespace EvilTemple {
 
         file.write(content.toUtf8());
         return QScriptValue(true);
-     }
+    }
 
-     static QScriptValue fileExists(QScriptContext *context, QScriptEngine *engine)
-     {
+    static QScriptValue fileExists(QScriptContext *context, QScriptEngine *engine)
+    {
         QScriptValue filename = context->argument(0);
 
         return QFile::exists(filename.toString());
-     }
+    }
 
-     static QScriptValue timerReference(QScriptContext*, QScriptEngine*)
-     {
+    static QScriptValue timerReference(QScriptContext*, QScriptEngine*)
+    {
         QElapsedTimer timer;
         timer.start();
         return QScriptValue((uint)timer.msecsSinceReference());
-     }
+    }
 
-     static QScriptValue generateGuid(QScriptContext*, QScriptEngine*)
-     {
-         return QUuid::createUuid().toString();
-     }
+    static QScriptValue generateGuid(QScriptContext*, QScriptEngine*)
+    {
+        return QUuid::createUuid().toString();
+    }
 
-     template<typename T>
-     static QScriptValue renderableCtor(QScriptContext *context, QScriptEngine *engine)
-     {
-         if (!context->isCalledAsConstructor()) {
-             return context->throwError(QScriptContext::SyntaxError, "Please call this function as a "
-                                        "constructor using the 'new' keyword.");
-         }
+    template<typename T>
+    static QScriptValue renderableCtor(QScriptContext *context, QScriptEngine *engine)
+    {
+        if (!context->isCalledAsConstructor()) {
+            return context->throwError(QScriptContext::SyntaxError, "Please call this function as a "
+                                       "constructor using the 'new' keyword.");
+        }
 
-         Scene *scene = qobject_cast<Scene*>(context->argument(0).toQObject());
+        Scene *scene = qobject_cast<Scene*>(context->argument(0).toQObject());
 
-         if (!scene) {
-             return context->throwError(QScriptContext::SyntaxError, "A renderable constructor requires the scene as "
-                                        "it's first argument");
-         }
+        if (!scene) {
+            return context->throwError(QScriptContext::SyntaxError, "A renderable constructor requires the scene as "
+                                       "it's first argument");
+        }
 
-         T *result = new T;
-         result->setParent(scene);
-         return engine->newQObject(result);
-     }
+        T *result = new T;
+        result->setParent(scene);
+        return engine->newQObject(result);
+    }
 
-     static QScriptValue selectionCircleCtor(QScriptContext *context, QScriptEngine *engine)
-     {
-         if (!context->isCalledAsConstructor()) {
-             return context->throwError(QScriptContext::SyntaxError, "Please call this function as a "
-                                        "constructor using the 'new' keyword.");
-         }
+    static QScriptValue selectionCircleCtor(QScriptContext *context, QScriptEngine *engine)
+    {
+        if (!context->isCalledAsConstructor()) {
+            return context->throwError(QScriptContext::SyntaxError, "Please call this function as a "
+                                       "constructor using the 'new' keyword.");
+        }
 
-         Scene *scene = qobject_cast<Scene*>(context->argument(0).toQObject());
-         Materials *materials = qobject_cast<Materials*>(context->argument(1).toQObject());
+        Scene *scene = qobject_cast<Scene*>(context->argument(0).toQObject());
+        Materials *materials = qobject_cast<Materials*>(context->argument(1).toQObject());
 
-         if (!scene || !materials) {
-             return context->throwError(QScriptContext::SyntaxError, "A selectioncircle constructor requires the "
-                                        "scene as its first argument and materials as its second");
-         }
+        if (!scene || !materials) {
+            return context->throwError(QScriptContext::SyntaxError, "A selectioncircle constructor requires the "
+                                       "scene as its first argument and materials as its second");
+        }
 
-         SelectionCircle *result = new SelectionCircle(materials);
-         result->setParent(scene);
-         return engine->newQObject(result);
-     }
+        SelectionCircle *result = new SelectionCircle(materials);
+        result->setParent(scene);
+        return engine->newQObject(result);
+    }
 
-     ScriptEngineData::ScriptEngineData(ScriptEngine *parent, Game *game)
-         : engine(new QScriptEngine(parent)),
-           debugger(NULL)
-     {
+    Q_DECLARE_METATYPE(QMouseEvent*)
+
+    QScriptValue qMouseEventToScriptable(QScriptEngine *engine, QMouseEvent* const &in)
+    {
+        QScriptValue result = engine->newObject();
+
+        result.setProperty("button", in->button());
+        result.setProperty("buttons", (int)in->buttons());
+        result.setProperty("modifiers", (int)in->modifiers());
+        result.setProperty("x", in->x());
+        result.setProperty("y", in->y());
+
+        return result;
+    }
+
+    void qMouseEventFromScriptable(const QScriptValue &object, QMouseEvent* &out)
+    {
+        qFatal("Trying to convert a QScriptValue to QMoueEvent. This is not supported.");
+    }
+
+    ScriptEngineData::ScriptEngineData(ScriptEngine *parent, Game *game)
+        : engine(new QScriptEngine(parent)),
+        debugger(NULL)
+    {
         // Debug the script engine if requested by the user
         foreach (const QString &argument, QCoreApplication::instance()->arguments()) {
             if (argument == "-scriptdebugger") {
@@ -231,6 +251,8 @@ namespace EvilTemple {
                 break;
             }
         }
+
+        qScriptRegisterMetaType<QMouseEvent*>(engine, qMouseEventToScriptable, qMouseEventFromScriptable);
 
         QScriptValue global = engine->globalObject();
 
@@ -286,4 +308,4 @@ namespace EvilTemple {
 
 }
 
-
+#include "scriptengine.moc"

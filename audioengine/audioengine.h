@@ -29,8 +29,6 @@ public:
     explicit AudioEngine(QObject *parent = 0);
     ~AudioEngine();
 
-signals:
-
 public slots:
 
     /**

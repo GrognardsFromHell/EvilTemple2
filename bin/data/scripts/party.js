@@ -1,4 +1,3 @@
-
 /**
  * Manages the party and its members.
  */
@@ -57,7 +56,7 @@ var Party = {};
     Party.getMembers = function () {
         var result = [];
         var i;
-        for ( i = 0; i < playerCharacters.length; ++i)
+        for (i = 0; i < playerCharacters.length; ++i)
             result.push(playerCharacters[i]);
         for (i = 0; i < followers.length; ++i)
             result.push(followers[i]);
@@ -84,11 +83,11 @@ var Party = {};
             return false;
 
         /*if (!(playerCharacter instanceof PlayerCharacter)) {
-            throw "Trying to add a non-player character as a member to the party.";
-        }*/
+         throw "Trying to add a non-player character as a member to the party.";
+         }*/
 
         print("Adding member to party: " + playerCharacter.id);
-        
+
         playerCharacters.push(playerCharacter);
 
         playerCharacter.joinedParty();
@@ -107,8 +106,8 @@ var Party = {};
             return false;
 
         /*if (!(npc instanceof NonPlayerCharacter)) {
-            throw "Trying to add a player character as a follower to the party.";
-        }*/
+         throw "Trying to add a player character as a follower to the party.";
+         }*/
 
         print("Adding member to party: " + npc.id);
 
@@ -130,8 +129,8 @@ var Party = {};
             return false;
 
         /*if (!(npc instanceof NonPlayerCharacter)) {
-            throw "Trying to add a player character as a follower to the party.";
-        }*/
+         throw "Trying to add a player character as a follower to the party.";
+         }*/
 
         print("Remove member from party: " + npc.id);
 

@@ -21,8 +21,7 @@ var WalkJobs = {
                 var dz = this.direction[2] * completion;
 
                 var position = [pos[0] + dx, 0, pos[2] + dz];
-                this.obj.position = position;
-
+                this.obj.position = position.slice(0); // Assign a copy, since position will be modified further
                 position[1] -= this.obj.getWaterDepth(); // Depth is DISPLAY ONLY
                 this.sceneNode.position = position;
             } else {

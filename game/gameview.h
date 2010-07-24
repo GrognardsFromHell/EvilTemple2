@@ -111,9 +111,9 @@ signals:
 
     void viewportChanged();
 
-    void worldClicked(int button, int buttons, const Vector4 &position);
+    void worldClicked(QMouseEvent *event, const Vector4 &position);
 
-    void worldDoubleClicked(int button, int buttons, const Vector4 &position);
+    void worldDoubleClicked(QMouseEvent *event, const Vector4 &position);
 
 public slots:
 
@@ -147,6 +147,8 @@ protected:
     void mouseDoubleClickEvent(QMouseEvent *event);
     void mousePressEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
+
+    void keyPressEvent(QKeyEvent *event);
 
     void drawBackground(QPainter *painter, const QRectF &rect);
 

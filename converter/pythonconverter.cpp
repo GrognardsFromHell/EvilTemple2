@@ -1769,6 +1769,33 @@ static bool process(expr_ty expression, QString &result, int indent, Environment
             }
             result.append(")");
             return true;
+        } else if (func.endsWith(".reputation_has")) {
+            result.append("Reputation.has(");
+            for (int i = 0; i < asdl_seq_LEN(args); ++i) {
+                if (i != 0)
+                    result.append(", ");
+                convertExpression((expr_ty)asdl_seq_GET(args, i), result, indent, environment, true);
+            }
+            result.append(")");
+            return true;
+        } else if (func.endsWith(".reputation_add")) {
+            result.append("Reputation.add(");
+            for (int i = 0; i < asdl_seq_LEN(args); ++i) {
+                if (i != 0)
+                    result.append(", ");
+                convertExpression((expr_ty)asdl_seq_GET(args, i), result, indent, environment, true);
+            }
+            result.append(")");
+            return true;
+        } else if (func.endsWith(".reputation_remove")) {
+            result.append("Reputation.remove(");
+            for (int i = 0; i < asdl_seq_LEN(args); ++i) {
+                if (i != 0)
+                    result.append(", ");
+                convertExpression((expr_ty)asdl_seq_GET(args, i), result, indent, environment, true);
+            }
+            result.append(")");
+            return true;
         }
 
     } else if (expression->kind == Name_kind) {
@@ -1865,6 +1892,33 @@ static bool process(expr_ty expression, QString &result, int indent, Environment
             }
         }
 
+        if (left->kind == Call_kind) {
+            QString callTo;
+            convertExpression(left, callTo, 0, environment, true);
+            if (callTo.startsWith("Reputation")) {
+                // Check that the comparison is against 0 or 1
+                QString comparingTo;
+                convertExpression(right, comparingTo, 0, environment, true);
+
+                if (comparingTo != "0" && comparingTo != "1") {
+                    qWarning("Comparing reputation results against something other than 1 or 0.",
+                             qPrintable(comparingTo));
+                    return false;
+                }
+
+                if (op == Eq && comparingTo == "0" || op == NotEq && comparingTo == "1") {
+                    result.append("!").append(callTo);
+                    return true;
+                } else if (op == Eq && comparingTo == "1" || op == NotEq && comparingTo == "0") {
+                    result.append(callTo);
+                    return true;
+                } else {
+                    qWarning("Unknown comparison of a Reputation function call.");
+                    return false;
+                }
+            }
+        }
+
         /*
          Querying the .area field in a comparison will convert the constant operand to a string
          corresponding to the new area ids.
@@ -1893,7 +1947,6 @@ static bool process(expr_ty expression, QString &result, int indent, Environment
         } else if (isAreaProperty(right)) {
             qWarning("Didn't account for npc.area to be on the right hand side.");
         }
-
 
         /*
          Querying the .map field of an NPC or PC will convert the right-hand-side from the numeric

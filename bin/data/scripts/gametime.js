@@ -6,6 +6,8 @@
  */
 var GameTime = {};
 
+var TimeReference;
+
 (function() {
 
     var secondOfTheYear = 0;
@@ -34,6 +36,37 @@ var GameTime = {};
         }
     }
 
+    TimeReference = function(secondOfTheYear, year) {
+        if (!(this instanceof TimeReference))
+            throw "Only use new to construct a time reference.";
+
+        this.secondOfTheYear = secondOfTheYear;
+        this.year = year;
+    };
+
+    TimeReference.prototype.normalizeTime = function() {
+        var wrappedYears = Math.floor(this.secondOfTheYear / SecondsPerYear);
+        this.secondOfTheYear %= SecondsPerYear;
+
+        if (wrappedYears > 0) {
+            this.year += wrappedYears;
+            print("Time overflow. Adding " + wrappedYears + " years.");
+        }
+    };
+
+    TimeReference.prototype.addTime = function(seconds) {
+        this.secondOfTheYear += seconds;
+        this.normalizeTime();
+    };
+
+    TimeReference.prototype.isInThePast = function() {
+        if (this.year < currentYear)
+            return true;
+        if (this.year > currentYear)
+            return false;
+        return this.secondOfTheYear <= secondOfTheYear;
+    };
+
     /**
      * Adds a listener that is notified whenever the game time changes.
      * @param callback
@@ -50,6 +83,14 @@ var GameTime = {};
      */
     GameTime.addHourChangedListener = function(callback, thisObj) {
         hourChangedListeners.append(callback, thisObj);
+    };
+
+    /**
+     * Returns a time reference representing the current time.
+     * @see TimeReference
+     */
+    GameTime.getReference = function() {
+        return new TimeReference(secondOfTheYear, currentYear);
     };
 
     /**

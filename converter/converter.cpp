@@ -263,14 +263,14 @@ public:
         mInternalDescription = openMessageFile("oemes/oname.mes");
 
         QList<ConversionTask*> tasks;
-        tasks // << new ConvertScriptsTask(this)
-              // << new ConvertParticleSystemsTask(this)
-              // << new ConvertTranslationsTask(this)
+        tasks << new ConvertScriptsTask(this)
+              << new ConvertParticleSystemsTask(this)
+              << new ConvertTranslationsTask(this)
               << new ConvertMapsTask(this)
-              //<< new ConvertSoundsTask(this)
-              //<< new ConvertMoviesTask(this)
-              //<< new ConvertInterfaceTask(this)
-              // << new ConvertModelsTask(this)
+              << new ConvertSoundsTask(this)
+              << new ConvertMoviesTask(this)
+              << new ConvertInterfaceTask(this)
+              << new ConvertModelsTask(this)
               ;
 
         // Sum up total work over all tasks

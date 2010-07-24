@@ -42,27 +42,27 @@ IntersectionResult Renderable::intersect(const Ray3d &ray) const
 
 void Renderable::mouseDoubleClickEvent(QMouseEvent *evt)
 {
-    emit mouseDoubleClicked(evt->button(), evt->buttons());
+    emit mouseDoubleClicked(evt);
 }
 
 void Renderable::mousePressEvent(QMouseEvent *evt)
 {
-    emit mousePressed(evt->button(), evt->buttons());
+    emit mousePressed(evt);
 }
 
 void Renderable::mouseReleaseEvent(QMouseEvent *evt)
 {
-    emit mouseReleased(evt->button(), evt->buttons());
+    emit mouseReleased(evt);
 }
 
 void Renderable::mouseEnterEvent(QMouseEvent *evt)
 {
-    emit mouseEnter(evt->buttons());
+    emit mouseEnter(evt);
 }
 
 void Renderable::mouseLeaveEvent(QMouseEvent *evt)
 {
-    emit mouseLeave(evt->buttons());
+    emit mouseLeave(evt);
 }
 
 void LineRenderable::render(RenderStates &renderStates, MaterialState *overrideMaterial)
