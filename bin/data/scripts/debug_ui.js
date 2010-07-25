@@ -19,7 +19,7 @@ function showLoadMapWindow() {
         if (!newMap) {
             print("Unable to find map id: " + mapId);
         } else {
-            print("STARTLOC: "+ newMap.startPosition);
+            print("STARTLOC: " + newMap.startPosition);
             Maps.goToMap(newMap, newMap.startPosition);
         }
     });
@@ -81,7 +81,7 @@ function handleDebugEvent(name) {
     } else if (name == 'openConsole') {
         showConsoleWindow();
     } else if (name == 'navmeshOverlay') {
-        gameView.sectorMap.createDebugView();        
+        gameView.sectorMap.createDebugView();
     }
 }
 
@@ -105,5 +105,8 @@ StartupListeners.add(function() {
             var screenshot = gameView.takeScreenshot();
             print("Taken screenshot " + screenshot);
         }
-    });    
+    });
+    Shortcuts.register(Keys.AsciiTilde, function() {
+        showConsoleWindow();
+    });
 });

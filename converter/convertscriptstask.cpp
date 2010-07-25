@@ -63,6 +63,10 @@ static QVariantMap convertDialogScript(IConversionService *service, const QByteA
         QString nextId = parts[5];
         QString action = parts[6];
 
+        // Fixes a broken line in the smithy's dialog
+        if (guard.contains("game.areas[3] = 0"))
+            continue;
+
         QVariantMap entry;
         entry["text"] = text;
         if (!femaleText.isEmpty() && femaleText != text)

@@ -17,7 +17,7 @@ namespace EvilTemple {
         mCurrentAnimation(NULL), mPartialFrameTime(0), mCurrentFrame(0),
         mTransformedPositions(NULL), mTransformedNormals(NULL), mFullTransform(NULL),
         mFullWorld(NULL), mCurrentFrameChanged(true), mIdling(true), mLooping(false),
-        mDrawsBehindWalls(false)
+        mDrawsBehindWalls(false), mTimeSinceLastRender(std::numeric_limits<float>::infinity())
     {
         mPositionBuffer.setUsagePattern(QGLBuffer::StreamDraw);
         mNormalBuffer.setUsagePattern(QGLBuffer::StreamDraw);
@@ -50,6 +50,7 @@ namespace EvilTemple {
         mReplacementMaterials.clear();
         mReplacementMaterials.resize(mModel->placeholders().size());
 
+
         mCurrentAnimation = model->animation("item_idle");
 
         if (!mCurrentAnimation) {
@@ -70,8 +71,10 @@ namespace EvilTemple {
             mNormalBuffer.bind();
             mNormalBuffer.allocate(model->normals, sizeof(Vector4) * model->vertices);
 
-            mFullWorld = new Matrix4[mModel->bones().size()];
-            mFullTransform = new Matrix4[mModel->bones().size()];
+            const Skeleton *skeleton = mModel->skeleton();
+
+            mFullWorld = new Matrix4[skeleton->bones().size()];
+            mFullTransform = new Matrix4[skeleton->bones().size()];
 
             // Check for events on frame 0 and trigger them now
             foreach (const AnimationEvent &event, mCurrentAnimation->events()) {
@@ -117,19 +120,23 @@ namespace EvilTemple {
               of an addmesh could be reordered to the bones of the mesh using it, but the relation between meshes
               and addmeshes is not known a-priori, making this difficult.
              */
-            QVector<uint> boneMapping(model->bones().size());
-            for (int i = 0; i < boneMapping.size(); ++i) {
-                const Bone &origBone = model->bones()[i];
+            if (model->skeleton()) {
+                QVector<uint> boneMapping(model->skeleton()->bones().size());
+                for (int i = 0; i < boneMapping.size(); ++i) {
+                    const Bone &origBone = model->skeleton()->bones()[i];
 
-                boneMapping[i] = i;
+                    boneMapping[i] = i;
 
-                for (int j = 0; j < mModel->bones().size(); ++j) {
-                    if (mModel->bones()[j].name() == origBone.name()) {
-                        boneMapping[i] = j;
+                    for (int j = 0; j < skeleton()->bones().size(); ++j) {
+                        if (skeleton()->bones()[j].name() == origBone.name()) {
+                            boneMapping[i] = j;
+                        }
                     }
                 }
+                mAddMeshBoneMapping.append(boneMapping);
+            } else {
+                mAddMeshBoneMapping.append(QVector<uint>());
             }
-            mAddMeshBoneMapping.append(boneMapping);
 
             Q_ASSERT(mTransformedPositionsAddMeshes.size() == mAddMeshes.size());
             Q_ASSERT(mTransformedNormalsAddMeshes.size() == mAddMeshes.size());
@@ -144,7 +151,7 @@ namespace EvilTemple {
         if (!mModel)
             return Matrix4::identity();
 
-        if (boneId >= mModel->bones().size()) {
+        if (boneId >= mModel->skeleton()->bones().size()) {
             qWarning("Unknown bone id: %s.", boneId);
             return Matrix4::identity();
         }
@@ -205,38 +212,35 @@ namespace EvilTemple {
                 Q_ASSERT(boneId >= 0 && boneId < boneMapping->size());
                 boneId = boneMapping->at(boneId);
             }
-            Q_ASSERT(boneId >= 0 && boneId < mModel->bones().size());
+            Q_ASSERT(boneId >= 0 && boneId < mModel->skeleton()->bones().size());
             const Matrix4 &firstTransform = mFullTransform[boneId];
 
             __m128 factor = _mm_set_ps(weight, - weight, weight, weight);
 
-            Vector4 result = _mm_mul_ps(factor, firstTransform * model->positions[i]);
-            Vector4 resultNormal = _mm_mul_ps(factor, firstTransform.mapNormal(model->normals[i]));
+            transformedPositions[i] = _mm_mul_ps(factor, firstTransform.mapPosition(model->positions[i]));
+            transformedNormals[i] = _mm_mul_ps(factor, firstTransform.mapNormal(model->normals[i]));
 
-            for (int k = 1; k < attachment.count(); ++k) {
+            for (int k = 1; k < qMin(4, attachment.count()); ++k) {
                 weight = attachment.weights()[k];
                 boneId = attachment.bones()[k];
                 if (boneMapping) {
                     Q_ASSERT(boneId >= 0 && boneId < boneMapping->size());
                     boneId = boneMapping->at(boneId);
                 }
-                Q_ASSERT(boneId >= 0 && boneId < mModel->bones().size());
+                Q_ASSERT(boneId >= 0 && boneId < mModel->skeleton()->bones().size());
 
                 const Matrix4 &fullTransform = mFullTransform[boneId];
 
                 // This flips the z coordinate, since the models are geared towards DirectX
                 factor = _mm_set_ps(weight, - weight, weight, weight);
 
-                result += _mm_mul_ps(factor, fullTransform * model->positions[i]);
-                resultNormal += _mm_mul_ps(factor, fullTransform.mapNormal(model->normals[i]));
+                transformedPositions[i] += _mm_mul_ps(factor, fullTransform * model->positions[i]);
+                transformedNormals[i] += _mm_mul_ps(factor, fullTransform.mapNormal(model->normals[i]));
             }
-
-            transformedPositions[i] = result;
-            transformedNormals[i] = resultNormal;
         }
 
         glBindBuffer(GL_ARRAY_BUFFER, positionBuffer->bufferId());
-        glBufferData(GL_ARRAY_BUFFER, sizeof(Vector4) * model->vertices, transformedPositions, GL_STREAM_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(Vector4) * model->vertices, transformedPositions, GL_STATIC_DRAW);
 
         // This is extremely costly. Accurately recomputing the normals for each vertex
         if (model->needsNormalsRecalculated()) {
@@ -269,7 +273,7 @@ namespace EvilTemple {
         }
 
         glBindBuffer(GL_ARRAY_BUFFER, normalBuffer->bufferId());
-        glBufferData(GL_ARRAY_BUFFER, sizeof(Vector4) * model->vertices, transformedNormals, GL_STREAM_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(Vector4) * model->vertices, transformedNormals, GL_STATIC_DRAW);
     }
 
     void ModelInstance::updateBones()
@@ -277,7 +281,7 @@ namespace EvilTemple {
         if (!mCurrentAnimation)
             return;
 
-        const QVector<Bone> &bones = mModel->bones();
+        const QVector<Bone> &bones = skeleton()->bones();
 
         // Create a bone state map for all bones
         const Animation::BoneMap &animationBones = mCurrentAnimation->animationBones();
@@ -336,6 +340,8 @@ namespace EvilTemple {
     void ModelInstance::render(RenderStates &renderStates, MaterialState *overrideMaterial)
     {
         ProfileScope<Profiler::ModelInstanceRender> profiler;
+
+        mTimeSinceLastRender = 0;
 
         const Model *model = mModel.data();
 
@@ -452,6 +458,12 @@ namespace EvilTemple {
 
     void ModelInstance::elapseTime(float elapsedSeconds)
     {
+        mTimeSinceLastRender += elapsedSeconds;
+
+        if (mTimeSinceLastRender >= 5) {
+            return; // Stop the animations as well
+        }
+
         ProfileScope<Profiler::ModelInstanceElapseTime> profile;
 
         if (!mModel || !mCurrentAnimation || mCurrentAnimation->driveType() != Animation::Time)
@@ -515,6 +527,11 @@ namespace EvilTemple {
     bool ModelInstance::advanceFrame()
     {
         Q_ASSERT(mCurrentAnimation != NULL);
+
+        if (mCurrentAnimation->frames() <= 1) {
+            // qWarning("Animation has only one frame.");
+            return true;
+        }
 
         mCurrentFrame++;
 
@@ -744,7 +761,10 @@ namespace EvilTemple {
     void ModelInstance::playIdleAnimation()
     {
         mIdling = true;
-        mCurrentAnimation = mModel->animation(mIdleAnimation);
+        if (mIdleAnimation.isEmpty())
+            mCurrentAnimation = NULL;
+        else
+            mCurrentAnimation = mModel->animation(mIdleAnimation);
         mCurrentFrame = 0;
         mCurrentFrameChanged = true;
         mPartialFrameTime = 0;

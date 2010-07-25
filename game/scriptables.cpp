@@ -97,6 +97,22 @@ QScriptValue ModelScriptable::animationDps(const QString &name) const
     }
 }
 
+QScriptValue ModelScriptable::animationFrames(const QString &name) const
+{
+    SharedModel model = data();
+
+    if (model) {
+        const Animation *animation = model->animation(name);
+        if (animation) {
+            return QScriptValue(animation->frames());
+        } else {
+            return engine()->undefinedValue();
+        }
+    } else {
+        return engine()->undefinedValue();
+    }
+}
+
 float ModelScriptable::radiusSquared() const
 {
     SharedModel model = data();

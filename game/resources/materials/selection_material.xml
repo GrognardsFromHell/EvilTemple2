@@ -77,6 +77,8 @@ void main() {
     <textureSampler texture=":/material/mouseover.tga" wrapU="wrap" wrapV="wrap" />
     <textureSampler texture=":/material/selection.tga" wrapU="wrap" wrapV="wrap" />
 
+    <blend>true</blend>
+    <blendFunc src="srcAlpha" dest="oneMinusSrcAlpha" />
     <cullFace>false</cullFace>
     <depthTest>false</depthTest>
     <depthWrite>false</depthWrite>

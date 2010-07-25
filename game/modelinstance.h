@@ -64,6 +64,9 @@ public:
     bool drawsBehindWalls() const;
     void setDrawsBehindWalls(bool drawsBehindWalls);
 
+    const Skeleton *skeleton() const;
+    bool hasSkeleton() const;
+
 public slots:
     Matrix4 getBoneSpace(uint boneId);
 
@@ -119,6 +122,8 @@ private:
     QList<QGLBuffer*> mPositionBufferAddMeshes;
     QList<QGLBuffer*> mNormalBufferAddMeshes;
 
+    float mTimeSinceLastRender;
+
     // When an add-mesh is loaded, this maps the bone-ids from the addmesh to the bone ids in the
     // skeleton used by mModel
     QList< QVector<uint> > mAddMeshBoneMapping;
@@ -152,6 +157,16 @@ inline bool ModelInstance::drawsBehindWalls() const
 inline void ModelInstance::setDrawsBehindWalls(bool drawsBehindWalls)
 {
     mDrawsBehindWalls = drawsBehindWalls;
+}
+
+inline bool ModelInstance::hasSkeleton() const
+{
+    return true;
+}
+
+inline const Skeleton *ModelInstance::skeleton() const
+{
+    return mModel->skeleton();
 }
 
 }

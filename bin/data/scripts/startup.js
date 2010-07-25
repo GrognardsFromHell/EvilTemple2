@@ -6,6 +6,8 @@ var jumppoints = {};
 var renderStates = {};
 var globalRenderStateId = 0;
 
+var editMode = true;
+
 // Base object for all prototypes
 //noinspection JSUnusedLocalSymbols
 var BaseObject = {
@@ -99,12 +101,8 @@ var BaseObject = {
         if (this.dontDraw || this.disabled)
             return;
 
-        if (this.renderStateId) {
-            print("Warning: Possibly re-creating render state for an object that already has one: " + this.id);
-        }
-
         var sceneNode = gameView.scene.createNode();
-        sceneNode.interactive = this.interactive;
+        sceneNode.interactive = editMode || this.interactive;
         var pos = this.position.slice(0); // Create a copy
         pos[1] -= this.getWaterDepth();
         sceneNode.position = pos;
@@ -130,12 +128,14 @@ var BaseObject = {
         };
         this.setRenderState(renderState);
 
-        if (this.interactive) {
+        if (editMode || this.interactive) {
             var selectionCircle = new SelectionCircle(gameView.scene, gameView.materials);
             renderState.selectionCircle = selectionCircle;
 
             if (this.radius !== undefined)
                 selectionCircle.radius = this.radius;
+            else
+                selectionCircle.radius = 25;
 
             selectionCircle.color = this.getReactionColor();
 
@@ -231,7 +231,7 @@ var BaseObject = {
             if (renderState)
                 showMobileInfo(this, renderState.modelInstance);
         } else if (event.button == Mouse.LeftButton) {
-            if (Party.isMember(this)) {
+            if (editMode || Party.isMember(this)) {
                 if (event.modifiers & KeyModifiers.Shift) {
                     if (Selection.isSelected(this)) {
                         Selection.remove([this]);
@@ -250,7 +250,7 @@ var BaseObject = {
     },
 
     getReactionColor: function() {
-        return [1, 1, 0]; // Neutral color
+        return [0.5, 0.5, 0.5]; // Neutral color
     }
 };
 
@@ -601,6 +601,11 @@ function handleAnimationEvent(type, content)
         obj: this
     };
     anim_obj.__proto__ = animEventAnimObjFacade;
+
+    if (type != 0) {
+        print("Skipping unknown animation event type: " + type);
+        return;
+    }
 
     /*
      Python one-liners are in general valid javascript, so we directly evaluate them here.

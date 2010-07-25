@@ -18,7 +18,7 @@ HEADERS += dagreader.h \
     model.h \
     troika_material.h \
     modelsource.h \
-    skeleton.h \
+    troika_skeleton.h \
     prototypes.h \
     util.h \
     constants.h \
@@ -38,7 +38,7 @@ SOURCES += dagreader.cpp \
     zonetemplatereader.cpp \
     model.cpp \
     troika_material.cpp \
-    skeleton.cpp \
+    troika_skeleton.cpp \
     prototypes.cpp \
     troika_materials.cpp \
     zonebackgroundmap.cpp \

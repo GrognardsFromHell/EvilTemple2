@@ -3,7 +3,7 @@
 #include "virtualfilesystem.h"
 #include "troika_material.h"
 #include "model.h"
-#include "skeleton.h"
+#include "troika_skeleton.h"
 
 #include <QDataStream>
 
@@ -54,7 +54,7 @@ namespace Troika
 
         qint32 objectCount, dataStart;
         stream >> objectCount >> dataStart; // The format allows for more than one object.
-        Q_ASSERT(objectCount == 1); // But we can only allow one object per file        
+        Q_ASSERT(objectCount == 1); // But we can only allow one object per file
         // TODO: Can we assert that dataStart == stream.device()->pos() ?
 
         quint32 vertexCount; // Number of vertices

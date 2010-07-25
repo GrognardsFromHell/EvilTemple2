@@ -13,7 +13,7 @@ uniform mat4 worldViewProjection;
 attribute vec4 vertexPosition;
 
 void main() {
-  gl_Position = worldViewProjection * vertexPosition;
+    gl_Position = worldViewProjection * vertexPosition;
 }
 ]]>
         </code>
@@ -35,8 +35,8 @@ void main() {
       <uniform name="worldViewProjection" semantic="WorldViewProjection" />
     </shader>
 
-    <cullFace>false</cullFace>
-    <blend>true</blend>
+    <cullFace>true</cullFace>
+    <blend>false</blend>
     <blendFunc src="srcAlpha" dest="oneMinusSrcAlpha" />
     <colorMask red="false" blue="false" green="false" alpha="false" />
   </pass>

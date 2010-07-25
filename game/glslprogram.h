@@ -3,6 +3,7 @@
 #define GLSLPROGRAM_H
 
 #include <QtCore/QString>
+#include <QtCore/QHash>
 #include <QtCore/QSharedPointer>
 #include <GL/glew.h>
 
@@ -52,16 +53,30 @@ public:
         return mError;
     }
 
-    GLint attributeLocation(const char *name);
+    GLint attributeLocation(const QByteArray &name) const;
 
-    GLint uniformLocation(const char *name);
+    GLint uniformLocation(const QByteArray &name) const;
 
 private:
+    void updateActiveUniforms();
+    void updateActiveAttributes();
+
     QString mError;
     GLuint mVertexShaderId, mFragmentShaderId, mProgramId;
+    QHash<QString, uint> mUniforms;
+    QHash<QString, uint> mAttributes;
 
     Q_DISABLE_COPY(GLSLProgram)
 };
+
+inline GLint GLSLProgram::attributeLocation(const QByteArray &name) const
+{
+    return mAttributes.value(name, -1);
+}
+
+inline GLint GLSLProgram::uniformLocation(const QByteArray &name) const {
+    return mUniforms.value(name, -1);
+}
 
 typedef QSharedPointer<GLSLProgram> SharedGLSLProgram;
 

@@ -307,5 +307,3 @@ namespace EvilTemple {
     }
 
 }
-
-#include "scriptengine.moc"

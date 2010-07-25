@@ -66,7 +66,8 @@ void ProfilerDialog::updateData()
         "ParticleSystemElapseTime",
         "ModelInstanceRender",
         "ParticleSystemRender",
-        "SceneRender"
+        "SceneRender",
+        "FrameRender"
     };
 
     for (int i = 0; i < Profiler::Count; ++i) {

@@ -35,6 +35,29 @@ MovableWindow {
         templeHouseButton.visible = knownAreas.indexOf('temple_ruined_house') != -1;
         templeTowerButton.visible = knownAreas.indexOf('temple_tower') != -1;
         templeButton.visible = knownAreas.indexOf('temple') != -1;
+
+        knownAreaModel.clear();
+        knownAreas.forEach(function (area) {
+            if (area == 'hommlet') {
+                knownAreaModel.append({
+                    areaId: 'hommlet-south',
+                    areaName: 'Hommlet South'
+                });
+                knownAreaModel.append({
+                    areaId: 'hommlet-north',
+                    areaName: 'Hommlet North'
+                });
+                knownAreaModel.append({
+                    areaId: 'hommlet-east',
+                    areaName: 'Hommlet East'
+                });
+            } else {
+                knownAreaModel.append({
+                    areaId: area,
+                    areaName: area
+                });
+            }
+        });
     }
 
     onCurrentAreaChanged: {
@@ -74,18 +97,19 @@ MovableWindow {
     }
 
     function refreshHighlight(mouseX, mouseY) {
-        var found = false;
+        var centerX, centerY, maxRadius;
+        var worldmapButton;
 
         for (var i = 0; i < children.length; ++i) {
             var child = root.children[i];
 
-            var maxRadius = child.maxRadius;
+            maxRadius = child.maxRadius;
 
             if (!maxRadius || !child.visible)
                 continue;
 
-            var centerX = (child.x + child.width / 2);
-            var centerY = (child.y + child.height / 2);
+            centerX = (child.x + child.width / 2);
+            centerY = (child.y + child.height / 2);
 
             var diffX = mouseX - centerX;
             var diffY = mouseY - centerY;
@@ -96,15 +120,21 @@ MovableWindow {
                 highlightOverlay.y = centerY - maxRadius;
                 highlightOverlay.width = maxRadius * 2;
                 highlightOverlay.height = maxRadius * 2;
-                found = true;
+                worldmapButton = child;
                 break;
             }
         }
 
-        if (found)
+        if (worldmapButton) {
             highlightOverlay.state = 'visible';
-        else
+            tooltip.text = worldmapButton.name;
+            tooltip.x = centerX - tooltip.width / 2;
+            tooltip.y = centerY + maxRadius;
+            tooltip.shown = true;
+        } else {
             highlightOverlay.state = '';
+            tooltip.shown = false;
+        }
     }
 
     Image {
@@ -137,6 +167,7 @@ MovableWindow {
             anchors.fill: parent
             source: "../art/interface/WORLDMAP_UI/WorldMap_Meadows.png"
         }
+        name: 'Emridy Meadows'
     }
 
     Image {
@@ -161,6 +192,7 @@ MovableWindow {
             anchors.fill: parent
             source: "../art/interface/WORLDMAP_UI/WorldMap_Moathouse.png"
         }
+        name: 'Moat house'
     }
 
     Image {
@@ -184,6 +216,7 @@ MovableWindow {
             anchors.fill: parent
             source: "../art/interface/WORLDMAP_UI/WorldMap_MoathouseCave.png"
         }
+        name: 'Moat House Cave Exit'
     }
 
     Image {
@@ -207,6 +240,7 @@ MovableWindow {
             anchors.fill: parent
             source: "../art/interface/WORLDMAP_UI/WorldMap_Nulb.png"
         }
+        name: 'Nulb'
     }
 
     Image {
@@ -230,6 +264,7 @@ MovableWindow {
             source: "../art/interface/WORLDMAP_UI/WorldMap_NulbRiverPool.png"
         }
         maxRadius: 20
+        name: 'Imeryds Run'
     }
 
     Image {
@@ -253,6 +288,7 @@ MovableWindow {
             source: "../art/interface/WORLDMAP_UI/WorldMap_OgreCave.png"
         }
         maxRadius: 30
+        name: 'Ogre Cave'
     }
 
     Image {
@@ -276,6 +312,7 @@ MovableWindow {
             source: "../art/interface/WORLDMAP_UI/WorldMap_Temple.png"
         }
         maxRadius: 16
+        name: 'Temple of Elemental Evil'
     }
 
     Image {
@@ -299,6 +336,7 @@ MovableWindow {
             source: "../art/interface/WORLDMAP_UI/WorldMap_TempleWell.png"
         }
         maxRadius: 14
+        name: 'Burnt Farmhouse'
     }
 
     Image {
@@ -322,6 +360,7 @@ MovableWindow {
             source: "../art/interface/WORLDMAP_UI/WorldMap_DekloTrees.png"
         }
         maxRadius: 20
+        name: 'Deklo Grove'
     }
 
     Image {
@@ -345,6 +384,7 @@ MovableWindow {
             source: "../art/interface/WORLDMAP_UI/WorldMap_TempleHouse.png"
         }
         maxRadius: 14
+        name: 'Temple Ruined House'
     }
 
     WorldMapButton {
@@ -358,6 +398,7 @@ MovableWindow {
             source: "../art/interface/WORLDMAP_UI/WorldMap_TempleTower.png"
         }
         maxRadius: 14
+        name: 'Temple Broken Tower'
     }
 
     WorldMapButton {
@@ -367,6 +408,7 @@ MovableWindow {
         width: 32
         height: 32
         maxRadius: 16
+        name: 'Hommlet - South'
     }
 
     WorldMapButton {
@@ -376,6 +418,7 @@ MovableWindow {
         width: 32
         height: 32
         maxRadius: 16
+        name: 'Hommlet - North'
     }
 
     WorldMapButton {
@@ -385,6 +428,7 @@ MovableWindow {
         width: 32
         height: 32
         maxRadius: 16
+        name: 'Hommlet - East'
     }
 
     Image {
@@ -439,4 +483,27 @@ MovableWindow {
         smooth: true
         source: "../art/interface/WORLDMAP_UI/Worldmap_You_are_here.png"
     }
+
+    Tooltip {
+        id: tooltip
+    }
+
+    ListModel {
+        id: knownAreaModel
+    }
+
+    ListView {
+        id: knownAreaList
+        x: 572
+        y: 99
+        width: 186
+        height: 375
+        model: knownAreaModel
+        clip: true
+        delegate: Text {
+            color: '#FFFFFF'
+            text: areaName
+        }
+    }
+
 }

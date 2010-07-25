@@ -15,7 +15,7 @@ namespace EvilTemple {
         Chunk_MaterialReferences = 3,
         Chunk_Geometry = 4,
         Chunk_Faces = 5,
-        Chunk_Bones = 6, // Skeletal data
+        Chunk_Skeleton = 6, // Skeletal data
         Chunk_BoneAttachments = 7, // Assigns vertices to bones
         Chunk_BoundingVolumes = 8, // Bounding volumes,
         Chunk_Animations = 9, // Animations
@@ -33,7 +33,8 @@ namespace EvilTemple {
     Model::Model()
         : mAnimations((Animation*)0), positions(0), normals(0), texCoords(0), vertices(0), textureData(0), faces(0),
         attachments(0), mRadius(std::numeric_limits<float>::infinity()), mRadiusSquared(std::numeric_limits<float>::infinity()),
-        materialState((MaterialState*)0), faceGroups((FaceGroup*)NULL), mNeedsNormalsRecalculated(false)
+        materialState((MaterialState*)0), faceGroups((FaceGroup*)NULL), mNeedsNormalsRecalculated(false),
+        mSkeleton(NULL)
     {
         activeModels++;
     }
@@ -41,6 +42,7 @@ namespace EvilTemple {
     Model::~Model()
     {
         activeModels--;
+        delete mSkeleton;
     }
 
     struct ModelHeader
@@ -183,28 +185,30 @@ namespace EvilTemple {
                 stream >> materialCount >> placeholderCount;
                 stream.skipRawData(sizeof(uint) + sizeof(uint));
 
-                materialState.reset(new MaterialState[materialCount]);
+                if (materialCount > 0) {
+                    materialState.reset(new MaterialState[materialCount]);
 
-                ModelTextureSource textureSource(hashes, textures, texturesSize);
+                    ModelTextureSource textureSource(hashes, textures, texturesSize);
 
-                for (int j = 0; j < materialCount; ++j) {
-                    stream.skipRawData(16); // Skip the md5 hash for now
+                    for (int j = 0; j < materialCount; ++j) {
+                        stream.skipRawData(16); // Skip the md5 hash for now
 
-                    QByteArray rawMaterialData;
-                    stream >> rawMaterialData;
+                        QByteArray rawMaterialData;
+                        stream >> rawMaterialData;
 
-                    Material material;
+                        Material material;
 
-                    if (!material.loadFromData(rawMaterialData)) {
-                        mError.append(QString("Unable to read material from model %1:\n%2").arg(filename)
-                                      .arg(material.error()));
-                        return false;
-                    }
+                        if (!material.loadFromData(rawMaterialData)) {
+                            mError.append(QString("Unable to read material from model %1:\n%2").arg(filename)
+                                          .arg(material.error()));
+                            return false;
+                        }
 
-                    if (!materialState[j].createFrom(material, renderState, &textureSource)) {
-                        mError.append(QString("Unable to create material state for model %1:\n%2").arg(filename)
-                                      .arg(materialState[j].error()));
-                        return false;
+                        if (!materialState[j].createFrom(material, renderState, &textureSource)) {
+                            mError.append(QString("Unable to create material state for model %1:\n%2").arg(filename)
+                                          .arg(materialState[j].error()));
+                            return false;
+                        }
                     }
                 }
 
@@ -260,34 +264,15 @@ namespace EvilTemple {
             } else if (chunkHeader.type == Chunk_Faces) {
                 faceData.swap(chunkData);
                 loadFaceData();
-            } else if (chunkHeader.type == Chunk_Bones) {
+            } else if (chunkHeader.type == Chunk_Skeleton) {
                 QDataStream stream(QByteArray::fromRawData(chunkData.data(), chunkHeader.size));
                 stream.setByteOrder(QDataStream::LittleEndian);
                 stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
 
-                uint bonesCount;
-                stream >> bonesCount;
-
-                mBones.resize(bonesCount);
-
-                for (int j = 0; j < bonesCount; ++j) {
-                    Bone &bone = mBones[j];
-                    QByteArray boneName;
-                    int parentId;
-
-                    stream >> boneName >> parentId >> bone.mFullWorldInverse >> bone.mRelativeWorld;
-
-                    Q_ASSERT(parentId >= -1 && parentId < mBones.size());
-
-                    bone.setBoneId(j);
-
-                    bone.mName = QString::fromUtf8(boneName, boneName.size());
-
-                    if (parentId == -1)
-                        continue;
-
-                    bone.mParent = mBones.constData() + parentId;
-                }
+                delete mSkeleton;
+                mSkeleton = new Skeleton;
+                mSkeleton->setName(filename);
+                stream >> *mSkeleton;
             } else if (chunkHeader.type == Chunk_BoneAttachments) {
                 boneAttachmentData.swap(chunkData);
 
@@ -517,17 +502,6 @@ namespace EvilTemple {
     {
         stream >> bone.rotationStream >> bone.scaleStream >> bone.translationStream;
         return stream;
-    }
-
-    int Model::bone(const QString &name) const
-    {
-        foreach (const Bone &bone, mBones) {
-            if (!bone.name().compare(name, Qt::CaseInsensitive)) {
-                return bone.boneId();
-            }
-        }
-
-        return -1;
     }
 
     QStringList Model::animations() const

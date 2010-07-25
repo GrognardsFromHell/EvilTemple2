@@ -1,5 +1,5 @@
 
-#include "skeleton.h"
+#include "troika_skeleton.h"
 #include "model.h"
 
 #include <QCryptographicHash>

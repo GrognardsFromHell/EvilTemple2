@@ -151,19 +151,14 @@ void Scene::render(RenderStates &renderStates)
 
             for (int j = 0; j < visibleLights.size(); ++j) {
                 // TODO: This ignores the full position
-                float distance = (visibleLights[j]->position() - sceneNode->position()).length();
-                if (distance <= visibleLights[j]->range() + bbExtent)
+                float squaredRange = visibleLights[j]->range() * visibleLights[j]->range() + bbExtent * bbExtent;
+
+                float distance = (visibleLights[j]->position() - sceneNode->position()).lengthSquared();
+                if (distance <= squaredRange)
                     activeLights.append(visibleLights[j]);
             }
 
             renderStates.setActiveLights(activeLights);
-
-            // TODO: Remove this.
-            glEnable(GL_BLEND);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-            glEnable(GL_DEPTH_TEST);
-            glDepthMask(GL_TRUE);
-            glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
             renderStates.setWorldMatrix(renderable->worldTransform());
             renderable->render(renderStates);

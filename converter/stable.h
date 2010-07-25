@@ -12,7 +12,7 @@
 using namespace GameMath;
 
 #include <dagreader.h>
-#include <skeleton.h>
+#include <troika_skeleton.h>
 #include <troika_material.h>
 #include <troika_materials.h>
 #include <prototypes.h>

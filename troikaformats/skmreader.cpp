@@ -6,7 +6,7 @@
 #include "model.h"
 #include "troika_material.h"
 #include "troika_materials.h"
-#include "skeleton.h"
+#include "troika_skeleton.h"
 
 namespace Troika
 {

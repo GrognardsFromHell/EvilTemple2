@@ -9,7 +9,7 @@ using namespace GameMath;
 namespace EvilTemple {
 
 SceneNode::SceneNode(Scene *scene)
-        : QObject(scene), mInteractive(true),
+        : QObject(scene), mInteractive(false),
         mPosition(0, 0, 0, 0),
         mScale(1, 1, 1, 1),
         mRotation(0, 0, 0, 1),

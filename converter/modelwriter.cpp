@@ -24,7 +24,8 @@ inline uint getRequiredPadding(uint size) {
     return result & 0xF;
 }
 
-ModelWriter::ModelWriter(QDataStream &_stream) : stream(_stream), chunks(0), lastChunkStart(-1)
+ModelWriter::ModelWriter(const QString &filename, QDataStream &_stream)
+    : stream(_stream), chunks(0), lastChunkStart(-1), mFilename(filename)
 {
     stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
     stream.setByteOrder(QDataStream::LittleEndian);
@@ -62,7 +63,7 @@ void ModelWriter::writeChunk(uint chunk, bool required, const QByteArray &data)
 
 void ModelWriter::writeBones(const Troika::Skeleton *skeleton)
 {
-    startChunk(Bones, true);
+    startChunk(Skeleton, true);
 
     stream << (uint)skeleton->bones().size();
 
@@ -261,31 +262,85 @@ void ModelWriter::writeMaterialReferences(const QStringList &materials)
     finishChunk();
 }
 
+struct Attachment {
+    float weight;
+    ushort bone;
+
+    bool operator <(const Attachment &other) const {
+        return weight < other.weight;
+    }
+};
+
 void ModelWriter::writeBoneAttachments(const QVector<Troika::Vertex> &vertices)
 {
     startChunk(BoneAttachments, true);
 
     stream << (uint)vertices.size() << RESERVED << RESERVED << RESERVED;
 
+    int rewiredVertices = 0;
+
     foreach (const Troika::Vertex &vertex, vertices) {
-        stream << (uint)vertex.attachmentCount;
-        for (int i = 0; i < 6; ++i) {
-            if (i < vertex.attachmentCount) {
-                stream << (int)vertex.attachmentBone[i];
-            } else {
-                stream << (int)-1;
+        uint attachmentCount = vertex.attachmentCount;
+
+        if (attachmentCount > 4) {
+            rewiredVertices++;
+            QVector<Attachment> attachments;
+
+            // Use the four highest weights and renormalize them
+            float totalWeight = 0;
+            for (int i = 0; i < vertex.attachmentCount; ++i) {
+                totalWeight = vertex.attachmentWeight[i];
+
+                Attachment attachment;
+                attachment.weight = vertex.attachmentWeight[i];
+                attachment.bone = vertex.attachmentBone[i];
+                attachments.append(attachment);
+
+                qSort(attachments);
             }
-        }
-        for (int i = 0; i < 6; ++i) {
-            if (i < vertex.attachmentCount) {
-                stream << (float)vertex.attachmentWeight[i];
-            } else {
-                stream << (float)0;
+
+            attachments.remove(0, attachments.size() - 4);
+            Q_ASSERT(attachments.size() == 4);
+
+            float newTotal = 0;
+
+            for (int i = 0; i < 4; ++i)
+                newTotal += attachments[i].weight;
+
+            float f = totalWeight / newTotal; // f > 1, scale weights up
+
+            for (int i = 0; i < 4; ++i)
+                attachments[i].weight *= f;
+
+            stream << (uint)4;
+            for (int i = 0; i < 4; ++i)
+                stream << (int)attachments[i].bone;
+            for (int i = 0; i < 4; ++i)
+                stream << (float)attachments[i].weight;
+        } else {
+            stream << attachmentCount;
+            for (int i = 0; i < 4; ++i) {
+                if (i < attachmentCount) {
+                    stream << (int)vertex.attachmentBone[i];
+                } else {
+                    stream << (int)-1;
+                }
+            }
+            for (int i = 0; i < 4; ++i) {
+                if (i < attachmentCount) {
+                    stream << (float)vertex.attachmentWeight[i];
+                } else {
+                    stream << (float)0;
+                }
             }
         }
     }
 
     finishChunk();
+
+    if (rewiredVertices > 0) {
+        qWarning("Had to rewire vertices with > 4 weights for file %s.", qPrintable(mFilename));
+    }
 }
 
 void ModelWriter::writeTextures(const QList<HashedData> &textures)

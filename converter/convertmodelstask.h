@@ -34,7 +34,7 @@ private:
 
     void convertMaterials(IFileWriter *writer);
     bool convertModel(IFileWriter *output, const QString &filename, Troika::MeshModel *model);
-    bool writeModel(IFileWriter *output, Troika::MeshModel *model, QDataStream &stream);
+    bool writeModel(const QString &filename, IFileWriter *output, Troika::MeshModel *model, QDataStream &stream);
 
     QHash<QString, bool> mWrittenTextures;
 

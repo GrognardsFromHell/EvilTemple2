@@ -157,8 +157,20 @@ bool MaterialPass::load(const QDomElement &passElement)
             destFuncEnum = GL_ONE_MINUS_SRC_ALPHA;
         }
 
+        // Only add state-changer if it differs from the default state
         SharedMaterialRenderState renderState(new MaterialBlendFunction(srcFuncEnum, destFuncEnum));
         mRenderStates.append(renderState);
+    }
+
+    QDomElement blendElement = passElement.firstChildElement("blend");
+    if (!blendElement.isNull()) {
+        if (blendElement.text() == "true") {
+            SharedMaterialRenderState renderState(new MaterialEnableState(GL_BLEND));
+            mRenderStates.append(renderState);
+        } else if (blendElement.text() == "false") {
+            SharedMaterialRenderState renderState(new MaterialDisableState(GL_BLEND));
+            mRenderStates.append(renderState);
+        }
     }
 
     QDomElement cullFaceElement = passElement.firstChildElement("cullFace");

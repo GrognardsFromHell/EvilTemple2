@@ -17,6 +17,7 @@ public:
         ModelInstanceRender,
         ParticleSystemRender,
         SceneRender,
+        FrameRender,
         Count
     };
 

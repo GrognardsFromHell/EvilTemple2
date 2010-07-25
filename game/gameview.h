@@ -141,6 +141,10 @@ public slots:
 
     bool playUiSound(const QString &filename);
 
+    QImage getFrameTimeHistogram();
+
+    float getFrameTimeAverage();
+
 protected:
     void resizeEvent(QResizeEvent *event);
     void mouseMoveEvent(QMouseEvent *event);

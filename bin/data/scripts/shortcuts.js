@@ -1,10 +1,12 @@
 
 /**
  * Keyboard constants.
+ * They come from: http://doc.qt.nokia.com/4.7-snapshot/qt.html#Key-enum
  */
 var Keys = {
     F5: 0x01000034, 
-    F10: 0x01000039
+    F10: 0x01000039,
+    AsciiTilde: 0x7E
 };
 
 /**

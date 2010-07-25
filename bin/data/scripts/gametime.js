@@ -255,7 +255,7 @@ var TimeReference;
         SaveGames.addSavingListener(save);
 
         var gameTimeTick = function() {
-            GameTime.addTime(60); // One minute per second for now.
+            GameTime.addTime(1); // One minute per second for now.
             gameView.addVisualTimer(100, gameTimeTick);
         };
         gameView.addVisualTimer(1000, gameTimeTick);

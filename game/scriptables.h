@@ -30,6 +30,7 @@ namespace EvilTemple {
     public slots:
         bool hasAnimation(const QString &name) const;
         QScriptValue animationDps(const QString &name) const;
+        QScriptValue animationFrames(const QString &name) const;
 
     private:
         SharedModel data() const;

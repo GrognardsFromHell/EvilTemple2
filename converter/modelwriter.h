@@ -9,7 +9,7 @@
 class ModelWriter
 {
 public:
-    ModelWriter(QDataStream &stream);
+    ModelWriter(const QString &filename, QDataStream &stream);
 
     void writeBones(const Troika::Skeleton *skeleton);
     void writeTextures(const QList<HashedData> &textures);
@@ -31,7 +31,7 @@ public:
                 MaterialReferences = 3,
         Geometry = 4,
         Faces = 5,
-        Bones = 6, // Skeletal data
+        Skeleton = 6, // Skeletal data
         BoneAttachments = 7, // Assigns vertices to bones
         BoundingVolumes = 8, // Bounding volumes,
         Animations = 9, // Animations
@@ -47,6 +47,7 @@ private:
     uint lastChunkStart;
     QDataStream &stream;
     uint chunks;
+    QString mFilename;
 };
 
 #endif // MODELWRITER_H

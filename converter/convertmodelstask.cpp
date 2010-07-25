@@ -20,7 +20,6 @@ static void writeDebugBoneHierarchy(QTextStream &stream,
                              const Troika::Bone &bone,
                              const QVector<Troika::Bone> &bones,
                              int indent = 0);
-static bool writeModel(IFileWriter *writer, Troika::MeshModel *model, QDataStream &stream);
 
 ConvertModelsTask::ConvertModelsTask(IConversionService *service, QObject *parent)
     : ConversionTask(service, parent)
@@ -234,7 +233,7 @@ bool ConvertModelsTask::convertModel(IFileWriter *output, const QString &filenam
     stream.setByteOrder(QDataStream::LittleEndian);
     stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
 
-    writeModel(output, model, stream);
+    writeModel(filename, output, model, stream);
 
     modelBuffer.close();
 
@@ -403,11 +402,12 @@ static void writeDebugBoneHierarchy(QTextStream &stream,
             writeDebugBoneHierarchy(stream, bones[i], bones, indent + 1);
 }
 
-bool ConvertModelsTask::writeModel(IFileWriter *output, Troika::MeshModel *model, QDataStream &stream)
+bool ConvertModelsTask::writeModel(const QString &filename, IFileWriter *output,
+                                   Troika::MeshModel *model, QDataStream &stream)
 {
     const bool external = true;
 
-    ModelWriter writer(stream);
+    ModelWriter writer(filename, stream);
 
     QHash< QString, QSharedPointer<Troika::Material> > groupedMaterials;
 

@@ -595,7 +595,7 @@ namespace EvilTemple {
             mParticleType = type;
         }
 
-        void setBoneName(const QString &boneName)
+        void setBoneName(const QByteArray &boneName)
         {
             mBoneName = boneName;
         }
@@ -622,6 +622,8 @@ namespace EvilTemple {
             return mParticleSystem;
         }
 
+        void resumeAfterInactivity(float inactiveTime);
+
     private:
         void updateBuffers();
 
@@ -647,7 +649,7 @@ namespace EvilTemple {
 
         SpaceType mEmitterSpace;
 
-        QString mBoneName; // For direct bone refs
+        QByteArray mBoneName; // For direct bone refs
 
         QString mName;
 
@@ -678,9 +680,9 @@ namespace EvilTemple {
         float mPartialSpawnedParticles; // If the elapsed time is not enough to spawn another particle, it is accumulated.
         bool mBuffersInvalid;
 
-        bool mWarnedAboutBoneSpace;
-
         float mSecondsSinceLastRender;
+
+        bool mWarnedAboutBoneSpace;
 
         Q_DISABLE_COPY(Emitter);
     };
@@ -722,6 +724,26 @@ namespace EvilTemple {
         mParticleColor.upload(particleColor, sizeof(uint) * count);
 
         mBuffersInvalid = true;
+    }
+
+    void Emitter::resumeAfterInactivity(float inactiveTime)
+    {
+        mSecondsSinceLastRender = 0;
+
+        // If the emitter has a limited lifespan, we ensure it's killed of here
+        if (mLifetime < std::numeric_limits<float>::infinity()) {
+            mElapsedTime += inactiveTime / ParticlesTimeUnit;
+            return;
+        }
+
+        // Advance all particles into the future
+        for (int i = 0; i < mParticles.size(); ++i) {
+            //mParticles[i].startTime += inactiveTime / ParticlesTimeUnit;
+            //mParticles[i].expireTime += inactiveTime / ParticlesTimeUnit;
+        }
+
+        mPartialSpawnedParticles = 0;
+
     }
 
     void Emitter::spawnParticle(float atTime)
@@ -806,15 +828,17 @@ namespace EvilTemple {
          In case the emitter space is "Bones", a bone is randomly selected to spawn the particle
          */
         ModelInstance *modelInstance = mParticleSystem->modelInstance();
-        if (modelInstance) {
+        if (modelInstance && modelInstance->skeleton()) {
             Matrix4 flipZ;
             flipZ.setToIdentity();
             flipZ(2,2) *= -1;
 
+            const Skeleton *skeleton = modelInstance->skeleton();
+
             if (mEmitterSpace == Space_RandomBone) {
                 while (true) {
                     // Choose a bone at random (?)
-                    const QVector<Bone> &bones = modelInstance->model()->bones();
+                    const QVector<Bone> &bones = skeleton->bones();
                     Q_ASSERT(bones.size() > 1);
                     const Bone &bone = bones[1 + (rand() % (bones.size() - 1))];
 
@@ -827,17 +851,17 @@ namespace EvilTemple {
                         || bone.name() == "Origin" || bone.name() == "Footstep" || bone.name() == "Pony")
                         continue;
 
-                    Matrix4 boneSpace = flipZ * modelInstance->getBoneSpace(bone.boneId()) * flipZ;
+                    Matrix4 boneSpace = flipZ * bone.fullWorld() * flipZ;
                     Vector4 trans = boneSpace.column(3);
                     trans.setW(0);
                     particle.position += trans;
                     break;
                 }
             } else if (mEmitterSpace == Space_Bone) {
-                int boneId = modelInstance->model()->bone(mBoneName);
+                const Bone *bone = skeleton->bone(mBoneName);
 
-                if (boneId != -1) {
-                    Matrix4 boneSpace = flipZ * modelInstance->getBoneSpace(boneId) * flipZ;
+                if (bone) {
+                    Matrix4 boneSpace = flipZ * bone->fullWorld() * flipZ;
                     Vector4 trans = boneSpace.column(3);
                     trans.setW(0);
                     particle.position += trans;
@@ -1017,8 +1041,12 @@ namespace EvilTemple {
         if (mEmitterSpace == Space_Bone) {
             ModelInstance *modelInstance = mParticleSystem->modelInstance();
 
-            if (!modelInstance || !modelInstance->model() || modelInstance->model()->bone(mBoneName) == -1)
+            if (!modelInstance || !modelInstance->skeleton() || !modelInstance->skeleton()->bone(mBoneName))
                 return;
+        }
+
+        if (mElapsedTime > mLifetime) {
+            mExpired = true;
         }
 
         // Spawn new particles
@@ -1032,10 +1060,6 @@ namespace EvilTemple {
 
             // A slight hack that prevents spawn-spikes
             mPartialSpawnedParticles = remainingSpawnTime;
-
-            if (mElapsedTime > mLifetime) {
-                mExpired = true;
-            }
         }
 
         updateParticles(timeUnits);
@@ -1269,6 +1293,7 @@ namespace EvilTemple {
 
     void Emitter::renderPoints(RenderStates &renderStates)
     {
+        qDebug("RENDERING POINTS");
         glMatrixMode(GL_PROJECTION);
         glLoadMatrixf(renderStates.projectionMatrix().data());
 
@@ -1393,34 +1418,6 @@ namespace EvilTemple {
         mParticleIndexBuffer.bind();
         SAFE_GL(glDrawElements(GL_QUADS, mParticles.size() * 4, GL_UNSIGNED_SHORT, 0));
 
-        /*foreach (const Particle &particle, mParticles) {
-            float d = particle.scale / 100.0 * 128;
-            glBegin(GL_QUADS);
-            switch (mParticleType) {
-            case Type_Sprite:
-                glVertexAttrib2f(texAttrib, 0, 0);
-                glVertexAttrib4fv(posAttrib, Vector4(d/2, d, -d/2, 1).data());
-                glVertexAttrib2f(texAttrib, 0, 1);
-                glVertexAttrib4fv(posAttrib, Vector4(d/2, -d, -d/2, 1).data());
-                glVertexAttrib2f(texAttrib, 1, 1);
-                glVertexAttrib4fv(posAttrib, Vector4(-d/2, -d, d/2, 1).data());
-                glVertexAttrib2f(texAttrib, 1, 0);
-                glVertexAttrib4fv(posAttrib, Vector4(-d/2, d, d/2, 1).data());
-                break;
-            case Type_Disc:
-                glVertexAttrib2f(texAttrib, 0, 0);
-                glVertexAttrib4fv(posAttrib, Vector4(d, 0, 0, 1).data());
-                glVertexAttrib2f(texAttrib, 0, 1);
-                glVertexAttrib4fv(posAttrib, Vector4(0, 0, d, 1).data());
-                glVertexAttrib2f(texAttrib, 1, 1);
-                glVertexAttrib4fv(posAttrib, Vector4(-d, 0, 0, 1).data());
-                glVertexAttrib2f(texAttrib, 1, 0);
-                glVertexAttrib4fv(posAttrib, Vector4(0, 0, -d, 1).data());
-                break;
-            }
-            glEnd();
-        }*/
-
         mParticleIndexBuffer.unbind();
 
         // Unbind attributes
@@ -1432,7 +1429,7 @@ namespace EvilTemple {
         glDepthMask(GL_TRUE);
         glDisable(GL_BLEND);
         glBlendEquation(GL_FUNC_ADD);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
         pass.program->unbind();
         mSecondsSinceLastRender = 0;
@@ -1541,6 +1538,13 @@ namespace EvilTemple {
     void ParticleSystem::render(RenderStates &renderStates, MaterialState *overrideMaterial) {
         ProfileScope<Profiler::ParticleSystemRender> profiler;
 
+        // If we were inside the shutoff-time, we have to reset the elapsed time
+        if (d->mTimeSinceLastRendered > 3) {
+            foreach (Emitter *emitter, d->emitters) {
+                emitter->resumeAfterInactivity(d->mTimeSinceLastRendered);
+            }
+        }
+
         d->mTimeSinceLastRendered = 0;
 
         bool allDead = true;
@@ -1578,7 +1582,7 @@ namespace EvilTemple {
         float mLifespan;
         ParticleBlendMode mBlendMode;
         SpaceType mEmitterSpace;
-        QString mBoneName; // For mEmitterSpace == Space_Bone
+        QByteArray mBoneName; // For mEmitterSpace == Space_Bone
         Property mScale;
         float mDelay;
 
@@ -1693,10 +1697,10 @@ namespace EvilTemple {
             mEmitterSpace = Space_World;
         } else if (space == "node pos") {
             mEmitterSpace = Space_Bone;
-            mBoneName = element.attribute("spaceNode");
+            mBoneName = element.attribute("spaceNode").toUtf8();
         } else if (space == "node ypr") {
             mEmitterSpace = Space_Bone;
-            mBoneName = element.attribute("spaceNode");
+            mBoneName = element.attribute("spaceNode").toUtf8();
         } else {
             // TODO: Implement them all
             mEmitterSpace = Space_World;
@@ -1955,49 +1959,52 @@ namespace EvilTemple {
         {
             mSpriteMaterial = materials->load(":/material/sprite_material.xml");
 
-            // Set a few uniforms that never change
-            GLfloat positionOffsetsSprite[4*4] = {
-                -0.5, 0.5, 0, 0,
-                -0.5, -0.5, 0, 0,
-                0.5, -0.5, 0, 0,
-                0.5, 0.5, 0, 0
-            };
+            if (mSpriteMaterial) {
 
-            GLfloat texCoords[4*2] = {
-                0, 0,
-                0, 1,
-                1, 1,
-                1, 0
-            };
+                // Set a few uniforms that never change
+                GLfloat positionOffsetsSprite[4*4] = {
+                    -0.5, 0.5, 0, 0,
+                    -0.5, -0.5, 0, 0,
+                    0.5, -0.5, 0, 0,
+                    0.5, 0.5, 0, 0
+                };
 
-            GLfloat positionOffsetsDisc[4*4] = {
-                -1, 0, -1, 0,
-                1, 0, -1, 0,
-                1, 0, 1, 0,
-                -1, 0, 1, 0
-            };
+                GLfloat texCoords[4*2] = {
+                    0, 0,
+                    0, 1,
+                    1, 1,
+                    1, 0
+                };
 
-            for (int i = 0; i < mSpriteMaterial->passCount; ++i) {
-                MaterialPassState &pass = mSpriteMaterial->passes[i];
+                GLfloat positionOffsetsDisc[4*4] = {
+                    -1, 0, -1, 0,
+                    1, 0, -1, 0,
+                    1, 0, 1, 0,
+                    -1, 0, 1, 0
+                };
 
-                pass.program->bind();
+                for (int i = 0; i < mSpriteMaterial->passCount; ++i) {
+                    MaterialPassState &pass = mSpriteMaterial->passes[i];
 
-                int location = pass.program->uniformLocation("positionOffsetsSprite");
-                if (location != -1) {
-                    SAFE_GL(glUniform4fv(location, 4, positionOffsetsSprite));
+                    pass.program->bind();
+
+                    int location = pass.program->uniformLocation("positionOffsetsSprite");
+                    if (location != -1) {
+                        SAFE_GL(glUniform4fv(location, 4, positionOffsetsSprite));
+                    }
+
+                    location = pass.program->uniformLocation("texCoords");
+                    if (location != -1) {
+                        SAFE_GL(glUniform2fv(location, 4, texCoords));
+                    }
+
+                    location = pass.program->uniformLocation("positionOffsetsDisc");
+                    if (location != -1) {
+                        SAFE_GL(glUniform4fv(location, 4, positionOffsetsDisc));
+                    }
+
+                    pass.program->unbind();
                 }
-
-                location = pass.program->uniformLocation("texCoords");
-                if (location != -1) {
-                    SAFE_GL(glUniform2fv(location, 4, texCoords));
-                }
-
-                location = pass.program->uniformLocation("positionOffsetsDisc");
-                if (location != -1) {
-                    SAFE_GL(glUniform4fv(location, 4, positionOffsetsDisc));
-                }
-
-                pass.program->unbind();
             }
         }
 

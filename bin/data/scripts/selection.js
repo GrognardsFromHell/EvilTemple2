@@ -47,7 +47,7 @@ var Selection = {};
             if (currentSelection.indexOf(critter) != -1)
                 return;
 
-            if (!Party.isMember(critter)) {
+            if (!editMode && !Party.isMember(critter)) {
                 print("Trying to select critter " + critter.id + ", which is not part of the party.");
                 return;
             }

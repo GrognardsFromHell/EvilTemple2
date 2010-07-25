@@ -114,7 +114,6 @@ public:
     {
         SAFE_GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mMesh->indexBuffer()));
         SAFE_GL(glDrawElements(GL_TRIANGLES, mMesh->faceCount(), GL_UNSIGNED_SHORT, 0));
-        SAFE_GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
     }
 
     GLint buffer(const MaterialPassAttributeState &attribute) const

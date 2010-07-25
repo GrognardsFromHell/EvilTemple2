@@ -15,6 +15,8 @@
 #include "util.h"
 #include "vertexbufferobject.h"
 
+#include "skeleton.h"
+
 #include <cmath>
 
 #include <gamemath.h>
@@ -61,7 +63,7 @@ namespace EvilTemple {
     private:
         int mBoneCount; // Number of bones this vertex is attached to
 
-        static const uint MaxCount = 6; // Maximum number of attachments
+        static const uint MaxCount = 4; // Maximum number of attachments
 
         int mBones[MaxCount]; // Index to every bone this vertex is attached to
 
@@ -369,112 +371,6 @@ namespace EvilTemple {
         return mAnimationBonesMap;
     }
 
-    /**
-    A bone for skeletal animation
-    */
-    class Bone : public AlignedAllocation
-    {
-        friend class Model;
-    public:
-
-        Bone() : mParent(NULL)
-        {
-        }
-
-        /**
-         * Returns the name of this bone.
-         */
-        const QString &name() const;
-
-        /**
-                Id of this bone.
-      */
-        uint boneId() const;
-
-        /**
-     * Returns the parent of this bone. NULL if this bone has no parent.
-     */
-        const Bone *parent() const;
-
-        /**
-     * Transforms from object space into this bone's local space, assuming the default pose of the skeleton.
-     */
-        const Matrix4 &fullWorldInverse() const;
-
-        /**
-     * Transforms from this bone's space into the local space of the parent or in case of a bone without a parent
-     * into object space.
-     */
-        const Matrix4 &relativeWorld() const;
-
-        void setBoneId(uint id);
-
-        void setName(const QString &name);
-
-        void setParent(const Bone *bone);
-
-        void setFullWorldInverse(const Matrix4 &fullWorldInverse);
-
-        void setRelativeWorld(const Matrix4 &relativeWorld);
-
-    private:
-        uint mBoneId;
-        QString mName;
-        const Bone *mParent; // Undeletable ref to parent
-        Matrix4 mFullWorldInverse;
-        Matrix4 mRelativeWorld;
-    };
-
-    inline uint Bone::boneId() const
-    {
-        return mBoneId;
-    }
-
-    inline const QString &Bone::name() const
-    {
-        return mName;
-    }
-
-    inline const Bone *Bone::parent() const
-    {
-        return mParent;
-    }
-
-    inline const Matrix4 &Bone::fullWorldInverse() const
-    {
-        return mFullWorldInverse;
-    }
-
-    inline const Matrix4 &Bone::relativeWorld() const
-    {
-        return mRelativeWorld;
-    }
-
-    inline void Bone::setBoneId(uint id)
-    {
-        mBoneId = id;
-    }
-
-    inline void Bone::setName(const QString &name)
-    {
-        mName = name;
-    }
-
-    inline void Bone::setParent(const Bone *bone)
-    {
-        mParent = bone;
-    }
-
-    inline void Bone::setFullWorldInverse(const Matrix4 &fullWorldInverse)
-    {
-        mFullWorldInverse = fullWorldInverse;
-    }
-
-    inline void Bone::setRelativeWorld(const Matrix4 &relativeWorld)
-    {
-        mRelativeWorld = relativeWorld;
-    }
-
     class Model : public AlignedAllocation
     {
     public:
@@ -506,15 +402,7 @@ namespace EvilTemple {
 
         const QString &error() const;
 
-        /**
-         * Returns the bones of the skeleton in this model. If it has no skeleton, the list is empty.
-         */
-        const QVector<Bone> &bones() const;
-
-        /**
-          Finds a bone with the given name (case-insensitive). -1 for non existing bones.
-          */
-        int bone(const QString &name) const;
+        const Skeleton *skeleton() const;
 
         /**
          * Returns an animation by name. NULL if no such animation is found.
@@ -544,13 +432,13 @@ namespace EvilTemple {
 
         QScopedArrayPointer<Animation> mAnimations;
 
-        QVector<Bone> mBones;
-
         QScopedArrayPointer<MaterialState> materialState;
 
         QStringList mPlaceholders;
 
         bool mNeedsNormalsRecalculated;
+
+        Skeleton *mSkeleton;
 
         AlignedPointer boneAttachmentData;
         AlignedPointer vertexData;
@@ -592,6 +480,11 @@ namespace EvilTemple {
         return mBoundingBox;
     }
 
+    inline const Skeleton *Model::skeleton() const
+    {
+        return mSkeleton;
+    }
+
     inline const Animation *Model::animation(const QString &name) const
     {
         AnimationMap::const_iterator it = mAnimationMap.find(name);
@@ -611,11 +504,6 @@ namespace EvilTemple {
     inline const QString &Model::error() const
     {
         return mError;
-    }
-
-    inline const QVector<Bone> &Model::bones() const
-    {
-        return mBones;
     }
 
     typedef QSharedPointer<Model> SharedModel;

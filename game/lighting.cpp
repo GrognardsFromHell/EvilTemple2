@@ -17,7 +17,6 @@ Vector4 Light::position() const
 
         const Matrix4 &fullTransform = mParentNode->fullTransform();
 
-
         return fullTransform * pos;
     }
 }

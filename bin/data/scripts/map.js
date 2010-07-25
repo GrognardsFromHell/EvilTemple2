@@ -164,6 +164,9 @@ var Map = function(id) {
         for (i = 0; i < mapObj.particleSystems.length; ++i) {
             obj = mapObj.particleSystems[i];
 
+            if (!obj.day)
+                continue;
+
             sceneNode = gameView.scene.createNode();
             sceneNode.interactive = false;
             sceneNode.position = obj.position;
@@ -449,7 +452,6 @@ var Map = function(id) {
         }
 
         var factor = (now - fadingStart) / fadingDuration;
-        print("Fade factor: " + factor);
 
         var color = Maps.currentMap.renderBackgroundMap.color;
 

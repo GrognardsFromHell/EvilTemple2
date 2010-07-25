@@ -3,39 +3,41 @@ const int Light_Directional = 1;
 const int Light_Point = 2;
 const int Light_Spot = 3;
 
-uniform int lightSourceType;
-uniform vec4 lightSourceColor;
-uniform float lightSourceAttenuation;
+/*
+const int MaxLights = 6;
+uniform vec4 lightSourceColor[MaxLights];
+*/
 
-varying vec3 normal;
-varying vec3 lightVector;
-varying vec3 halfVector;
-varying float lightDistance;
+/*varying vec3 normal;
+varying vec3 lightVector[MaxLights];
+varying vec3 halfVector[MaxLights];
+varying float attenuation[MaxLights];*/
+
+varying vec4 lightingColor;
 
 vec4 lighting(float shininess, vec4 materialColor, vec4 specularColor) {
-    vec4 color = vec4(0,0,0,1);
+    return lightingColor * materialColor;
+
+    /*vec4 color = vec4(0,0,0,1);
 
     vec3 n = normalize(normal);
-    vec3 lightDir = normalize(lightVector);
 
-    float attenuation = 1.0f;
+    for (int i = 0; i < MaxLights; ++i) {
+        vec3 lightDir = normalize(lightVector[i]);
 
-    if (lightSourceType == Light_Point || lightSourceType == Light_Spot) {
-        attenuation = min(1, 1.0 / (lightSourceAttenuation * lightDistance * lightDistance));
-    }
+        // compute the dot product between normal and ldir
+        float NdotL = max(dot(n,lightDir), 0.0f);
 
-    /* compute the dot product between normal and ldir */
-    float NdotL = max(dot(n,lightDir), 0.0f);
+        if (NdotL > 0.0) {
+            color += attenuation[i] * lightSourceColor[i] * NdotL;
 
-    if (NdotL > 0.0) {
-            color += attenuation * lightSourceColor * NdotL;
-
-            vec3 halfV = normalize(halfVector);
+            vec3 halfV = normalize(halfVector[i]);
             float NdotHV = max(dot(n, halfV),0.0);
-            color += specularColor * attenuation * lightSourceColor * pow(NdotHV, shininess);
+            color += specularColor * attenuation[i] * lightSourceColor[i] * pow(NdotHV, shininess);
+        }
     }
 
-    return color * materialColor;
+    return color * materialColor;*/
 }
 
 vec4 lighting(float shininess, vec4 materialColor)

@@ -55,7 +55,8 @@ SOURCES += \
     models.cpp \
     imageuploader.cpp \
     selectioncircle.cpp \
-    savegames.cpp
+    savegames.cpp \
+    skeleton.cpp
 HEADERS += \
     mainwindow.h \
     game.h \
@@ -97,7 +98,8 @@ HEADERS += \
     models.h \
     imageuploader.h \
     selectioncircle.h \
-    savegames.h
+    savegames.h \
+    skeleton.h
 OTHER_FILES += \
     resources/schema/materialfile.xsd \
     resources/materials/map_material.xml \

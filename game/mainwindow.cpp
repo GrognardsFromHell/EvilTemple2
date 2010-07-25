@@ -158,6 +158,7 @@ namespace EvilTemple {
         windowTitle.append(QString(" Mat-States: %1").arg(getActiveMaterialStates()));
         windowTitle.append(QString(" NavMeshes: %1").arg(getActiveNavigationMeshes()));
         windowTitle.append(QString(" Renderables: %1").arg(getActiveRenderables()));
+        windowTitle.append(QString(" FrameTime: %1").arg(d_ptr->gameView->getFrameTimeAverage()));
 
         Vector4 worldPosition = d_ptr->gameView->worldCenter();
         windowTitle.append(QString(" (%1,%2,%3)").arg((int)worldPosition.x())

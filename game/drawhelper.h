@@ -157,28 +157,41 @@ struct ModelDrawStrategy : public DrawStrategy {
 
             bool first = true;
 
+            static const int MaxLightsPerPass = 12;
+
+            GLint types[MaxLightsPerPass] = {0, };
+            Vector4 color[MaxLightsPerPass];
+            Vector4 direction[MaxLightsPerPass];
+            Vector4 position[MaxLightsPerPass];
+            float attenuation[MaxLightsPerPass];
+
             // Draw again for every light affecting this mesh
-            foreach (const Light *light, renderStates.activeLights()) {
-                switch (light->type()) {
-                case Light::Directional:
-                    SAFE_GL(glUniform1i(typePos, 1));
-                    break;
-                case Light::Point:
-                    SAFE_GL(glUniform1i(typePos, 2));
-                    break;
-                case Light::Spot:
-                    SAFE_GL(glUniform1i(typePos, 3));
-                    break;
+            for (int i = 0; i < renderStates.activeLights().size(); i += MaxLightsPerPass) {
+                int lightsThisPass = qMin(MaxLightsPerPass, renderStates.activeLights().size() - i);
+
+                for (int j = 0; j < lightsThisPass; ++j) {
+                    const Light *light = renderStates.activeLights().at(i + j);
+
+                    types[j] = light->type();
+                    color[j] = light->color();
+                    direction[j] = light->direction();
+                    position[j] = light->position();
+                    attenuation[j] = light->attenuation();
                 }
 
-                SAFE_GL(glUniform4fv(colorPos, 1, light->color().data()));
-                SAFE_GL(glUniform4fv(directionPos, 1, light->direction().data()));
-                SAFE_GL(glUniform4fv(positionPos, 1, light->position().data()));
-                SAFE_GL(glUniform1f(attenuationPos, light->attenuation()));
+                for (int j = lightsThisPass; j < MaxLightsPerPass; ++j) {
+                    color[j] = Vector4(0,0,0,0);
+                }
+
+                SAFE_GL(glUniform1iv(typePos, MaxLightsPerPass, types));
+                SAFE_GL(glUniform4fv(colorPos, MaxLightsPerPass, (GLfloat*)color);
+                SAFE_GL(glUniform4fv(directionPos, MaxLightsPerPass, (GLfloat*)direction)));
+                SAFE_GL(glUniform4fv(positionPos, MaxLightsPerPass, (GLfloat*)position));
+                SAFE_GL(glUniform1fv(attenuationPos, MaxLightsPerPass, (GLfloat*)attenuation));
 
                 SAFE_GL(glDrawElements(GL_TRIANGLES, mElementCount, GL_UNSIGNED_SHORT, 0));
 
-                if (first) {
+                if (first && i + 1 < renderStates.activeLights().size()) {
                     SAFE_GL(glDepthFunc(GL_LEQUAL));
                     SAFE_GL(glEnable(GL_CULL_FACE));
 
@@ -191,8 +204,6 @@ struct ModelDrawStrategy : public DrawStrategy {
             SAFE_GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 
             SAFE_GL(glDepthFunc(GL_LESS));
-
-            SAFE_GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
         } else {
             SAFE_GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mBufferId));
             SAFE_GL(glDrawElements(GL_TRIANGLES, mElementCount, GL_UNSIGNED_SHORT, 0));

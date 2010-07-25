@@ -104,7 +104,8 @@ public:
         colorLocations.reserve(materialState.passCount);
         for (int i = 0; i < materialState.passCount; ++i) {
             int location = materialState.passes[i].program->uniformLocation("color");
-            colorLocations.append(location);
+            if (location != -1)
+                colorLocations.append(location);
         }
     }
 

@@ -188,21 +188,62 @@ namespace EvilTemple {
             return false;
         }
 
+        updateActiveUniforms();
+        updateActiveAttributes();
+
         return true;
     }
 
-    GLint GLSLProgram::attributeLocation(const char *name)
+    void GLSLProgram::updateActiveUniforms()
     {
-        GLint location;
-        SAFE_GL(location = glGetAttribLocation(mProgramId, name));
-        return location;
+        GLint activeUniforms;
+        SAFE_GL(glGetProgramiv(mProgramId, GL_ACTIVE_UNIFORMS, &activeUniforms));
+
+        GLint maxUniformLength;
+        SAFE_GL(glGetProgramiv(mProgramId, GL_ACTIVE_UNIFORM_MAX_LENGTH, &maxUniformLength));
+
+        // The GL spec is not clear whether GL_ACTIVE_UNIFORM_MAX_LENGTH includes null-termination
+        QByteArray uniformName(maxUniformLength + 1, Qt::Uninitialized);
+
+        // Get the uniform-name of each index
+        mUniforms.clear();
+        mUniforms.reserve(activeUniforms);
+        for (int i = 0; i < activeUniforms; ++i) {
+            GLsizei maxLength = uniformName.size();
+            GLint size;
+            GLenum type;
+            SAFE_GL(glGetActiveUniform(mProgramId, i, maxLength, &maxLength, &size, &type, uniformName.data()));
+            int locationId = glGetUniformLocation(mProgramId, uniformName.constData());
+
+            QByteArray truncatedName(uniformName.constData());
+            mUniforms.insert(truncatedName, locationId);
+        }
     }
 
-    GLint GLSLProgram::uniformLocation(const char *name)
+    void GLSLProgram::updateActiveAttributes()
     {
-        GLint location;
-        SAFE_GL(location = glGetUniformLocation(mProgramId, name));
-        return location;
+        GLint activeAttributes;
+        SAFE_GL(glGetProgramiv(mProgramId, GL_ACTIVE_ATTRIBUTES, &activeAttributes));
+
+        GLint maxAttributeLength;
+        SAFE_GL(glGetProgramiv(mProgramId, GL_ACTIVE_ATTRIBUTE_MAX_LENGTH, &maxAttributeLength));
+
+        // The GL spec is not clear whether GL_ACTIVE_ATTRIBUTE_MAX_LENGTH includes null-termination
+        QByteArray attributeName(maxAttributeLength + 1, Qt::Uninitialized);
+
+        // Get the attribute-name of each index
+        mAttributes.clear();
+        mAttributes.reserve(activeAttributes);
+        for (int i = 0; i < activeAttributes; ++i) {
+            GLsizei maxLength = attributeName.size();
+            GLint size;
+            GLenum type;
+            SAFE_GL(glGetActiveAttrib(mProgramId, i, maxLength, &maxLength, &size, &type, attributeName.data()));
+            int locationId = glGetAttribLocation(mProgramId, attributeName.constData());
+
+            QByteArray truncatedName(attributeName.constData());
+            mAttributes.insert(truncatedName, locationId);
+        }
     }
 
     void GLSLProgram::release()

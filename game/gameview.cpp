@@ -55,6 +55,8 @@ static qint64 getTicks() {
 
 namespace EvilTemple {
 
+    static const int MaxFrameTimes = 100;
+
     class VisualTimer {
     public:
 
@@ -229,12 +231,10 @@ namespace EvilTemple {
             audioEngine.setListenerPosition(Vector4(worldX, 0, worldY, 1));
         }
 
-        Vector4 worldPositionFromScreen(const QPoint &point) {
-            GLint viewport[4];
-            glGetIntegerv(GL_VIEWPORT, viewport);
-
-            float width = viewport[2];
-            float height = viewport[3];
+        Vector4 worldPositionFromScreen(const QPoint &point)
+        {
+            float width = viewportSize.width();
+            float height = viewportSize.height();
 
             // Construct a picking ray
             Vector4 nearPlanePoint(2 * point.x() / width - 1,
@@ -261,11 +261,8 @@ namespace EvilTemple {
 
         Ray3d getPickingRay(float x, float y)
         {
-            GLint viewport[4];
-            glGetIntegerv(GL_VIEWPORT, viewport);
-
-            float width = viewport[2];
-            float height = viewport[3];
+            float width = viewportSize.width();
+            float height = viewportSize.height();
 
             // Construct a picking ray
             Vector4 nearPlanePoint(2 * x / width - 1,
@@ -352,6 +349,8 @@ namespace EvilTemple {
         Scene scene;
 
         Vector4 lastAudioEnginePosition;
+
+        QList<float> lastFrameTimes;
 
         void playVideo(const QString &video);
 
@@ -540,6 +539,12 @@ namespace EvilTemple {
 
         Profiler::newFrame();
 
+        ProfileScope<Profiler::FrameRender> profiler;
+
+#ifdef Q_OS_WIN
+        qint64 startTime = getTicks();
+#endif
+
         while (glGetError() != GL_NO_ERROR);
 
         if (d->mPlayingVideo) {
@@ -652,6 +657,13 @@ namespace EvilTemple {
         glBindBuffer(GL_ARRAY_BUFFER, 0);
 
         SAFE_GL(glDisable(GL_MULTISAMPLE));
+
+#ifdef Q_OS_WIN
+        qint64 elapsed = getTicks() - startTime;
+        d->lastFrameTimes.append(elapsed);
+        if (d->lastFrameTimes.size() > MaxFrameTimes)
+            d->lastFrameTimes.removeAt(0);
+#endif
     }
 
     QObject *GameView::showView(const QString &url)
@@ -1029,6 +1041,45 @@ namespace EvilTemple {
         }
 
         QGraphicsView::keyPressEvent(event);
+    }
+
+    QImage GameView::getFrameTimeHistogram()
+    {
+        QImage result(MaxFrameTimes, 50, QImage::Format_ARGB32);
+        result.fill(0);
+
+        int sx = result.width() - d->lastFrameTimes.size();
+
+        float maxTime = 50;
+        for (int i = 0; i < d->lastFrameTimes.size(); ++i) {
+            if (d->lastFrameTimes[i] > maxTime) {
+                maxTime = d->lastFrameTimes[i];
+            }
+        }
+
+        for (int i = 0; i < d->lastFrameTimes.size(); ++i) {
+            int height = d->lastFrameTimes[i] / maxTime * result.height();
+
+            for (int y = result.height() - 1; y >= result.height() - height; --y) {
+                result.setPixel(sx + i, y, qRgb(1, 0, 0));
+            }
+        }
+
+        return result;
+    }
+
+    float GameView::getFrameTimeAverage()
+    {
+        if (d->lastFrameTimes.isEmpty())
+            return 0;
+
+        float result = d->lastFrameTimes.at(0);
+
+        for (int i = 0; i < d->lastFrameTimes.size(); ++i) {
+            result += d->lastFrameTimes.at(i);
+        }
+
+        return result / d->lastFrameTimes.size();
     }
 
 }

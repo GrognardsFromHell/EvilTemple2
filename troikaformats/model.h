@@ -12,7 +12,7 @@
 #include <QtOpenGL>
 
 #include "qbox3d.h"
-#include "skeleton.h"
+#include "troika_skeleton.h"
 
 namespace Troika {
 

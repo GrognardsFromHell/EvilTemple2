@@ -20,7 +20,7 @@ MovableWindow {
             Text {
                anchors.left: parent.left
                anchors.right: parent.right
-               text: name
+               text: name + ' (' + frames + ' frames)'
                font.pointSize: 12
                font.family: "Fontin"
                font.bold: true
@@ -48,7 +48,8 @@ MovableWindow {
         listModel.clear();
         for (var i = 0; i < animations.length; ++i) {
             listModel.append({
-                name: animations[i]
+                name: animations[i].name,
+                frames: animations[i].frames
             });
         }
     }
