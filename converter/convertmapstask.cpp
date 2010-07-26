@@ -450,6 +450,24 @@ bool compareScale(const Vector4 &a, const Vector4 &b) {
     return (diff.x() <= scaleEpsilon && diff.y() <= scaleEpsilon && diff.z() <= scaleEpsilon);
 }
 
+/**
+  These properties become pre-baked.
+  */
+struct DagInstanceProperty {
+    float scaleX;
+    float scaleY;
+    float scaleZ;
+    float rotation;
+
+    bool operator ==(const DagInstanceProperty &other) const
+    {
+        return qFuzzyCompare(scaleX, other.scaleX)
+                && qFuzzyCompare(scaleY, other.scaleY)
+                && qFuzzyCompare(scaleZ, other.scaleZ)
+                && qFuzzyCompare(rotation, other.rotation);
+    }
+};
+
 void convertClippingMeshes(IConversionService *service, ZoneTemplate *zoneTemplate, IFileWriter *writer)
 {
     QByteArray clippingData;
@@ -459,13 +477,13 @@ void convertClippingMeshes(IConversionService *service, ZoneTemplate *zoneTempla
 
     // Create a list of all clipping geometry meshes
     QStringList clippingGeometryFiles;
-    QList< QList<Vector4> > scalingPerFile;
+    QList< QList<DagInstanceProperty> > instancesPerFile;
     foreach (GeometryObject *object, zoneTemplate->clippingGeometry()) {
         QString normalizedFilename = QDir::toNativeSeparators(object->mesh()).toLower();
 
         if (!clippingGeometryFiles.contains(normalizedFilename)) {
             clippingGeometryFiles.append(normalizedFilename);
-            scalingPerFile.append(QList<Vector4>());
+            instancesPerFile.append(QList<DagInstanceProperty>());
         }
     }
 
@@ -479,48 +497,37 @@ void convertClippingMeshes(IConversionService *service, ZoneTemplate *zoneTempla
         QString normalizedFilename = QDir::toNativeSeparators(object->mesh()).toLower();
         int fileIndex = (uint)clippingGeometryFiles.indexOf(normalizedFilename);
 
-        Vector4 scale(object->scale().x(), object->scale().y(), object->scale().z(), 1);
+        DagInstanceProperty instanceProperty;
+        instanceProperty.scaleX = object->scale().x();
+        instanceProperty.scaleY = object->scale().y();
+        instanceProperty.scaleZ = object->scale().z();
+        instanceProperty.rotation = object->rotation();
 
-        bool scaleExists = false;
-        foreach (Vector4 existingScale, scalingPerFile[fileIndex]) {
-            if (compareScale(existingScale, scale)) {
-                scaleExists = true;
+        bool instanceExists = false;
+        foreach (DagInstanceProperty existingInstance, instancesPerFile[fileIndex]) {
+            if (existingInstance ==  instanceProperty) {
+                instanceExists = true;
                 break;
             }
         }
 
-        if (!scaleExists)
-            scalingPerFile[fileIndex].append(scale);
+        if (!instanceExists)
+            instancesPerFile[fileIndex].append(instanceProperty);
     }
 
     uint totalFileCount = 0;
 
     // Now we test if for any geometry object there are more than one scale versions
     for (int i = 0; i < clippingGeometryFiles.size(); ++i) {
-        totalFileCount += scalingPerFile[i].size();
-#ifndef QT_NO_DEBUG
-        if (scalingPerFile[i].size() > 1) {
-            qDebug("Clipping geometry file %s is used in %d different scales:", qPrintable(clippingGeometryFiles[i]), scalingPerFile[i].size());
+        totalFileCount += instancesPerFile[i].size();
+        if (instancesPerFile[i].size() > 1) {
+            qDebug("Clipping geometry file %s is used in %d different versions:",
+                   qPrintable(clippingGeometryFiles[i]), instancesPerFile[i].size());
         }
-#endif
     }
 
     // File header
     clippingStream << totalFileCount << (uint)zoneTemplate->clippingGeometry().size();
-
-    /**
-    These transformations come from the original game and are *constant*.
-    **/
-    // Old: -44
-    Quaternion rot1 = Quaternion::fromAxisAndAngle(1, 0, 0, -0.77539754f);
-    Matrix4 rotate1matrix = Matrix4::transformation(Vector4(1,1,1,0), rot1, Vector4(0,0,0,0));
-
-    // Old: 90-135
-    Quaternion rot2 = Quaternion::fromAxisAndAngle(0, 1, 0, 2.3561945f);
-    Matrix4 rotate2matrix = Matrix4::transformation(Vector4(1,1,1,0), rot2, Vector4(0,0,0,0));
-
-    Matrix4 baseView = rotate1matrix * rotate2matrix;
-    Matrix4 baseViewInverse = baseView.inverted();
 
     for (int i = 0; i < clippingGeometryFiles.size(); ++i) {
         Troika::DagReader reader(service->virtualFileSystem(), clippingGeometryFiles[i]);
@@ -532,35 +539,49 @@ void convertClippingMeshes(IConversionService *service, ZoneTemplate *zoneTempla
         /**
           Calculate the scaling matrix for each instance and transform the vertices ahead-of-time.
           */
-        foreach (Vector4 scale, scalingPerFile[i]) {
-            QVector<Vector4> scaledVertices(model->vertices().size());
+        foreach (const DagInstanceProperty &instance, instancesPerFile[i]) {
+            QVector<Vector4> instanceVertices(model->vertices().size());
 
-            // Switch z/y
-            if (qFuzzyCompare(scale.x(), 1) && qFuzzyCompare(scale.y(), 1) && qFuzzyCompare(scale.z(), 1)) {
-                for (int j = 0; j < scaledVertices.size(); ++j) {
-                    const Troika::Vertex &vertex = model->vertices()[j];
-                    Vector4 pos(vertex.positionX, vertex.positionY, vertex.positionZ, 1);
-                    scaledVertices[j] = pos;
-                }
-            } else {
-                Matrix4 scaleMatrix2d = Matrix4::scaling(scale.x(), scale.z(), scale.y());
-                Matrix4 scaleMatrix = baseViewInverse * scaleMatrix2d * baseView;
+            float scaleX = instance.scaleX;
+            float scaleY = instance.scaleY;
+            float scaleZ = instance.scaleZ;
+            float rotation = instance.rotation;
+            float rotCos = cos(rotation);
+            float rotSin = sin(rotation);
 
-                for (int j = 0; j < scaledVertices.size(); ++j) {
-                    const Troika::Vertex &vertex = model->vertices()[j];
-                    Vector4 pos(vertex.positionX, vertex.positionY, vertex.positionZ, 1);
-                    scaledVertices[j] = scaleMatrix.mapPosition(pos);
-                }
+            for (int j = 0; j < instanceVertices.size(); ++j) {
+                const Troika::Vertex &vertex = model->vertices()[j];
+
+                float x = vertex.positionX;
+                float y = vertex.positionY;
+                float z = vertex.positionZ;
+
+                float nx, ny, nz;
+
+                // Apply rotation, coordinate system already flipped.
+                nx = rotSin * z + rotCos * x;
+                ny = y;
+                nz = rotCos * z - rotSin * x;
+
+                float tx = 0.5f * scaleX * (nz - nx);
+                float ty = 0.5f * scaleY * (nx + nz);
+
+                nx = ty - tx;
+                ny = scaleZ * ny;
+                nz = tx + ty;
+
+                instanceVertices[j] = Vector4(nx, ny, nz, 1);
             }
 
-            Box3d boundingBox(scaledVertices[0], scaledVertices[0]);
+            // Calculate an axis-aligned bounding box.
+            Box3d boundingBox(instanceVertices[0], instanceVertices[0]);
 
-            Vector4 firstVertex = scaledVertices[0];
+            Vector4 firstVertex = instanceVertices[0];
             firstVertex.setW(0);
             float originDistanceSquared = firstVertex.lengthSquared();
 
-            for (int j = 1; j < scaledVertices.size(); ++j) {
-                Vector4 vertex = scaledVertices[j];
+            for (int j = 1; j < instanceVertices.size(); ++j) {
+                Vector4 vertex = instanceVertices[j];
                 boundingBox.merge(vertex);
                 vertex.setW(0);
                 originDistanceSquared = qMax<double>(originDistanceSquared, vertex.lengthSquared());
@@ -572,11 +593,11 @@ void convertClippingMeshes(IConversionService *service, ZoneTemplate *zoneTempla
                     << boundingBox.minimum().w() << boundingBox.maximum().x() << boundingBox.maximum().y()
                     << boundingBox.maximum().z() << boundingBox.maximum().w() << originDistance << originDistanceSquared;
 
-            clippingStream << (uint)scaledVertices.size() << (uint)model->faceGroups()[0]->faces().size() * 3;
+            clippingStream << (uint)instanceVertices.size() << (uint)model->faceGroups()[0]->faces().size() * 3;
 
             // We should apply the scaling here.
 
-            foreach (const Vector4 &vertex, scaledVertices) {
+            foreach (const Vector4 &vertex, instanceVertices) {
                 clippingStream << vertex.x() << vertex.y() << vertex.z() << vertex.w();
             }
 
@@ -595,14 +616,19 @@ void convertClippingMeshes(IConversionService *service, ZoneTemplate *zoneTempla
 
         // Find the filename/scale pair appropriate for this instance
         for (uint i = 0; i < fileNameIndex; ++i)
-            fileIndex += scalingPerFile[i].size();
+            fileIndex += instancesPerFile[i].size();
 
         bool found = false;
 
-        Vector4 scale(object->scale().x(), object->scale().y(), object->scale().z(), 1);
-        for (int i = 0; i < scalingPerFile[fileNameIndex].size(); ++i) {
-            Vector4 existingScale = scalingPerFile[fileNameIndex][i];
-            if (compareScale(existingScale, scale)) {
+        DagInstanceProperty instanceProperty;
+        instanceProperty.scaleX = object->scale().x();
+        instanceProperty.scaleY = object->scale().y();
+        instanceProperty.scaleZ = object->scale().z();
+        instanceProperty.rotation = object->rotation();
+
+        for (int i = 0; i < instancesPerFile[fileNameIndex].size(); ++i) {
+            DagInstanceProperty existing = instancesPerFile[fileNameIndex][i];
+            if (existing == instanceProperty) {
                 found = true;
                 break;
             }
@@ -612,7 +638,6 @@ void convertClippingMeshes(IConversionService *service, ZoneTemplate *zoneTempla
         Q_ASSERT(found);
 
         clippingStream << object->position().x() << object->position().y() << object->position().z() << (float)1
-                << deg2rad(object->rotation()) << (float)1
                 << fileIndex;
     }
 

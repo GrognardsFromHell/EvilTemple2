@@ -504,17 +504,13 @@ namespace Troika
             QVector3D position, scale;
             stream >> position >> scale;
 
-            float tmp = scale.z();
-            scale.setZ(scale.y());
-            scale.setY(tmp);
-
             float rotation;
             stream >> rotation;
 
             // TODO: The following transformation is incorrect and needs to be copied from the clipping geometry class
 
             GeometryObject *geometryMesh = new GeometryObject(position,
-                                                              rad2deg(rotation),
+                                                              rotation,
                                                               scale,
                                                               clippingMeshFiles[meshIndex]);
 

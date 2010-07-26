@@ -77,6 +77,9 @@ TestGLWidget::TestGLWidget(QWidget *parent) :
                     mTransformedVertices(NULL),
                     mScaleX(1), mScaleY(1), mScaleZ(1), mRotation(0)
 {
+    setScaleX(1.035002f);
+    setScaleY(1.025001);
+    setScaleZ(1);
 }
 
 TestGLWidget::~TestGLWidget()

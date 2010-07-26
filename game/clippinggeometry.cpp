@@ -92,12 +92,12 @@ public:
 
     void render(RenderStates &renderStates, MaterialState *overrideMaterial = NULL)
     {
-        glPolygonMode(GL_FRONT, GL_LINE);
+        // glPolygonMode(GL_FRONT, GL_LINE);
 
         DrawHelper<ClippingGeometryInstance,ClippingGeometryInstance> drawHelper;
         drawHelper.draw(renderStates, overrideMaterial ? overrideMaterial : mMaterial, *this, *this);
 
-        glPolygonMode(GL_FRONT, GL_FILL);
+        // glPolygonMode(GL_FRONT, GL_FILL);
     }
 
     const Box3d &boundingBox()
@@ -207,12 +207,10 @@ public:
 
         // Read instances
         Vector4 position;
-        float scale;
-        float rotation;
         int meshIndex;
 
         for (int i = 0; i < instanceCount; ++i) {
-            stream >> position >> rotation >> scale >> meshIndex;
+            stream >> position >> meshIndex;
 
             Q_ASSERT(meshIndex >= 0 && meshIndex < meshCount);
 
@@ -224,8 +222,6 @@ public:
             SceneNode *node = scene->createNode();
             instance->setParent(node);
             node->setPosition(position);
-            node->setScale(Vector4(scale, scale, scale, 1));
-            node->setRotation(Quaternion::fromAxisAndAngle(0, 1, 0, rotation));
             node->attachObject(instance);
         }
 

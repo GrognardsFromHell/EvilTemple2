@@ -4,7 +4,7 @@ TEMPLATE = app
 TARGET = converter
 
 QT += xml opengl xmlpatterns script
-CONFIG += qaxcontainer console
+CONFIG += qaxcontainer
 
 TEMPLE_LIBS += troikaformats qt3d minizip jpeg qjson glew python
 

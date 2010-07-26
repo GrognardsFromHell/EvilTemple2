@@ -36,9 +36,9 @@ void main() {
     </shader>
 
     <cullFace>false</cullFace>
-    <blend>true</blend>
+    <blend>false</blend>
     <blendFunc src="srcAlpha" dest="oneMinusSrcAlpha" />
-    <!--<colorMask red="false" blue="false" green="false" alpha="false" />-->
+    <colorMask red="false" blue="false" green="false" alpha="false" />
   </pass>
 
 </material>
