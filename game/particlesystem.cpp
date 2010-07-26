@@ -838,20 +838,20 @@ namespace EvilTemple {
             if (mEmitterSpace == Space_RandomBone) {
                 while (true) {
                     // Choose a bone at random (?)
-                    const QVector<Bone> &bones = skeleton->bones();
+                    const Skeleton::ConstBones &bones = skeleton->bones();
                     Q_ASSERT(bones.size() > 1);
-                    const Bone &bone = bones[1 + (rand() % (bones.size() - 1))];
+                    const Bone *bone = bones[1 + (rand() % (bones.size() - 1))];
 
                     // Skip a certain set of "ref" bones
-                    if (bone.name() == "groundParticleRef" || bone.name() == "Chest_ref" || bone.name() == "HandR_ref"
-                        || bone.name() == "HandL_ref" || bone.name() == "Head_ref" || bone.name() == "FootR_ref"
-                        || bone.name() == "FootL_ref" || bone.name() == "Bip01 Footsteps"
-                        || bone.name() == "Bip01" || bone.name() == "origin"
-                        || bone.name() == "EarthElemental_reg" || bone.name() == "Casting_ref"
-                        || bone.name() == "Origin" || bone.name() == "Footstep" || bone.name() == "Pony")
+                    if (bone->name() == "groundParticleRef" || bone->name() == "Chest_ref" || bone->name() == "HandR_ref"
+                        || bone->name() == "HandL_ref" || bone->name() == "Head_ref" || bone->name() == "FootR_ref"
+                        || bone->name() == "FootL_ref" || bone->name() == "Bip01 Footsteps"
+                        || bone->name() == "Bip01" || bone->name() == "origin"
+                        || bone->name() == "EarthElemental_reg" || bone->name() == "Casting_ref"
+                        || bone->name() == "Origin" || bone->name() == "Footstep" || bone->name() == "Pony")
                         continue;
 
-                    Matrix4 boneSpace = flipZ * bone.fullWorld() * flipZ;
+                    Matrix4 boneSpace = flipZ * bone->fullWorld() * flipZ;
                     Vector4 trans = boneSpace.column(3);
                     trans.setW(0);
                     particle.position += trans;

@@ -15,6 +15,7 @@ namespace EvilTemple {
   */
 class Bone : public AlignedAllocation
 {
+friend class Animation;
 public:
     Bone();
 
@@ -27,6 +28,11 @@ public:
         Id of this bone.
     */
     uint boneId() const;
+
+    /**
+     * Returns the parent of this bone. NULL if this bone has no parent.
+     */
+    Bone *parent();
 
     /**
      * Returns the parent of this bone. NULL if this bone has no parent.
@@ -48,11 +54,16 @@ public:
 
     void setName(const QByteArray &name);
 
-    void setParent(const Bone *bone);
+    void setParent(Bone *bone);
 
     void setFullWorldInverse(const Matrix4 &fullWorldInverse);
 
     void setRelativeWorld(const Matrix4 &relativeWorld);
+
+    /**
+     * Sets the full world matrix of this bone.
+     */
+    void setFullWorld(const Matrix4 &fullWorld);
 
     /**
       Returns the matrix that transforms from this bones space into world space. This is derived from the
@@ -66,6 +77,12 @@ public:
       */
     const Matrix4 &fullTransform() const;
 
+    /**
+     * Sets the full transform matrix for this bone. This matrix is derived from this bone's
+     * full world inverse and full world matrix.
+     */
+    void setFullTransform(const Matrix4 &fullTransform);
+
 private:
     Matrix4 mFullWorldInverse;
     Matrix4 mRelativeWorld;
@@ -74,7 +91,7 @@ private:
 
     uint mBoneId;
     QByteArray mName;
-    const Bone *mParent; // Undeletable ref to parent
+    Bone *mParent; // Undeletable ref to parent
 };
 
 inline Bone::Bone() : mParent(NULL)
@@ -86,12 +103,22 @@ inline uint Bone::boneId() const
     return mBoneId;
 }
 
+inline void Bone::setFullWorld(const Matrix4 &fullWorld)
+{
+    mFullWorld = fullWorld;
+}
+
 inline const QByteArray &Bone::name() const
 {
     return mName;
 }
 
 inline const Bone *Bone::parent() const
+{
+    return mParent;
+}
+
+inline Bone *Bone::parent()
 {
     return mParent;
 }
@@ -126,7 +153,7 @@ inline void Bone::setName(const QByteArray &name)
     mName = name;
 }
 
-inline void Bone::setParent(const Bone *bone)
+inline void Bone::setParent(Bone *bone)
 {
     mParent = bone;
 }
@@ -134,6 +161,11 @@ inline void Bone::setParent(const Bone *bone)
 inline void Bone::setFullWorldInverse(const Matrix4 &fullWorldInverse)
 {
     mFullWorldInverse = fullWorldInverse;
+}
+
+inline void Bone::setFullTransform(const Matrix4 &fullTransform)
+{
+    mFullTransform = fullTransform;
 }
 
 inline void Bone::setRelativeWorld(const Matrix4 &relativeWorld)
@@ -149,7 +181,17 @@ inline void Bone::setRelativeWorld(const Matrix4 &relativeWorld)
 class Skeleton
 {
     friend QDataStream &operator >>(QDataStream &stream, Skeleton &skeleton);
+    friend class Animation;
 public:
+
+    Skeleton();
+    ~Skeleton();
+
+    Skeleton(const Skeleton &other);
+
+    typedef QVector<const Bone*> ConstBones;
+
+    typedef QVector<Bone*> Bones;
 
     /**
       Returns the name of this skeleton.
@@ -162,24 +204,56 @@ public:
       */
     void setName(const QString &name);
 
+    /**
+     * Retrieves a bone by name from the skeleton.
+     */
+    Bone *bone(const QByteArray &name);
+
+    /**
+     * Retrieves a bone by name from the skeleton.
+     */
     const Bone *bone(const QByteArray &name) const;
 
-    const QVector<Bone> &bones() const;
+    /**
+     * Returns a bone with the given id if it exists.
+     */
+    Bone *bone(uint boneId);
+
+    /**
+     * Returns a non-mutable bone with the given id if it exists.
+     */
+    const Bone *bone(uint boneId) const;
+
+    /**
+      * Returns a vector of mutable pointers to the bones of this skeleton.
+      */
+    const Bones &bones();
+
+    /**
+      * Returns a vector of non-mutable pointers to the bones of this skeleton.
+      */
+    const ConstBones &bones() const;
 
 private:
     QString mName;
-    QVector<Bone> mBones;
+    Bone *mBones;
+    Bones mBonePointers;
+    mutable ConstBones mConstBonePointers;
     QHash<QByteArray, Bone*> mBoneMap;
 };
 
-inline const Bone *Skeleton::bone(const QByteArray &name) const
+inline Skeleton::Skeleton()
+{
+}
+
+inline Bone *Skeleton::bone(const QByteArray &name)
 {
     return mBoneMap.value(name, NULL);
 }
 
-inline const QVector<Bone> &Skeleton::bones() const
+inline const Bone *Skeleton::bone(const QByteArray &name) const
 {
-    return mBones;
+    return mBoneMap.value(name, NULL);
 }
 
 inline const QString &Skeleton::name() const
@@ -190,6 +264,38 @@ inline const QString &Skeleton::name() const
 inline void Skeleton::setName(const QString &name)
 {
     mName = name;
+}
+
+inline const Skeleton::Bones &Skeleton::bones()
+{
+    return mBonePointers;
+}
+
+inline const Skeleton::ConstBones &Skeleton::bones() const
+{
+    if (mConstBonePointers.isEmpty()) {
+        mConstBonePointers.resize(mBonePointers.size());
+        for (int i = 0; i < mBonePointers.size(); ++i) {
+            mConstBonePointers[i] = mBonePointers[i];
+        }
+    }
+    return mConstBonePointers;
+}
+
+inline const Bone *Skeleton::bone(uint boneId) const
+{
+    if (boneId < mBonePointers.size())
+        return mBonePointers.at(boneId);
+    else
+        return NULL;
+}
+
+inline Bone *Skeleton::bone(uint boneId)
+{
+    if (boneId < mBonePointers.size())
+        return mBonePointers.at(boneId);
+    else
+        return NULL;
 }
 
 QDataStream &operator >>(QDataStream &stream, Skeleton &skeleton);

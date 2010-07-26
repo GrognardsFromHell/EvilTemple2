@@ -7,23 +7,25 @@ namespace EvilTemple {
 
 static QHash<QString, GLenum> toggleableGlStates;
 
-static GLenum getToggleableGlState(const QStringRef &stateName, bool *ok)
+static GLenum getToggleableGlState(const QString &stateName, bool *ok)
 {
-if (toggleableGlStates.isEmpty()) {
-    toggleableGlStates["blend"] = GL_BLEND;
-    toggleableGlStates["cullFace"] = GL_CULL_FACE;
-    toggleableGlStates["depthTest"] = GL_DEPTH_TEST;
-    toggleableGlStates["stencilTest"] = GL_STENCIL_TEST;
-}
 
-QHash<QString, GLenum>::const_iterator it = toggleableGlStates.find(stateName.toString());
+    if (toggleableGlStates.isEmpty()) {
+        toggleableGlStates["blend"] = GL_BLEND;
+        toggleableGlStates["cullFace"] = GL_CULL_FACE;
+        toggleableGlStates["depthTest"] = GL_DEPTH_TEST;
+        toggleableGlStates["stencilTest"] = GL_STENCIL_TEST;
+    }
 
-if (it == toggleableGlStates.constEnd()) {
-    *ok = false;
-    return -1;
-} else {
-    return *it;
-}
+    QHash<QString, GLenum>::const_iterator it = toggleableGlStates.find(stateName);
+
+    if (it == toggleableGlStates.constEnd()) {
+        *ok = false;
+        return -1;
+    } else {
+        *ok = true;
+        return *it;
+    }
 }
 
 Material::Material()
@@ -204,7 +206,7 @@ bool MaterialPass::load(QXmlStreamReader *reader)
 
     // Read the rest of the pass element
     while (reader->readNextStartElement()) {
-        QStringRef name = reader->name();
+        QString name = reader->name().toString();
 
         if (name == "textureSampler") {
             MaterialTextureSampler sampler;

@@ -2,7 +2,7 @@
 /*
     Reads a JSON file from disk (UTF-8 encoding) and returns the contained top-level object.
  */
-function readJson(filename)
+function readJson(filename, bench)
 {
     var start = timerReference();
 
@@ -10,7 +10,10 @@ function readJson(filename)
     var result = eval('(' + text + ')');
 
     var diff = timerReference() - start;
-    print("Loaded " + filename + " in " + diff + " ms.");
+
+    if (bench)
+        print("Loaded " + filename + " in " + diff + " ms.");
+    
     return result;
 }
 

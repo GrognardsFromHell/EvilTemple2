@@ -13,14 +13,13 @@
 namespace EvilTemple {
 
     ModelInstance::ModelInstance()
-        : mPositionBuffer(QGLBuffer::VertexBuffer), mNormalBuffer(QGLBuffer::VertexBuffer),
+        :
         mCurrentAnimation(NULL), mPartialFrameTime(0), mCurrentFrame(0),
-        mTransformedPositions(NULL), mTransformedNormals(NULL), mFullTransform(NULL),
-        mFullWorld(NULL), mCurrentFrameChanged(true), mIdling(true), mLooping(false),
-        mDrawsBehindWalls(false), mTimeSinceLastRender(std::numeric_limits<float>::infinity())
+        mTransformedPositions(NULL), mTransformedNormals(NULL),
+        mCurrentFrameChanged(true), mIdling(true), mLooping(false),
+        mDrawsBehindWalls(false), mTimeSinceLastRender(std::numeric_limits<float>::infinity()),
+        mSkeleton(NULL)
     {
-        mPositionBuffer.setUsagePattern(QGLBuffer::StreamDraw);
-        mNormalBuffer.setUsagePattern(QGLBuffer::StreamDraw);
     }
 
     ModelInstance::~ModelInstance()
@@ -31,8 +30,6 @@ namespace EvilTemple {
         qDeleteAll(mPositionBufferAddMeshes);
         delete [] mTransformedPositions;
         delete [] mTransformedNormals;
-        delete [] mFullWorld;
-        delete [] mFullTransform;
     }
 
     void ModelInstance::setModel(const SharedModel &model)
@@ -41,15 +38,17 @@ namespace EvilTemple {
         mTransformedPositions = 0;
         delete [] mTransformedNormals;
         mTransformedNormals = 0;
-        delete [] mFullWorld;
-        mFullWorld = 0;
-        delete [] mFullTransform;
-        mFullTransform = 0;
+
+        delete mSkeleton;
+        mSkeleton = NULL;
 
         mModel = model;
         mReplacementMaterials.clear();
         mReplacementMaterials.resize(mModel->placeholders().size());
 
+        if (mModel->skeleton()) {
+            mSkeleton = new Skeleton(*mModel->skeleton());
+        }
 
         mCurrentAnimation = model->animation("item_idle");
 
@@ -58,23 +57,19 @@ namespace EvilTemple {
         }
 
         if (mCurrentAnimation) {
+            if (mCurrentAnimation->animationBones().isEmpty()) {
+                // qWarning("The animation %s on %s is empty.", qPrintable(mCurrentAnimation->name()), qPrintable(mSkeleton->name()));
+                mCurrentAnimation = NULL;
+                return;
+            }
+
             mIdleAnimation = mCurrentAnimation->name();
 
             mTransformedPositions = new Vector4[mModel->vertices];
             mTransformedNormals = new Vector4[mModel->vertices];
 
-            mPositionBuffer.create();
-            mPositionBuffer.bind();
-            mPositionBuffer.allocate(model->positions, sizeof(Vector4) * model->vertices);
-
-            mNormalBuffer.create();
-            mNormalBuffer.bind();
-            mNormalBuffer.allocate(model->normals, sizeof(Vector4) * model->vertices);
-
-            const Skeleton *skeleton = mModel->skeleton();
-
-            mFullWorld = new Matrix4[skeleton->bones().size()];
-            mFullTransform = new Matrix4[skeleton->bones().size()];
+            mPositionBuffer.upload(model->positions, sizeof(Vector4) * model->vertices);
+            mNormalBuffer.upload(model->normals, sizeof(Vector4) * model->vertices);
 
             // Check for events on frame 0 and trigger them now
             foreach (const AnimationEvent &event, mCurrentAnimation->events()) {
@@ -97,16 +92,12 @@ namespace EvilTemple {
             mTransformedNormalsAddMeshes.append(new Vector4[model->vertices]);
             mTransformedPositionsAddMeshes.append(new Vector4[model->vertices]);
 
-            QGLBuffer *buffer = new QGLBuffer(QGLBuffer::VertexBuffer);
-            buffer->create();
-            buffer->bind();
-            buffer->allocate(model->positions, sizeof(Vector4) * model->vertices);
+            VertexBufferObject *buffer = new VertexBufferObject;
+            buffer->upload(model->positions, sizeof(Vector4) * model->vertices);
             mPositionBufferAddMeshes.append(buffer);
 
-            buffer = new QGLBuffer(QGLBuffer::VertexBuffer);
-            buffer->create();
-            buffer->bind();
-            buffer->allocate(model->normals, sizeof(Vector4) * model->vertices);
+            buffer = new VertexBufferObject;
+            buffer->upload(model->normals, sizeof(Vector4) * model->vertices);
             mNormalBufferAddMeshes.append(buffer);
 
             /*
@@ -121,16 +112,18 @@ namespace EvilTemple {
               and addmeshes is not known a-priori, making this difficult.
              */
             if (model->skeleton()) {
-                QVector<uint> boneMapping(model->skeleton()->bones().size());
+                const Skeleton::ConstBones &originalBones = model->skeleton()->bones();
+                QVector<uint> boneMapping(originalBones.size());
+                const Skeleton *curSkeleton = skeleton();
+
                 for (int i = 0; i < boneMapping.size(); ++i) {
-                    const Bone &origBone = model->skeleton()->bones()[i];
 
-                    boneMapping[i] = i;
+                    const Bone *mappedBone = curSkeleton->bone(originalBones[i]->name());
 
-                    for (int j = 0; j < skeleton()->bones().size(); ++j) {
-                        if (skeleton()->bones()[j].name() == origBone.name()) {
-                            boneMapping[i] = j;
-                        }
+                    if (mappedBone) {
+                        boneMapping[i] = mappedBone->boneId();
+                    } else {
+                        boneMapping[i] = i;
                     }
                 }
                 mAddMeshBoneMapping.append(boneMapping);
@@ -148,11 +141,7 @@ namespace EvilTemple {
 
     Matrix4 ModelInstance::getBoneSpace(uint boneId)
     {
-        if (!mModel)
-            return Matrix4::identity();
-
-        if (boneId >= mModel->skeleton()->bones().size()) {
-            qWarning("Unknown bone id: %s.", boneId);
+        if (!hasSkeleton()) {
             return Matrix4::identity();
         }
 
@@ -161,7 +150,14 @@ namespace EvilTemple {
             mCurrentFrameChanged = false;
         }
 
-        return mFullWorld[boneId];
+        const Bone *bone = skeleton()->bone(boneId);
+
+        if (!bone) {
+            qWarning("Unknown bone id: %s.", boneId);
+            return Matrix4::identity();
+        }
+
+        return bone->fullWorld();
     }
 
     void ModelInstance::drawNormals() const
@@ -198,9 +194,13 @@ namespace EvilTemple {
         SAFE_GL(glEnd());
     }
 
-    void ModelInstance::animateVertices(const SharedModel &model, Vector4 *transformedPositions, Vector4 *transformedNormals, QGLBuffer *positionBuffer, QGLBuffer *normalBuffer,
-                                        QVector<uint> *boneMapping)
+    void ModelInstance::animateVertices( const SharedModel &model,
+        Vector4 *transformedPositions, Vector4 *transformedNormals,
+        VertexBufferObject *positionBuffer, VertexBufferObject *normalBuffer,
+        const QVector<uint> *boneMapping )
     {
+        const Skeleton::Bones &bones = mSkeleton->bones();
+
         for (int i = 0; i < model->vertices; ++i) {
             const BoneAttachment &attachment = model->attachments[i];
 
@@ -212,8 +212,8 @@ namespace EvilTemple {
                 Q_ASSERT(boneId >= 0 && boneId < boneMapping->size());
                 boneId = boneMapping->at(boneId);
             }
-            Q_ASSERT(boneId >= 0 && boneId < mModel->skeleton()->bones().size());
-            const Matrix4 &firstTransform = mFullTransform[boneId];
+            Q_ASSERT(boneId >= 0 && boneId < bones.size());
+            const Matrix4 &firstTransform = bones[boneId]->fullTransform();
 
             __m128 factor = _mm_set_ps(weight, - weight, weight, weight);
 
@@ -227,9 +227,9 @@ namespace EvilTemple {
                     Q_ASSERT(boneId >= 0 && boneId < boneMapping->size());
                     boneId = boneMapping->at(boneId);
                 }
-                Q_ASSERT(boneId >= 0 && boneId < mModel->skeleton()->bones().size());
+                Q_ASSERT(boneId >= 0 && boneId < bones.size());
 
-                const Matrix4 &fullTransform = mFullTransform[boneId];
+                const Matrix4 &fullTransform = bones[boneId]->fullTransform();
 
                 // This flips the z coordinate, since the models are geared towards DirectX
                 factor = _mm_set_ps(weight, - weight, weight, weight);
@@ -281,13 +281,16 @@ namespace EvilTemple {
         if (!mCurrentAnimation)
             return;
 
-        const QVector<Bone> &bones = skeleton()->bones();
+        const Skeleton::Bones &bones = mSkeleton->bones();
 
         // Create a bone state map for all bones
         const Animation::BoneMap &animationBones = mCurrentAnimation->animationBones();
 
+        // if (animationBones.isEmpty())
+        //    return;
+
         for (int i = 0; i < bones.size(); ++i) {
-            const Bone &bone = bones[i];
+            Bone *bone = bones[i];
 
             Matrix4 relativeWorld;
 
@@ -296,20 +299,19 @@ namespace EvilTemple {
 
                 relativeWorld = animationBone->getTransform(mCurrentFrame, mCurrentAnimation->frames());
             } else {
-                relativeWorld = bone.relativeWorld();
+                relativeWorld = bone->relativeWorld();
             }
 
             // Use relative world and fullWorld of parent to build this bone's full world
-            const Bone *parent = bone.parent();
+            Bone *parent = bone->parent();
 
             if (parent) {
-                Q_ASSERT(parent->boneId() >= 0 && parent->boneId() < bone.boneId());
-                mFullWorld[i] = mFullWorld[parent->boneId()] * relativeWorld;
+                bone->setFullWorld(parent->fullWorld() * relativeWorld);
             } else {
-                mFullWorld[i] = relativeWorld;
+                bone->setFullWorld(relativeWorld);
             }
 
-            mFullTransform[i] = mFullWorld[i] * bone.fullWorldInverse();
+            bone->setFullTransform(bone->fullWorld() * bone->fullWorldInverse());
         }
 
         animateVertices(mModel, mTransformedPositions, mTransformedNormals, &mPositionBuffer, &mNormalBuffer, NULL);
@@ -748,6 +750,12 @@ namespace EvilTemple {
         mCurrentFrameChanged = true;
         mPartialFrameTime = 0;
         mIdling = false;
+
+        if (mCurrentAnimation->animationBones().isEmpty()) {
+            emit animationFinished(mCurrentAnimation->name(), true);
+            mCurrentAnimation = NULL;
+            //qWarning("The animation %s on %s is empty.", qPrintable(name), qPrintable(mSkeleton->name()));
+        }
 
         return true;
     }

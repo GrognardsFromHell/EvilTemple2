@@ -91,16 +91,17 @@ private:
 
     bool advanceFrame();
 
-    void animateVertices(const SharedModel &model, Vector4 *transformedPositions, Vector4 *transformedNormals, QGLBuffer *positionBuffer, QGLBuffer *normalBuffer,
-                         QVector<uint> *boneMapping);
+    void animateVertices(const SharedModel &model, 
+        Vector4 *transformedPositions, 
+        Vector4 *transformedNormals, 
+        VertexBufferObject *positionBuffer, 
+        VertexBufferObject *normalBuffer, 
+        const QVector<uint> *boneMapping);
 
     void playIdleAnimation();
     void updateBones();
 
     bool mDrawsBehindWalls;
-
-    Matrix4 *mFullWorld;
-    Matrix4 *mFullTransform;
 
     SharedModel mModel;
 
@@ -119,17 +120,19 @@ private:
     QList<Vector4*> mTransformedPositionsAddMeshes;
     QList<Vector4*> mTransformedNormalsAddMeshes;
 
-    QList<QGLBuffer*> mPositionBufferAddMeshes;
-    QList<QGLBuffer*> mNormalBufferAddMeshes;
+    QList<VertexBufferObject*> mPositionBufferAddMeshes;
+    QList<VertexBufferObject*> mNormalBufferAddMeshes;
 
     float mTimeSinceLastRender;
+
+    Skeleton *mSkeleton;
 
     // When an add-mesh is loaded, this maps the bone-ids from the addmesh to the bone ids in the
     // skeleton used by mModel
     QList< QVector<uint> > mAddMeshBoneMapping;
 
-    QGLBuffer mPositionBuffer;
-    QGLBuffer mNormalBuffer;
+    VertexBufferObject mPositionBuffer;
+    VertexBufferObject mNormalBuffer;
 
     QList<SharedModel> mAddMeshes;
 
@@ -166,7 +169,7 @@ inline bool ModelInstance::hasSkeleton() const
 
 inline const Skeleton *ModelInstance::skeleton() const
 {
-    return mModel->skeleton();
+    return mSkeleton;
 }
 
 }

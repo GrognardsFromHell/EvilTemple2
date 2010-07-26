@@ -36,7 +36,6 @@ var Maps = {
             var map = new Map(mapId);
             this.maps.push(map);
             this.mapsById[mapId] = map;
-            print("Loaded map " + map.name + ' (' + mapId + ')');
         }
     };
 
