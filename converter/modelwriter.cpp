@@ -131,6 +131,8 @@ void ModelWriter::writeAnimations(const Troika::MeshModel *model)
 
     startChunk(Animations, true);
 
+    uint startPos = stream.device()->pos();
+
     stream << (uint)skeleton->animations().size() << RESERVED << RESERVED << RESERVED;
 
     QHash<uint, QString> animDataStartMap;
@@ -139,7 +141,13 @@ void ModelWriter::writeAnimations(const Troika::MeshModel *model)
 
     QHash<QByteArray, QString> animationHashes;
 
+    uint animsWritten = 0;
+
     foreach (const Troika::Animation &animation, skeleton->animations()) {
+
+        // Somehow empty animation-names show up here.
+        if (animation.name().length() == 0)
+            continue;
 
         if (animDataStartMap.contains(animation.keyFramesDataStart())) {
             animAliasMap[animation.name()] = animDataStartMap[animation.keyFramesDataStart()];
@@ -162,25 +170,6 @@ void ModelWriter::writeAnimations(const Troika::MeshModel *model)
 
         animDataStartMap[animation.keyFramesDataStart()] = animation.name();
 
-        // How do we ensure padding if the animations have variable length names?
-        stream << animation.name().toUtf8();
-        stream << (uint)animation.frames() << animation.frameRate() << animation.dps()
-                << (uint)animation.driveType() << animation.loopable() << (uint)animation.events().size();
-
-        foreach (const Troika::AnimationEvent &event, animation.events()) {
-            uint frameId = event.frameId;
-            stream << frameId;
-
-            if (event.type == "action")
-                stream << (uint)1;
-            else if (event.type == "script")
-                stream << (uint)0;
-            else
-                qFatal("Unknown event type: %s.", qPrintable(event.type));
-
-            stream << event.action.toUtf8();
-        }
-
         QHash<uint, Streams> streams;
         streams.reserve(skeleton->bones().size());
 
@@ -194,6 +183,7 @@ void ModelWriter::writeAnimations(const Troika::MeshModel *model)
                 boneStreams.appendCurrentState(boneState);
             }
         }
+
         int nextFrame = animStream->getNextFrameId();
         while (!animStream->atEnd()) {
             animStream->readNextFrame();
@@ -221,6 +211,31 @@ void ModelWriter::writeAnimations(const Troika::MeshModel *model)
 
         animation.freeStream(animStream);
 
+        if (streams.isEmpty() && animation.events().isEmpty()) {
+            animationHashes.remove(hash);
+            animDataStartMap.remove(animation.keyFramesDataStart());
+
+            continue;
+        }
+
+        stream << animation.name().toUtf8();
+        stream << (uint)animation.frames() << animation.frameRate() << animation.dps()
+                << (uint)animation.driveType() << animation.loopable() << (uint)animation.events().size();
+
+        foreach (const Troika::AnimationEvent &event, animation.events()) {
+            uint frameId = event.frameId;
+            stream << frameId;
+
+            if (event.type == "action")
+                stream << (uint)1;
+            else if (event.type == "script")
+                stream << (uint)0;
+            else
+                qFatal("Unknown event type: %s.", qPrintable(event.type));
+
+            stream << event.action.toUtf8();
+        }
+
         // Write out the number of bones affected by the animation
         stream << (uint)streams.size();
 
@@ -245,7 +260,15 @@ void ModelWriter::writeAnimations(const Troika::MeshModel *model)
                 stream << (quint16)frameId << translation.x() << translation.y() << translation.z() << (float)0;
             }
         }
+
+        animsWritten++;
     }
+
+    uint endPos = stream.device()->pos();
+
+    stream.device()->seek(startPos);
+    stream << (uint)animsWritten;
+    stream.device()->seek(endPos);
 
     finishChunk();
 

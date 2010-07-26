@@ -35,10 +35,10 @@ void main() {
       <uniform name="worldViewProjection" semantic="WorldViewProjection" />
     </shader>
 
-    <cullFace>true</cullFace>
-    <blend>false</blend>
+    <cullFace>false</cullFace>
+    <blend>true</blend>
     <blendFunc src="srcAlpha" dest="oneMinusSrcAlpha" />
-    <colorMask red="false" blue="false" green="false" alpha="false" />
+    <!--<colorMask red="false" blue="false" green="false" alpha="false" />-->
   </pass>
 
 </material>

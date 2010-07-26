@@ -41,14 +41,12 @@ namespace Troika
         stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
 
         /*
-         ToEE uses a bounding box defined in screen-space. We don't use this
-         bounding box and use a normal 3d bounding box instead.
-         the bounding box is defined as follows:
+         ToEE uses a boundind sphere for depth art geometry.
 
-         float - negative X of the bounding box center offset
-         float - negative Y of the bounding box center offset
-         float - negative Z of the bounding box center offset
-         float - Radius of the bounding box in screen-space
+         float - X of the bounding sphere center offset
+         float - Y of the bounding sphere center offset
+         float - Z of the bounding sphere center offset
+         float - Radius of the bounding sphere
          */
         stream.skipRawData(4 * sizeof(float));
 

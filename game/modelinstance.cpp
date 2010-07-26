@@ -46,9 +46,14 @@ namespace EvilTemple {
         mReplacementMaterials.clear();
         mReplacementMaterials.resize(mModel->placeholders().size());
 
-        if (mModel->skeleton()) {
-            mSkeleton = new Skeleton(*mModel->skeleton());
+        // Create animation state if necessary
+        if (mModel->animations().isEmpty()) {
+            return;
         }
+
+        mTransformedPositions = new Vector4[mModel->vertices];
+        mTransformedNormals = new Vector4[mModel->vertices];
+        mSkeleton = new Skeleton(*mModel->skeleton());
 
         mCurrentAnimation = model->animation("item_idle");
 
@@ -64,9 +69,6 @@ namespace EvilTemple {
             }
 
             mIdleAnimation = mCurrentAnimation->name();
-
-            mTransformedPositions = new Vector4[mModel->vertices];
-            mTransformedNormals = new Vector4[mModel->vertices];
 
             mPositionBuffer.upload(model->positions, sizeof(Vector4) * model->vertices);
             mNormalBuffer.upload(model->normals, sizeof(Vector4) * model->vertices);
@@ -350,7 +352,7 @@ namespace EvilTemple {
         if (!model)
             return;
 
-        if (mCurrentFrameChanged) {
+        if (mCurrentAnimation && mCurrentFrameChanged) {
             updateBones();
             mCurrentFrameChanged = false;
         }
@@ -655,10 +657,12 @@ namespace EvilTemple {
         result.intersects = false;
         result.distance = std::numeric_limits<float>::infinity();
 
-        if (!mModel || !mCurrentAnimation) {
+        if (!mModel) {
             result.intersects = false;
             return result;
         }
+
+        Vector4 *positions = mCurrentAnimation ? mTransformedPositions : mModel->positions;
 
         // Do it per-face
         for (int i = 0; i < mModel->faces; ++i) {
@@ -667,9 +671,9 @@ namespace EvilTemple {
             const QVector<ushort> &indices = group.indices;
 
             for (int j = 0; j < indices.size(); j += 3) {
-                const Vector4 &va = mTransformedPositions[indices[j]];
-                const Vector4 &vb = mTransformedPositions[indices[j+1]];
-                const Vector4 &vc = mTransformedPositions[indices[j+2]];
+                const Vector4 &va = positions[indices[j]];
+                const Vector4 &vb = positions[indices[j+1]];
+                const Vector4 &vc = positions[indices[j+2]];
 
                 float distance;
                 if (intersectRay(ray, va, vb, vc, distance) && distance < result.distance) {

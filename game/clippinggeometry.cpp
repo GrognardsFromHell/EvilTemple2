@@ -92,8 +92,12 @@ public:
 
     void render(RenderStates &renderStates, MaterialState *overrideMaterial = NULL)
     {
+        glPolygonMode(GL_FRONT, GL_LINE);
+
         DrawHelper<ClippingGeometryInstance,ClippingGeometryInstance> drawHelper;
         drawHelper.draw(renderStates, overrideMaterial ? overrideMaterial : mMaterial, *this, *this);
+
+        glPolygonMode(GL_FRONT, GL_FILL);
     }
 
     const Box3d &boundingBox()
