@@ -10,6 +10,8 @@
 
 #include "virtualfilesystem.h"
 
+#include <QMutex>
+
 namespace Troika {
 
 class TroikaArchiveEntry;
@@ -41,6 +43,8 @@ private:
     void readIndex();
     void readIndexEntry(QDataStream &dataStream, TroikaArchiveEntry &entry);
     const TroikaArchiveEntry *findEntry(const QString &filename) const;
+
+    QMutex readMutex;
 
     Q_DISABLE_COPY(TroikaArchive)
 };

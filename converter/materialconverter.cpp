@@ -40,20 +40,20 @@ public:
         QTextStream shadowCasterStream(&shadowCaster);
 
         while (!shadowCasterStream.atEnd()) {
-            QString line = shadowCasterStream.readLine().trimmed();
+            QString line = shadowCasterStream.readLine().trimmed().toLower();
             if (line.startsWith('#') || line.isEmpty())
                 continue;
             if (line.startsWith('-')) {
-                shadowCasterExclusions.append(QDir::toNativeSeparators(line.right(line.length() - 1).toLower()));
+                shadowCasterExclusions.append(QDir::cleanPath(QDir::toNativeSeparators(line.mid(1))));
             } else {
-                shadowCasterList.append(QDir::toNativeSeparators(line.toLower()));
+                shadowCasterList.append(QDir::cleanPath(QDir::toNativeSeparators(line)));
             }
         }
     }
 
     bool isShadowCaster(const QString &filename)
     {
-        QString comparison = QDir::toNativeSeparators(filename.toLower());
+        QString comparison = QDir::cleanPath(QDir::toNativeSeparators(filename.toLower()));
         foreach (const QString &exclusion, shadowCasterExclusions) {
             if (comparison.startsWith(exclusion)) {
                 return false;
@@ -256,33 +256,42 @@ public:
         materialFile.replace("{{DEPTH_TEST}}", material->isDepthTestDisabled() ? "false" : "true");
         materialFile.replace("{{SPECULAR_POWER}}", QString("%1").arg(material->specularPower()));
 
-        QString srcFactor, destFactor, alphaTest;
+        QString srcFactor, destFactor;
+        bool alphaTest;
         switch (material->blendType()) {
         case Material::None:
             srcFactor = "one";
             destFactor = "zero";
-            alphaTest = "false";
+            alphaTest = false;
             break;
         case Material::Alpha:
             srcFactor = "srcAlpha";
             destFactor = "oneMinusSrcAlpha";
-            alphaTest = "true";
+            alphaTest = true;
             break;
         case Material::Add:
             srcFactor = "one";
             destFactor = "one";
-            alphaTest = "true";
+            alphaTest = true;
             break;
         case Material::AlphaAdd:
             srcFactor = "srcAlpha";
             destFactor = "one";
-            alphaTest = "true";
+            alphaTest = true;
             break;
+        }
+
+        if (!alphaTest) {
+            QRegExp blocks("\\{\\{ALPHATEST_ON\\}\\}.+\\{\\{\\/ALPHATEST_ON\\}\\}");
+            blocks.setMinimal(true);
+            materialFile.replace(blocks, "");
+        } else {
+            materialFile.replace("{{ALPHATEST_ON}}", "");
+            materialFile.replace("{{/ALPHATEST_ON}}", "");
         }
 
         materialFile.replace("{{BLEND_SRC}}", srcFactor);
         materialFile.replace("{{BLEND_DEST}}", destFactor);
-        materialFile.replace("{{ALPHA_TEST}}", alphaTest);
 
         HashedData materialScriptData(materialFile.toUtf8());
         materialScripts.insert(getNewMaterialFilename(material->name()), materialScriptData);

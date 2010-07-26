@@ -25,7 +25,11 @@ art/meshes/scenery/portals
 -art/meshes/scenery/misc/fire_node
 
 # The mill wheel has a precomputed shadow
--art/meshes/scenery/mill_wheel
+-art/meshes/scenery/misc/mill_wheel
+
+# Shadows for all signs are baked into the map already
+-art/meshes/scenery/misc/sign
+-art/meshes/scenery/misc/real_time
 
 # The main menu has no shadows either
 -art/meshes/scenery/misc/main menu

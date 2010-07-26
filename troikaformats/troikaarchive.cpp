@@ -160,6 +160,8 @@ namespace Troika {
             return QByteArray((char*)NULL, 0);
         }
 
+        readMutex.lock();
+
         file->seek(entry->dataStart);
 
         if (entry->isCompressed()) {
@@ -168,9 +170,14 @@ namespace Troika {
             dataStream << entry->uncompressedSize;
             file->read(data.data() + sizeof(int), entry->compressedSize);
 
+            readMutex.unlock();
+
             return qUncompress(data);
         } else {
-            return file->read(entry->uncompressedSize);
+            QByteArray result = file->read(entry->uncompressedSize);
+            readMutex.unlock();
+
+            return result;
         }
     }
 
@@ -178,7 +185,7 @@ namespace Troika {
         return findEntry(filename) != NULL;
     }
 
-    QStringList TroikaArchive::listFiles(const QString &path, const QString &filter) {        
+    QStringList TroikaArchive::listFiles(const QString &path, const QString &filter) {
         QStringList result;
         const TroikaArchiveEntry *entry = findEntry(path);
 

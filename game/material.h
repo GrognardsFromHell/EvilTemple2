@@ -8,13 +8,12 @@
 #include <QtCore/QString>
 #include <QtCore/QByteArray>
 #include <QtCore/QSharedPointer>
+#include <QtCore/QXmlStreamReader>
 
 #include "util.h"
 
 #include <gamemath.h>
 using namespace GameMath;
-
-class QDomElement;
 
 namespace EvilTemple {
 
@@ -189,7 +188,7 @@ public:
         VertexShader = GL_FRAGMENT_SHADER
     };
 
-    bool load(const QDomElement &shaderElement);
+    bool load(QXmlStreamReader *reader);
 
     Type type() const;
     const QString &code() const;
@@ -285,8 +284,8 @@ public:
 
     /**
      * Loads this attribute binding from an XML element.
-     */
-    bool load(const QDomElement &element);
+     */    
+    bool load(QXmlStreamReader *reader);
 private:
     QString mName;
     QString mBufferName;
@@ -363,7 +362,7 @@ public:
     /**
      * Loads this uniform binding from an XML element.
      */
-    bool load( const QDomElement &element );
+    bool load(QXmlStreamReader *reader);
 
 private:
     QString mName;
@@ -408,7 +407,7 @@ public:
     /**
      * Loads this material texture from an XML element.
      */
-    bool load(const QDomElement &element);
+    bool load(QXmlStreamReader *reader);
 
     enum WrapMode {
         Clamp,
@@ -448,7 +447,8 @@ inline MaterialTextureSampler::WrapMode MaterialTextureSampler::wrapV() const
 
 class MaterialPass {
 public:
-    bool load(const QDomElement &passElement);
+
+    bool load(QXmlStreamReader *reader);
 
     const MaterialShader &vertexShader() const;
     const MaterialShader &fragmentShader() const;
@@ -513,6 +513,8 @@ public:
 
     const QList<MaterialPass*> &passes() const;
 private:
+    bool read(QXmlStreamReader *reader);
+    
     QString mError;
     QList<MaterialPass*> mPasses;
 };

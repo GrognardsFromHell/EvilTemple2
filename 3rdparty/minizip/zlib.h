@@ -277,7 +277,7 @@ ZEXTERN int ZEXPORT deflate OF((z_streamp strm, int flush));
   decide how much data to accumulate before producing output, in order to
   maximize compression.
 
-    If the parameter flush is set to Z_SYNC_FLUSH, all pending output is
+  If the parameter flush is set to Z_SYNC_FLUSH, all pending output is
   flushed to the output buffer and the output is aligned on a byte boundary, so
   that the decompressor can get all input data available so far.  (In
   particular avail_in is zero after the call if enough output space has been

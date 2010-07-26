@@ -33,12 +33,15 @@ private:
     void convertReferencedMeshes();
 
     void convertMaterials(IFileWriter *writer);
-    bool convertModel(IFileWriter *output, const QString &filename, Troika::MeshModel *model);
+    bool convertModel(IFileWriter *output, const QString &filename);
     bool writeModel(const QString &filename, IFileWriter *output, Troika::MeshModel *model, QDataStream &stream);
 
     QHash<QString, bool> mWrittenTextures;
 
     QHash<QString, bool> mWrittenMaterials;
+
+    int mTotalWork;
+    QAtomicInt mWorkDone;
 };
 
 #endif // CONVERTMODELSTASK_H

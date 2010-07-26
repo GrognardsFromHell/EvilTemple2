@@ -50,7 +50,7 @@ SelectionCircle::SelectionCircle(Materials *materials)
 void SelectionCircle::render(RenderStates &renderStates, MaterialState *overrideMaterial)
 {
 
-    if (!mHovering && !mSelected)
+    if (!mHovering && !mSelected || !mMaterial)
         return;
 
     if (mBuffersInvalid) {

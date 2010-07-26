@@ -1,21 +1,38 @@
 
-#include <QtXml/QtXml>
+#include <QtCore/QXmlStreamReader>
 
 #include "material.h"
 
 namespace EvilTemple {
 
-static const QString PASS_TAG = "pass";
+static QHash<QString, GLenum> toggleableGlStates;
+
+static GLenum getToggleableGlState(const QStringRef &stateName, bool *ok)
+{
+if (toggleableGlStates.isEmpty()) {
+    toggleableGlStates["blend"] = GL_BLEND;
+    toggleableGlStates["cullFace"] = GL_CULL_FACE;
+    toggleableGlStates["depthTest"] = GL_DEPTH_TEST;
+    toggleableGlStates["stencilTest"] = GL_STENCIL_TEST;
+}
+
+QHash<QString, GLenum>::const_iterator it = toggleableGlStates.find(stateName.toString());
+
+if (it == toggleableGlStates.constEnd()) {
+    *ok = false;
+    return -1;
+} else {
+    return *it;
+}
+}
 
 Material::Material()
 {
-
 }
 
 Material::~Material()
 {
     qDeleteAll(mPasses);
-    mPasses.clear();
 }
 
 bool Material::loadFromFile(const QString &filename)
@@ -32,31 +49,72 @@ bool Material::loadFromFile(const QString &filename)
 
 bool Material::loadFromData(const QByteArray &data)
 {
-    QString errorMsg;
-    int errorLine, errorColumn;
+    QXmlStreamReader reader(data);
 
-    QDomDocument document;
-    if (!document.setContent(data, false, &errorMsg, &errorLine, &errorColumn)) {
-        mError = QString("[%1:%2] %3.").arg(errorLine).arg(errorColumn).arg(errorMsg);
-        return false;
+    return read(&reader);
+}
+
+bool Material::read(QXmlStreamReader *reader)
+{
+    if (reader->readNextStartElement()) {
+        if (reader->name() != "material") {
+            reader->raiseError(QString("The root element of the material file is %1. Should be material.")
+                .arg(reader->name().toString()));
+        } else {
+
+            while (reader->readNextStartElement()) {
+                if (reader->name() == "pass") {
+                    MaterialPass *pass = new MaterialPass();
+                    if (!pass->load(reader))
+                        delete pass;
+                    else
+                        mPasses.append(pass);
+                } else {
+                    reader->raiseError("Expected pass element, got: " + reader->name().toString());
+                }
+            }
+
+        }
     }
 
-    QDomElement documentRoot = document.documentElement();
-
-    QDomElement passNode = documentRoot.firstChildElement(PASS_TAG);
-
-    while (!passNode.isNull()) {
-        MaterialPass *pass = new MaterialPass;
-        mPasses.append(pass);
-        pass->load(passNode);
-
-        passNode = passNode.nextSiblingElement(PASS_TAG);
+    if (reader->hasError()) {
+        mError = QString("Parsing error @ %1:%2: %3").arg(reader->lineNumber())
+            .arg(reader->columnNumber()).arg(reader->errorString());
+        return false;
     }
 
     return true;
 }
 
-inline GLenum convertStencilOp(const QString &stencilOp) {
+bool MaterialShader::load(QXmlStreamReader *reader)
+{
+    Q_ASSERT(reader->name() == "vertexShader" || reader->name() == "fragmentShader");
+
+    mType = (reader->name() == "vertexShader") ? VertexShader : FragmentShader;
+
+    mVersion = reader->attributes().value("version").toString();
+
+    // Read content of shader
+    while (reader->readNextStartElement()) {
+
+        if (reader->name() == "include") {
+            Q_ASSERT(reader->attributes().hasAttribute("file"));
+            mIncludes.append(reader->attributes().value("file").toString());
+            reader->skipCurrentElement();
+        } else if (reader->name() == "code") {
+            mCode = reader->readElementText();
+        } else {
+            reader->raiseError("Unknown vertex or fragment shader element.");
+            return false;
+        }
+    }
+
+    return true;
+}
+
+inline GLenum parseStencilOp(const QStringRef &stencilOp, bool *ok) {
+    *ok = true;
+
     if (stencilOp == "keep")
         return GL_KEEP;
     else if (stencilOp == "zero")
@@ -73,272 +131,271 @@ inline GLenum convertStencilOp(const QString &stencilOp) {
         return GL_DECR_WRAP;
     else if (stencilOp == "invert")
         return GL_INVERT;
-    else
-        qWarning("Invalid stencil op: %s.", qPrintable(stencilOp));
 
+    *ok = false;
     return GL_KEEP;
 }
 
-bool MaterialPass::load(const QDomElement &passElement)
+static GLenum parseBlendFunction(const QStringRef &stringRef, bool *ok)
 {
-    QDomElement shaderElement = passElement.firstChildElement("shader");
-    Q_ASSERT(!shaderElement.isNull());
+    *ok = true;
 
-    QDomNodeList children = shaderElement.childNodes();
+    if (stringRef == "one")
+        return GL_ONE;
+    else if (stringRef == "zero")
+        return GL_ZERO;
+    else if (stringRef == "srcAlpha")
+        return GL_SRC_ALPHA;
+    else if (stringRef == "oneMinusSrcAlpha")
+        return GL_ONE_MINUS_SRC_ALPHA;
 
-    for (int i = 0; i < children.size(); ++i) {
-        QDomElement element = children.item(i).toElement();
+    *ok = false;
+    return GL_ZERO;
+}
 
-        if (element.isNull())
-            continue;
+bool MaterialPass::load(QXmlStreamReader *reader)
+{
+    Q_ASSERT(reader->name() == "pass");
 
-        if (element.nodeName() == "vertexShader") {
-            if (!mVertexShader.load(element)) {
-                return false;
-            }
-        } else if (element.nodeName() == "fragmentShader") {
-            if (!mFragmentShader.load(element)) {
-                return false;
-            }
-        } else if (element.nodeName() == "attribute") {
+    if (!reader->readNextStartElement() || reader->name() != "shader") {
+        reader->raiseError("First element of pass must be the shader element.");
+        return false;
+    }
+
+    if (!reader->readNextStartElement() || reader->name() != "vertexShader") {
+        reader->raiseError("Missing vertex shader element.");
+        return false;
+    }
+
+    if (!mVertexShader.load(reader))
+        return false;
+
+    if (!reader->readNextStartElement() || reader->name() != "fragmentShader") {
+        reader->raiseError("Missing fragment shader element.");
+        return false;
+    }
+
+    if (!mFragmentShader.load(reader))
+        return false;
+
+    // The rest can be a mix of attributes and uniforms
+    while (reader->readNextStartElement()) {
+        if (reader->name() == "attribute") {
             MaterialAttributeBinding binding;
 
-            if (!binding.load(element)) {
+            if (!binding.load(reader)) {
                 return false;
             }
 
             mAttributeBindings.append(binding);
-        } else if (element.nodeName() == "uniform") {
+        } else if (reader->name() == "uniform") {
             MaterialUniformBinding binding;
 
-            if (!binding.load(element)) {
+            if (!binding.load(reader)) {
                 return false;
             }
 
             mUniformBindings.append(binding);
         } else {
-            qWarning("Unknown child-element of pass: %s", qPrintable(element.nodeName()));
+            reader->raiseError("Unknown child-element of shader: " + reader->name().toString());
             return false;
         }
     }
 
-    QDomElement textureSamplerElement = shaderElement.nextSiblingElement("textureSampler");
+    // Read the rest of the pass element
+    while (reader->readNextStartElement()) {
+        QStringRef name = reader->name();
 
-    while (!textureSamplerElement.isNull()) {
-        MaterialTextureSampler sampler;
+        if (name == "textureSampler") {
+            MaterialTextureSampler sampler;
 
-        if (!sampler.load(textureSamplerElement)) {
-            return false;
-        }
+            if (!sampler.load(reader)) {
+                return false;
+            }
 
-        mTextureSamplers.append(sampler);
+            mTextureSamplers.append(sampler);
 
-        textureSamplerElement = textureSamplerElement.nextSiblingElement("textureSampler");
-    }
+        } else if (name == "blendFunc") {
+            QStringRef srcFunc = reader->attributes().value("src");
+            bool ok;
 
-    QDomElement blendFuncElement = passElement.firstChildElement("blendFunc");
-    if (!blendFuncElement.isNull()) {
-        QString srcFunc = blendFuncElement.attribute("src");
-        QString destFunc = blendFuncElement.attribute("dest");
+            // TODO: Expand for all other values. Don't add state changer if it's the default anyway
+            GLenum srcFuncEnum = parseBlendFunction(srcFunc, &ok);
+            if (!ok) {
+                reader->raiseError("Unknown source blending function.");
+                return false;
+            }
 
-        // TODO: Expand for all other values. Don't add state changer if it's the default anyway
-        GLenum srcFuncEnum = GL_ZERO;
-        if (srcFunc == "one") {
-            srcFuncEnum = GL_ONE;
-        } else if (srcFunc == "srcAlpha") {
-            srcFuncEnum = GL_SRC_ALPHA;
-        }
-        GLenum destFuncEnum = GL_ZERO;
-        if (destFunc == "one") {
-            destFuncEnum = GL_ONE;
-        } else if (destFunc == "srcAlpha") {
-            destFuncEnum = GL_SRC_ALPHA;
-        } else if (destFunc == "oneMinusSrcAlpha") {
-            destFuncEnum = GL_ONE_MINUS_SRC_ALPHA;
-        }
+            QStringRef destFunc = reader->attributes().value("dest");
+            GLenum destFuncEnum = parseBlendFunction(destFunc, &ok);
 
-        // Only add state-changer if it differs from the default state
-        SharedMaterialRenderState renderState(new MaterialBlendFunction(srcFuncEnum, destFuncEnum));
-        mRenderStates.append(renderState);
-    }
+            if (!ok) {
+                reader->raiseError("Unknown destination blending function.");
+                return false;
+            }
 
-    QDomElement blendElement = passElement.firstChildElement("blend");
-    if (!blendElement.isNull()) {
-        if (blendElement.text() == "true") {
-            SharedMaterialRenderState renderState(new MaterialEnableState(GL_BLEND));
+            SharedMaterialRenderState renderState(new MaterialBlendFunction(srcFuncEnum, destFuncEnum));
             mRenderStates.append(renderState);
-        } else if (blendElement.text() == "false") {
-            SharedMaterialRenderState renderState(new MaterialDisableState(GL_BLEND));
+
+            reader->skipCurrentElement();
+
+        } else if (name == "depthWrite") {
+
+            QString text = reader->readElementText();
+            if (text == "true") {
+                SharedMaterialRenderState renderState(new MaterialDepthMask(true));
+                mRenderStates.append(renderState);
+            } else if (text == "false") {
+                SharedMaterialRenderState renderState(new MaterialDepthMask(false));
+                mRenderStates.append(renderState);
+            } else {
+                reader->raiseError("Boolean (true or false) expected.");
+                return false;
+            }
+
+        } else if (name == "stencilFunc") {
+
+            // This encodes default state
+            GLenum func = GL_ALWAYS;
+            GLint ref = 0;
+            GLuint mask = ~0;
+
+            bool ok;
+
+            if (reader->attributes().hasAttribute("function")) {
+                QStringRef funcString = reader->attributes().value("function");
+
+                if (funcString == "always")
+                    func = GL_ALWAYS;
+                else if (funcString == "never")
+                    func = GL_NEVER;
+                else if (funcString == "less")
+                    func = GL_LESS;
+                else if (funcString == "lequal")
+                    func = GL_LEQUAL;
+                else if (funcString == "greater")
+                    func = GL_GREATER;
+                else if (funcString == "gequal")
+                    func = GL_GEQUAL;
+                else if (funcString == "equal")
+                    func = GL_EQUAL;
+                else if (funcString == "notequal")
+                    func = GL_NOTEQUAL;
+                else {
+                    reader->raiseError("Unknown stencil function.");
+                    return false;
+                }
+            }
+
+            if (reader->attributes().hasAttribute("reference")) {
+                ref = reader->attributes().value("reference").toString().toInt(&ok);
+
+                if (!ok) {
+                    reader->raiseError("Invalid stencil function reference.");
+                    return false;
+                }
+            }
+
+            if (reader->attributes().hasAttribute("mask")) {
+                mask = reader->attributes().value("mask").toString().toUInt(&ok);
+
+                if (!ok) {
+                    reader->raiseError("Invalid stencil function mask.");
+                    return false;
+                }
+            }
+
+            SharedMaterialRenderState renderState(new StencilFuncState(func, ref, mask));
             mRenderStates.append(renderState);
-        }
-    }
 
-    QDomElement cullFaceElement = passElement.firstChildElement("cullFace");
-    if (!cullFaceElement.isNull()) {
-        QString cullFaces = cullFaceElement.text();
+            reader->skipCurrentElement();
 
-        // TODO: Sanity check
-        if (cullFaces == "false") {
-            SharedMaterialRenderState renderState(new MaterialDisableState(GL_CULL_FACE));
+        } else if (name == "clearStencil") {
+
+            GLint value = 0;
+
+            if (reader->attributes().hasAttribute("value")) {
+                bool ok;
+                value = reader->attributes().value("value").toString().toInt(&ok);
+
+                if (!ok) {
+                    reader->raiseError("Invalid value.");
+                    return false;
+                }
+            }
+
+            SharedMaterialRenderState renderState(new ClearStencilState(value));
             mRenderStates.append(renderState);
-        }
-    }
 
-    QDomElement depthWriteElement = passElement.firstChildElement("depthWrite");
-    if (!depthWriteElement.isNull()) {
-        QString depthWrite = depthWriteElement.text();
+            reader->skipCurrentElement();
 
-        // TODO: Sanity check
-        if (depthWrite == "false") {
-            SharedMaterialRenderState renderState(new MaterialDepthMask(false));
+        } else if (name == "stencilOp") {
+
+            bool failOk, zFailOk, zPassOk;
+            GLenum fail = GL_KEEP;
+            GLenum zFail = GL_KEEP;
+            GLenum zPass = GL_KEEP;
+
+            if (reader->attributes().hasAttribute("stencilFail"))
+                fail = parseStencilOp(reader->attributes().value("stencilFail"), &failOk);
+            if (reader->attributes().hasAttribute("depthFail"))
+                zFail = parseStencilOp(reader->attributes().value("depthFail"), &zFailOk);
+            if (reader->attributes().hasAttribute("depthPass"))
+                zPass= parseStencilOp(reader->attributes().value("depthPass"), &zPassOk);
+
+            if (!failOk || !zFailOk || !zPassOk) {
+                reader->raiseError("Invalid stencil operation.");
+                return false;
+            }
+
+            SharedMaterialRenderState renderState(new StencilOpState(fail, zFail, zPass));
             mRenderStates.append(renderState);
-        }
-    }
 
-    QDomElement depthTestElement = passElement.firstChildElement("depthTest");
-    if (!depthTestElement.isNull()) {
-        QString depthTest = depthTestElement.text();
+            reader->skipCurrentElement();
 
-        // TODO: Sanity check
-        if (depthTest == "false") {
-            SharedMaterialRenderState renderState(new MaterialDisableState(GL_DEPTH_TEST));
-            mRenderStates.append(renderState);
-        }
-    }
+        } else if (name == "colorMask") {
+            bool red = true;
+            if (reader->attributes().hasAttribute("red"))
+                red = reader->attributes().value("red") == "true";
 
-    QDomElement alphaTestElement = passElement.firstChildElement("alphaTest");
-    if (!alphaTestElement.isNull()) {
-        QString enabled = alphaTestElement.text();
+            bool green = true;
+            if (reader->attributes().hasAttribute("green"))
+                green = reader->attributes().value("green") == "true";
 
-        if (enabled == "false") {
-            SharedMaterialRenderState renderState(new MaterialDisableState(GL_ALPHA_TEST));
-            mRenderStates.append(renderState);
-        } else if (enabled == "true") {
-            SharedMaterialRenderState renderState(new MaterialEnableState(GL_ALPHA_TEST));
-            mRenderStates.append(renderState);
-        }
-    }
+            bool blue = true;
+            if (reader->attributes().hasAttribute("blue"))
+                blue = reader->attributes().value("blue") == "true";
 
-    QDomElement stencilTestElement = passElement.firstChildElement("stencilTest");
-    if (!stencilTestElement.isNull()) {
-        QString stencilTest = stencilTestElement.text();
+            bool alpha = true;
+            if (reader->attributes().hasAttribute("alpha"))
+                alpha = reader->attributes().value("alpha") == "true";
 
-        // TODO: Sanity check
-        if (stencilTest == "true") {
-            SharedMaterialRenderState renderState(new MaterialEnableState(GL_STENCIL_TEST));
-            mRenderStates.append(renderState);
-        }
-    }
-
-    QDomElement stencilFuncElement = passElement.firstChildElement("stencilFunc");
-    if (!stencilFuncElement.isNull()) {
-        // This encodes default state
-        GLenum func = GL_ALWAYS;
-        GLint ref = 0;
-        GLuint mask = ~0;
-
-        QString funcString = stencilFuncElement.attribute("function", "always");
-        if (funcString == "always")
-            func = GL_ALWAYS;
-        else if (funcString == "never")
-            func = GL_NEVER;
-        else if (funcString == "less")
-            func = GL_LESS;
-        else if (funcString == "lequal")
-            func = GL_LEQUAL;
-        else if (funcString == "greater")
-            func = GL_GREATER;
-        else if (funcString == "gequal")
-            func = GL_GEQUAL;
-        else if (funcString == "equal")
-            func = GL_EQUAL;
-        else if (funcString == "notequal")
-            func = GL_NOTEQUAL;
-        else
-            qWarning("Unknown stencil function: %s", qPrintable(funcString));
-
-        bool ok;
-        ref = stencilFuncElement.attribute("reference", "0").toInt(&ok);
-
-        if (!ok)
-            qWarning("Invalid stencil function reference: %s", qPrintable(stencilFuncElement.attribute("reference")));
-
-        if (stencilFuncElement.hasAttribute("mask"))
-            mask = stencilFuncElement.attribute("mask").toUInt(&ok);
-
-        if (!ok)
-            qWarning("Invalid stencil function mask: %s", qPrintable(stencilFuncElement.attribute("mask")));
-
-        SharedMaterialRenderState renderState(new StencilFuncState(func, ref, mask));
-        mRenderStates.append(renderState);
-    }
-
-    QDomElement clearStencilElement = passElement.firstChildElement("clearStencil");
-    if (!clearStencilElement.isNull()) {
-        bool ok;
-        GLint value = clearStencilElement.attribute("value", "0").toInt(&ok);
-        Q_ASSERT(ok);
-
-        SharedMaterialRenderState renderState(new ClearStencilState(value));
-        mRenderStates.append(renderState);
-    }
-
-    QDomElement stencilOpElement = passElement.firstChildElement("stencilOp");
-    if (!stencilOpElement.isNull()) {
-        GLenum fail = convertStencilOp(stencilOpElement.attribute("stencilFail", "keep"));
-        GLenum zFail = convertStencilOp(stencilOpElement.attribute("depthFail", "keep"));
-        GLenum zPass= convertStencilOp(stencilOpElement.attribute("depthPass", "keep"));
-
-        SharedMaterialRenderState renderState(new StencilOpState(fail, zFail, zPass));
-        mRenderStates.append(renderState);
-    }
-
-    QDomElement colorMaskElement = passElement.firstChildElement("colorMask");
-    if (!colorMaskElement.isNull()) {
-        bool red = colorMaskElement.attribute("red", "true") == "true";
-        bool green = colorMaskElement.attribute("green", "true") == "true";
-        bool blue = colorMaskElement.attribute("blue", "true") == "true";
-        bool alpha = colorMaskElement.attribute("alpha", "true") == "true";
-
-        // TODO: Need some way to determine default state without encoding it here
-        if (!red || !green || !blue || !alpha) {
             SharedMaterialRenderState renderState(new MaterialColorMaskState(red, green, blue, alpha));
             mRenderStates.append(renderState);
-        }
-    }
 
-    return true;
-}
+            reader->skipCurrentElement();
 
-bool MaterialShader::load(const QDomElement &shaderElement)
-{
-    if (shaderElement.nodeName() == "vertexShader") {
-        mType = VertexShader;
-    } else if (shaderElement.nodeName() == "fragmentShader") {
-        mType = FragmentShader;
-    } else {
-        qWarning("Shader element has invalid name %s.", qPrintable(shaderElement.nodeName()));
-        return false;
-    }
-
-    mVersion = shaderElement.attribute("version");
-
-    QDomElement childElement = shaderElement.firstChildElement();
-    while (!childElement.isNull()) {
-        QString childName = childElement.nodeName();
-
-        if (childName == "code") {
-            mCode = childElement.text();
-        } else if (childName == "include") {
-            Q_ASSERT(childElement.hasAttribute("file"));
-            mIncludes.append(childElement.attribute("file"));
-        } else if (childName == "code") {
-            mCode = childElement.text();
         } else {
-            qFatal("Unknown sub-element of shader element: %s", qPrintable(childName));
-        }
+            bool ok;
+            GLenum state = getToggleableGlState(name, &ok);
 
-        childElement = childElement.nextSiblingElement();
+            if (!ok) {
+                reader->raiseError("Unknown pass element: " + reader->name().toString());
+                return false;
+            }
+
+            QString text = reader->readElementText();
+            if (text == "true") {
+                SharedMaterialRenderState renderState(new MaterialEnableState(state));
+                mRenderStates.append(renderState);
+            } else if (text == "false") {
+                SharedMaterialRenderState renderState(new MaterialDisableState(state));
+                mRenderStates.append(renderState);
+            } else {
+                reader->raiseError("Boolean (true/false) expected.");
+                return false;
+            }
+        }
     }
 
     return true;
@@ -349,185 +406,232 @@ MaterialAttributeBinding::MaterialAttributeBinding()
 {
 }
 
-bool MaterialAttributeBinding::load(const QDomElement &element)
+bool MaterialAttributeBinding::load(QXmlStreamReader *reader)
 {
-    Q_ASSERT(element.hasAttribute("name"));
-    Q_ASSERT(element.hasAttribute("buffer"));
+    Q_ASSERT(reader->attributes().hasAttribute("name"));
+    Q_ASSERT(reader->attributes().hasAttribute("buffer"));
 
-    mName = element.attribute("name");
-    mBufferName = element.attribute("buffer");
+    mName = reader->attributes().value("name").toString();
+    mBufferName = reader->attributes().value("buffer").toString();
 
-    bool ok;
-    int value = element.attribute("components", "4").toInt(&ok);
+    if (reader->attributes().hasAttribute("components")) {
+        bool ok;
+        int val = reader->attributes().value("components").toString().toInt(&ok);
 
-    if (!ok || value < 1 || value > 4) {
-        qWarning("Invalid number of components for attribute: %s.", qPrintable(element.attribute("components")));
-        return false;
+        if (!ok || val < 1 || val > 4) {
+            reader->raiseError("Invalid number of attribute components. Must be 1-4.");
+            return false;
+        }
+
+        mComponents = val;
     }
 
-    mComponents = value;
-
-    QString typeName = element.attribute("type", "float");
-    if (typeName == "byte") {
-        mType = Byte;
-    } else if (typeName == "unsigned_byte") {
-        mType = UnsignedByte;
-    } else if (typeName == "short") {
-        mType = Short;
-    } else if (typeName == "unsigned_short") {
-        mType = UnsignedShort;
-    } else if (typeName == "integer") {
-        mType = Integer;
-    } else if (typeName == "unsigned_integer") {
-        mType = UnsignedInteger;
-    } else if (typeName == "float") {
+    if (reader->attributes().hasAttribute("type")) {
+        QStringRef typeName = reader->attributes().value("type");
+        if (typeName == "byte") {
+            mType = Byte;
+        } else if (typeName == "unsigned_byte") {
+            mType = UnsignedByte;
+        } else if (typeName == "short") {
+            mType = Short;
+        } else if (typeName == "unsigned_short") {
+            mType = UnsignedShort;
+        } else if (typeName == "integer") {
+            mType = Integer;
+        } else if (typeName == "unsigned_integer") {
+            mType = UnsignedInteger;
+        } else if (typeName == "float") {
+            mType = Float;
+        } else if (typeName == "double") {
+            mType = Double;
+        } else {
+            reader->raiseError("Unknown attribute type name.");
+            return false;
+        }
+    } else {
         mType = Float;
-    } else if (typeName == "double") {
-        mType = Double;
-    } else {
-        qWarning("Unknown type name for attribute: %s", qPrintable(typeName));
-        return false;
     }
 
-    QString normalized = element.attribute("normalized", "false");
+    if (reader->attributes().hasAttribute("normalized")) {
+        QStringRef normalized = reader->attributes().value("normalized");
 
-    if (normalized == "true") {
-        mNormalized = true;
-    } else if (normalized == "false") {
+        if (normalized == "true") {
+            mNormalized = true;
+        } else if (normalized == "false") {
+            mNormalized = false;
+        } else {
+            reader->raiseError("Expected boolean for normalized attribute.");
+            return false;
+        }
+    } else {
         mNormalized = false;
+    }
+
+    if (reader->attributes().hasAttribute("stride")) {
+        bool ok;
+        int value = reader->attributes().value("stride").toString().toInt(&ok);
+
+        if (!ok || value < 0) {
+            reader->raiseError("Invalid stride.");
+            return false;
+        }
+
+        mStride = value;
     } else {
-        qWarning("Invalid value for normalized, only true and false are allowed: %s.", qPrintable(normalized));
-        return false;
+        mStride = 0;
     }
 
-    value = element.attribute("stride", "0").toInt(&ok);
+    if (reader->attributes().hasAttribute("offset")) {
+        bool ok;
+        int value = reader->attributes().value("offset").toString().toInt(&ok);
 
-    if (!ok || value < 0) {
-        qWarning("Invalid stride for attribute: %s.", qPrintable(element.attribute("stride")));
-        return false;
+        if (!ok || value < 0) {
+            reader->raiseError("Invalid offset.");
+            return false;
+        }
+
+        mOffset = value;
+    } else {
+        mOffset = 0;
     }
 
-    mStride = value;
-
-    value = element.attribute("offset", "0").toInt(&ok);
-
-    if (!ok || value < 0) {
-        qWarning("Invalid offset for attribute: %s.", qPrintable(element.attribute("offset")));
-        return false;
-    }
-
-    mOffset = value;
+    reader->skipCurrentElement();
 
     return true;
 }
 
-inline static float attributeToFloat(const QDomElement &element, const QString &name)
+inline static float attributeToFloat(QXmlStreamReader *reader, const QXmlStreamAttributes &attributes, const char *name)
 {
     bool ok;
-    float result = element.attribute(name).toFloat(&ok);
+    float result = attributes.value(name).toString().toFloat(&ok);
     if (!ok) {
-        qWarning("Attribute %s has invalid float value: %s", qPrintable(name), qPrintable(element.tagName()));
+        reader->raiseError(QString("Attribute %1 is missing.").arg(name));
     }
     return result;
 }
 
-inline static float attributeToInt(const QDomElement &element, const QString &name)
+inline static int attributeToInt(QXmlStreamReader *reader, const QXmlStreamAttributes &attributes, const char *name)
 {
     bool ok;
-    float result = element.attribute(name).toInt(&ok);
+    int result = attributes.value(name).toString().toInt(&ok);
     if (!ok) {
-        qWarning("Attribute %s has invalid integer value: %s", qPrintable(name), qPrintable(element.tagName()));
+        reader->raiseError(QString("Attribute %1 is missing.").arg(name));
     }
     return result;
 }
 
-bool MaterialUniformBinding::load(const QDomElement &element)
+bool MaterialUniformBinding::load(QXmlStreamReader *reader)
 {
-    Q_ASSERT(element.hasAttribute("name"));
+    QXmlStreamAttributes attributes = reader->attributes();
 
-    mOptional = element.attribute("optional", "true") == "true";
-    mName = element.attribute("name");
-    mSemantic = element.attribute("semantic", "Constant");
+    Q_ASSERT(attributes.hasAttribute("name"));
 
-    QDomElement constant = element.firstChildElement();
+    if (attributes.hasAttribute("optional"))
+        mOptional = attributes.value("optional") == "true";
+    else
+        mOptional = true;
 
-    if (constant.isNull())
-        return true; // No constant value
+    mName = attributes.value("name").toString();
+
+    if (attributes.hasAttribute("semantic"))
+        mSemantic = attributes.value("semantic").toString();
+    else
+        mSemantic = "Constant";
+
+   if (!reader->readNextStartElement())
+       return true; // No constant value
 
     // Retrieve the constant value
-    QString constantType = constant.nodeName();
+    QStringRef constantType = reader->name();
+
+    attributes = reader->attributes(); // Refresh attributes vector
 
     if (constantType == "float4") {
         QVector4D value;
-        if (constant.hasAttribute("x"))
-            value.setX(attributeToFloat(constant, "x"));
-        if (constant.hasAttribute("r"))
-            value.setX(attributeToFloat(constant, "r"));
+        if (attributes.hasAttribute("x"))
+            value.setX(attributeToFloat(reader, attributes, "x"));
+        if (attributes.hasAttribute("r"))
+            value.setX(attributeToFloat(reader, attributes, "r"));
 
-        if (constant.hasAttribute("y"))
-            value.setY(attributeToFloat(constant, "y"));
-        if (constant.hasAttribute("g"))
-            value.setY(attributeToFloat(constant, "g"));
+        if (attributes.hasAttribute("y"))
+            value.setY(attributeToFloat(reader, attributes, "y"));
+        if (attributes.hasAttribute("g"))
+            value.setY(attributeToFloat(reader, attributes, "g"));
 
-        if (constant.hasAttribute("z"))
-            value.setZ(attributeToFloat(constant, "z"));
-        if (constant.hasAttribute("b"))
-            value.setZ(attributeToFloat(constant, "b"));
+        if (attributes.hasAttribute("z"))
+            value.setZ(attributeToFloat(reader, attributes, "z"));
+        if (attributes.hasAttribute("b"))
+            value.setZ(attributeToFloat(reader, attributes, "b"));
 
-        if (constant.hasAttribute("w"))
-            value.setW(attributeToFloat(constant, "w"));
-        if (constant.hasAttribute("a"))
-            value.setW(attributeToFloat(constant, "a"));
+        if (attributes.hasAttribute("w"))
+            value.setW(attributeToFloat(reader, attributes, "w"));
+        if (attributes.hasAttribute("a"))
+            value.setW(attributeToFloat(reader, attributes, "a"));
         mConstantValue = QVariant(value);
     } else if (constantType == "float3") {
         QVector3D value;
-        if (constant.hasAttribute("x"))
-            value.setX(attributeToFloat(constant, "x"));
-        if (constant.hasAttribute("r"))
-            value.setX(attributeToFloat(constant, "r"));
+        if (attributes.hasAttribute("x"))
+            value.setX(attributeToFloat(reader, attributes, "x"));
+        if (attributes.hasAttribute("r"))
+            value.setX(attributeToFloat(reader, attributes, "r"));
 
-        if (constant.hasAttribute("y"))
-            value.setY(attributeToFloat(constant, "y"));
-        if (constant.hasAttribute("g"))
-            value.setY(attributeToFloat(constant, "g"));
+        if (attributes.hasAttribute("y"))
+            value.setY(attributeToFloat(reader, attributes, "y"));
+        if (attributes.hasAttribute("g"))
+            value.setY(attributeToFloat(reader, attributes, "g"));
 
-        if (constant.hasAttribute("z"))
-            value.setZ(attributeToFloat(constant, "z"));
-        if (constant.hasAttribute("b"))
-            value.setZ(attributeToFloat(constant, "b"));
+        if (attributes.hasAttribute("z"))
+            value.setZ(attributeToFloat(reader, attributes, "z"));
+        if (attributes.hasAttribute("b"))
+            value.setZ(attributeToFloat(reader, attributes, "b"));
 
         mConstantValue = QVariant(value);
     } else if (constantType == "float2") {
         QVector2D value;
-        if (constant.hasAttribute("x"))
-            value.setX(attributeToFloat(constant, "x"));
-        if (constant.hasAttribute("u"))
-            value.setX(attributeToFloat(constant, "r"));
+        if (attributes.hasAttribute("x"))
+            value.setX(attributeToFloat(reader, attributes, "x"));
+        if (attributes.hasAttribute("u"))
+            value.setX(attributeToFloat(reader, attributes, "r"));
 
-        if (constant.hasAttribute("y"))
-            value.setY(attributeToFloat(constant, "u"));
-        if (constant.hasAttribute("u"))
-            value.setY(attributeToFloat(constant, "v"));
+        if (attributes.hasAttribute("y"))
+            value.setY(attributeToFloat(reader, attributes, "u"));
+        if (attributes.hasAttribute("u"))
+            value.setY(attributeToFloat(reader, attributes, "v"));
 
         mConstantValue = QVariant(value);
     } else if (constantType == "float") {
         float value = 0;
-        if (constant.hasAttribute("value")) {
-            value = attributeToFloat(constant, "value");
+        if (attributes.hasAttribute("value")) {
+            value = attributeToFloat(reader, attributes, "value");
         }
         mConstantValue = QVariant(value);
     } else if (constantType == "int") {
         int value = 0;
-        if (constant.hasAttribute("value")) {
-            value = attributeToInt(constant, "value");
+        if (attributes.hasAttribute("value")) {
+            value = attributeToInt(reader, attributes, "value");
         }
         mConstantValue = QVariant(value);
+    } else {
+        reader->raiseError("Unknown constant type.");
+        return false;
     }
 
-    return true;
+    QXmlStreamReader::TokenType token = reader->readNext();
+
+    if (token != QXmlStreamReader::EndElement) {
+        reader->raiseError("Constant uniform elements must not have a body.");
+        return false;
+    }
+
+    if (reader->readNextStartElement()) {
+        reader->raiseError("Uniform elements may only have one child-element.");
+        return false;
+    }
+
+    return !reader->hasError();
 }
 
-static MaterialTextureSampler::WrapMode parseWrapMode(const QString &text) {
+static MaterialTextureSampler::WrapMode parseWrapMode(const QStringRef &text) {
     if (text == "repeat")
         return MaterialTextureSampler::Repeat;
     else if (text == "wrap")
@@ -535,21 +639,23 @@ static MaterialTextureSampler::WrapMode parseWrapMode(const QString &text) {
     else if (text == "clamp")
         return MaterialTextureSampler::Clamp;
 
-    qWarning("Unknown texture sampler wrap mode: %s", qPrintable(text));
+    qWarning("Unknown texture sampler wrap mode: %s", qPrintable(text.toString()));
     return MaterialTextureSampler::Repeat;
 }
 
-bool MaterialTextureSampler::load(const QDomElement &element)
+bool MaterialTextureSampler::load(QXmlStreamReader *reader)
 {
-    Q_ASSERT(element.hasAttribute("texture"));
+    Q_ASSERT(reader->attributes().hasAttribute("texture"));
 
-    mTexture = element.attribute("texture");
+    mTexture = reader->attributes().value("texture").toString();
 
-    if (element.hasAttribute("wrapU"))
-        mWrapU = parseWrapMode(element.attribute("wrapU"));
+    if (reader->attributes().hasAttribute("wrapU"))
+        mWrapU = parseWrapMode(reader->attributes().value("wrapU"));
 
-    if (element.hasAttribute("wrapV"))
-        mWrapV = parseWrapMode(element.attribute("wrapV"));
+    if (reader->attributes().hasAttribute("wrapV"))
+        mWrapV = parseWrapMode(reader->attributes().value("wrapV"));
+
+    reader->skipCurrentElement();
 
     return true;
 }
@@ -569,3 +675,4 @@ void MaterialBlendFunction::disable()
 }
 
 }
+

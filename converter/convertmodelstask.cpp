@@ -1,4 +1,5 @@
 
+#include <QtConcurrentRun>
 #include <QTextStream>
 #include <QDataStream>
 #include <QVector>
@@ -140,34 +141,23 @@ void ConvertModelsTask::convertReferencedMeshes()
 
     const QSet<QString> &meshReferences = service()->getMeshReferences();
 
-    int totalWork = meshReferences.size();
-    int workDone = 0;
+    mTotalWork = meshReferences.size();
+    mWorkDone = 0;
+
+    QList< QFuture<bool> > futures;
 
     foreach (const QString &meshFilename, meshReferences) {
         assertNotAborted();
 
-        ++workDone;
-
-        if (mExclusions.isExcluded(meshFilename)) {
-            qWarning("Skipping %s, since it's excluded.", qPrintable(meshFilename));
-            workDone++;
-            continue;
-        }
-
-        Troika::SkmReader reader(service()->virtualFileSystem(), service()->materials(), meshFilename);
-        QScopedPointer<Troika::MeshModel> model(reader.get());
-
-        if (!model) {
-            qWarning("Unable to open model %s.", qPrintable(meshFilename));
-            workDone++;
-            continue;
-        }
-
-        convertModel(output.data(), meshFilename, model.data());
-
-        if (workDone % 10 == 0)
-            emit progress(workDone, totalWork);
+        futures.append(QtConcurrent::run(this, &ConvertModelsTask::convertModel, output.data(), meshFilename));
     }
+
+    // Now start waiting on the futures
+    foreach (QFuture<bool> future, futures) {
+        future.waitForFinished();
+    }
+
+    assertNotAborted();
 
     convertMaterials(output.data());
 
@@ -215,8 +205,26 @@ void ConvertModelsTask::convertMaterials(IFileWriter *output)
 /**
   * Converts a single model, given its original filename.
   */
-bool ConvertModelsTask::convertModel(IFileWriter *output, const QString &filename, Troika::MeshModel *model)
+bool ConvertModelsTask::convertModel(IFileWriter *output, const QString &filename)
 {
+    if (isAborted())
+        return false;
+
+    if (mExclusions.isExcluded(filename)) {
+        qWarning("Skipping %s, since it's excluded.", qPrintable(filename));
+        mWorkDone.fetchAndAddRelaxed(1);
+        return false;
+    }
+
+    Troika::SkmReader reader(service()->virtualFileSystem(), service()->materials(), filename);
+    QScopedPointer<Troika::MeshModel> model(reader.get());
+
+    if (!model) {
+        qWarning("Unable to open model %s.", qPrintable(filename));
+        mWorkDone.fetchAndAddRelaxed(1);
+        return false;
+    }
+
     // This is a tedious process, but necessary. Create a total bounding box,
     // then create a bounding box for every animation of the mesh.
     QString newFilename = getNewModelFilename(filename);
@@ -233,13 +241,21 @@ bool ConvertModelsTask::convertModel(IFileWriter *output, const QString &filenam
     stream.setByteOrder(QDataStream::LittleEndian);
     stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
 
-    writeModel(filename, output, model, stream);
+    writeModel(filename, output, model.data(), stream);
 
     modelBuffer.close();
 
     // writeDebugModel(model, newFilename + ".debug", zip);
 
     output->addFile(newFilename, modelData);
+
+    int workDone = mWorkDone.fetchAndAddRelaxed(1);
+
+    if (workDone % 10 == 0) {
+        emit progress(workDone, mTotalWork);
+    }
+
+    return true;
 }
 
 // We convert the streams to non-interleaved data, which makes it easier to read them into vectors

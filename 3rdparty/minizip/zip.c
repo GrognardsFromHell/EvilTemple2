@@ -1210,17 +1210,17 @@ extern int ZEXPORT zipOpenNewFileInZip4_64 (zipFile file, const char* filename, 
     {
         if(zi->ci.method == Z_DEFLATED)
         {
-          zi->ci.stream.zalloc = (alloc_func)0;
-          zi->ci.stream.zfree = (free_func)0;
-          zi->ci.stream.opaque = (voidpf)0;
+            zi->ci.stream.zalloc = (alloc_func)0;
+            zi->ci.stream.zfree = (free_func)0;
+            zi->ci.stream.opaque = (voidpf)0;
 
-          if (windowBits>0)
-              windowBits = -windowBits;
+            if (windowBits>0)
+                windowBits = -windowBits;
 
-          err = deflateInit2(&zi->ci.stream, level, Z_DEFLATED, windowBits, memLevel, strategy);
+            err = deflateInit2(&zi->ci.stream, level, Z_DEFLATED, windowBits, memLevel, strategy);
 
-          if (err==Z_OK)
-              zi->ci.stream_initialised = Z_DEFLATED;
+            if (err==Z_OK)
+                zi->ci.stream_initialised = Z_DEFLATED;
         }
         else if(zi->ci.method == Z_BZIP2ED)
         {
@@ -1410,7 +1410,8 @@ extern int ZEXPORT zipWriteInFileInZip (zipFile file,const void* buf,unsigned in
     if (zi->in_opened_file_inzip == 0)
         return ZIP_PARAMERROR;
 
-    zi->ci.crc32 = crc32(zi->ci.crc32,buf,(uInt)len);
+    if (!zi->ci.raw)
+        zi->ci.crc32 = crc32(zi->ci.crc32,buf,(uInt)len);
 
 #ifdef HAVE_BZIP2
     if(zi->ci.method == Z_BZIP2ED && (!zi->ci.raw))

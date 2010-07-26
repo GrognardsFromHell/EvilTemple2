@@ -18,7 +18,7 @@ void TestZipWriter::emptyZipFile()
     qDebug("Creating test file in %s.", qPrintable(tempPath));
 
     ZipWriter writer(tempPath);
-    writer.addFile("test.txt", "testdata", 0);
+    writer.addFile("test.txt", "testdatatestdatatestdatatestdatatestdatatestdatatestdatatestdatatestdatatestdata", 9);
     writer.close();
 
     QVERIFY2(QFile::exists(tempPath), "Zip file wasn't created.");
