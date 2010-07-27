@@ -1,6 +1,9 @@
 #ifndef ANIMATION_H
 #define ANIMATION_H
 
+#include <QHash>
+#include <QByteArray>
+#include <QVector>
 #include <QDataStream>
 #include <QString>
 
@@ -58,17 +61,16 @@ namespace EvilTemple {
         return mType;
     }
 
-    template<typename T> inline T lerp(const T &a, const T &b, float t)
+    template<typename T> inline T lerp(const T &from, const T &to, float t)
     {
-        Vector4 diff = b - a;
-        return a + t * diff;
+        return from + t * (to - from);
     }
 
-    template<> inline Quaternion lerp<Quaternion>(const Quaternion &a, const Quaternion &b, float t)
+    template<> inline Quaternion lerp<Quaternion>(const Quaternion &from, const Quaternion &to, float t)
     {
         float opposite;
         float inverse;
-        float dot = a.dot(b);
+        float dot = from.dot(to);
         bool flag = false;
 
         if( dot < 0.0f )
@@ -92,7 +94,7 @@ namespace EvilTemple {
                 : ( ( static_cast<float>( sin( static_cast<double>( t * acos ) ) ) ) * invSin );
         }
 
-        return inverse * a + opposite * b;
+        return inverse * from + opposite * to;
 
         // TODO: Try to use SLERP here, but also account for direction like this NLERP implementation
         /*float dot = a.dot(b);
@@ -167,7 +169,7 @@ namespace EvilTemple {
 
         Q_DISABLE_COPY(KeyframeStream);
     };
-    
+
     template<typename T, typename FT>
     inline QDataStream &operator >>(QDataStream &stream, KeyframeStream<T,FT> &keyframeStream)
     {
@@ -177,7 +179,7 @@ namespace EvilTemple {
         keyframeStream.mFrameStream = new FT[size];
         keyframeStream.mValueStream = new T[size];
 
-        for (int i = 0; i < size; ++i) {
+        for (uint i = 0; i < size; ++i) {
             stream >> keyframeStream.mFrameStream[i] >> keyframeStream.mValueStream[i];
         }
 
@@ -243,7 +245,7 @@ namespace EvilTemple {
          */
         typedef QHash<uint, const AnimationBone*> BoneMap;
 
-        const QString &name() const;
+        const QByteArray &name() const;
 
         uint frames() const;
 
@@ -260,7 +262,7 @@ namespace EvilTemple {
         const BoneMap &animationBones() const;
 
     private:
-        QString mName;
+        QByteArray mName;
         uint mFrames;
         float mFrameRate;
         float mDps;
@@ -272,7 +274,7 @@ namespace EvilTemple {
         Q_DISABLE_COPY(Animation);
     };
 
-    inline const QString &Animation::name() const
+    inline const QByteArray &Animation::name() const
     {
         return mName;
     }

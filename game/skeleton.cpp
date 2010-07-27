@@ -12,7 +12,6 @@ QDataStream &operator >>(QDataStream &stream, Skeleton &skeleton)
     skeleton.mBones = new Bone[bonesCount];
     skeleton.mBonePointers.resize(bonesCount);
 
-    Matrix4 fullWorldInverse;
     Matrix4 relativeWorld;
     
     for (int j = 0; j < bonesCount; ++j) {
@@ -20,7 +19,7 @@ QDataStream &operator >>(QDataStream &stream, Skeleton &skeleton)
         QByteArray boneName;
         int parentId;
 
-        stream >> boneName >> parentId >> fullWorldInverse >> relativeWorld;
+        stream >> boneName >> parentId >> relativeWorld;
 
         if (skeleton.mBoneMap.contains(boneName)) {
             qWarning("Duplicate bone %s in skeleton %s", boneName.constData(), qPrintable(skeleton.mName));
@@ -33,13 +32,11 @@ QDataStream &operator >>(QDataStream &stream, Skeleton &skeleton)
         Q_ASSERT(parentId >= -1 && parentId < j);
 
         bone.setBoneId(j);
-        bone.setFullWorldInverse(fullWorldInverse);
         bone.setRelativeWorld(relativeWorld);
         bone.setName(boneName);
 
         if (parentId == -1) {
             bone.setFullWorld(relativeWorld);
-            bone.setFullTransform(relativeWorld * fullWorldInverse);
             continue;
         }
 
@@ -47,7 +44,6 @@ QDataStream &operator >>(QDataStream &stream, Skeleton &skeleton)
 
         bone.setParent(parent);
         bone.setFullWorld(parent->fullWorld() * relativeWorld);
-        bone.setFullTransform(bone.fullWorld() * fullWorldInverse);
     }
 
     return stream;

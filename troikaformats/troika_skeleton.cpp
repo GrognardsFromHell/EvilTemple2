@@ -1,6 +1,6 @@
 
 #include "troika_skeleton.h"
-#include "model.h"
+#include "troika_model.h"
 
 #include <QCryptographicHash>
 #include <QDataStream>
@@ -8,13 +8,29 @@
 namespace Troika
 {
 
+    static inline QByteArray normalizeBoneName(QByteArray boneName)
+    {
+        boneName = boneName.toLower();
+
+        // Strip the _ground from some bone names, although this is most likely irrelevant anyway
+        // since those skeletons are mostly empty, and in that case we really don't need bones.
+        // Unless they're ref bones that is.
+        if (boneName.startsWith("#cylinder")
+            || boneName.startsWith("#sphere")) {
+            int indexOfBracket = boneName.indexOf(']');
+            return boneName.left(indexOfBracket + 2);
+        }
+
+        return boneName;
+    }
+
     AnimationStream *Animation::openStream(const Skeleton *skeleton) const
     {
         int boneCount = skeleton->bones().size();
         if (_frames == 0)
             return 0;
         else
-            return new AnimationStream(_keyFramesData, _keyFramesDataStart, boneCount, _frames, skeleton->remappedBones());
+            return new AnimationStream(_keyFramesData, _keyFramesDataStart, boneCount, _frames);
     }
 
     void Animation::freeStream(AnimationStream *stream) const
@@ -28,40 +44,14 @@ namespace Troika
         QByteArray data; // SKA data
         QDataStream stream;
         QString filename;
-        QVector<Bone> skmBones;
-        QHash<uint,uint> remappedBones;
 
         void loadBones(quint32 count, quint32 dataStart)
         {
             stream.device()->seek(dataStart);
 
-            // It's possible that the SKA file defines more bones than the SKM file
-            // Compensate for that here
-            if (int(count) > bones.count()) {
-                qWarning("SKA file defines %d bones, while SKM file defines %d.", count, bones.count());
-                bones.reserve(count); // Reserve memory for later appends
-            }
-
-            skmBones = bones;
-
+            bones.resize(count);
             for (quint32 i = 0; i < count; ++i) {
                 loadBone(i);
-            }
-
-            // Process bone remapping
-            if (!remappedBones.isEmpty()) {
-                qWarning("Model %s has different set of bones from skeleton.", qPrintable(filename));
-
-                // For all vertices, re-wire bone attachments from the skmBoneId to our bone id
-                for (int i = 0; i < vertexCount; ++i) {
-                    for (int j = 0; j < vertices[i].attachmentCount; ++j) {
-                        uint boneId = vertices[i].attachmentBone[j];
-                        QHash<uint,uint>::const_iterator it = remappedBones.find(boneId);
-                        if (it != remappedBones.end()) {
-                            vertices[i].attachmentBone[j] = it.value();
-                        }
-                    }
-                }
             }
         }
 
@@ -75,51 +65,16 @@ namespace Troika
             rawBoneName[48] = 0;
             stream.readRawData(rawBoneName, 48);
 
-            QString boneName = QString::fromLatin1(rawBoneName);
+            if (flags != 0) {
+                qDebug("Bone flags in SKA %s for bone %s are: %x", qPrintable(filename), rawBoneName, flags);
+            }
 
             // Bones in the skeleton file are associated with bones from the original model
             // It's possible that the skeleton defines additional bones.
-            if (int(boneId) >= bones.count()) {
-                bones.resize(boneId + 1);
-
-                Bone &newBone = bones[boneId];
-                newBone.id = boneId;
-                newBone.flags = flags;
-                newBone.name = boneName;
-                newBone.skaOnly = true;
-                newBone.skmOnly = false;
-            } else if (boneName != bones[boneId].name) {
-                int skmBoneId = -1;
-
-                // Try to find the skmBone with the same name
-                for (int i = 0; i < skmBones.size(); ++i) {
-                    if (skmBones[i].name == boneName) {
-                        skmBoneId = i;
-                        break;
-                    }
-                }
-
-                if (skmBoneId == -1) {
-                    qWarning("Found a SKA bone with name '%s' that has no corresponding bone in the SKM"
-                             " and overlaps with SKM bone '%s'",
-                             qPrintable(boneName), qPrintable(bones[boneId].name));
-                    bones[boneId].skaOnly = true;
-
-                    // Such a bone will NOT have a fullWorldInverse and is thus quite useless for animations
-                    // Since in no case will it be used by any SKM file (*unless* multiple SKMs use this SKA)
-                } else {
-                    bones[boneId].skmOnly = false;
-
-                    bones[boneId].name = boneName;
-                    bones[boneId].fullWorldInverse = skmBones[skmBoneId].fullWorldInverse;
-
-                    remappedBones[skmBoneId] = boneId;
-                }
-            } else {
-                bones[boneId].skmOnly = false;
-            }
-
-            bones[boneId].parentId = parentId;
+            Bone &bone = bones[boneId];
+            bone.id = boneId;
+            bone.name = QByteArray(rawBoneName);
+            bone.parentId = parentId;
 
             QVector4D scale; // The fourth component is discarded
             QVector4D rotation; // Order is: X,Y,Z,Scalar
@@ -128,7 +83,7 @@ namespace Troika
             stream >> scale >> rotation >> translation;
 
             // Build the relative world matrix for the bone
-            QMatrix4x4 &relativeWorld = bones[boneId].relativeWorld;
+            QMatrix4x4 &relativeWorld = bone.relativeWorld;
             relativeWorld.setToIdentity();
             relativeWorld.translate(translation.x(), translation.y(), translation.z());
             relativeWorld.rotate(QQuaternion(rotation.w(), rotation.x(), rotation.y(), rotation.z()));
@@ -159,7 +114,7 @@ namespace Troika
             rawName[64] = 0;
             stream.readRawData(rawName, 64);
 
-            animation.setName(QString::fromLatin1(rawName));
+            animation.setName(QByteArray(rawName));
 
             quint8 driveType;
             quint8 loopable;
@@ -216,8 +171,8 @@ namespace Troika
                 stream.readRawData(type, 48);
                 stream.readRawData(action, 128);
 
-                event.type = QString::fromLatin1(type);
-                event.action = QString::fromLatin1(action);
+                event.type = QByteArray(type);
+                event.action = QByteArray(action);
             }
 
             animation.setEvents(events);
@@ -226,15 +181,10 @@ namespace Troika
     public:
         QVector<Bone> bones;
         QVector<Animation> animations;
-        QHash<QString, Animation*> animationMap;
+        QHash<QByteArray, Animation*> animationMap;
 
-        // Used to fix broken bone assignments
-        Vertex* vertices;
-        int vertexCount;
-
-        SkeletonData(Vertex* _vertices, int _vertexCount, const QVector<Bone> &_bones, const QByteArray &_data,
-                     const QString &_filename) : data(_data), stream(data), bones(_bones), filename(_filename),
-        vertices(_vertices), vertexCount(_vertexCount)
+        SkeletonData(const QByteArray &_data, const QString &_filename)
+            : data(_data), stream(data), filename(_filename)
         {
             stream.setByteOrder(QDataStream::LittleEndian);
             stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
@@ -269,9 +219,8 @@ namespace Troika
         }
     };
 
-    Skeleton::Skeleton(Vertex *vertices, int vertexCount, const QVector<Bone> &bones,
-                       const QByteArray &data, const QString &filename)
-                           : d_ptr(new SkeletonData(vertices, vertexCount, bones, data, filename))
+    Skeleton::Skeleton(const QByteArray &data, const QString &filename)
+                           : d_ptr(new SkeletonData(data, filename))
     {
         d_ptr->load();
     }
@@ -290,9 +239,9 @@ namespace Troika
         return d_ptr->animations;
     }
 
-    const Animation *Skeleton::findAnimation(const QString &name) const
+    const Animation *Skeleton::findAnimation(const QByteArray &name) const
     {
-        QHash<QString,Animation*>::const_iterator it = d_ptr->animationMap.find(name.toLower());
+        QHash<QByteArray,Animation*>::const_iterator it = d_ptr->animationMap.find(name.toLower());
         if (it == d_ptr->animationMap.end()) {
             return 0;
         } else {
@@ -309,9 +258,8 @@ namespace Troika
 
     const float AnimationStream::rotationFactor = 1 / 32766.0f;
 
-    AnimationStream::AnimationStream(const QByteArray &data, int dataStart, int boneCount, int _frameCount, const QHash<uint,uint> &remappedBones)
-        : _dataStart(dataStart), _boneCount(boneCount), _boneMap(new AnimationBoneState*[boneCount]), stream(data), frameCount(_frameCount),
-        _remappedBones(remappedBones)
+    AnimationStream::AnimationStream(const QByteArray &data, int dataStart, int boneCount, int _frameCount)
+        : _dataStart(dataStart), _boneCount(boneCount), _boneMap(new AnimationBoneState*[boneCount]), stream(data), frameCount(_frameCount)
     {
         stream.setByteOrder(QDataStream::LittleEndian);
         stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
@@ -558,11 +506,6 @@ namespace Troika
         while (nextFrameId < frame && nextFrameId > 0) {
             readNextFrame();
         }
-    }
-
-    const QHash<uint,uint> &Skeleton::remappedBones() const
-    {
-        return d_ptr->remappedBones;
     }
 
 }

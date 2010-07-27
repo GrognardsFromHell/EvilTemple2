@@ -2,8 +2,6 @@
 #ifndef MODEL_H
 #define MODEL_H
 
-#include <GL/glew.h>
-
 #include <QtCore/QString>
 #include <QtCore/QSharedPointer>
 #include <QtCore/QScopedArrayPointer>
@@ -12,13 +10,11 @@
 
 #include "materialstate.h"
 #include "renderstates.h"
-#include "util.h"
 #include "vertexbufferobject.h"
 
 #include "animation.h"
 #include "skeleton.h"
-
-#include <cmath>
+#include "bindingpose.h"
 
 #include <gamemath.h>
 using namespace GameMath;
@@ -42,35 +38,6 @@ namespace EvilTemple {
         QVector<ushort> indices;
     };
 
-    /**
-    Models the attachment of a single vertex to several bones.
-    This is used for skeletal animation
-    */
-    class BoneAttachment {
-    public:
-
-        int count() const {
-            return mBoneCount;
-        }
-
-        const int *bones() const {
-            return &mBones[0];
-        }
-
-        const float *weights() const {
-            return &mWeights[0];
-        }
-
-    private:
-        int mBoneCount; // Number of bones this vertex is attached to
-
-        static const uint MaxCount = 4; // Maximum number of attachments
-
-        int mBones[MaxCount]; // Index to every bone this vertex is attached to
-
-        float mWeights[MaxCount]; // Weights for every one of these bones. Assumption is: Sum(mWeights) = 1.0f
-    };
-    
     class Model : public AlignedAllocation
     {
     public:
@@ -78,12 +45,11 @@ namespace EvilTemple {
         ~Model();
 
         bool load(const QString &filename,
-                  Materials *materials,
-                  const RenderStates &renderState);
+            Materials *materials,
+            const RenderStates &renderState);
 
         Vector4 *positions;
         Vector4 *normals;
-        const BoneAttachment *attachments; // This CAN be null!
         const float *texCoords;
         int vertices;
 
@@ -103,6 +69,8 @@ namespace EvilTemple {
         const QString &error() const;
 
         const Skeleton *skeleton() const;
+
+        const BindingPose *bindingPose() const;
 
         /**
          * Returns an animation by name. NULL if no such animation is found.
@@ -137,10 +105,11 @@ namespace EvilTemple {
         QStringList mPlaceholders;
 
         bool mNeedsNormalsRecalculated;
-
+        
         Skeleton *mSkeleton;
 
-        AlignedPointer boneAttachmentData;
+        BindingPose *mBindingPose;
+
         AlignedPointer vertexData;
         AlignedPointer faceData;
         AlignedPointer textureData;
@@ -183,6 +152,11 @@ namespace EvilTemple {
     inline const Skeleton *Model::skeleton() const
     {
         return mSkeleton;
+    }
+
+    inline const BindingPose *Model::bindingPose() const
+    {
+        return mBindingPose;
     }
 
     inline const Animation *Model::animation(const QString &name) const

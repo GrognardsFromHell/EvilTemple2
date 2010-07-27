@@ -61,17 +61,27 @@ void ModelWriter::writeChunk(uint chunk, bool required, const QByteArray &data)
     chunks++;
 }
 
-void ModelWriter::writeBones(const Troika::Skeleton *skeleton)
+struct Attachment {
+    float weight;
+    ushort bone;
+
+    bool operator <(const Attachment &other) const {
+        return weight < other.weight;
+    }
+};
+
+void ModelWriter::writeBindingPose(const Troika::MeshModel *model)
 {
-    startChunk(Skeleton, true);
+    startChunk(BindingPose, true);
 
-    stream << (uint)skeleton->bones().size();
+    const QVector<Vertex> &vertices = model->vertices();
+    const QVector<BindingPoseBone> &bones = model->bindingPoseBones();
 
-    foreach (const Troika::Bone &bone, skeleton->bones()) {
-        stream << bone.name.toUtf8();
+    stream << (uint)bones.size();
 
-        // Id of parent (or -1)
-        stream << (int)bone.parentId;
+    for (int i = 0; i < model->bindingPoseBones().size(); ++i) {
+        const BindingPoseBone &bone = model->bindingPoseBones()[i];
+        stream << bone.name;
 
         // This is the full world inverse for the bone
         for (int col = 0; col < 4; ++col) {
@@ -79,6 +89,83 @@ void ModelWriter::writeBones(const Troika::Skeleton *skeleton)
                 stream << (float)bone.fullWorldInverse(row, col);
             }
         }
+    }
+
+    stream << (uint)vertices.size();
+
+    int rewiredVertices = 0;
+
+    foreach (const Troika::Vertex &vertex, vertices) {
+        uint attachmentCount = vertex.attachmentCount;
+
+        if (attachmentCount > 4) {
+            rewiredVertices++;
+            QVector<Attachment> attachments;
+
+            // Use the four highest weights and renormalize them
+            float totalWeight = 0;
+            for (int i = 0; i < vertex.attachmentCount; ++i) {
+                totalWeight = vertex.attachmentWeight[i];
+
+                Attachment attachment;
+                attachment.weight = vertex.attachmentWeight[i];
+                attachment.bone = vertex.attachmentBone[i];
+                attachments.append(attachment);
+
+                qSort(attachments);
+            }
+
+            attachments.remove(0, attachments.size() - 4);
+            Q_ASSERT(attachments.size() == 4);
+
+            float newTotal = 0;
+
+            for (int i = 0; i < 4; ++i)
+                newTotal += attachments[i].weight;
+
+            float f = totalWeight / newTotal; // f > 1, scale weights up
+
+            for (int i = 0; i < 4; ++i)
+                attachments[i].weight *= f;
+
+            stream << (uint)4;
+            for (int i = 0; i < 4; ++i)
+                stream << (int)attachments[i].bone;
+            for (int i = 0; i < 4; ++i)
+                stream << (float)attachments[i].weight;
+        } else {
+            stream << attachmentCount;
+            for (int i = 0; i < 4; ++i) {
+                if (i < attachmentCount) {
+                    stream << (int)vertex.attachmentBone[i];
+                } else {
+                    stream << (int)-1;
+                }
+            }
+            for (int i = 0; i < 4; ++i) {
+                if (i < attachmentCount) {
+                    stream << (float)vertex.attachmentWeight[i];
+                } else {
+                    stream << (float)0;
+                }
+            }
+        }
+    }
+
+    finishChunk();
+}
+
+void ModelWriter::writeSkeleton(const Troika::Skeleton *skeleton)
+{
+    startChunk(Skeleton, true);
+
+    stream << (uint)skeleton->bones().size();
+
+    foreach (const Troika::Bone &bone, skeleton->bones()) {
+        stream << bone.name;
+
+        // Id of parent (or -1)
+        stream << (int)bone.parentId;
 
         // This is the default relative world matrix
         for (int col = 0; col < 4; ++col) {
@@ -159,7 +246,7 @@ void ModelWriter::writeAnimations(const Troika::MeshModel *model)
         QByteArray hash = animStream->calculateHash();
 
         if (animationHashes.contains(hash)) {
-            qDebug("Animation %s has same content as anim: %s", qPrintable(animation.name()),
+            qDebug("Animation %s has same content as anim: %s", animation.name().constData(),
                    qPrintable(animationHashes[hash]));
             animAliasMap[animation.name()] = animationHashes[hash];
             animDataStartMap[animation.keyFramesDataStart()] = animationHashes[hash];
@@ -218,8 +305,7 @@ void ModelWriter::writeAnimations(const Troika::MeshModel *model)
             continue;
         }
 
-        stream << animation.name().toUtf8();
-        stream << (uint)animation.frames() << animation.frameRate() << animation.dps()
+        stream << animation.name() << (uint)animation.frames() << animation.frameRate() << animation.dps()
                 << (uint)animation.driveType() << animation.loopable() << (uint)animation.events().size();
 
         foreach (const Troika::AnimationEvent &event, animation.events()) {
@@ -231,9 +317,9 @@ void ModelWriter::writeAnimations(const Troika::MeshModel *model)
             else if (event.type == "script")
                 stream << (uint)0;
             else
-                qFatal("Unknown event type: %s.", qPrintable(event.type));
+                qFatal("Unknown event type: %s.", event.type.constData());
 
-            stream << event.action.toUtf8();
+            stream << event.action;
         }
 
         // Write out the number of bones affected by the animation
@@ -283,87 +369,6 @@ void ModelWriter::writeMaterialReferences(const QStringList &materials)
     stream << materials;
 
     finishChunk();
-}
-
-struct Attachment {
-    float weight;
-    ushort bone;
-
-    bool operator <(const Attachment &other) const {
-        return weight < other.weight;
-    }
-};
-
-void ModelWriter::writeBoneAttachments(const QVector<Troika::Vertex> &vertices)
-{
-    startChunk(BoneAttachments, true);
-
-    stream << (uint)vertices.size() << RESERVED << RESERVED << RESERVED;
-
-    int rewiredVertices = 0;
-
-    foreach (const Troika::Vertex &vertex, vertices) {
-        uint attachmentCount = vertex.attachmentCount;
-
-        if (attachmentCount > 4) {
-            rewiredVertices++;
-            QVector<Attachment> attachments;
-
-            // Use the four highest weights and renormalize them
-            float totalWeight = 0;
-            for (int i = 0; i < vertex.attachmentCount; ++i) {
-                totalWeight = vertex.attachmentWeight[i];
-
-                Attachment attachment;
-                attachment.weight = vertex.attachmentWeight[i];
-                attachment.bone = vertex.attachmentBone[i];
-                attachments.append(attachment);
-
-                qSort(attachments);
-            }
-
-            attachments.remove(0, attachments.size() - 4);
-            Q_ASSERT(attachments.size() == 4);
-
-            float newTotal = 0;
-
-            for (int i = 0; i < 4; ++i)
-                newTotal += attachments[i].weight;
-
-            float f = totalWeight / newTotal; // f > 1, scale weights up
-
-            for (int i = 0; i < 4; ++i)
-                attachments[i].weight *= f;
-
-            stream << (uint)4;
-            for (int i = 0; i < 4; ++i)
-                stream << (int)attachments[i].bone;
-            for (int i = 0; i < 4; ++i)
-                stream << (float)attachments[i].weight;
-        } else {
-            stream << attachmentCount;
-            for (int i = 0; i < 4; ++i) {
-                if (i < attachmentCount) {
-                    stream << (int)vertex.attachmentBone[i];
-                } else {
-                    stream << (int)-1;
-                }
-            }
-            for (int i = 0; i < 4; ++i) {
-                if (i < attachmentCount) {
-                    stream << (float)vertex.attachmentWeight[i];
-                } else {
-                    stream << (float)0;
-                }
-            }
-        }
-    }
-
-    finishChunk();
-
-    if (rewiredVertices > 0) {
-        qWarning("Had to rewire vertices with > 4 weights for file %s.", qPrintable(mFilename));
-    }
 }
 
 void ModelWriter::writeTextures(const QList<HashedData> &textures)

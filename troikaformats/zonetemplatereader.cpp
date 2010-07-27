@@ -12,7 +12,7 @@ using namespace GameMath;
 #include "zonetemplatereader.h"
 #include "zonetemplate.h"
 #include "zonebackgroundmap.h"
-#include "model.h"
+#include "troika_model.h"
 #include "util.h"
 
 namespace Troika

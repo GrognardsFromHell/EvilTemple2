@@ -5,8 +5,6 @@
 
 #include <limits>
 
-#include "qbox3d.h"
-
 #include "gamemath.h"
 
 namespace EvilTemple

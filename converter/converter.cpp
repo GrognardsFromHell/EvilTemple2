@@ -267,11 +267,10 @@ public:
               << new ConvertParticleSystemsTask(this)
               << new ConvertTranslationsTask(this)
               << new ConvertMapsTask(this)
-              // << new ConvertSoundsTask(this)
-              // << new ConvertMoviesTask(this)
-              // << new ConvertInterfaceTask(this)
-              << new ConvertModelsTask(this)
-              ;
+              << new ConvertSoundsTask(this)
+              << new ConvertMoviesTask(this)
+              << new ConvertInterfaceTask(this)
+              << new ConvertModelsTask(this);
 
         // Sum up total work over all tasks
         mTotalWork = 0;

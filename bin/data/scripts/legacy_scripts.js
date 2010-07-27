@@ -213,6 +213,10 @@ var LegacyScripts = {};
      */
     var UtilityModule = eval('(' + readFile('scripts/legacy/utilities.js') + ')');
 
+    /**
+     * All scripts objects converted from Python have this prototype and can access
+     * all its functions via the "this" variable.
+     */
     var LegacyScriptPrototype = {
         SKIP_DEFAULT: true,
 
@@ -246,12 +250,23 @@ var LegacyScripts = {};
 
         OF_OFF: 'disabled',
 
+        // This imports all functions from the utility module into the "this" context.
         __proto__: UtilityModule,
 
         anyone: function(creatures, command, id) {
             print("Checking whether " + creatures + " have " + command + " " + id);
 
             var j;
+            var followers = Party.getFollowers();
+            
+            if (command == 'has_follower') {
+                for (j = 0; j < followers.length; ++j) {
+                    if (followers[j].internalId == id)
+                        return true;
+                }
+
+                return false;
+            }
 
             for (var i = 0; i < creatures.length; ++i) {
                 var critter = creatures[i].obj;
@@ -266,6 +281,7 @@ var LegacyScripts = {};
                             }
                         }
                         break;
+
                     default:
                         print("Unknown verb for 'anyone': " + command);
                         return false;
@@ -488,6 +504,10 @@ var LegacyScripts = {};
 
         if (!from.content)
             return false;
+
+        if (!to.content) {
+            to.content = [];
+        }
 
         // TODO: This needs refactoring to account for several things
         // i.e. Updating inventory screens, taking weight updates into account,

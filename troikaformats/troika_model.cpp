@@ -1,5 +1,5 @@
 
-#include "model.h"
+#include "troika_model.h"
 #include "troika_material.h"
 #include "troika_materials.h"
 #include "virtualfilesystem.h"
@@ -8,11 +8,16 @@ namespace Troika {
 
     MeshModel::MeshModel(QList< QSharedPointer<FaceGroup> > faceGroups,
                          const QVector<Vertex> &vertices,
+                         const QVector<BindingPoseBone> *bindingPose,
                          Skeleton *skeleton) :
     _faceGroups(faceGroups),
     _vertices(vertices),
     _skeleton(skeleton)
     {
+        if (bindingPose) {
+            mBones = *bindingPose;
+        }
+
         createBoundingBox();
     }
 
@@ -58,7 +63,7 @@ namespace Troika {
     }
 
     QSharedPointer<Material> FaceGroup::material()
-    {        
+    {
         return _material;
     }
 

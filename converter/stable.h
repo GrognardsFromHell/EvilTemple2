@@ -15,6 +15,7 @@ using namespace GameMath;
 #include <troika_skeleton.h>
 #include <troika_material.h>
 #include <troika_materials.h>
+#include <troika_model.h>
 #include <prototypes.h>
 #include <objectfilereader.h>
 

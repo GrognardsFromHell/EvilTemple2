@@ -2,6 +2,8 @@
 #define SKELETON_H
 
 #include <QVector>
+#include <QByteArray>
+#include <QHash>
 #include <QObject>
 #include <QDataStream>
 
@@ -40,11 +42,6 @@ public:
     const Bone *parent() const;
 
     /**
-     * Transforms from object space into this bone's local space, assuming the default pose of the skeleton.
-     */
-    const Matrix4 &fullWorldInverse() const;
-
-    /**
      * Transforms from this bone's space into the local space of the parent or in case of a bone without a parent
      * into object space.
      */
@@ -55,8 +52,6 @@ public:
     void setName(const QByteArray &name);
 
     void setParent(Bone *bone);
-
-    void setFullWorldInverse(const Matrix4 &fullWorldInverse);
 
     void setRelativeWorld(const Matrix4 &relativeWorld);
 
@@ -71,22 +66,8 @@ public:
       */
     const Matrix4 &fullWorld() const;
 
-    /**
-      Returns this bone's full transform matrix, which is the full world inverse of the bind pose, multiplied
-      with the full world matrix of this bone.
-      */
-    const Matrix4 &fullTransform() const;
-
-    /**
-     * Sets the full transform matrix for this bone. This matrix is derived from this bone's
-     * full world inverse and full world matrix.
-     */
-    void setFullTransform(const Matrix4 &fullTransform);
-
 private:
-    Matrix4 mFullWorldInverse;
     Matrix4 mRelativeWorld;
-    Matrix4 mFullTransform;
     Matrix4 mFullWorld;
 
     uint mBoneId;
@@ -123,11 +104,6 @@ inline Bone *Bone::parent()
     return mParent;
 }
 
-inline const Matrix4 &Bone::fullWorldInverse() const
-{
-    return mFullWorldInverse;
-}
-
 inline const Matrix4 &Bone::relativeWorld() const
 {
     return mRelativeWorld;
@@ -136,11 +112,6 @@ inline const Matrix4 &Bone::relativeWorld() const
 inline const Matrix4 &Bone::fullWorld() const
 {
     return mFullWorld;
-}
-
-inline const Matrix4 &Bone::fullTransform() const
-{
-    return mFullTransform;
 }
 
 inline void Bone::setBoneId(uint id)
@@ -156,16 +127,6 @@ inline void Bone::setName(const QByteArray &name)
 inline void Bone::setParent(Bone *bone)
 {
     mParent = bone;
-}
-
-inline void Bone::setFullWorldInverse(const Matrix4 &fullWorldInverse)
-{
-    mFullWorldInverse = fullWorldInverse;
-}
-
-inline void Bone::setFullTransform(const Matrix4 &fullTransform)
-{
-    mFullTransform = fullTransform;
 }
 
 inline void Bone::setRelativeWorld(const Matrix4 &relativeWorld)
@@ -284,7 +245,7 @@ inline const Skeleton::ConstBones &Skeleton::bones() const
 
 inline const Bone *Skeleton::bone(uint boneId) const
 {
-    if (boneId < mBonePointers.size())
+    if (int(boneId) < mBonePointers.size())
         return mBonePointers.at(boneId);
     else
         return NULL;
@@ -292,7 +253,7 @@ inline const Bone *Skeleton::bone(uint boneId) const
 
 inline Bone *Skeleton::bone(uint boneId)
 {
-    if (boneId < mBonePointers.size())
+    if (int(boneId) < mBonePointers.size())
         return mBonePointers.at(boneId);
     else
         return NULL;

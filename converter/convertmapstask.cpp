@@ -16,7 +16,7 @@ using namespace QJson;
 #include "dagreader.h"
 #include "virtualfilesystem.h"
 #include "navigationmeshbuilder.h"
-#include "model.h"
+#include "troika_model.h"
 #include "mapareamapping.h"
 
 static QVariantMap convertPathNodes(const QString &directory, IConversionService *service)

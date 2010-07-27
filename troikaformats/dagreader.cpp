@@ -2,7 +2,7 @@
 #include "dagreader.h"
 #include "virtualfilesystem.h"
 #include "troika_material.h"
-#include "model.h"
+#include "troika_model.h"
 #include "troika_skeleton.h"
 
 #include <QDataStream>

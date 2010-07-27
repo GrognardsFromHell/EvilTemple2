@@ -5,10 +5,9 @@ namespace EvilTemple {
 
 QDataStream &operator >>(QDataStream &stream, Animation &animation)
 {
-    QByteArray name;
     uint driveType;
     uint animationBonesCount;
-    stream >> name >> animation.mFrames >> animation.mFrameRate >> animation.mDps
+    stream >> animation.mName >> animation.mFrames >> animation.mFrameRate >> animation.mDps
         >> driveType >> animation.mLoopable >> animation.mEvents >> animationBonesCount;
 
     delete [] animation.mAnimationBones;
@@ -16,7 +15,7 @@ QDataStream &operator >>(QDataStream &stream, Animation &animation)
     animation.mAnimationBonesMap.reserve(animationBonesCount);
     animation.mAnimationBones = new AnimationBone[animationBonesCount];
 
-    for (int i = 0; i < animationBonesCount; ++i) {
+    for (uint i = 0; i < animationBonesCount; ++i) {
         uint boneId;
         stream >> boneId >> animation.mAnimationBones[i];
         animation.mAnimationBonesMap.insert(boneId, animation.mAnimationBones + i);
@@ -26,8 +25,7 @@ QDataStream &operator >>(QDataStream &stream, Animation &animation)
     Q_ASSERT(driveType == Animation::Time || driveType == Animation::Rotation || driveType == Animation::Distance);
 
     animation.mDriveType = static_cast<Animation::DriveType>(driveType);
-    animation.mName = QString::fromUtf8(name.constData(), name.length());
-
+    
     return stream;
 }
 

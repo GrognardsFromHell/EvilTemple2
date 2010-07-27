@@ -86,59 +86,71 @@ namespace EvilTemple {
         }
     }
 
+    /**
+      Creates a mapping that assigns a bone to each bone-id used in a binding pose, by comparing the names of bones
+      from the binding pose to the bones in the skeleton.
+    */
+    static QVector<uint> createBoneMapping(const BindingPose *pose, const Skeleton *skeleton)
+    {
+        QVector<uint> result(pose->boneCount());
+
+        for (uint i = 0; i < pose->boneCount(); ++i) {
+            const Bone *bone = skeleton->bone(pose->boneName(i));
+
+            if (bone) {
+                result[i] = bone->boneId();
+            } else {
+                result[i] = -1;
+            }
+        }
+
+        return result;
+    }
+
     void ModelInstance::addMesh(const SharedModel &model)
     {
         mAddMeshes.append(model);
 
-        if (mCurrentAnimation) {
-            mTransformedNormalsAddMeshes.append(new Vector4[model->vertices]);
-            mTransformedPositionsAddMeshes.append(new Vector4[model->vertices]);
+        mTransformedNormalsAddMeshes.append(new Vector4[model->vertices]);
+        mTransformedPositionsAddMeshes.append(new Vector4[model->vertices]);
 
-            VertexBufferObject *buffer = new VertexBufferObject;
-            buffer->upload(model->positions, sizeof(Vector4) * model->vertices);
-            mPositionBufferAddMeshes.append(buffer);
+        VertexBufferObject *buffer = new VertexBufferObject;
+        buffer->upload(model->positions, sizeof(Vector4) * model->vertices);
+        mPositionBufferAddMeshes.append(buffer);
 
-            buffer = new VertexBufferObject;
-            buffer->upload(model->normals, sizeof(Vector4) * model->vertices);
-            mNormalBufferAddMeshes.append(buffer);
+        buffer = new VertexBufferObject;
+        buffer->upload(model->normals, sizeof(Vector4) * model->vertices);
+        mNormalBufferAddMeshes.append(buffer);
 
-            /*
-              Create a bone mapping. This crappy hack is necessary, since the ordering of bones in addmeshes
-              generally can differ from the order in the current skeleton. Thus we create a mapping from the
-              bone ids in the addmesh to bone ids in the current mesh, so the vertices are bound to the
-              correct bones.
+        /*
+            Create a bone mapping. This crappy hack is necessary, since the ordering of bones in addmeshes
+            generally can differ from the order in the current skeleton. Thus we create a mapping from the
+            bone ids in the addmesh to bone ids in the current mesh, so the vertices are bound to the
+            correct bones.
 
-              It might be possible to actually fix this problem by enforcing a unified order on bones (i.e. by name
-              ascending), although this *could* add additional problems for parent ids. Otherwise, the bones
-              of an addmesh could be reordered to the bones of the mesh using it, but the relation between meshes
-              and addmeshes is not known a-priori, making this difficult.
-             */
-            if (model->skeleton()) {
-                const Skeleton::ConstBones &originalBones = model->skeleton()->bones();
-                QVector<uint> boneMapping(originalBones.size());
-                const Skeleton *curSkeleton = skeleton();
+            It might be possible to actually fix this problem by enforcing a unified order on bones (i.e. by name
+            ascending), although this *could* add additional problems for parent ids. Otherwise, the bones
+            of an addmesh could be reordered to the bones of the mesh using it, but the relation between meshes
+            and addmeshes is not known a-priori, making this difficult.
 
-                for (int i = 0; i < boneMapping.size(); ++i) {
+            UPDATE:
+            The bone mapping is done by-name. Now the addmeshes don't actually contain a skeleton, which wouldn't 
+            be used. Instead, they only contain a binding pose, which is mapped to the current skeleton here.
+            */
+        if (model->bindingPose()) {
+            const Skeleton *curSkeleton = skeleton();
 
-                    const Bone *mappedBone = curSkeleton->bone(originalBones[i]->name());
-
-                    if (mappedBone) {
-                        boneMapping[i] = mappedBone->boneId();
-                    } else {
-                        boneMapping[i] = i;
-                    }
-                }
-                mAddMeshBoneMapping.append(boneMapping);
-            } else {
-                mAddMeshBoneMapping.append(QVector<uint>());
-            }
-
-            Q_ASSERT(mTransformedPositionsAddMeshes.size() == mAddMeshes.size());
-            Q_ASSERT(mTransformedNormalsAddMeshes.size() == mAddMeshes.size());
-            Q_ASSERT(mPositionBufferAddMeshes.size() == mAddMeshes.size());
-            Q_ASSERT(mNormalBufferAddMeshes.size() == mAddMeshes.size());
-            Q_ASSERT(mAddMeshBoneMapping.size() == mAddMeshes.size());
+            mAddMeshBoneMapping.append(createBoneMapping(model->bindingPose(), curSkeleton));
+        } else {
+            qWarning("An addmesh was added, although it doesn't have a binding pose.");
+            mAddMeshBoneMapping.append(QVector<uint>());
         }
+
+        Q_ASSERT(mTransformedPositionsAddMeshes.size() == mAddMeshes.size());
+        Q_ASSERT(mTransformedNormalsAddMeshes.size() == mAddMeshes.size());
+        Q_ASSERT(mPositionBufferAddMeshes.size() == mAddMeshes.size());
+        Q_ASSERT(mNormalBufferAddMeshes.size() == mAddMeshes.size());
+        Q_ASSERT(mAddMeshBoneMapping.size() == mAddMeshes.size());
     }
 
     Matrix4 ModelInstance::getBoneSpace(uint boneId)
@@ -196,42 +208,51 @@ namespace EvilTemple {
         SAFE_GL(glEnd());
     }
 
-    void ModelInstance::animateVertices( const SharedModel &model,
+    void ModelInstance::animateVertices(const SharedModel &model,
         Vector4 *transformedPositions, Vector4 *transformedNormals,
         VertexBufferObject *positionBuffer, VertexBufferObject *normalBuffer,
-        const QVector<uint> *boneMapping )
+        const QVector<uint> &boneMapping)
     {
         const Skeleton::Bones &bones = mSkeleton->bones();
-
+        const BindingPose *bindingPose = model->bindingPose();
+        
         for (int i = 0; i < model->vertices; ++i) {
-            const BoneAttachment &attachment = model->attachments[i];
+            const BoneAttachment &attachment = bindingPose->attachment(i);
 
-            Q_ASSERT(attachment.count() > 0);
+            if (attachment.count() == 0) {
+                transformedPositions[i] = model->positions[i];
+                transformedNormals[i] = model->normals[i];
+                continue;
+            }
 
             float weight = attachment.weights()[0];
-            uint boneId = attachment.bones()[0];
-            if (boneMapping) {
-                Q_ASSERT(boneId >= 0 && boneId < boneMapping->size());
-                boneId = boneMapping->at(boneId);
-            }
+            uint boneId = attachment.bones()[0];                        
+            Q_ASSERT(boneId >= 0 && boneId < boneMapping.size());
+
+            const Matrix4 &fullWorldInverse = bindingPose->fullWorldInverse(boneId);
+
+            boneId = boneMapping.at(boneId);
             Q_ASSERT(boneId >= 0 && boneId < bones.size());
-            const Matrix4 &firstTransform = bones[boneId]->fullTransform();
+
+            const Matrix4 &firstTransform = bones[boneId]->fullWorld() * fullWorldInverse;
 
             __m128 factor = _mm_set_ps(weight, - weight, weight, weight);
-
+            
             transformedPositions[i] = _mm_mul_ps(factor, firstTransform.mapPosition(model->positions[i]));
             transformedNormals[i] = _mm_mul_ps(factor, firstTransform.mapNormal(model->normals[i]));
 
             for (int k = 1; k < qMin(4, attachment.count()); ++k) {
                 weight = attachment.weights()[k];
                 boneId = attachment.bones()[k];
-                if (boneMapping) {
-                    Q_ASSERT(boneId >= 0 && boneId < boneMapping->size());
-                    boneId = boneMapping->at(boneId);
-                }
-                Q_ASSERT(boneId >= 0 && boneId < bones.size());
 
-                const Matrix4 &fullTransform = bones[boneId]->fullTransform();
+                Q_ASSERT(boneId >= 0 && boneId < boneMapping.size());
+
+                const Matrix4 &fullWorldInverse = bindingPose->fullWorldInverse(boneId);
+
+                boneId = boneMapping.at(boneId);
+                Q_ASSERT(boneId >= 0 && boneId < bones.size());                               
+
+                const Matrix4 &fullTransform = bones[boneId]->fullWorld() * fullWorldInverse;
 
                 // This flips the z coordinate, since the models are geared towards DirectX
                 factor = _mm_set_ps(weight, - weight, weight, weight);
@@ -288,9 +309,6 @@ namespace EvilTemple {
         // Create a bone state map for all bones
         const Animation::BoneMap &animationBones = mCurrentAnimation->animationBones();
 
-        // if (animationBones.isEmpty())
-        //    return;
-
         for (int i = 0; i < bones.size(); ++i) {
             Bone *bone = bones[i];
 
@@ -312,15 +330,15 @@ namespace EvilTemple {
             } else {
                 bone->setFullWorld(relativeWorld);
             }
-
-            bone->setFullTransform(bone->fullWorld() * bone->fullWorldInverse());
         }
 
-        animateVertices(mModel, mTransformedPositions, mTransformedNormals, &mPositionBuffer, &mNormalBuffer, NULL);
+        QVector<uint> mapping = createBoneMapping(mModel->bindingPose(), mModel->skeleton());
+
+        animateVertices(mModel, mTransformedPositions, mTransformedNormals, &mPositionBuffer, &mNormalBuffer, mapping);
 
         for (int i = 0; i < mAddMeshes.size(); ++i) {
             animateVertices(mAddMeshes[i], mTransformedPositionsAddMeshes[i], mTransformedNormalsAddMeshes[i], mPositionBufferAddMeshes[i], mNormalBufferAddMeshes[i],
-                            &mAddMeshBoneMapping[i]);
+                            mAddMeshBoneMapping[i]);
         }
     }
 

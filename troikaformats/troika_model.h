@@ -36,7 +36,7 @@ namespace Troika {
         float normalW; // Ignored
         float texCoordX;
         float texCoordY;
-        quint16 unknown;
+        quint16 padding;
         quint16 attachmentCount;
         quint16 attachmentBone[MaxBoneAttachments];
         float attachmentWeight[MaxBoneAttachments];
@@ -86,13 +86,9 @@ namespace Troika {
         Q_DISABLE_COPY(FaceGroup)
     };
 
-    struct MeshModelBone
-    {
-        quint16 id;
-        quint16 flags;
-        MeshModelBone *parent;
-        QString name;
-        QMatrix4x4 worldInverse;
+    struct BindingPoseBone {
+        QByteArray name;
+        QMatrix4x4 fullWorldInverse;
     };
 
     class TROIKAFORMATS_EXPORT MeshModel
@@ -104,6 +100,7 @@ namespace Troika {
          */
         MeshModel(QList< QSharedPointer<FaceGroup> > faceGroups,
                   const QVector<Vertex> &vertices,
+                  const QVector<BindingPoseBone> *bindingPose = NULL,
                   Skeleton *skeleton = NULL);
         ~MeshModel();
 
@@ -145,10 +142,17 @@ namespace Troika {
         void draw() const;
         void saveAsText(const QString &filename);
 
+        const QVector<BindingPoseBone> &bindingPoseBones() const
+        {
+            return mBones;
+        }
+
     private:
         QBox3D _boundingBox;
         void createBoundingBox();
         void createBuffers();
+
+        QVector<BindingPoseBone> mBones;
 
         QList< QSharedPointer<FaceGroup> > _faceGroups;
         QVector<Vertex> _vertices;

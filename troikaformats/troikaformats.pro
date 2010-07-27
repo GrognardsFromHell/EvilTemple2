@@ -15,7 +15,7 @@ HEADERS += dagreader.h \
     troikaarchive.h \
     virtualfilesystem.h \
     zonetemplatereader.h \
-    model.h \
+    troika_model.h \
     troika_material.h \
     modelsource.h \
     troika_skeleton.h \
@@ -36,7 +36,7 @@ SOURCES += dagreader.cpp \
     troikaarchive.cpp \
     virtualfilesystem.cpp \
     zonetemplatereader.cpp \
-    model.cpp \
+    troika_model.cpp \
     troika_material.cpp \
     troika_skeleton.cpp \
     prototypes.cpp \

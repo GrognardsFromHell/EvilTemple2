@@ -3,7 +3,7 @@
 
 #include "skmreader.h"
 #include "virtualfilesystem.h"
-#include "model.h"
+#include "troika_model.h"
 #include "troika_material.h"
 #include "troika_materials.h"
 #include "troika_skeleton.h"
@@ -31,7 +31,7 @@ namespace Troika
         SkmHeader header;
 
         // Data pointers that will be put into the resulting model
-        QVector<Bone> bones;
+        QVector<BindingPoseBone> bones;
         QVector<Vertex> vertices;
         QList< QSharedPointer<Material> > modelMaterials;
         QList< QList<Face> > faceGroupLists;
@@ -59,7 +59,7 @@ namespace Troika
 
             // Some models (add meshes for instance) have no skeleton and are unanimated
             QByteArray skaData = vfs->openFile(filename.replace(".skm", ".ska", Qt::CaseInsensitive));
-            skeleton.reset(new Skeleton(vertices.data(), vertices.size(), bones, skaData, filename));
+            skeleton.reset(new Skeleton(skaData, filename));
 
             QList< QSharedPointer<FaceGroup> > faceGroups;
             for (quint32 i = 0; i < header.materialCount; ++i) {
@@ -69,7 +69,7 @@ namespace Troika
                 faceGroups.append(faceGroup);
             }
 
-            MeshModel *result(new MeshModel(faceGroups, vertices, skeleton.take()));
+            MeshModel *result(new MeshModel(faceGroups, vertices, &bones, skeleton.take()));
 
             // qDebug("Loaded %s in %d ms.", qPrintable(filename), timer.elapsed());
 
@@ -91,14 +91,11 @@ namespace Troika
             bones.resize(header.boneCount);
 
             for (quint32 i = 0; i < header.boneCount; ++i) {
+                BindingPoseBone &bone = bones[i];
 
-                Bone &bone = bones[i];
-
-                bone.skmOnly = true;
-                bone.skaOnly = false;
-
-                bone.id = i;
-                stream >> bone.flags >> bone.parentId;
+                ushort flags; // Ignored, always 0
+                short parentId; // Ignored, SKA file is authoritative
+                stream >> flags >> parentId;
                 stream.readRawData(rawName, 48);
 
                 QMatrix4x4 &fullWorldInverse = bone.fullWorldInverse;
@@ -110,7 +107,7 @@ namespace Troika
                     }
                 }
 
-                bone.name = QString::fromLatin1(rawName);
+                bone.name = QByteArray(rawName);
             }
         }
 
@@ -125,7 +122,7 @@ namespace Troika
                 stream  >> vertex.positionX >> vertex.positionY >> vertex.positionZ >> vertex.positionW
                         >> vertex.normalX >> vertex.normalY >> vertex.normalZ >> vertex.normalW
                         >> vertex.texCoordX >> vertex.texCoordY
-                        >> vertex.unknown
+                        >> vertex.padding
                         >> vertex.attachmentCount;
                 for (int i = 0; i < 6; ++i) {
                     stream >> vertex.attachmentBone[i];

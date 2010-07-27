@@ -142,6 +142,7 @@ void main(void)
 
     <blend>true</blend>
     <blendFunc src="srcAlpha" dest="oneMinusSrcAlpha" />
+    <depthTest>true</depthTest>
     <depthWrite>false</depthWrite>
     <clearStencil value="1" />
     <stencilTest>true</stencilTest>

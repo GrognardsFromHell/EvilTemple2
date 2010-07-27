@@ -57,7 +57,8 @@ SOURCES += \
     selectioncircle.cpp \
     savegames.cpp \
     skeleton.cpp \
-    animation.cpp
+    animation.cpp \
+    bindingpose.cpp
 HEADERS += \
     mainwindow.h \
     game.h \
@@ -101,7 +102,8 @@ HEADERS += \
     selectioncircle.h \
     savegames.h \
     skeleton.h \
-    animation.h
+    animation.h \
+    bindingpose.h
 OTHER_FILES += \
     resources/schema/materialfile.xsd \
     resources/materials/map_material.xml \

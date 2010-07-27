@@ -96,7 +96,7 @@ private:
         Vector4 *transformedNormals, 
         VertexBufferObject *positionBuffer, 
         VertexBufferObject *normalBuffer, 
-        const QVector<uint> *boneMapping);
+        const QVector<uint> &boneMapping);
 
     void playIdleAnimation();
     void updateBones();

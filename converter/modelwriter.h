@@ -3,7 +3,7 @@
 
 #include <QDataStream>
 #include <QHash>
-#include "model.h"
+#include "troika_model.h"
 #include "materialconverter.h"
 
 class ModelWriter
@@ -11,7 +11,8 @@ class ModelWriter
 public:
     ModelWriter(const QString &filename, QDataStream &stream);
 
-    void writeBones(const Troika::Skeleton *skeleton);
+    void writeSkeleton(const Troika::Skeleton *skeleton);
+    void writeBindingPose(const Troika::MeshModel *model);
     void writeTextures(const QList<HashedData> &textures);
     void writeMaterials(const QList<HashedData> &materialScripts, const QStringList &placeholders);
         void writeMaterialReferences(const QStringList &materialFiles);
@@ -28,11 +29,11 @@ public:
     enum ChunkTypes {
         Textures = 1,
         Materials = 2,
-                MaterialReferences = 3,
+        MaterialReferences = 3,
         Geometry = 4,
         Faces = 5,
         Skeleton = 6, // Skeletal data
-        BoneAttachments = 7, // Assigns vertices to bones
+        BindingPose = 7, // Assigns vertices to bones and gives the full inverse matrices used for it
         BoundingVolumes = 8, // Bounding volumes,
         Animations = 9, // Animations
         AnimationAliases = 10, // Additional animation aliases

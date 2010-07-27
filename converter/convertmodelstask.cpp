@@ -6,7 +6,7 @@
 #include <QHash>
 #include <QMap>
 
-#include <model.h>
+#include <troika_model.h>
 #include <troika_material.h>
 #include <virtualfilesystem.h>
 #include <skmreader.h>
@@ -303,7 +303,7 @@ static void writeDebugModel(IFileWriter *writer, Troika::MeshModel *model, const
         stream.setFieldAlignment(QTextStream::AlignRight);
 
         // How do we ensure padding if the animations have variable length names?
-        stream << "Name: " << animation.name().toUtf8() << endl;
+        stream << "Name: " << animation.name() << endl;
         stream << "Frames: " << (uint)animation.frames() << endl << "Rate: " << animation.frameRate() << endl
                 << "DPS: " << animation.dps() << endl
                 << "Drive Type: " << (uint)animation.driveType() << endl
@@ -410,8 +410,7 @@ static void writeDebugBoneHierarchy(QTextStream &stream,
     for (int i = 0; i < indent; ++i)
         stream << "  ";
 
-    stream << qSetFieldWidth(4) << bone.id << qSetFieldWidth(0) << " " << bone.name << " (Flags: " << bone.flags
-            << ")" << endl;
+    stream << qSetFieldWidth(4) << bone.id << qSetFieldWidth(0) << " " << bone.name << endl;
 
     for (int i = 0; i < bones.size(); ++i)
         if (bones[i].parentId == bone.id)
@@ -483,13 +482,15 @@ bool ConvertModelsTask::writeModel(const QString &filename, IFileWriter *output,
     writer.writeVertices(model->vertices());
     writer.writeFaces(model->faceGroups(), materialMapping);
 
-    writer.writeBones(model->skeleton());
-    writer.writeBoneAttachments(model->vertices());
-
-    writer.writeBoundingVolumes(model);
-
-    if (!model->skeleton()->animations().isEmpty())
+    if (!model->skeleton()->animations().isEmpty()) {
+        writer.writeSkeleton(model->skeleton());
+        writer.writeBindingPose(model);
+        writer.writeBoundingVolumes(model);
         writer.writeAnimations(model);
+    } else {
+        writer.writeBindingPose(model);
+        writer.writeBoundingVolumes(model);
+    }
 
     writer.finish();
 

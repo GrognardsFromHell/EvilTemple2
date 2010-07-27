@@ -16,7 +16,7 @@ namespace EvilTemple {
         Chunk_Geometry = 4,
         Chunk_Faces = 5,
         Chunk_Skeleton = 6, // Skeletal data
-        Chunk_BoneAttachments = 7, // Assigns vertices to bones
+        Chunk_BindingPose = 7, // Assigns vertices to bones
         Chunk_BoundingVolumes = 8, // Bounding volumes,
         Chunk_Animations = 9, // Animations
         Chunk_AnimationAliases = 10, // Aliases for animations
@@ -32,9 +32,9 @@ namespace EvilTemple {
 
     Model::Model()
         : mAnimations((Animation*)0), positions(0), normals(0), texCoords(0), vertices(0), textureData(0), faces(0),
-        attachments(0), mRadius(std::numeric_limits<float>::infinity()), mRadiusSquared(std::numeric_limits<float>::infinity()),
+        mRadius(std::numeric_limits<float>::infinity()), mRadiusSquared(std::numeric_limits<float>::infinity()),
         materialState((MaterialState*)0), faceGroups((FaceGroup*)NULL), mNeedsNormalsRecalculated(false),
-        mSkeleton(NULL)
+        mSkeleton(NULL), mBindingPose(NULL)
     {
         activeModels++;
     }
@@ -273,17 +273,15 @@ namespace EvilTemple {
                 mSkeleton = new Skeleton;
                 mSkeleton->setName(filename);
                 stream >> *mSkeleton;
-            } else if (chunkHeader.type == Chunk_BoneAttachments) {
-                boneAttachmentData.swap(chunkData);
+            } else if (chunkHeader.type == Chunk_BindingPose) {
 
-                int count = *reinterpret_cast<unsigned int*>(boneAttachmentData.data());
-                if (count != vertices) {
-                    mError.append(QString("The number of bone attachments differs from the number of vertices in the"
-                                          " model."));
-                    return false;
-                }
+                QDataStream stream(QByteArray::fromRawData(chunkData.data(), chunkHeader.size));
+                stream.setByteOrder(QDataStream::LittleEndian);
+                stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
 
-                attachments = reinterpret_cast<BoneAttachment*>(boneAttachmentData.data() + 16);
+                mBindingPose = new BindingPose;
+                stream >> *mBindingPose;
+
             } else if (chunkHeader.type == Chunk_Animations) {
                 QDataStream stream(QByteArray::fromRawData(chunkData.data(), chunkHeader.size));
                 stream.setByteOrder(QDataStream::LittleEndian);
