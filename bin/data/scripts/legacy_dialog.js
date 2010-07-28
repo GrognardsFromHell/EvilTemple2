@@ -52,6 +52,7 @@ var LegacyDialog = {};
     /**
      * Retrieves the actual text-line that should be shown in a conversation.
      *
+     * @param dialog The NPC dialog object.
      * @param line The line object whose text should be retrieved
      * @param npc The NPC that is talking.
      * @param pc The PC that is talking.

@@ -9,9 +9,9 @@ var SoundController = {};
 
     var activeSchemes = [];
 
-    var activeHandles = [];
+    var activeSounds = [];
 
-    var heartbeatInterval = 1000;
+    var heartbeatInterval = 2000;
 
     function isActive(record) {
         var currentHour = GameTime.getHourOfDay();
@@ -31,27 +31,85 @@ var SoundController = {};
      * The exact logic is still unknown.
      */
     function ambientSoundHeartbeat() {
+        var i, j, scheme, sound, chance, handle;
 
-        activeSchemes.forEach(function (scheme) {
-            scheme.ambientSounds.forEach(function (ambientSound) {
-                var chance = ambientSound.frequency / 100;
+        for (i = 0; i < activeSchemes.length; ++i) {
+            scheme = activeSchemes[i];
+
+            for (j = 0; j < scheme.ambientSounds.length; ++j) {
+                sound = scheme.ambientSounds[j];
+
+                chance = sound.frequency / 200;
                 if (Math.random() < chance) {
-                    var handle = gameView.audioEngine.playSoundOnce(ambientSound.filename, SoundCategory_Ambience);
-                    handle.volume = ambientSound.volume / 100;                    
+                    handle = gameView.audioEngine.playSoundOnce(sound.filename, SoundCategory_Ambience);
+                    handle.volume = sound.volume / 100;
                 }
-            });
-        });
+            }
+        }
 
         gameView.addVisualTimer(heartbeatInterval, ambientSoundHeartbeat);
+    }
+
+    /**
+     * Plays the combat intro sound for the current scheme, or if no custom one is defined,
+     * plays the fallback intro.
+     */
+    function playCombatIntro() {
+        var filename = 'sound/music/combatintro.mp3';
+
+        activeSchemes.some(function(scheme) {
+            if (scheme.combatIntro) {
+                filename = scheme.combatIntro.filename;
+                return true;
+            }
+            return false;
+        });
+
+        // In theory a scheme could unset the combat intro for whatever reason.
+        if (filename) {
+            gameView.audioEngine.playSoundOnce(filename, SoundCategory_Music);
+        }
+    }
+
+    SoundController._playCombatIntro = playCombatIntro;
+
+    function removeInactiveSounds() {
+        var i, sound, remove;
+
+        print("Trying to remove inactive sounds (" + activeSounds.length + ")");
+
+        for (i = 0; i < activeSounds.length; ++i) {
+            // See if the sound still applies.
+            sound = activeSounds[i];
+            remove = false;
+
+            print("Checking " + sound.filename);
+
+            if (activeSchemes.indexOf(sound.scheme) == -1) {
+                print("Sound's scheme is no longer active.");
+                remove = true;
+            } else if (!isActive(sound)) {
+                print("Sound itself is no longer active (i.e. time)");
+                remove = true;
+            }
+
+            if (remove) {
+                print("Removing sound " + sound.filename);
+                try {
+                    sound.handle.stop();
+                } catch (e) {
+                }
+                activeSounds.splice(i, 1);
+                sound = undefined;
+                i--;
+            }
+        }
     }
 
     function updatePlaying() {
         var i, j, scheme, music, handle, sound;
 
-        activeHandles.forEach(function (handle) {
-            handle.stop();
-        });
-        activeHandles = [];
+        removeInactiveSounds();
 
         for (i = 0; i < activeSchemes.length; ++i) {
             scheme = activeSchemes[i];
@@ -69,7 +127,13 @@ var SoundController = {};
                     print("Setting music volume to " + music.volume + "%");
                     handle.volume = music.volume / 100;
                 }
-                activeHandles.push(handle);
+
+                var activeSound = {
+                    handle: handle,
+                    scheme: scheme
+                };
+                activeSound.__proto__ = music;
+                activeSounds.push(activeSound);
             }
         }
     }
@@ -81,10 +145,7 @@ var SoundController = {};
      * @param schemes The schemes to activate.
      */
     SoundController.activate = function(schemes) {
-        // TODO: This should only activate schemes that aren't already active
-        // And it should keep those active and only deactivate those that are no longer active.
-
-        this.deactivate();
+        activeSchemes = [];
 
         schemes.forEach(function (name) {
             var scheme = soundSchemes[name];
@@ -102,11 +163,11 @@ var SoundController = {};
      * Deactivates all active sound schemes.
      */
     SoundController.deactivate = function() {
-        activeHandles.forEach(function (handle) {
-            handle.stop();
+        activeSounds.forEach(function (sound) {
+            sound.handle.stop();
         });
 
-        activeHandles = [];
+        activeSounds = [];
         activeSchemes = [];
         gc();
     };
@@ -115,6 +176,7 @@ var SoundController = {};
     StartupListeners.add(function() {
         GameTime.addHourChangedListener(updatePlaying);
         gameView.addVisualTimer(heartbeatInterval, ambientSoundHeartbeat);
+        // TODO: Combat Enter/Leave needs to trigger switch to combat music
     });
 
 })();

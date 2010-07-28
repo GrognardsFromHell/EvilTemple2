@@ -63,7 +63,7 @@ function showInventory(obj) {
 
             inventoryDialog.removeItem(guid);
 
-            var player = Party.getPlayers()[0];
+            var player = Party.getLeader();
             if (!player.content)
                 player.content = [];
             player.content.push(item);

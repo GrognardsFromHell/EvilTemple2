@@ -142,6 +142,14 @@ var Party = {};
         return true;
     };
 
+    /**
+     * Returns the party leader, which usually is the first player in the party, that is alive.
+     */
+    Party.getLeader = function() {
+        // TODO: Do alive checks.
+        return playerCharacters[0];
+    };
+
     // Loads a member from the savegame payload
     function loadMember(member) {
         // Re-use the given object

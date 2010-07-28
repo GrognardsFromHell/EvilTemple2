@@ -265,7 +265,7 @@ var LegacyScripts = {};
 
             var j;
             var followers = Party.getFollowers();
-            
+
             if (command == 'has_follower') {
                 for (j = 0; j < followers.length; ++j) {
                     if (followers[j].internalId == id)
@@ -432,7 +432,7 @@ var LegacyScripts = {};
      */
     function getTriggerer() {
         // TODO: Later on, take selection into account. Right now, use first partymember
-        return Party.getPlayers()[0];
+        return Party.getLeader();
     }
 
     var CritterWrapper = function(obj) {
@@ -481,6 +481,49 @@ var LegacyScripts = {};
      */
     CritterWrapper.prototype.can_see = function(critter) {
         return true; // TODO: Implement
+    };
+
+    /**
+     * Displays a line above the NPCs head. This system usually keeps the line with the NPC,
+     * while the current implementation really doesn't do that.
+     * @param dialogLineId The id of the dialog to display. This is taken from the dialog file attached
+     * to this NPC.
+     * @param talkingTo While the line may not actually need this parameter, some lines use @pcname@ or
+     * the character's gender. So a PC is usually required for this.
+     */
+    CritterWrapper.prototype.float_line = function(dialogLineId, talkingTo) {
+        // We need a peer to talk to. Fall back to the party leader.
+        if (!talkingTo) {
+            talkingTo = Party.getLeader();
+        } else {
+            talkingTo = talkingTo.obj;
+        }
+
+        if (!this.obj.OnDialog) {
+            print("Triggering float_line on NPC " + this.obj.id + " who doesn't have a dialog file.");
+            return;
+        }
+
+        var dialogId = this.obj.OnDialog.script;
+        var dialog = LegacyDialog.get(dialogId);
+
+        var dialogLine = dialog[dialogLineId];
+
+        if (!dialogLine) {
+            print("Triggering float_line on NPC " + this.obj.id + " with dialog file "
+                    + dialogId + " but missing dialog line " + dialogLineId);
+            return;
+        }
+
+        dialogLine = LegacyDialog.transformLine(dialog, dialogLine, this.obj, talkingTo);
+
+        var position = this.obj.position.slice();
+        if (this.obj.height)
+            position[1] += this.obj.height;
+
+        print("Floating line " + dialogLine.text + " @ " + position);
+
+        gameView.scene.addTextOverlay(position, dialogLine.text, [1, 1, 1, 1]);
     };
 
     /**
@@ -622,7 +665,7 @@ var LegacyScripts = {};
      */
     CritterWrapper.prototype.leader_get = function() {
         if (Party.isMember(this.obj)) {
-            return new CritterWrapper(Party.getPlayers()[0]);
+            return new CritterWrapper(Party.getLeader());
         } else {
             return null;
         }
