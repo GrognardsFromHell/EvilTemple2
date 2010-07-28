@@ -17,7 +17,7 @@ var SoundController = {};
         if (record.time) {
             if (currentHour < record.time.from || currentHour > record.time.to) {
                 print("Skipping music " + record.filename + " since it's not in the time-range.");
-                return true;
+                return false;
             }
         }
 
@@ -26,6 +26,11 @@ var SoundController = {};
 
     function updatePlaying() {
         var i, j, scheme, music, handle, sound;
+
+        activeHandles.forEach(function (handle) {
+            handle.stop();
+        });
+        activeHandles = [];        
 
         for (i = 0; i < activeSchemes.length; ++i) {
             scheme = activeSchemes[i];
@@ -39,8 +44,10 @@ var SoundController = {};
                 print("Music: " + music.filename);
                 sound = gameView.audioEngine.readSound(music.filename);
                 handle = gameView.audioEngine.playSound(sound, SoundCategory_Music, true);
-                if (music.volume)
+                if (music.volume) {
+                    print("Setting music volume to " + music.volume + "%");
                     handle.volume = music.volume / 100;
+                }
                 activeHandles.push(handle);
             }
         }
@@ -53,6 +60,9 @@ var SoundController = {};
      * @param schemes The schemes to activate.
      */
     SoundController.activate = function(schemes) {
+        // TODO: This should only activate schemes that aren't already active
+        // And it should keep those active and only deactivate those that are no longer active.
+
         this.deactivate();
 
         schemes.forEach(function (name) {
@@ -79,5 +89,10 @@ var SoundController = {};
         activeSchemes = [];
         gc();
     };
+
+    // Update music when the hour of the day changes.
+    StartupListeners.add(function() {
+        GameTime.addHourChangedListener(updatePlaying);
+    });
 
 })();
