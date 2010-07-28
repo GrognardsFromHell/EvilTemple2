@@ -10,11 +10,18 @@ var LegacyScripts = {};
     var scriptCache = {};
 
     var GameFacade = {
-        /*
-         Returns the number of members in the party.
-         This only seems to extend to the players in the party.
+        /**
+         * Returns the number of members in the party. Since there is party_pc_size, this should
+         * probably include all followers.
          */
         party_size: function() {
+            return Party.getMembers().length;
+        },
+
+        /**
+         * Presumably returns the number of players in the party, excluding followers.
+         */
+        party_pc_size: function() {
             return Party.getPlayers().length;
         },
 

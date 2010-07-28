@@ -240,6 +240,8 @@ var Map = function(id) {
         gameView.addVisualTimer(1000, function() {
             map.heartbeat();
         });
+
+        SoundController.activate(mapObj.soundSchemes);
     };
 
     Map.prototype.entering = function(position) {
