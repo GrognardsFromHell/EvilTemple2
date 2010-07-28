@@ -11,6 +11,8 @@ var SoundController = {};
 
     var activeHandles = [];
 
+    var heartbeatInterval = 1000;
+
     function isActive(record) {
         var currentHour = GameTime.getHourOfDay();
 
@@ -24,13 +26,32 @@ var SoundController = {};
         return true;
     }
 
+    /**
+     * This selects an ambient sound and plays it.
+     * The exact logic is still unknown.
+     */
+    function ambientSoundHeartbeat() {
+
+        activeSchemes.forEach(function (scheme) {
+            scheme.ambientSounds.forEach(function (ambientSound) {
+                var chance = ambientSound.frequency / 100;
+                if (Math.random() < chance) {
+                    var handle = gameView.audioEngine.playSoundOnce(ambientSound.filename, SoundCategory_Ambience);
+                    handle.volume = ambientSound.volume / 100;                    
+                }
+            });
+        });
+
+        gameView.addVisualTimer(heartbeatInterval, ambientSoundHeartbeat);
+    }
+
     function updatePlaying() {
         var i, j, scheme, music, handle, sound;
 
         activeHandles.forEach(function (handle) {
             handle.stop();
         });
-        activeHandles = [];        
+        activeHandles = [];
 
         for (i = 0; i < activeSchemes.length; ++i) {
             scheme = activeSchemes[i];
@@ -93,6 +114,7 @@ var SoundController = {};
     // Update music when the hour of the day changes.
     StartupListeners.add(function() {
         GameTime.addHourChangedListener(updatePlaying);
+        gameView.addVisualTimer(heartbeatInterval, ambientSoundHeartbeat);
     });
 
 })();
