@@ -508,6 +508,7 @@ var Map = function(id) {
         var color = interpolateColor(hour, keyframes2d).slice(0);
         color[3] = getForegroundFade();
         this.renderBackgroundMap.color = color;
+        
         this.renderGlobalLight.color = interpolateColor(hour, keyframes3d);
     };
 

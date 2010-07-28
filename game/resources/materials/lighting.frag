@@ -15,8 +15,8 @@ varying float attenuation[MaxLights];*/
 
 varying vec4 lightingColor;
 
-vec4 lighting(float shininess, vec4 materialColor, vec4 specularColor) {
-    return lightingColor * materialColor;
+vec4 lighting(vec4 specularColor) {
+    return lightingColor;
 
     /*vec4 color = vec4(0,0,0,1);
 
@@ -40,16 +40,16 @@ vec4 lighting(float shininess, vec4 materialColor, vec4 specularColor) {
     return color * materialColor;*/
 }
 
-vec4 lighting(float shininess, vec4 materialColor)
+vec4 lighting()
 {
-    return lighting(shininess, materialColor, vec4(1,1,1,1));
+    return lighting(vec4(1,1,1,1));
 }
 
-vec4 lightingGlossmap(float shininess, vec4 materialColor, sampler2D glossmapSampler, vec2 texCoords)
+vec4 lightingGlossmap(sampler2D glossmapSampler, vec2 texCoords)
 {
     // Retrieve the specular material color from the glossmap
     vec4 specularColor = texture2D(glossmapSampler, texCoords);
 
 
-    return lighting(shininess, materialColor, vec4(1,1,1,1));
+    return lighting(vec4(1,1,1,1));
 }

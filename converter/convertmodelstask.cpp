@@ -440,11 +440,11 @@ bool ConvertModelsTask::writeModel(const QString &filename, IFileWriter *output,
     QHash<uint,QString> materialFileMapping;
     int i = 0;
     int j = -1; // placeholders are negative
-    QStringList placeholders;
+    QVector<QByteArray> placeholders;
 
     foreach (QString materialName, groupedMaterials.keys()) {
         if (groupedMaterials[materialName]->type() == Troika::Material::Placeholder) {
-            placeholders.append(materialName);
+            placeholders.append(materialName.toLatin1());
             materialMapping[materialName] = (j--);
         } else {
             materialFileMapping[i] = getNewMaterialFilename(materialName);
@@ -455,15 +455,18 @@ bool ConvertModelsTask::writeModel(const QString &filename, IFileWriter *output,
 
     if (!external) {
         writer.writeTextures(converter.textureList());
-        writer.writeMaterials(converter.materialList(), placeholders);
+        writer.writeMaterials(converter.materialList());
+        if (!placeholders.isEmpty())
+            writer.writeMaterialPlaceholders(placeholders);
     } else {
-        writer.writeMaterials(QList<HashedData>(), placeholders);
-
         QStringList materials;
         for (int j = 0; j < i; ++j) {
             materials.append(materialFileMapping[j]);
         }
         writer.writeMaterialReferences(materials);
+
+        if (!placeholders.isEmpty())
+            writer.writeMaterialPlaceholders(placeholders);
 
         foreach (const QString &filename, converter.materialScripts().keys()) {
             if (!mWrittenMaterials[filename]) {

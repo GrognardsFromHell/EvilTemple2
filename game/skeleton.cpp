@@ -1,19 +1,21 @@
 
 #include "skeleton.h"
-#include "util.h"
+#include "gamemath_streams.h"
 
 namespace EvilTemple {
 
 QDataStream &operator >>(QDataStream &stream, Skeleton &skeleton)
 {
-    uint bonesCount;
+    int bonesCount;
     stream >> bonesCount;
+
+    Q_ASSERT(bonesCount >= 0);
 
     skeleton.mBones = new Bone[bonesCount];
     skeleton.mBonePointers.resize(bonesCount);
 
     Matrix4 relativeWorld;
-    
+
     for (int j = 0; j < bonesCount; ++j) {
         Bone &bone = skeleton.mBones[j];
         QByteArray boneName;
@@ -59,7 +61,7 @@ Skeleton::Skeleton(const Skeleton &other)
 {
     mBones = new Bone[other.mBonePointers.size()];
     memcpy(mBones, other.mBones, sizeof(Bone) * other.mBonePointers.size());
-    
+
     mBonePointers.resize(other.mBonePointers.size());
     mBoneMap.reserve(other.mBoneMap.capacity());
 

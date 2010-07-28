@@ -75,16 +75,16 @@ namespace EvilTemple {
         /**
          * Returns an animation by name. NULL if no such animation is found.
          */
-        const Animation *animation(const QString &name) const;
+        const Animation *animation(const QByteArray &name) const;
 
-        QStringList animations() const;
+        QList<QByteArray> animations() const;
 
         /**
           Checks if the model supports the given animation.
           */
-        bool hasAnimation(const QString &name) const;
+        bool hasAnimation(const QByteArray &name) const;
 
-        const QStringList &placeholders() const;
+        const QVector<QByteArray> &placeholders() const;
 
         /**
           Indicates that this model needs its normals recalculated after it was animated.
@@ -92,7 +92,7 @@ namespace EvilTemple {
         bool needsNormalsRecalculated() const;
 
     private:
-        typedef QHash<QString, const Animation*> AnimationMap;
+        typedef QHash<QByteArray, const Animation*> AnimationMap;
 
         typedef QScopedPointer<char, AlignedDeleter> AlignedPointer;
 
@@ -100,12 +100,12 @@ namespace EvilTemple {
 
         QScopedArrayPointer<Animation> mAnimations;
 
-        QScopedArrayPointer<MaterialState> materialState;
+        QVector<SharedMaterialState> mMaterialState;
 
-        QStringList mPlaceholders;
+        QVector<QByteArray> mPlaceholders;
 
         bool mNeedsNormalsRecalculated;
-        
+
         Skeleton *mSkeleton;
 
         BindingPose *mBindingPose;
@@ -129,7 +129,7 @@ namespace EvilTemple {
         return mNeedsNormalsRecalculated;
     }
 
-    inline const QStringList &Model::placeholders() const
+    inline const QVector<QByteArray> &Model::placeholders() const
     {
         return mPlaceholders;
     }
@@ -159,7 +159,7 @@ namespace EvilTemple {
         return mBindingPose;
     }
 
-    inline const Animation *Model::animation(const QString &name) const
+    inline const Animation *Model::animation(const QByteArray &name) const
     {
         AnimationMap::const_iterator it = mAnimationMap.find(name);
 
@@ -170,7 +170,7 @@ namespace EvilTemple {
         }
     }
 
-    inline bool Model::hasAnimation(const QString &name) const
+    inline bool Model::hasAnimation(const QByteArray &name) const
     {
         return mAnimationMap.contains(name);
     }

@@ -61,7 +61,7 @@ float ModelScriptable::radius() const
 bool ModelScriptable::hasAnimation(const QString &name) const
 {
     SharedModel model = data();
-    return model ? model->hasAnimation(name) : false;
+    return model ? model->hasAnimation(name.toLatin1()) : false;
 }
 
 QScriptValue ModelScriptable::animations() const
@@ -69,11 +69,11 @@ QScriptValue ModelScriptable::animations() const
     SharedModel model = data();
 
     if (model) {
-        QStringList animations = model->animations();
+        QList<QByteArray> animations = model->animations();
         QScriptValue result = engine()->newArray(animations.size());
         int i = 0;
-        foreach (const QString &anim, animations) {
-            result.setProperty(i++, QScriptValue(anim));
+        foreach (const QByteArray &anim, animations) {
+            result.setProperty(i++, QScriptValue(QString(anim)));
         }
         return result;
     } else {
@@ -86,7 +86,7 @@ QScriptValue ModelScriptable::animationDps(const QString &name) const
     SharedModel model = data();
 
     if (model) {
-        const Animation *animation = model->animation(name);
+        const Animation *animation = model->animation(name.toLatin1());
         if (animation) {
             return QScriptValue(animation->dps());
         } else {
@@ -102,7 +102,7 @@ QScriptValue ModelScriptable::animationFrames(const QString &name) const
     SharedModel model = data();
 
     if (model) {
-        const Animation *animation = model->animation(name);
+        const Animation *animation = model->animation(name.toLatin1());
         if (animation) {
             return QScriptValue(animation->frames());
         } else {

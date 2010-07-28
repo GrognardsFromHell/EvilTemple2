@@ -6,22 +6,10 @@
 
 #include "modelfile.h"
 #include "util.h"
+#include "materials.h"
+#include "modelfilereader.h"
 
 namespace EvilTemple {
-
-    enum ModelChunks {
-        Chunk_Textures = 1,
-        Chunk_Materials = 2,
-        Chunk_MaterialReferences = 3,
-        Chunk_Geometry = 4,
-        Chunk_Faces = 5,
-        Chunk_Skeleton = 6, // Skeletal data
-        Chunk_BindingPose = 7, // Assigns vertices to bones
-        Chunk_BoundingVolumes = 8, // Bounding volumes,
-        Chunk_Animations = 9, // Animations
-        Chunk_AnimationAliases = 10, // Aliases for animations
-        Chunk_Metadata = 0xFFFF,  // Last chunk is always metadata
-    };
 
     static uint activeModels = 0;
 
@@ -33,7 +21,7 @@ namespace EvilTemple {
     Model::Model()
         : mAnimations((Animation*)0), positions(0), normals(0), texCoords(0), vertices(0), textureData(0), faces(0),
         mRadius(std::numeric_limits<float>::infinity()), mRadiusSquared(std::numeric_limits<float>::infinity()),
-        materialState((MaterialState*)0), faceGroups((FaceGroup*)NULL), mNeedsNormalsRecalculated(false),
+        faceGroups((FaceGroup*)NULL), mNeedsNormalsRecalculated(false),
         mSkeleton(NULL), mBindingPose(NULL)
     {
         activeModels++;
@@ -108,23 +96,10 @@ namespace EvilTemple {
     {
         mError.clear();
 
-        QFile file(filename);
+        ModelFileReader reader;
 
-        if (!file.open(QIODevice::ReadOnly)) {
-            mError.append(QString("Unable to open model file %1.").arg(filename));
-            return false;
-        }
-
-        ModelHeader header;
-
-        // TODO: Fix this up for non little-endian systems
-        if (!file.read(reinterpret_cast<char*>(&header), sizeof(header))) {
-            mError.append(QString("Unable to read model file header from %1.").arg(filename));
-            return false;
-        }
-
-        if (header.magic[0] != 'M' || header.magic[1] != 'O' || header.magic[2] != 'D' || header.magic[3] != 'L') {
-            mError.append(QString("File has invalid magic number: %1.").arg(filename));
+        if (!reader.open(filename)) {
+            mError.append(QString("Unable to open model file %1: %2").arg(filename).arg(reader.error()));
             return false;
         }
 
@@ -132,29 +107,17 @@ namespace EvilTemple {
         QVector<unsigned char*> textures;
         QVector<int> texturesSize;
 
-        for (uint i = 0; i < header.chunks; ++i) {
-            ChunkHeader chunkHeader;
-
-            if (!file.read(reinterpret_cast<char*>(&chunkHeader), sizeof(ChunkHeader))) {
-                mError.append(QString("Unable to read chunk %1 from file %2.").arg(i).arg(filename));
+        while (reader.hasNextChunk()) {
+            if (!reader.nextChunk()) {
+                mError = QString("Unable to read next chunk from %1: %2").arg(filename).arg(reader.error());
                 return false;
             }
 
-            if (chunkHeader.type < Chunk_Textures || chunkHeader.type > Chunk_AnimationAliases) {
-                // Skip, unknown chunk
-                mError.append(QString("WARN: Unknown chunk type %1 in model file %2.").arg(chunkHeader.type).arg(filename));
-                file.seek(file.pos() + chunkHeader.size);
-                continue;
-            }
+            QDataStream &stream = reader.stream();
 
-            AlignedPointer chunkData((char*)ALIGNED_MALLOC(chunkHeader.size));
-
-            if (!file.read(chunkData.data(), chunkHeader.size)) {
-                mError.append(QString("Unable to read data of chunk %1 in %2.").arg(i).arg(filename));
-                return false;
-            }
-
-            if (chunkHeader.type == Chunk_Textures) {
+            if (reader.chunkType() == Chunk_Textures) {
+                AlignedPointer chunkData((char*)ALIGNED_MALLOC(reader.chunkSize()));
+                stream.readRawData(chunkData.data(), reader.chunkSize());
                 textureData.swap(chunkData);
 
                 unsigned int textureCount = *(unsigned int*)textureData.data();
@@ -175,18 +138,13 @@ namespace EvilTemple {
                     texturesSize[j] = size;
                     ptr += size;
                 }
-            } else if (chunkHeader.type == Chunk_Materials) {
-                QDataStream stream(QByteArray::fromRawData(chunkData.data(), chunkHeader.size));
-                stream.setByteOrder(QDataStream::LittleEndian);
-                stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
+            } else if (reader.chunkType() == Chunk_Materials) {
+                uint materialCount;
 
-                uint materialCount, placeholderCount;
-
-                stream >> materialCount >> placeholderCount;
-                stream.skipRawData(sizeof(uint) + sizeof(uint));
+                stream >> materialCount;
 
                 if (materialCount > 0) {
-                    materialState.reset(new MaterialState[materialCount]);
+                    mMaterialState.resize(materialCount);
 
                     ModelTextureSource textureSource(hashes, textures, texturesSize);
 
@@ -204,88 +162,53 @@ namespace EvilTemple {
                             return false;
                         }
 
-                        if (!materialState[j].createFrom(material, renderState, &textureSource)) {
+                        mMaterialState[j].create();
+
+                        if (!mMaterialState[j]->createFrom(material, renderState, &textureSource)) {
                             mError.append(QString("Unable to create material state for model %1:\n%2").arg(filename)
-                                          .arg(materialState[j].error()));
+                                          .arg(mMaterialState[j]->error()));
                             return false;
                         }
                     }
                 }
-
-                for (int j = 0; j < placeholderCount; ++j) {
-                    QByteArray placeholderName;
-                    stream >> placeholderName;
-                    mPlaceholders.append(QString::fromUtf8(placeholderName.constData(), placeholderName.size()));
-                }
-            } else if (chunkHeader.type == Chunk_MaterialReferences) {
-                Q_ASSERT(materialState.isNull()); // Materials and MaterialReferences are exclusive
-
-                QDataStream stream(QByteArray::fromRawData(chunkData.data(), chunkHeader.size));
-                stream.setByteOrder(QDataStream::LittleEndian);
-                stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
+            } else if (reader.chunkType() == Chunk_MaterialReferences) {
+                Q_ASSERT(mMaterialState.isEmpty()); // Materials and MaterialReferences are exclusive
 
                 QStringList materialNames;
                 stream >> materialNames;
 
-                materialState.reset(new MaterialState[materialNames.size()]);
+                mMaterialState.resize(materialNames.size());
 
-                for (int j = 0; j < materialNames.size(); ++j) {
+                for (int j = 0; j < materialNames.size(); ++j)
+                    mMaterialState[j] = materials->load(materialNames[j]);
 
-                    QFile file(materialNames[j]);
+            } else if (reader.chunkType() == Chunk_MaterialPlaceholders) {
 
-                    if (!file.open(QIODevice::ReadOnly)) {
-                        qWarning("Unable to open material file %s.", qPrintable(materialNames[j]));
-                        return false;
-                    }
+                stream >> mPlaceholders;
 
-                    Material material;
-
-                    if (!material.loadFromData(file.readAll())) {
-                        mError.append(QString("Unable to read material from model %1:\n%2").arg(filename)
-                                      .arg(material.error()));
-                        return false;
-                    }
-
-                    if (!materialState[j].createFrom(material, renderState, FileTextureSource::instance())) {
-                        mError.append(QString("Unable to create material state for model %1:\n%2").arg(filename)
-                                      .arg(materialState[j].error()));
-                        return false;
-                    }
-                }
-            } else if (chunkHeader.type == Chunk_BoundingVolumes) {
-                QDataStream stream(QByteArray::fromRawData(chunkData.data(), chunkHeader.size));
-                stream.setByteOrder(QDataStream::LittleEndian);
-                stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
-
+            } else if (reader.chunkType() == Chunk_BoundingVolumes) {
                 stream >> mBoundingBox >> mRadius >> mRadiusSquared;
-            } else if (chunkHeader.type == Chunk_Geometry) {
+            } else if (reader.chunkType() == Chunk_Geometry) {
+                AlignedPointer chunkData((char*)ALIGNED_MALLOC(reader.chunkSize()));
+                stream.readRawData(chunkData.data(), reader.chunkSize());
                 vertexData.swap(chunkData);
                 loadVertexData();
-            } else if (chunkHeader.type == Chunk_Faces) {
+            } else if (reader.chunkType() == Chunk_Faces) {
+                AlignedPointer chunkData((char*)ALIGNED_MALLOC(reader.chunkSize()));
+                stream.readRawData(chunkData.data(), reader.chunkSize());
                 faceData.swap(chunkData);
                 loadFaceData();
-            } else if (chunkHeader.type == Chunk_Skeleton) {
-                QDataStream stream(QByteArray::fromRawData(chunkData.data(), chunkHeader.size));
-                stream.setByteOrder(QDataStream::LittleEndian);
-                stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
-
+            } else if (reader.chunkType() == Chunk_Skeleton) {
                 delete mSkeleton;
                 mSkeleton = new Skeleton;
                 mSkeleton->setName(filename);
                 stream >> *mSkeleton;
-            } else if (chunkHeader.type == Chunk_BindingPose) {
-
-                QDataStream stream(QByteArray::fromRawData(chunkData.data(), chunkHeader.size));
-                stream.setByteOrder(QDataStream::LittleEndian);
-                stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
+            } else if (reader.chunkType() == Chunk_BindingPose) {
 
                 mBindingPose = new BindingPose;
                 stream >> *mBindingPose;
 
-            } else if (chunkHeader.type == Chunk_Animations) {
-                QDataStream stream(QByteArray::fromRawData(chunkData.data(), chunkHeader.size));
-                stream.setByteOrder(QDataStream::LittleEndian);
-                stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
+            } else if (reader.chunkType() == Chunk_Animations) {
 
                 uint count;
                 stream >> count;
@@ -298,19 +221,15 @@ namespace EvilTemple {
                     stream >> animation;
                     mAnimationMap[animation.name()] = &animation;
                 }
-            } else if (chunkHeader.type == Chunk_AnimationAliases) {
-                QDataStream stream(QByteArray::fromRawData(chunkData.data(), chunkHeader.size));
-                stream.setByteOrder(QDataStream::LittleEndian);
-                stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
-
-                QHash<QString, QString> animationMap;
+            } else if (reader.chunkType() == Chunk_AnimationAliases) {
+                QHash<QByteArray, QByteArray> animationMap;
                 stream >> animationMap;
 
-                foreach (const QString &anim, animationMap.keys()) {
-                    QString mapTo = animationMap[anim];
+                foreach (const QByteArray &anim, animationMap.keys()) {
+                    QByteArray mapTo = animationMap[anim];
                     if (!mAnimationMap.contains(mapTo)) {
                         qWarning("Animation %s in animation map maps to unknown animation %s.",
-                                 qPrintable(anim), qPrintable(mapTo));
+                                 anim.constData(), mapTo.constData());
                     } else {
                         mAnimationMap[anim] = mAnimationMap[mapTo];
                     }
@@ -403,7 +322,7 @@ namespace EvilTemple {
                 faceGroup->material = 0;
                 faceGroup->placeholderId = (- groupHeader->materialId) - 1;
             } else {
-                faceGroup->material = materialState.data() + groupHeader->materialId;
+                faceGroup->material = mMaterialState[groupHeader->materialId].data();
                 faceGroup->placeholderId = -1;
             }
 
@@ -453,10 +372,10 @@ namespace EvilTemple {
     FaceGroup::FaceGroup() : material(0)
     {
     }
-    
-    QStringList Model::animations() const
+
+    QList<QByteArray> Model::animations() const
     {
-        return QStringList(mAnimationMap.keys());
+        return mAnimationMap.keys();
     }
 
 }

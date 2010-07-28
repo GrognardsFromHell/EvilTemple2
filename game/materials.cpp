@@ -135,14 +135,14 @@ SharedMaterialState Materials::load(const QString &filename)
 
     // It's possible mMaterials contains a null weakpointer, so we have to check again.
     if (!result) {
-        result = SharedMaterialState(new MaterialState);
+        result = result.create();
 
         if (!result->createFromFile(filename, d->renderStates, FileTextureSource::instance())) {
             qWarning("Unable to open material file %s: %s", qPrintable(filename), qPrintable(result->error()));
             result = missingMaterial();
-        } else {
-            d->activeMaterials[filename] = result;
         }
+
+        d->activeMaterials[filename] = result;
     }
 
     return result;

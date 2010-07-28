@@ -18,8 +18,6 @@ include(../3rdparty/game-math/game-math.pri)
 
 DEFINES += GAME_LIBRARY
 
-INCLUDEPATH += ../3rdparty/boost_1_43_0
-
 SOURCES += \
     mainwindow.cpp \
     game.cpp \
@@ -58,7 +56,10 @@ SOURCES += \
     savegames.cpp \
     skeleton.cpp \
     animation.cpp \
-    bindingpose.cpp
+    bindingpose.cpp \
+    animatedmeshstate.cpp \
+    modelfilereader.cpp \
+    modelfilechunks.cpp
 HEADERS += \
     mainwindow.h \
     game.h \
@@ -103,7 +104,11 @@ HEADERS += \
     savegames.h \
     skeleton.h \
     animation.h \
-    bindingpose.h
+    bindingpose.h \
+    animatedmeshstate.h \
+    modelfilereader.h \
+    modelfilechunks.h \
+    gamemath_streams.h
 OTHER_FILES += \
     resources/schema/materialfile.xsd \
     resources/materials/map_material.xml \

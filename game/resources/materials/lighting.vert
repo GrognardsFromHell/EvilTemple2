@@ -12,6 +12,7 @@ uniform float lightSourceAttenuation[MaxLights];
 uniform vec4 lightSourceColor[MaxLights];
 
 uniform mat4 worldMatrix;
+uniform int shininess;
 
 /*varying vec3 normal;
 varying vec3 lightVector[MaxLights];
@@ -72,9 +73,7 @@ void lighting(vec4 vertexPosition, vec4 vertexNormal, mat4 worldViewMatrix, mat4
         }
 
         vec3 halfVector = normalize(lightVector + eyeVector);
-
-        float shininess = 50;
-
+		
         // compute the dot product between normal and ldir
         float NdotL = max(dot(normal, lightVector), 0.0f);
 

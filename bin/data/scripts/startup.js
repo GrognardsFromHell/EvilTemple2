@@ -6,7 +6,7 @@ var jumppoints = {};
 var renderStates = {};
 var globalRenderStateId = 0;
 
-var editMode = false;
+var editMode = true;
 
 // Base object for all prototypes
 //noinspection JSUnusedLocalSymbols

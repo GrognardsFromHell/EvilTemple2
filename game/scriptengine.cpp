@@ -239,6 +239,17 @@ namespace EvilTemple {
         qFatal("Trying to convert a QScriptValue to QMoueEvent. This is not supported.");
     }
 
+
+    QScriptValue qByteArrayToScriptable(QScriptEngine *engine, QByteArray const &in)
+    {
+        return QScriptValue(QString::fromLatin1(in));
+    }
+
+    void qByteArrayFromScriptable(const QScriptValue &object, QByteArray &out)
+    {
+        out = object.toString().toLatin1();
+    }
+
     ScriptEngineData::ScriptEngineData(ScriptEngine *parent, Game *game)
         : engine(new QScriptEngine(parent)),
         debugger(NULL)
@@ -253,6 +264,7 @@ namespace EvilTemple {
         }
 
         qScriptRegisterMetaType<QMouseEvent*>(engine, qMouseEventToScriptable, qMouseEventFromScriptable);
+        qScriptRegisterMetaType<QByteArray>(engine, qByteArrayToScriptable, qByteArrayFromScriptable);
 
         QScriptValue global = engine->globalObject();
 

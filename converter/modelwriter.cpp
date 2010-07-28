@@ -222,11 +222,11 @@ void ModelWriter::writeAnimations(const Troika::MeshModel *model)
 
     stream << (uint)skeleton->animations().size() << RESERVED << RESERVED << RESERVED;
 
-    QHash<uint, QString> animDataStartMap;
+    QHash<uint, QByteArray> animDataStartMap;
     animDataStartMap.reserve(skeleton->animations().size());
-    QHash<QString, QString> animAliasMap;
+    QHash<QByteArray, QByteArray> animAliasMap;
 
-    QHash<QByteArray, QString> animationHashes;
+    QHash<QByteArray, QByteArray> animationHashes;
 
     uint animsWritten = 0;
 
@@ -247,7 +247,7 @@ void ModelWriter::writeAnimations(const Troika::MeshModel *model)
 
         if (animationHashes.contains(hash)) {
             qDebug("Animation %s has same content as anim: %s", animation.name().constData(),
-                   qPrintable(animationHashes[hash]));
+                   animationHashes[hash].constData());
             animAliasMap[animation.name()] = animationHashes[hash];
             animDataStartMap[animation.keyFramesDataStart()] = animationHashes[hash];
             continue;
@@ -384,19 +384,25 @@ void ModelWriter::writeTextures(const QList<HashedData> &textures)
     finishChunk();
 }
 
-void ModelWriter::writeMaterials(const QList<HashedData> &materialScripts, const QStringList &placeholders)
+void ModelWriter::writeMaterials(const QList<HashedData> &materialScripts)
 {
     startChunk(Materials, true);
 
-    stream << (uint)materialScripts.size() << (int)placeholders.size() << RESERVED << RESERVED;
+    stream << (uint)materialScripts.size();
 
     foreach (const HashedData &hashedData, materialScripts) {
         stream << hashedData;
     }
 
-    foreach (const QString &placeholder, placeholders) {
-        stream << placeholder.toUtf8();
-    }
+    finishChunk();
+}
+
+
+void ModelWriter::writeMaterialPlaceholders(const QVector<QByteArray> &placeholders)
+{
+    startChunk(MaterialPlaceholders, true);
+
+    stream << placeholders;
 
     finishChunk();
 }
@@ -526,7 +532,7 @@ void ModelWriter::finishChunk()
     lastChunkStart = -1;
 }
 
-void ModelWriter::writeAnimationAliases(const QHash<QString, QString> &aliases)
+void ModelWriter::writeAnimationAliases(const QHash<QByteArray, QByteArray> &aliases)
 {
     startChunk(AnimationAliases, false);
 

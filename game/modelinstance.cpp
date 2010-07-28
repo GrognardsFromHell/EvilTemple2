@@ -137,12 +137,11 @@ namespace EvilTemple {
             The bone mapping is done by-name. Now the addmeshes don't actually contain a skeleton, which wouldn't 
             be used. Instead, they only contain a binding pose, which is mapped to the current skeleton here.
             */
-        if (model->bindingPose()) {
-            const Skeleton *curSkeleton = skeleton();
-
+        const Skeleton *curSkeleton = skeleton();
+        if (model->bindingPose() && curSkeleton) {
             mAddMeshBoneMapping.append(createBoneMapping(model->bindingPose(), curSkeleton));
         } else {
-            qWarning("An addmesh was added, although it doesn't have a binding pose.");
+            qWarning("An add-mesh was added, although it doesn't have a binding pose.");
             mAddMeshBoneMapping.append(QVector<uint>());
         }
 
@@ -704,7 +703,7 @@ namespace EvilTemple {
         return result;
     }
 
-    bool ModelInstance::overrideMaterial(const QString &name, const SharedMaterialState &state)
+    bool ModelInstance::overrideMaterial(const QByteArray &name, const SharedMaterialState &state)
     {
         if (!mModel)
             return false;
@@ -719,7 +718,7 @@ namespace EvilTemple {
         return true;
     }
 
-    bool ModelInstance::clearOverrideMaterial(const QString &name)
+    bool ModelInstance::clearOverrideMaterial(const QByteArray &name)
     {
         if (!mModel)
             return false;
@@ -740,17 +739,17 @@ namespace EvilTemple {
             mReplacementMaterials[i].clear();
     }
 
-    void ModelInstance::setIdleAnimation(const QString &idleAnimation)
+    void ModelInstance::setIdleAnimation(const QByteArray &idleAnimation)
     {
         mIdleAnimation = idleAnimation;
     }
 
-    const QString &ModelInstance::idleAnimation() const
+    const QByteArray &ModelInstance::idleAnimation() const
     {
         return mIdleAnimation;
     }
 
-    bool ModelInstance::playAnimation(const QString &name, bool loop)
+    bool ModelInstance::playAnimation(const QByteArray &name, bool loop)
     {
         if (!mModel)
             return false;

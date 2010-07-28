@@ -32,7 +32,7 @@ class ModelInstance : public Renderable
 Q_OBJECT
 Q_PROPERTY(const SharedModel &model READ model WRITE setModel)
 Q_PROPERTY(bool idling READ isIdling)
-Q_PROPERTY(QString idleAnimation READ idleAnimation WRITE setIdleAnimation)
+Q_PROPERTY(QByteArray idleAnimation READ idleAnimation WRITE setIdleAnimation)
 Q_PROPERTY(bool drawBehindWalls READ drawsBehindWalls WRITE setDrawsBehindWalls)
 public:
     ModelInstance();
@@ -56,8 +56,8 @@ public:
 
     const Matrix4 &worldTransform() const;
 
-    void setIdleAnimation(const QString &idleAnimation);
-    const QString &idleAnimation() const;
+    void setIdleAnimation(const QByteArray &idleAnimation);
+    const QByteArray &idleAnimation() const;
 
     bool isIdling() const; // No animation is playing
 
@@ -72,11 +72,11 @@ public slots:
 
     void addMesh(const SharedModel &model);
 
-    bool overrideMaterial(const QString &name, const SharedMaterialState &state);
-    bool clearOverrideMaterial(const QString &name);
+    bool overrideMaterial(const QByteArray &name, const SharedMaterialState &state);
+    bool clearOverrideMaterial(const QByteArray &name);
     void clearOverrideMaterials();
 
-    bool playAnimation(const QString &name, bool loop = false);
+    bool playAnimation(const QByteArray &name, bool loop = false);
     void stopAnimation();
 
     void elapseTime(float elapsedSeconds);
@@ -105,7 +105,7 @@ private:
 
     SharedModel mModel;
 
-    QString mIdleAnimation;
+    QByteArray mIdleAnimation;
     bool mIdling; // mCurrentAnimation is the idle animation
     bool mLooping; // Only relevant if not idling (idle is always looped)
     const Animation *mCurrentAnimation;

@@ -57,16 +57,13 @@ void main() {
 
         <code>
         <![CDATA[
-
-// Material properties
-uniform vec4 materialColor;
-uniform int shininess;
-
 varying vec2 texCoord;
 
 {{TEXTUREANIM_ON}}
 uniform float t = 0;
 {{/TEXTUREANIM_ON}}
+
+uniform vec4 materialColor;
 
 {{SAMPLERS}}
 

@@ -1,6 +1,6 @@
 
 #include "bindingpose.h"
-#include "util.h"
+#include "gamemath_streams.h"
 
 namespace EvilTemple {
 
@@ -33,7 +33,7 @@ namespace EvilTemple {
         stream >> count;
 
         pose.mAttachments.resize(count);
-        
+
         for (uint i = 0; i < count; ++i) {
             stream >> pose.mAttachments[i];
         }

@@ -10,7 +10,7 @@
 #include <gamemath.h>
 using namespace GameMath;
 
-#include "util.h"
+#include "gamemath_streams.h"
 
 namespace EvilTemple {
 
