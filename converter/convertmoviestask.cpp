@@ -1,6 +1,7 @@
 
 
 #include <QSet>
+#include <QVariantMap>
 
 #include <serializer.h>
 

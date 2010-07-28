@@ -1,5 +1,6 @@
 
 #include <QtCore/QXmlStreamReader>
+#include <QFile>
 
 #include "material.h"
 

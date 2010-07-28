@@ -1,5 +1,6 @@
 
 #include <QScriptEngine>
+#include <QSet>
 
 #include <serializer.h>
 

@@ -1,5 +1,7 @@
 
 #include <QFile>
+#include <QStringList>
+#include <QHash>
 
 #include "mapareamapping.h"
 

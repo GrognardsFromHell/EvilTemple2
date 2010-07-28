@@ -10,6 +10,7 @@ SOURCES += \
 QT += opengl
 CONFIG += console
 
+include(../3rdparty/game-math/game-math.pri)
 include(../base.pri)
 
 HEADERS += \

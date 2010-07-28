@@ -2,6 +2,7 @@
 #include "../game/tga.h"
 
 #include <QImage>
+#include <QBuffer>
 
 #include "convertinterfacetask.h"
 #include "virtualfilesystem.h"

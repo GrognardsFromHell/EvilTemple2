@@ -6,6 +6,7 @@
 #include "audioengine.h"
 #include "binkplayer.h"
 #include "dialog.h"
+using namespace EvilTemple;
 
 extern "C" {
     #include "libavcodec/avcodec.h"

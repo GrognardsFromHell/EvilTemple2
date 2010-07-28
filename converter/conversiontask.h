@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QString>
 #include <QByteArray>
+#include <QHash>
 
 namespace Troika
 {

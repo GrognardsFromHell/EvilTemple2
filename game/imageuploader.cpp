@@ -1,6 +1,7 @@
 
 #include <QByteArray>
 #include <QBuffer>
+#include <QFile>
 
 #include <QNetworkRequest>
 #include <QNetworkReply>

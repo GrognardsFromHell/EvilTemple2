@@ -19,6 +19,8 @@ using namespace QJson;
 #include "troika_model.h"
 #include "mapareamapping.h"
 
+#include <QDir>
+
 static QVariantMap convertPathNodes(const QString &directory, IConversionService *service)
 {
     PathNodeConverter converter;

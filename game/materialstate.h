@@ -46,11 +46,11 @@ template<> inline void bindUniform<Matrix4>(GLint location, const Matrix4 &matri
     glUniformMatrix4fv(location, 1, false, matrix.data());
 }
 
-template<> inline void bindUniform<uint>(GLint location, const uint &value) {
-    glUniform1ui(location, value);
+template<> inline void bindUniform<int>(GLint location, const int &value) {
+    glUniform1i(location, value);
 }
 
-template<> inline void bindUniform<int>(GLint location, const int &value) {
+template<> inline void bindUniform<uint>(GLint location, const uint &value) {
     glUniform1i(location, value);
 }
 

@@ -1,4 +1,7 @@
 
+#include <QVariantMap>
+#include <QSet>
+
 #include <serializer.h>
 
 #include <messagefile.h>

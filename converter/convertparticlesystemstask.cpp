@@ -1,3 +1,6 @@
+#include <QDomDocument>
+#include <QDomElement>
+
 #include "convertparticlesystemstask.h"
 #include "virtualfilesystem.h"
 #include "messagefile.h"

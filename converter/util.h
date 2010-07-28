@@ -11,6 +11,9 @@ using namespace GameMath;
 #include <QXmlStreamWriter>
 #include <QVariant>
 #include <QVector3D>
+#include <QDir>
+
+#include <ctype.h>
 
 /**
   Converts radians to degree.

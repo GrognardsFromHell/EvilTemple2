@@ -27,6 +27,8 @@
 
 #include <parser.h>
 
+Q_DECLARE_METATYPE(QMouseEvent*)
+
 namespace EvilTemple {
 
     class ScriptEngineData {
@@ -218,8 +220,6 @@ namespace EvilTemple {
         result->setParent(scene);
         return engine->newQObject(result);
     }
-
-    Q_DECLARE_METATYPE(QMouseEvent*)
 
     QScriptValue qMouseEventToScriptable(QScriptEngine *engine, QMouseEvent* const &in)
     {

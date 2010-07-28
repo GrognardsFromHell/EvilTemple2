@@ -1,5 +1,6 @@
 
 #include <QImage>
+#include <QDir>
 
 #include "mapconverter.h"
 #include "zonebackgroundmap.h"

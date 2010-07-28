@@ -9,6 +9,10 @@
 #include <QtCore/QByteArray>
 #include <QtCore/QSharedPointer>
 #include <QtCore/QXmlStreamReader>
+#include <QtCore/QVariant>
+#include <QtGui/QVector2D>
+#include <QtGui/QVector3D>
+#include <QtGui/QVector4D>
 
 #include "util.h"
 

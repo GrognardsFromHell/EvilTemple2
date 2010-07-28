@@ -1,6 +1,7 @@
 
 #include <QString>
 #include <QCryptographicHash>
+#include <QTextStream>
 
 #include "virtualfilesystem.h"
 #include "troika_material.h"
