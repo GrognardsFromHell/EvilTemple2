@@ -48,7 +48,8 @@ namespace Troika
                 && readMobiles()
                 && readClippingMeshFiles()
                 && readClippingMeshInstances()
-                && readGlobalLight();
+                && readGlobalLight()
+                && readSoundSchemes();
     }
 
     bool ZoneTemplateReader::readMapProperties()
@@ -649,6 +650,38 @@ namespace Troika
         } else if (nonEmptySets > 0) {
             qWarning("Map %d has %d non-empty daylight.mes sets. Should be either 4 or 0.", zoneTemplate->id(),
                      nonEmptySets);
+        }
+
+        return true;
+    }
+
+    bool ZoneTemplateReader::readSoundSchemes()
+    {
+        QByteArray mapInfo = vfs->openFile(zoneTemplate->directory() + "mapinfo.txt");
+
+        QRegExp soundSchemePattern("SoundScheme: (\\d+),(\\d+)");
+
+        QStringList lines = QString::fromLatin1(mapInfo).split("\n");
+
+        foreach (QString line, lines) {
+            line = line.trimmed();
+            if (line.isEmpty())
+                continue;
+            if (!soundSchemePattern.exactMatch(line)) {
+                qWarning("Unknown command in mapinfo.txt: %s for %s.", qPrintable(line),
+                         qPrintable(zoneTemplate->directory()));
+                continue;
+            }
+
+            uint primary = soundSchemePattern.cap(1).toUInt();
+            uint secondary = soundSchemePattern.cap(2).toUInt();
+
+            QList<uint> schemes;
+            if (primary)
+                schemes << primary;
+            if (secondary)
+                schemes << secondary;
+            zoneTemplate->setSoundSchemes(schemes);
         }
 
         return true;

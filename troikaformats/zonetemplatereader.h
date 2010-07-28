@@ -56,6 +56,7 @@ namespace Troika
         bool readClippingMeshFiles(); // Loads clipping.cgf
         bool readClippingMeshInstances(); // Loads dag files + clipping.cif
         bool readGlobalLight(); // Loads global.lit + daylight.mes
+        bool readSoundSchemes();
 
         VirtualFileSystem *vfs;
         Prototypes *prototypes;

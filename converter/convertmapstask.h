@@ -19,7 +19,8 @@ public:
 private:
     Exclusions mMapExclusions;
 
-    void convertStaticObjects(Troika::ZoneTemplate *zoneTemplate, IFileWriter *writer);
+    void convertMapObject(Troika::ZoneTemplate *zoneTemplate, IFileWriter *writer);
+
 };
 
 #endif // CONVERTMAPSTASK_H

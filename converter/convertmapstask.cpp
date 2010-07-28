@@ -290,7 +290,7 @@ static QVariantList convertLightingKeyframes(const QList<LightKeyframe> &keyfram
     return result;
 }
 
-void ConvertMapsTask::convertStaticObjects(ZoneTemplate *zoneTemplate, IFileWriter *writer)
+void ConvertMapsTask::convertMapObject(ZoneTemplate *zoneTemplate, IFileWriter *writer)
 {
     QVariantMap mapObject;
 
@@ -328,6 +328,12 @@ void ConvertMapsTask::convertStaticObjects(ZoneTemplate *zoneTemplate, IFileWrit
     mapObject["tutorialMap"] = zoneTemplate->isTutorialMap();
     mapObject["clippingGeometry"] = zoneTemplate->directory() + "clipping.dat";
     mapObject["regions"] = zoneTemplate->directory() + "regions.dat";
+
+    QVariantList soundSchemes;
+    foreach (uint schemeId, zoneTemplate->soundSchemes()) {
+        soundSchemes.append(QString("scheme-%1").arg(schemeId));
+    }
+    mapObject["soundSchemes"] = soundSchemes;
 
     QVariantMap globalLightMap;
 
@@ -736,7 +742,7 @@ void ConvertMapsTask::run()
                 service()->addMeshReference(object->mesh());
             }
 
-            convertStaticObjects(zoneTemplate.data(), mapsOutput.data());
+            convertMapObject(zoneTemplate.data(), mapsOutput.data());
 
             convertClippingMeshes(service(), zoneTemplate.data(), mapsOutput.data());
 

@@ -203,6 +203,9 @@ namespace Troika
         void setLightingKeyframesNight(const QList<LightKeyframe> &keyframes2d,
                                      const QList<LightKeyframe> &keyframes3d);
 
+        const QList<uint> &soundSchemes() const;
+        void setSoundSchemes(const QList<uint> &soundSchemes);
+
     private:
         QScopedPointer<ZoneTemplateData> d_ptr;
 

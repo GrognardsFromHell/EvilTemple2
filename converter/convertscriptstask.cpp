@@ -28,6 +28,171 @@ QString ConvertScriptsTask::description() const
     return "Converting scripts";
 }
 
+struct SoundSchemeEntry {
+    enum Type {
+        BackgroundMusic,
+        CombatIntro,
+        CombatMusic,
+        Ambience
+    };
+
+    QString filename;
+    Type type;
+    uint volume;
+    uint frequency;
+    uint fromTime;
+    uint toTime;
+    bool scatter;
+    uint volumeFrom;
+    uint volumeTo;
+    uint balanceFrom;
+    uint balanceTo;
+};
+
+static bool parseSoundSchemeEntry(const QString &line, SoundSchemeEntry &entry)
+{
+    static QRegExp timePattern("/time:(\\d+)-(\\d+)");
+
+    QStringList parts = line.split(' ');
+
+    if (parts.isEmpty())
+        return false;
+
+    entry.filename = parts.takeFirst();
+    entry.filename.replace('\\', '/');
+    entry.filename.prepend("sound/");
+
+    // Set defaults
+    entry.volume = 100;
+    entry.scatter = false;
+    entry.fromTime = 0;
+    entry.toTime = 23;
+    entry.frequency = 50;
+    entry.type = SoundSchemeEntry::Ambience;
+
+    foreach (QString command, parts) {
+        command = command.toLower();
+
+        if (command == "/loop")
+            entry.type = SoundSchemeEntry::BackgroundMusic;
+        else if (command == "/combatintro")
+            entry.type = SoundSchemeEntry::CombatIntro;
+        else if (command == "/combatmusic")
+            entry.type = SoundSchemeEntry::CombatMusic;
+        else if (command.startsWith("/scatter"))
+            entry.scatter = true;
+        else if (command.startsWith("/freq:"))
+            entry.frequency = command.mid(6).toUInt();
+        else if (command.startsWith("/vol:")) {
+            int index = command.indexOf('-');
+            if (index == -1) {
+                entry.volume = command.mid(5).toUInt();
+            } else {
+                entry.volumeFrom = command.mid(5, index - 5).toUInt();
+                entry.volumeTo = command.mid(index + 1).toUInt();
+            }
+        } else if (command.startsWith("/bal:"))
+            continue; // Ignored
+        else if (timePattern.exactMatch(command)) {
+            entry.fromTime = timePattern.cap(1).toUInt();
+            entry.toTime = timePattern.cap(2).toUInt();
+        } else {
+            qWarning("Unknown sound scheme command: %s.", qPrintable(command));
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static void convertSoundSchemes(IConversionService *service, IFileWriter *writer)
+{
+    QHash<uint, QString> soundSchemeIndex = service->openMessageFile("sound/schemeindex.mes");
+    QHash<uint, QString> soundSchemeList = service->openMessageFile("sound/schemelist.mes");
+
+    QVariantMap result;
+
+    foreach (uint soundSchemeId, soundSchemeIndex.keys()) {
+        if (soundSchemeId == 0)
+            continue;
+
+        QString name = soundSchemeIndex[soundSchemeId];
+
+        QRegExp namePattern("(.*)\\s+#(\\d+)");
+        if (!namePattern.exactMatch(name)) {
+            qWarning("Unable to parse name of sound scheme: %s.", qPrintable(name));
+            continue;
+        }
+
+        uint indexOffset = namePattern.cap(2).toUInt();
+
+        QVariantMap scheme;
+        scheme["name"] = namePattern.cap(1);
+        QVariantList backgroundMusic;
+        QVariantList ambientSounds;
+
+        // Process 100 lines for the sound scheme.
+        for (uint i = indexOffset; i < indexOffset + 100; ++i) {
+            QString line = soundSchemeList.value(i, QString::null);
+
+            if (line.isNull())
+                continue;
+
+            SoundSchemeEntry entry;
+            if (!parseSoundSchemeEntry(line, entry)) {
+                qWarning("Invalid sound scheme entry %d: %s.", i, qPrintable(line));
+                continue;
+            }
+
+            QVariantMap newEntry;
+            newEntry["filename"] = entry.filename;
+            newEntry["volume"] = entry.volume;
+
+            /**
+              Presumably we could introduce a very generic script-guard system for ambience or
+              background music sounds, instead of coding it like this.
+              */
+            if (entry.fromTime != 0 || entry.toTime != 23) {
+                QVariantMap time;
+                time["from"] = entry.fromTime;
+                time["to"] = entry.toTime;
+                newEntry["time"] = time;
+            }
+
+            switch (entry.type) {
+            case SoundSchemeEntry::Ambience:
+                if (entry.scatter) {
+                    newEntry["scatter"] = true;
+                }
+                newEntry["frequency"] = entry.frequency;
+                ambientSounds.append(newEntry);
+                break;
+            case SoundSchemeEntry::BackgroundMusic:
+                backgroundMusic.append(newEntry);
+                break;
+            case SoundSchemeEntry::CombatIntro:
+                scheme["combatIntro"] = newEntry;
+                break;
+            case SoundSchemeEntry::CombatMusic:
+                scheme["combatMusic"] = newEntry;
+                break;
+            default:
+                qWarning("Unknown type for scheme entry %d.", i);
+                continue;
+            }
+        }
+
+        scheme["ambientSounds"] = ambientSounds;
+        scheme["backgroundMusic"] = backgroundMusic;
+
+        result[QString("scheme-%1").arg(soundSchemeId)] = scheme;
+    }
+
+    QJson::Serializer serializer;
+
+    writer->addFile("soundschemes.js", serializer.serialize(result));
+}
+
 static QVariantMap convertDialogScript(IConversionService *service, const QByteArray &rawScript, const QString &filename)
 {
     PythonConverter converter(service);
@@ -360,6 +525,8 @@ void ConvertScriptsTask::run()
     convertScripts(service(), writer.data());
 
     convertLegacyMaps(service(), writer.data());
+
+    convertSoundSchemes(service(), writer.data());
 
     writer->close();
 }

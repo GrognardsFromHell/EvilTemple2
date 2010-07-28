@@ -31,6 +31,7 @@ namespace Troika
         QList<GameObject*> staticObjects;
         QList<GameObject*> mobiles;
         QList<GeometryObject*> clippingGeometry;
+        QList<uint> soundSchemes;
 
         QList<ParticleSystem> particleSystems;
         QList<Light> lights;
@@ -323,6 +324,16 @@ namespace Troika
     {
         d_ptr->lightingKeyframesNight2d = keyframes2d;
         d_ptr->lightingKeyframesNight3d = keyframes3d;
+    }
+
+    const QList<uint> &ZoneTemplate::soundSchemes() const
+    {
+        return d_ptr->soundSchemes;
+    }
+
+    void ZoneTemplate::setSoundSchemes(const QList<uint> &soundSchemes)
+    {
+        d_ptr->soundSchemes = soundSchemes;
     }
 
 }
