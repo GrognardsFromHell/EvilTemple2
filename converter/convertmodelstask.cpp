@@ -146,8 +146,10 @@ void ConvertModelsTask::convertReferencedMeshes()
 
     QList< QFuture<bool> > futures;
 
-    foreach (const QString &meshFilename, meshReferences) {
+    foreach (QString meshFilename, meshReferences) {
         assertNotAborted();
+
+        meshFilename = QDir::cleanPath(QDir::toNativeSeparators(meshFilename)).toLower();
 
         futures.append(QtConcurrent::run(this, &ConvertModelsTask::convertModel, output.data(), meshFilename));
     }

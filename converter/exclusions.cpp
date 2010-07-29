@@ -20,16 +20,19 @@ bool Exclusions::load(const QString &filename)
         QString line = stream.readLine().trimmed(); // Remove whitespace, newline is already removed
 
         // Allow comments
-        if (line.startsWith('#'))
+        if (line.startsWith('#') || line.isEmpty())
             continue;
 
         // Normalize path
         line = QDir::cleanPath(QDir::toNativeSeparators(line)).toLower();
 
-        if (line.endsWith('*'))
+        if (line.endsWith('*')) {
+            qDebug("Adding exclusion prefix %s.", qPrintable(line));
             excludedPrefixes.append(line.left(line.length() - 1));
-        else
+        } else {
+            qDebug("Adding exclusion %s.", qPrintable(line));
             exclusions.append(line);
+        }
     }
 
     exclusionText.close();
@@ -38,12 +41,11 @@ bool Exclusions::load(const QString &filename)
 
 bool Exclusions::isExcluded(const QString &filename) const
 {
-
     QString normalizedFilename = QDir::cleanPath(QDir::toNativeSeparators(filename)).toLower();
 
     // Check for exact matches
     foreach (const QString &exclusion, exclusions) {
-        if (exclusion.compare(normalizedFilename) == 0) {
+        if (exclusion == normalizedFilename) {
             return true;
         }
     }
