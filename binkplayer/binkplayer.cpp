@@ -1,6 +1,15 @@
 
-#include <QUrl>
-#include <QFile>
+/*
+ This is required. Since __cplusplus is defined, stdint would otherwise not
+ define constants required by ffmpeg.
+ */
+#define __STDC_CONSTANT_MACROS
+
+extern "C" {
+#include "libavcodec/avcodec.h"
+#include "libavformat/avformat.h"
+#include "libavutil/avutil.h"
+}
 
 extern "C" {
     #include "libavcodec/avcodec.h"
@@ -8,6 +17,9 @@ extern "C" {
     #include "libavutil/avutil.h"
     #include "libswscale/swscale.h"
 }
+
+#include <QUrl>
+#include <QFile>
 
 #include "binkplayer.h"
 
