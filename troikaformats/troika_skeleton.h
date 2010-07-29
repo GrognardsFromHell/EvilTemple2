@@ -62,14 +62,14 @@ namespace Troika
     class TROIKAFORMATS_EXPORT AnimationStream
     {
     public:
-        AnimationStream(const QByteArray &data, int dataStart, int boneCount, int frameCount);
+        AnimationStream(const QString &filename, const QByteArray &data, int dataStart, int boneCount, int frameCount);
 
         const AnimationBoneState *getBoneState(quint16 boneId) const;
 
         QByteArray calculateHash();
 
         bool atEnd() const;
-        void readNextFrame();
+        bool readNextFrame();
         void seek(int frame);
         void rewind();
 
@@ -78,6 +78,7 @@ namespace Troika
         }
 
     private:
+        QString mFilename;
         int _dataStart; // Offset into the stream where the first key frame starts
         int _boneCount; // The total number of bones in the skeleton (highest bone id + 1)
 
@@ -238,6 +239,8 @@ namespace Troika
 
         const QVector<Bone> &bones() const;
         const QVector<Animation> &animations() const;
+
+        const QString &filename() const;
 
         /**
           Finds the animation with the given name.

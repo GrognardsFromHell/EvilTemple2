@@ -30,7 +30,7 @@ namespace Troika
         if (_frames == 0)
             return 0;
         else
-            return new AnimationStream(_keyFramesData, _keyFramesDataStart, boneCount, _frames);
+            return new AnimationStream(skeleton->filename(), _keyFramesData, _keyFramesDataStart, boneCount, _frames);
     }
 
     void Animation::freeStream(AnimationStream *stream) const
@@ -229,6 +229,11 @@ namespace Troika
     {
     }
 
+    const QString &Skeleton::filename() const
+    {
+        return d_ptr->filename;
+    }
+
     const QVector<Bone> &Skeleton::bones() const
     {
         return d_ptr->bones;
@@ -258,8 +263,13 @@ namespace Troika
 
     const float AnimationStream::rotationFactor = 1 / 32766.0f;
 
-    AnimationStream::AnimationStream(const QByteArray &data, int dataStart, int boneCount, int _frameCount)
-        : _dataStart(dataStart), _boneCount(boneCount), _boneMap(new AnimationBoneState*[boneCount]), stream(data), frameCount(_frameCount)
+    AnimationStream::AnimationStream(const QString &filename,
+                                     const QByteArray &data,
+                                     int dataStart,
+                                     int boneCount,
+                                     int _frameCount)
+        : _dataStart(dataStart), _boneCount(boneCount),
+        _boneMap(new AnimationBoneState*[boneCount]), stream(data), frameCount(_frameCount), mFilename(filename)
     {
         stream.setByteOrder(QDataStream::LittleEndian);
         stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
@@ -319,7 +329,7 @@ namespace Troika
         return hash.result();
     }
 
-    void AnimationStream::readNextFrame()
+    bool AnimationStream::readNextFrame()
     {
         if (nextFrameId == -1) {
             // Make all "next states" current and keep them forever
@@ -333,7 +343,7 @@ namespace Troika
                 state.translationFrame = state.nextTranslationFrame;
             }
 
-            return;
+            return true;
         }
 
         qint16 boneHeader;
@@ -345,26 +355,9 @@ namespace Troika
         while ((boneHeader & 1) == 1) {
             int boneId = boneHeader >> 4;
 
-            // Would be nice. But doesnt work. Q_ASSERT(boneId < _boneCount);
-
             if (boneId < 0 || boneId >= _boneCount) {
-                qWarning("Animation stream tries to reference an invalid bone. Trying to recover.");
-
-                if ((boneHeader & 8) == 8) {
-                    qint16 nextFrame, x, y, z;
-                    stream >> nextFrame >> x >> y >> z;
-                }
-                if ((boneHeader & 4) == 4) {
-                    qint16 nextFrame, x, y, z, w;
-                    stream >> nextFrame >> x >> y >> z >> w;
-                }
-                if ((boneHeader & 2) == 2) {
-                    qint16 nextFrame, x, y, z;
-                    stream >> nextFrame >> x >> y >> z;
-                }
-
-                stream >> boneHeader;
-                continue;
+                qWarning("Animation stream in %s tries to reference an invalid bone.", qPrintable(mFilename));
+                return false;
             }
 
             // Get a pointer to the bone state affected by this key frame chunk
@@ -373,24 +366,9 @@ namespace Troika
             // Would've been too nice Q_ASSERT(state);
 
             if (!state) {
-                qWarning("Found key-frame data in frame %d for bone %d, which isn't part of the initial key frame."
-                         " Trying to recover.", nextFrameId, boneId);
-
-                if ((boneHeader & 8) == 8) {
-                    qint16 nextFrame, x, y, z;
-                    stream >> nextFrame >> x >> y >> z;
-                }
-                if ((boneHeader & 4) == 4) {
-                    qint16 nextFrame, x, y, z, w;
-                    stream >> nextFrame >> x >> y >> z >> w;
-                }
-                if ((boneHeader & 2) == 2) {
-                    qint16 nextFrame, x, y, z;
-                    stream >> nextFrame >> x >> y >> z;
-                }
-
-                stream >> boneHeader;
-                continue;
+                qWarning("Found key-frame data in frame %d for bone %d of file %s, which isn't part of "
+                         "the initial key frame.", nextFrameId, boneId, qPrintable(mFilename));
+                return false;
             }
 
             // Scale Delta Frame

@@ -24,7 +24,7 @@ bool Exclusions::load(const QString &filename)
             continue;
 
         // Normalize path
-        line = QDir::toNativeSeparators(line).toLower();
+        line = QDir::cleanPath(QDir::toNativeSeparators(line)).toLower();
 
         if (line.endsWith('*'))
             excludedPrefixes.append(line.left(line.length() - 1));
@@ -39,7 +39,7 @@ bool Exclusions::load(const QString &filename)
 bool Exclusions::isExcluded(const QString &filename) const
 {
 
-    QString normalizedFilename = QDir::toNativeSeparators(filename).toLower();
+    QString normalizedFilename = QDir::cleanPath(QDir::toNativeSeparators(filename)).toLower();
 
     // Check for exact matches
     foreach (const QString &exclusion, exclusions) {
