@@ -1,3 +1,11 @@
+
+#include <QVariantMap>
+#include <QList>
+#include <QByteArray>
+#include <QString>
+#include <QStringList>
+#include <QRegExp>
+
 #include <serializer.h>
 
 #include "converttranslationstask.h"
