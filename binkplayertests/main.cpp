@@ -8,6 +8,7 @@
 #include "dialog.h"
 using namespace EvilTemple;
 
+#define __STDC_CONSTANT_MACROS
 extern "C" {
     #include "libavcodec/avcodec.h"
     #include "libavformat/avformat.h"
