@@ -1251,6 +1251,9 @@ namespace Troika
 
             if (type == 0x1E)
             {
+                stream >> scoutMap >> scoutFlags >> scoutX >> scoutY >> scoutXOffset >> scoutYOffset >> scoutJP;
+                stream.skipRawData(52);
+
                 // Only define a night standpoint if the standpoint is actually different from the day/night standpoint
                 bool differentFromDay = !object.dayStandpoint.defined || (scoutFlags != dayFlags || scoutX != dayX || scoutY != dayY || scoutXOffset != dayXOffset
                                          || scoutYOffset != dayYOffset || dayJP != scoutJP);
@@ -1258,8 +1261,6 @@ namespace Troika
                                          || scoutYOffset != nightYOffset || nightJP != scoutJP);
 
                 if (differentFromDay || differentFromNight) {
-                    stream >> scoutMap >> scoutFlags >> scoutX >> scoutY >> scoutXOffset >> scoutYOffset >> scoutJP;
-                    stream.skipRawData(52);
                     object.scoutStandpoint.defined = true;
                     object.scoutStandpoint.flags = scoutFlags;
                     object.scoutStandpoint.jumpPoint = scoutJP;

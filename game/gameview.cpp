@@ -1082,6 +1082,16 @@ namespace EvilTemple {
         return result / d->lastFrameTimes.size();
     }
 
+    Vector4 GameView::screenFromWorld(const Vector4 &position) const
+    {
+        Vector4 projPos = d->renderStates.viewProjectionMatrix().mapPosition(position);
+
+        return Vector4((projPos.x() / 2 + 0.5f) * d->viewportSize.width(),
+                       (1 - (projPos.y() / 2 + 0.5f)) * d->viewportSize.height(),
+                       0,
+                       1);
+    }
+
 }
 
 #include "gameview.moc"

@@ -129,9 +129,39 @@ var Maps = {
         }
     }
 
+    function updateStandpoints() {
+        var isDay = GameTime.isDaytime();
+
+        // Iterate over all mobiles that may need a standpoint change
+        Maps.maps.forEach(function (map) {
+            var i;
+            for (i = 0; i < map.mobiles.length; ++i) {
+                var mobile = map.mobiles[i];
+                if (!mobile.standpointDay || !mobile.standpointNight || Party.isMember(mobile))
+                    continue;
+
+                var standpoint = mobile.standpointDay;
+                if (!isDay)
+                    standpoint = mobile.standpointNight;
+
+                if (mobile.map.id != standpoint.map) {
+                    print("Moving mobile " + mobile.getName() + " to " + objectToString(standpoint));
+                }
+            }
+        });
+    }
+
     function updateDayNight(oldHour) {
         if (Maps.currentMap) {
             Maps.currentMap.updateDayNight(oldHour);
+        }
+
+        // Move mobiles around if there was a day->night or night->day transition
+        var wasNight = (oldHour < 6 || oldHour >= 18);
+        var isNight = GameTime.isNighttime();
+
+        if (wasNight != isNight) {
+            updateStandpoints();
         }
     }
 

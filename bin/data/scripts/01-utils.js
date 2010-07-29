@@ -1,19 +1,23 @@
-
 /*
-    Reads a JSON file from disk (UTF-8 encoding) and returns the contained top-level object.
+ Reads a JSON file from disk (UTF-8 encoding) and returns the contained top-level object.
  */
 function readJson(filename, bench)
 {
     var start = timerReference();
 
     var text = readFile(filename);
-    var result = eval('(' + text + ')');
+    var result;
+    try {
+        result = eval('(' + text + ')');
+    } catch (e) {
+        throw "Unable to load file " + filename + " due to a syntax error: " + e;
+    }
 
     var diff = timerReference() - start;
 
     if (bench)
         print("Loaded " + filename + " in " + diff + " ms.");
-    
+
     return result;
 }
 
@@ -46,7 +50,7 @@ function randomRange(min, max) {
 }
 
 /**
-    Creates a quaternion that rotates around the Y axis by the given amount (in degrees).
+ Creates a quaternion that rotates around the Y axis by the given amount (in degrees).
  */
 function rotationFromDegrees(degrees) {
     var radians = degrees * 0.0174532925199432;

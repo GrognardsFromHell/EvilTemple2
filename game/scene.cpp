@@ -308,8 +308,6 @@ Renderable *Scene::pickRenderable(const Ray3d &ray) const
 void Scene::clear()
 {
     d->sceneNodes.clear();
-
-    // TODO: Delete all child objects
     qDeleteAll(children());
 }
 

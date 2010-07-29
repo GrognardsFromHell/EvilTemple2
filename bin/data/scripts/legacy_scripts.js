@@ -25,6 +25,18 @@ var LegacyScripts = {};
             return Party.getPlayers().length;
         },
 
+        tutorial_toggle: function() {
+            tutorialMode = true;
+        },
+
+        tutorial_is_active: function() {
+            return tutorialMode;
+        },
+
+        tutorial_show_topic: function(topic) {
+            HelpUi.show(topic);
+        },
+
         /**
          * Opens the Party Pool interface to add/remove members from the party.
          */
@@ -256,6 +268,26 @@ var LegacyScripts = {};
         Q_Critter_Can_Find_Traps: 'critter_can_find_traps',
 
         OF_OFF: 'disabled',
+
+        /*
+            Tutorial text constants.
+         */
+        TAG_TUT_MEMORIZE_SPELLS: 'TAG_TUT_MEMORIZE_SPELLS',
+        TAG_TUT_ARIEL_KILL: 'TAG_TUT_ARIEL_KILL',
+        TAG_TUT_ROOM1_OVERVIEW: 'TAG_TUT_ROOM1_OVERVIEW',
+        TAG_TUT_ROOM2_OVERVIEW: 'TAG_TUT_ROOM2_OVERVIEW',
+        TAG_TUT_PICKLOCK: 'TAG_TUT_PICKLOCK',
+        TAG_TUT_ROOM3_OVERVIEW: 'TAG_TUT_ROOM3_OVERVIEW',
+        TAG_TUT_ROOM4_OVERVIEW: 'TAG_TUT_ROOM4_OVERVIEW',
+        TAG_TUT_PASSAGE_ICON: 'TAG_TUT_PASSAGE_ICON',
+        TAG_TUT_DIALOGUE: 'TAG_TUT_DIALOGUE',
+        TAG_TUT_ROOM6_OVERVIEW: 'TAG_TUT_ROOM6_OVERVIEW',
+        TAG_TUT_ROOM7_OVERVIEW: 'TAG_TUT_ROOM7_OVERVIEW',
+        TAG_TUT_LOOT_PREFERENCE: 'TAG_TUT_LOOT_PREFERENCE',
+        TAG_TUT_LOOT_REMINDER: 'TAG_TUT_LOOT_REMINDER',
+        TAG_TUT_LOCKED_DOOR_REMINDER: 'TAG_TUT_LOCKED_DOOR_REMINDER',
+        TAG_TUT_ROOM9_OVERVIEW: 'TAG_TUT_ROOM9_OVERVIEW',
+        TAG_TUT_WAND_USE: 'TAG_TUT_WAND_USE',
 
         // This imports all functions from the utility module into the "this" context.
         __proto__: UtilityModule,

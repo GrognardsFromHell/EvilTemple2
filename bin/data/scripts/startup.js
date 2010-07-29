@@ -8,6 +8,10 @@ var globalRenderStateId = 0;
 
 var editMode = true;
 
+var tutorialMode = false; // Indicates that the tutorial is running.
+
+var currentTooltip = null;
+
 // Base object for all prototypes
 //noinspection JSUnusedLocalSymbols
 var BaseObject = {
@@ -199,12 +203,26 @@ var BaseObject = {
 
     mouseEnter: function(event) {
         var renderState = this.getRenderState();
+
         if (renderState)
             renderState.selectionCircle.hovering = true;
+
         if (this.OnDialog) {
             print("Setting cursor");
             gameView.currentCursor = 'art/interface/cursors/talk.png';
         }
+
+        if (!currentTooltip) {
+            currentTooltip = gameView.addGuiItem('interface/Tooltip.qml');
+        }
+
+        var screenPos = gameView.screenFromWorld(this.position);
+        print(screenPos);
+
+        currentTooltip.text = this.getName();
+        currentTooltip.x = screenPos[0];
+        currentTooltip.y = screenPos[1];
+        currentTooltip.shown = true;
     },
 
     mouseLeave: function(event) {
@@ -213,6 +231,7 @@ var BaseObject = {
             renderState.selectionCircle.hovering = false;
         if (this.OnDialog)
             gameView.currentCursor = 'art/interface/cursors/maincursor.png';
+        currentTooltip.shown = false;
     },
 
     setSelected: function(selected) {
@@ -321,14 +340,20 @@ var MapChanger = {
     __proto__: BaseObject,
     interactive: true,
     clicked: function(event) {
-        var jumpPoint = jumppoints[this.teleportTarget];
+        var renderState = this.getRenderState();
+        if (event.button == Mouse.LeftButton) {
+            var jumpPoint = jumppoints[this.teleportTarget];
 
-        var newMap = Maps.mapsById[jumpPoint.map];
+            var newMap = Maps.mapsById[jumpPoint.map];
 
-        if (!newMap) {
-            print("JumpPoint " + this.teleportTarget + " links to unknown map: " + jumpPoint.map);
-        } else {
-            Maps.goToMap(newMap, [jumpPoint.x, 0, jumpPoint.z]);
+            if (!newMap) {
+                print("JumpPoint " + this.teleportTarget + " links to unknown map: " + jumpPoint.map);
+            } else {
+                Maps.goToMap(newMap, [jumpPoint.x, 0, jumpPoint.z]);
+            }
+        } else if (event.button == Mouse.RightButton) {
+            if (renderState)
+                showMobileInfo(this, renderState.modelInstance);
         }
     }
 };
@@ -419,7 +444,11 @@ function startup() {
     print("Loading subsystems.");
     LegacyScripts.load();
     LegacyDialog.load();
-    Maps.load();
+    try {
+        Maps.load();
+    } catch (e) {
+        throw "Error Loading Maps: " + e;
+    }
 
     // Assign the prototype of each loaded prototype
     for (var i in prototypes) {

@@ -16,6 +16,10 @@ var UtilityBarUi = {};
         JournalUi.show();
     }
 
+    function openHelp() {
+        HelpUi.show();
+    }
+
     StartupListeners.add(function() {
         WorldMap.addMarkedNewAreaListener(function() {
             if (utilityBar)
@@ -33,6 +37,7 @@ var UtilityBarUi = {};
         utilityBar = gameView.addGuiItem('interface/UtilityBar.qml');
         utilityBar.openTownmap.connect(openTownmap);
         utilityBar.openLogbook.connect(openJournal);
+        utilityBar.openHelp.connect(openHelp);
         this.update();
     };
 

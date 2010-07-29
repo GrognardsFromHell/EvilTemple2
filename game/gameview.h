@@ -145,6 +145,12 @@ public slots:
 
     float getFrameTimeAverage();
 
+    /**
+      Gets the screen coordinates (relative to the current viewport)
+      from the given world coordinates.
+      */
+    Vector4 screenFromWorld(const Vector4 &position) const;
+
 protected:
     void resizeEvent(QResizeEvent *event);
     void mouseMoveEvent(QMouseEvent *event);

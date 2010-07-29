@@ -60,9 +60,13 @@ static QVariantMap standpointToMap(const GameObject::Standpoint &standpoint)
     QVariantMap result;
 
     if (standpoint.defined) {
-        if (standpoint.jumpPoint != -1) {
+        /*
+          There are some broken standpoints in the vanilla files with NAN x/y coordinates.
+          They do have map=0 && jumpPoint == 0, so we use that as an exclusion criteria here.
+          */
+        if (standpoint.jumpPoint != -1 && standpoint.jumpPoint != 0) {
             result["jumpPoint"] = standpoint.jumpPoint;
-        } else {
+        } else if (standpoint.map != 0) {
             result["map"] = standpoint.map;
             result["position"] = vectorToList(standpoint.position);
         }
