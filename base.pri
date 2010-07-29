@@ -28,9 +28,9 @@ contains(TEMPLE_LIBS,python) {
         LIBS += -LC:/python26/libs/ -lpython26
     }
     unix {
-	# This probably needs proper detection code.
+        # This probably needs proper detection code.
         LIBS += -lpython2.5
-	INCLUDEPATH += /usr/include/python2.5
+        INCLUDEPATH += /usr/include/python2.5
     }
 }
 
@@ -78,23 +78,6 @@ contains(TEMPLE_LIBS,troikaformats) {
     }
 }
 
-contains(TEMPLE_LIBS,libavcodec) {
-    win32:INCLUDEPATH += $${PWD}/3rdparty/libavcodec-minimal/include
-    win32:LIBS += -L$${PWD}/3rdparty/libavcodec-minimal
-
-    win32-msvc2008:INCLUDEPATH += $${PWD}/3rdparty/libavcodec-minimal/msvc
-    win32-msvc2010:INCLUDEPATH += $${PWD}/3rdparty/libavcodec-minimal/msvc
-
-    unix {
-	INCLUDEPATH += $${PWD}/3rdparty/ffmpeg/include/
-	LIBS += -L$${PWD}/3rdparty/ffmpeg/lib/ -lavcodec -lavformat -lavutil -lswscale
-    }
-
-    win32 {
-        LIBS += -lavcodec-52 -lavformat-52 -lavutil-50 -lswscale-0
-    }
-}
-
 contains(TEMPLE_LIBS,minizip) {
     INCLUDEPATH += ../3rdparty/minizip
     CONFIG(debug, debug|release) {
@@ -110,6 +93,25 @@ contains(TEMPLE_LIBS,audioengine) {
         LIBS += -laudioengine_d
     } else {
         LIBS += -laudioengine
+    }
+
+    unix:TEMPLE_LIBS += libavcodec
+}
+
+contains(TEMPLE_LIBS,libavcodec) {
+    win32:INCLUDEPATH += $${PWD}/3rdparty/libavcodec-minimal/include
+    win32:LIBS += -L$${PWD}/3rdparty/libavcodec-minimal
+
+    win32-msvc2008:INCLUDEPATH += $${PWD}/3rdparty/libavcodec-minimal/msvc
+    win32-msvc2010:INCLUDEPATH += $${PWD}/3rdparty/libavcodec-minimal/msvc
+
+    unix {
+        INCLUDEPATH += $${PWD}/3rdparty/ffmpeg/include/
+        LIBS += -L$${PWD}/3rdparty/ffmpeg/lib/ -lavcodec -lavformat -lavutil -lswscale
+    }
+
+    win32 {
+        LIBS += -lavcodec-52 -lavformat-52 -lavutil-50 -lswscale-0
     }
 }
 
@@ -130,6 +132,8 @@ contains(TEMPLE_LIBS,binkplayer) {
     } else {
         LIBS += -lbinkplayer
     }
+
+    unix:TEMPLE_LIBS += libavcodec
 }
 
 contains(TEMPLE_LIBS,openal) {
