@@ -11,6 +11,7 @@
 #include "converttranslationstask.h"
 #include "virtualfilesystem.h"
 #include "messagefile.h"
+#include "util.h"
 
 using namespace Troika;
 
@@ -115,7 +116,7 @@ void ConvertTranslationsTask::run()
     QStringList mesFiles = service()->virtualFileSystem()->listAllFiles("*.mes");
 
     foreach (const QString &mesFile, mesFiles) {
-        QString mesKey = QDir::toNativeSeparators(mesFile).replace(QDir::separator(), "/");
+        QString mesKey = normalizePath(mesFile);
         mesKey.replace(QRegExp("\\.mes$"), "").toLower();
 
         if (!mesKey.startsWith("mes/") && !mesKey.startsWith("oemes/")) {

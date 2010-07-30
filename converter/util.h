@@ -15,6 +15,10 @@ using namespace GameMath;
 
 #include <ctype.h>
 
+inline QString normalizePath(const QString &path) {
+    return QDir::cleanPath(path).toLower().replace('\\', '/');
+}
+
 /**
   Converts radians to degree.
   */
@@ -57,12 +61,12 @@ inline uint ELFHash(const QByteArray &string)
 }
 
 inline QString getNewModelFilename(const QString &modelFilename) {
-    QString newFilename = QDir::toNativeSeparators(modelFilename);
-    if (newFilename.startsWith(QString("art") + QDir::separator(), Qt::CaseInsensitive)) {
-        newFilename = newFilename.right(newFilename.length() - 4);
+    QString newFilename = normalizePath(modelFilename);
+    if (newFilename.startsWith("art/")) {
+        newFilename = newFilename.mid(4);
     }
 
-    if (newFilename.endsWith(".skm", Qt::CaseInsensitive) || newFilename.endsWith(".ska", Qt::CaseInsensitive))
+    if (newFilename.endsWith(".skm") || newFilename.endsWith(".ska"))
     {
         newFilename = newFilename.left(newFilename.length() - 4);
     }
@@ -73,12 +77,12 @@ inline QString getNewModelFilename(const QString &modelFilename) {
 }
 
 inline QString getNewMaterialFilename(const QString &mdfFilename) {
-    QString newFilename = QDir::toNativeSeparators(mdfFilename);
-    if (newFilename.startsWith(QString("art") + QDir::separator(), Qt::CaseInsensitive)) {
-        newFilename = newFilename.right(newFilename.length() - 4);
+    QString newFilename = normalizePath(mdfFilename);
+    if (newFilename.startsWith("art/")) {
+        newFilename = newFilename.mid(4);
     }
 
-    if (newFilename.endsWith(".mdf", Qt::CaseInsensitive))
+    if (newFilename.endsWith(".mdf"))
     {
         newFilename = newFilename.left(newFilename.length() - 4);
     }
@@ -89,9 +93,9 @@ inline QString getNewMaterialFilename(const QString &mdfFilename) {
 }
 
 inline QString getNewTextureFilename(const QString &mdfFilename) {
-    QString newFilename = QDir::toNativeSeparators(mdfFilename);
-    if (newFilename.startsWith(QString("art") + QDir::separator(), Qt::CaseInsensitive)) {
-        newFilename = newFilename.right(newFilename.length() - 4);
+    QString newFilename = normalizePath(mdfFilename);
+    if (newFilename.startsWith("art/")) {
+        newFilename = newFilename.mid(4);
     }
     return newFilename;
 }

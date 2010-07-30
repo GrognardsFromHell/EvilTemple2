@@ -5,6 +5,7 @@
 #include <QVector>
 #include <QHash>
 #include <QMap>
+#include <QApplication>
 
 #include <troika_model.h>
 #include <troika_material.h>
@@ -110,7 +111,7 @@ void ConvertModelsTask::addMeshesMesReferences()
     QHash<uint, QString> meshesIndex = service()->openMessageFile("art/meshes/meshes.mes");
 
     foreach (quint32 meshId, meshesIndex.keys()) {
-        QString meshFilename = QDir::toNativeSeparators("art/meshes/" + meshesIndex[meshId] + ".skm");
+        QString meshFilename = normalizePath("art/meshes/" + meshesIndex[meshId] + ".skm");
 
         service()->addMeshReference(meshFilename);
     }
@@ -141,7 +142,6 @@ void ConvertModelsTask::convertReferencedMeshes()
 
     const QSet<QString> &meshReferences = service()->getMeshReferences();
 
-    mTotalWork = meshReferences.size();
     mWorkDone = 0;
 
     QList< QFuture<bool> > futures;
@@ -149,14 +149,26 @@ void ConvertModelsTask::convertReferencedMeshes()
     foreach (QString meshFilename, meshReferences) {
         assertNotAborted();
 
-        meshFilename = QDir::cleanPath(QDir::toNativeSeparators(meshFilename)).toLower();
+        meshFilename = normalizePath(meshFilename);
 
         futures.append(QtConcurrent::run(this, &ConvertModelsTask::convertModel, output.data(), meshFilename));
     }
 
     // Now start waiting on the futures
-    foreach (QFuture<bool> future, futures) {
-        future.waitForFinished();
+    int lastReport = 0;
+    for (int i = 0; i < futures.size(); ++i) {
+        QFuture<bool> future = futures[i];
+        if (!future.isFinished()) {
+            --i;
+            QThread::yieldCurrentThread();
+        }
+
+        int workNow = mWorkDone;
+        if (workNow - lastReport > 10) {
+            emit progress(workNow, meshReferences.size());
+            lastReport = workNow;
+            QApplication::processEvents();
+        }
     }
 
     assertNotAborted();
@@ -214,7 +226,7 @@ bool ConvertModelsTask::convertModel(IFileWriter *output, const QString &filenam
 
     if (mExclusions.isExcluded(filename)) {
         qWarning("Skipping %s, since it's excluded.", qPrintable(filename));
-        mWorkDone.fetchAndAddRelaxed(1);
+        mWorkDone.fetchAndAddOrdered(1);
         return false;
     }
 
@@ -223,7 +235,7 @@ bool ConvertModelsTask::convertModel(IFileWriter *output, const QString &filenam
 
     if (!model) {
         qWarning("Unable to open model %s.", qPrintable(filename));
-        mWorkDone.fetchAndAddRelaxed(1);
+        mWorkDone.fetchAndAddOrdered(1);
         return false;
     }
 
@@ -251,11 +263,7 @@ bool ConvertModelsTask::convertModel(IFileWriter *output, const QString &filenam
 
     output->addFile(newFilename, modelData);
 
-    int workDone = mWorkDone.fetchAndAddRelaxed(1);
-
-    if (workDone % 10 == 0) {
-        emit progress(workDone, mTotalWork);
-    }
+    mWorkDone.fetchAndAddOrdered(1);
 
     return true;
 }

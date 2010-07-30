@@ -420,6 +420,7 @@ namespace Troika
 
         // Store the header for the next key frame
         nextFrameId = boneHeader >> 1;
+        return true;
     }
 
     void AnimationStream::rewind()

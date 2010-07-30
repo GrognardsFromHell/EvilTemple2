@@ -289,6 +289,12 @@ var LegacyScripts = {};
         TAG_TUT_ROOM9_OVERVIEW: 'TAG_TUT_ROOM9_OVERVIEW',
         TAG_TUT_WAND_USE: 'TAG_TUT_WAND_USE',
 
+        /*
+         Standpoint constants.
+         */
+        STANDPOINT_NIGHT: 'standpointNight',
+        STANDPOINT_DAY: 'standpointDay',       
+
         // This imports all functions from the utility module into the "this" context.
         __proto__: UtilityModule,
 
@@ -818,6 +824,36 @@ var LegacyScripts = {};
         else
             print("Giving " + delta + " money to the player.");
         Party.money.addCopper(delta);
+    };
+
+    /**
+     * Changes one of the standpoints for the mobile to a given jump point.
+     * @param type The standpoint type. (See constants above).
+     * @param jumpPoint The jump point that the standpoint should be set to.
+     */
+    CritterWrapper.prototype.standpoint_set = function(type, jumpPoint) {
+        if (type == 'standpointDay') {
+            this.obj.standpointDay = {
+                jumpPoint: jumpPoint
+            };
+        } else if (type == 'standpointNight') {
+            this.obj.standpointNight = {
+                jumpPoint: jumpPoint
+            };
+        } else {
+            print("Trying to set unknown standpoint type " + type + " on mobile " + this.obj.id);
+        }
+    };
+
+    /**
+     * The NPC will run to a given location, then fade out and be disabled.
+     * @param location The location to run off to
+     */
+    CritterWrapper.prototype.runoff = function(location) {
+        // TODO: Actual running/fade needs to be done.
+        print("NPC " + this.obj.id + " running off to " + location);
+        this.obj.removeRenderState();
+        this.obj.disabled = true;
     };
 
     /**

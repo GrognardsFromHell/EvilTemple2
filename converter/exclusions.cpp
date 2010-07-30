@@ -4,6 +4,7 @@
 #include <QDir>
 
 #include "exclusions.h"
+#include "util.h"
 
 bool Exclusions::load(const QString &filename)
 {
@@ -24,7 +25,7 @@ bool Exclusions::load(const QString &filename)
             continue;
 
         // Normalize path
-        line = QDir::cleanPath(QDir::toNativeSeparators(line)).toLower();
+        line = normalizePath(line);
 
         if (line.endsWith('*')) {
             qDebug("Adding exclusion prefix %s.", qPrintable(line));
@@ -41,7 +42,7 @@ bool Exclusions::load(const QString &filename)
 
 bool Exclusions::isExcluded(const QString &filename) const
 {
-    QString normalizedFilename = QDir::cleanPath(QDir::toNativeSeparators(filename)).toLower();
+    QString normalizedFilename = normalizePath(filename);
 
     // Check for exact matches
     foreach (const QString &exclusion, exclusions) {

@@ -45,16 +45,16 @@ public:
             if (line.startsWith('#') || line.isEmpty())
                 continue;
             if (line.startsWith('-')) {
-                shadowCasterExclusions.append(QDir::cleanPath(QDir::toNativeSeparators(line.mid(1))));
+                shadowCasterExclusions.append(normalizePath(line.mid(1)));
             } else {
-                shadowCasterList.append(QDir::cleanPath(QDir::toNativeSeparators(line)));
+                shadowCasterList.append(normalizePath(line));
             }
         }
     }
 
     bool isShadowCaster(const QString &filename)
     {
-        QString comparison = QDir::cleanPath(QDir::toNativeSeparators(filename.toLower()));
+        QString comparison = normalizePath(filename);
         foreach (const QString &exclusion, shadowCasterExclusions) {
             if (comparison.startsWith(exclusion)) {
                 return false;

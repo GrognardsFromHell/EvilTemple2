@@ -40,7 +40,6 @@ private:
 
     QHash<QString, bool> mWrittenMaterials;
 
-    int mTotalWork;
     QAtomicInt mWorkDone;
 };
 

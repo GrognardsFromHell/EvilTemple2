@@ -6,6 +6,7 @@
 
 #include "convertinterfacetask.h"
 #include "virtualfilesystem.h"
+#include "util.h"
 
 ConvertInterfaceTask::ConvertInterfaceTask(IConversionService *service, QObject *parent)
     : ConversionTask(service, parent)
@@ -141,8 +142,7 @@ void ConvertInterfaceTask::convertTextures(IFileWriter *writer)
             emit progress(workDone, images.size());
         }
 
-        if (QDir::toNativeSeparators(imagePath).startsWith(QDir::toNativeSeparators("art/meshes/"),
-                                                           Qt::CaseInsensitive)) {
+        if (normalizePath(imagePath).startsWith("art/meshes/")) {
             continue;
         }
 

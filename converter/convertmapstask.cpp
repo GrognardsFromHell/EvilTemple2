@@ -491,7 +491,7 @@ void convertClippingMeshes(IConversionService *service, ZoneTemplate *zoneTempla
     QStringList clippingGeometryFiles;
     QList< QList<DagInstanceProperty> > instancesPerFile;
     foreach (GeometryObject *object, zoneTemplate->clippingGeometry()) {
-        QString normalizedFilename = QDir::toNativeSeparators(object->mesh()).toLower();
+        QString normalizedFilename = normalizePath(object->mesh());
 
         if (!clippingGeometryFiles.contains(normalizedFilename)) {
             clippingGeometryFiles.append(normalizedFilename);
@@ -506,7 +506,7 @@ void convertClippingMeshes(IConversionService *service, ZoneTemplate *zoneTempla
     for each scaling level used.
       */
     foreach (GeometryObject *object, zoneTemplate->clippingGeometry()) {
-        QString normalizedFilename = QDir::toNativeSeparators(object->mesh()).toLower();
+        QString normalizedFilename = normalizePath(object->mesh());
         int fileIndex = (uint)clippingGeometryFiles.indexOf(normalizedFilename);
 
         DagInstanceProperty instanceProperty;
@@ -621,7 +621,7 @@ void convertClippingMeshes(IConversionService *service, ZoneTemplate *zoneTempla
 
     // Instances
     foreach (GeometryObject *object, zoneTemplate->clippingGeometry()) {
-        QString normalizedFilename = QDir::toNativeSeparators(object->mesh()).toLower();
+        QString normalizedFilename = normalizePath(object->mesh());
 
         uint fileNameIndex = (uint)clippingGeometryFiles.indexOf(normalizedFilename);
         uint fileIndex = 0;

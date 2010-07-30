@@ -315,8 +315,7 @@ PrototypeConverter::PrototypeConverter(VirtualFileSystem *vfs) : mVfs(vfs)
     mModelFiles = MessageFile::parse(mVfs->openFile("art/meshes/meshes.mes"));
 
     foreach (uint key, mModelFiles.keys()) {
-        QString filename = QDir::toNativeSeparators(mModelFiles[key]);
-        filename.replace(QDir::separator(), "/");
+        QString filename = normalizePath(mModelFiles[key]);
 
         mModelFiles[key] = "meshes/" + filename + ".model";
     }

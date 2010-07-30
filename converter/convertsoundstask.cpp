@@ -8,6 +8,7 @@
 #include <virtualfilesystem.h>
 
 #include "convertsoundstask.h"
+#include "util.h"
 
 ConvertSoundsTask::ConvertSoundsTask(IConversionService *service, QObject *parent)
     : ConversionTask(service, parent)
@@ -30,7 +31,7 @@ void ConvertSoundsTask::run()
         QHash<uint, QString> soundIndex = Troika::MessageFile::parse(service()->virtualFileSystem()->openFile(soundIndexFile));
 
         foreach (uint key, soundIndex.keys()) {
-            QString filename = QDir::toNativeSeparators("sound/" + soundIndex[key].toLower());
+            QString filename = normalizePath("sound/" + soundIndex[key]);
 
             // Some entries are empty, others are directory names
             if (!filename.toLower().endsWith(".wav"))

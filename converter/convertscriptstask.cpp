@@ -10,6 +10,7 @@
 #include "convertscriptstask.h"
 #include "prototypeconverter.h"
 #include "pythonconverter.h"
+#include "util.h"
 
 using namespace Troika;
 
@@ -314,7 +315,7 @@ static void convertDialogScripts(IConversionService *service, IFileWriter *outpu
         if (filesWritten.contains(filename))
             continue;
 
-        if (!QDir::toNativeSeparators(filename).startsWith(QDir::toNativeSeparators("dlg/")))
+        if (!normalizePath(filename).startsWith("dlg/"))
             continue;
 
         QVariantMap dialogScript = convertDialogScript(service, vfs->openFile(filename), filename);
@@ -360,8 +361,8 @@ static void convertScripts(IConversionService *service, IFileWriter *output)
         if (filesWritten.contains(filename))
             continue;
 
-        if (!QDir::toNativeSeparators(filename).startsWith(QDir::toNativeSeparators("scr/Spell"))
-            && !QDir::toNativeSeparators(filename).startsWith(QDir::toNativeSeparators("scr/py")))
+        if (!normalizePath(filename).startsWith("scr/spell")
+            && !normalizePath(filename).startsWith("scr/py"))
             continue;
 
         QByteArray script = convertScript(service, vfs->openFile(filename), filename);
