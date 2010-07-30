@@ -34,7 +34,7 @@ void ConvertSoundsTask::run()
             QString filename = normalizePath("sound/" + soundIndex[key]);
 
             // Some entries are empty, others are directory names
-            if (!filename.toLower().endsWith(".wav"))
+            if (!filename.toLower().endsWith(".wav") && !filename.toLower().endsWith(".mp3"))
                 continue;
 
             soundMapping.insert(QString("%1").arg(key), QVariant(filename));
