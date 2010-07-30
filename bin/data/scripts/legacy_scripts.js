@@ -607,6 +607,52 @@ var LegacyScripts = {};
     };
 
     /**
+     * Transfers an item from the possession of this character to the
+     * possession of another character.
+     */
+    CritterWrapper.prototype.item_transfer_to_by_proto = function(to, prototypeId) {
+        var from = this.obj;
+        to = to.obj;
+
+        if (!from.content)
+            return false;
+
+        if (!to.content) {
+            to.content = [];
+        }
+
+        // TODO: This needs refactoring to account for several things
+        // i.e. Updating inventory screens, taking weight updates into account,
+        // scripting events, etc. etc. (or even a unified party inventory)
+        for (var i = 0; i < from.content.length; ++i) {
+            var item = from.content[i];
+            if (item.prototype == prototypeId) {
+                to.content.push(item);
+                from.content.splice(i, 1);
+                return true;
+            }
+        }
+
+        return false;
+    };
+
+    /**
+     * Adds a permanent condition effect to the player.
+     *
+     * @param conditionId The internal id of the condition.
+     * @param arg1 First arg of the condition. This is type dependent.
+     * @param arg2 Second arg of the condition. This is type dependent.
+     */
+    CritterWrapper.prototype.condition_add_with_args = function(conditionId, arg1, arg2) {
+        if (conditionId == 'Fallen_Paladin') {
+            print(this.obj.id + " should now be a fallen paladin.");
+        } else {
+            print("Trying to add an unknown condition on " + this.obj.id + ": " + conditionId
+                    + " (" + arg1 + "," + arg2 + ")");
+        }
+    };
+
+    /**
      * Destroys the object.
      */
     CritterWrapper.prototype.destroy = function() {

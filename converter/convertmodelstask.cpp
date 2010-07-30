@@ -330,9 +330,15 @@ static void writeDebugModel(IFileWriter *writer, Troika::MeshModel *model, const
                 streams[i].appendCurrentState(boneState);
             }
         }
+
         int nextFrame = animStream->getNextFrameId();
         while (!animStream->atEnd()) {
-            animStream->readNextFrame();
+            if (!animStream->readNextFrame()) {
+                qWarning("Stopping animation conversion for %s in %s prematurely, since a frame couldn't be read.",
+                         animation.name().constData(), qPrintable(model->skeleton()->filename()));
+                break;
+            }
+
             Q_ASSERT(animStream->getNextFrameId() > nextFrame || animStream->atEnd());
             nextFrame = animStream->getNextFrameId();
 

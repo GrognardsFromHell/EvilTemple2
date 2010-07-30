@@ -144,8 +144,37 @@ var Maps = {
                 if (!isDay)
                     standpoint = mobile.standpointNight;
 
-                if (mobile.map.id != standpoint.map) {
-                    print("Moving mobile " + mobile.getName() + " to " + objectToString(standpoint));
+                var newMapId = standpoint.map;
+                var newPosition = standpoint.position;
+
+                if (standpoint.jumpPoint) {
+                    var jumpPoint = jumppoints[standpoint.jumpPoint];
+                    if (!jumpPoint) {
+                        print("Mobile " + mobile.id + " has standpoint with unknown jump point: "
+                                + standpoint.jumpPoint);
+                        continue;
+                    }
+                    newMapId = jumpPoint.map;
+                    newPosition = [jumpPoint.x, jumpPoint.y, jumpPoint.z]; // TODO Merge this in the jump point table
+                }
+
+                if (mobile.map.id != newMapId && mobile.map.legacyId != newMapId) {
+                    print("Moving mobile " + mobile.getName() + " to " + newPosition + " on map " + newMapId);
+
+                    var newMap = Maps.mapsById[newMapId];
+                    if (!newMap)
+                        newMap = Maps.getByLegacyId(newMapId); // TODO: Remove this, use new map ids.
+
+                    if (!newMap) {
+                        print("Can't move mobile " + mobile.id + " to " + newMapId
+                                + " since the map is unknown.");
+                        continue;
+                    }
+
+                    mobile.map.removeMobile(mobile);
+                    newMap.addMobile(mobile);
+                    mobile.position = newPosition;
+                    --i;
                 }
             }
         });

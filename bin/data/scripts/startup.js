@@ -220,7 +220,7 @@ var BaseObject = {
         print(screenPos);
 
         currentTooltip.text = this.getName();
-        currentTooltip.x = screenPos[0];
+        currentTooltip.x = screenPos[0] - currentTooltip.width / 2;
         currentTooltip.y = screenPos[1];
         currentTooltip.shown = true;
     },
