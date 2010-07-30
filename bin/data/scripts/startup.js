@@ -570,7 +570,7 @@ var animEventGameFacade = {
         particleSystem.modelInstance = renderState.modelInstance;
         renderState.sceneNode.attachObject(particleSystem);
     },
-    sound_local_obj: function(soundId, sceneNode) {
+    sound_local_obj: function(soundId, proxyObject) {
         var filename = sounds[soundId];
         if (filename === undefined) {
             print("Unknown sound id: " + soundId);
@@ -578,7 +578,10 @@ var animEventGameFacade = {
         }
 
         print("Playing sound " + filename);
-        gameView.audioEngine.playSoundOnce(filename, SoundCategory_Effect);
+        var handle = gameView.audioEngine.playSoundOnce(filename, SoundCategory_Effect);
+        handle.setPosition(proxyObject.obj.position);
+        handle.setMaxDistance(1500);
+        handle.setReferenceDistance(150);
     },
     shake: function(a, b) {
         print("Shake: " + a + ", " + b);
