@@ -37,6 +37,7 @@ public:
         DebugOverlay,
         StaticGeometry,
         Background,
+        FogOfWar,
         Count
     };
 

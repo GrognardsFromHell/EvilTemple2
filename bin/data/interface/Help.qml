@@ -22,7 +22,8 @@ MovableWindow {
 
         Text {
             id: content
-            text: "text\ntext\n<a href='#'>text</a>\ntext\ntext\ntext\ntext\ntext\ntext\ntext\ntext\ntext\ntext\ntext\ntext\ntext\ntext\ntext\ntext\n"
+            text: "text\ntext\n<a href='#'>text</a>\ntext\ntext\ntext\ntext\ntext\ntext\ntext\n"
+                + "text\ntext\ntext\ntext\ntext\ntext\ntext\ntext\ntext\n<img src=\"http://www.co8.org/forum/images/smilies/icon_hug.gif\">"
             font.family: 'Fontin'
             font.pointSize: 12
             color: '#FFFFFF'

@@ -123,7 +123,8 @@ void Scene::render(RenderStates &renderStates)
         Renderable::Default,
         Renderable::Lights,
         Renderable::StaticGeometry,
-        Renderable::DebugOverlay
+        Renderable::DebugOverlay,
+        Renderable::FogOfWar
     };
 
     // Find all light sources that are visible.

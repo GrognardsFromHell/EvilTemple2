@@ -1717,6 +1717,9 @@ static bool process(expr_ty expression, QString &result, int indent, Environment
             }
             result.append(")");
             return true;
+        } else if (func == "this.game.sleep_status_update") {
+            result.append("UtilityBarUi.update()");
+            return true;
         } else if (func == "this.game.fade_and_teleport") {
             result.append("this.game.fade_and_teleport(");
             for (int i = 0; i < asdl_seq_LEN(args); ++i) {
@@ -1769,6 +1772,9 @@ static bool process(expr_ty expression, QString &result, int indent, Environment
             }
             result.append(")");
             return true;
+        } else if (func == "this.game.combat_is_active") {
+            result.append("Combat.isActive()");
+            return true;
         } else if (func.endsWith(".reputation_has")) {
             result.append("Reputation.has(");
             for (int i = 0; i < asdl_seq_LEN(args); ++i) {
@@ -1795,6 +1801,50 @@ static bool process(expr_ty expression, QString &result, int indent, Environment
                 convertExpression((expr_ty)asdl_seq_GET(args, i), result, indent, environment, true);
             }
             result.append(")");
+            return true;
+        } else if (func == "this.location_from_axis") {
+            if (asdl_seq_LEN(args) != 2) {
+                qWarning("Found location_from_axis with != 2 num arguments.");
+                return false;
+            }
+
+            bool xOk, yOk;
+            uint x = expressionToInt((expr_ty)asdl_seq_GET(args, 0), &xOk);
+            uint y = expressionToInt((expr_ty)asdl_seq_GET(args, 1), &yOk);
+
+            if (!xOk || !yOk) {
+                qWarning("Found location_from_axis with two non-numeric arguments.");
+                return false;
+            }
+
+            // Should have two arguments.
+            result.append("[");
+            result.append(QString::number((uint)((x + 0.5f) * PixelPerWorldTile)));
+            result.append(", 0, ");
+            result.append(QString::number((uint)((y + 0.5f) * PixelPerWorldTile)));
+            result.append("]");
+            return true;
+        } else if (func.endsWith(".runoff")) {
+            if (asdl_seq_LEN(args) != 1) {
+                qWarning("runoff method call with more than 1 argument.");
+                return false;
+            }
+
+            /* This is rather idiotic. ToEE uses a x,y coordinate packed into an int and just
+               subtracts 3 to run off to the south-west (always)
+               What we do here is:
+               If the argument is an arithmetic expression, we remove the argument and let
+               the method handle it internally, otherwise we pass it on and assume it's a proper (new-style)
+               position.
+             */
+            expr_ty arg = (expr_ty)asdl_seq_GET(args, 0);
+
+            result.append(func).append('(');
+            if (arg->kind != BinOp_kind) {
+                convertExpression(arg, result, 0, environment, true);
+            }
+            result.append(')');
+
             return true;
         }
 
@@ -2156,8 +2206,9 @@ static bool process(stmt_ty stmt, QString &result, int indent, Environment *envi
             QString newValue;
             convertExpression(value, newValue, indent, environment, true);
 
+            appendIndent(indent, result);
+
             if (newValue == "1") {
-                appendIndent(indent, result);
                 result.append("GlobalFlags.set(").append(flagId).append(");\n");
             } else if (newValue == "0") {
                 result.append("GlobalFlags.unset(").append(flagId).append(");\n");

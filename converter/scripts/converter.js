@@ -124,12 +124,12 @@ function postprocess(prototypes) {
 }
 
 function processLegacyMapList() {
-        var records = readMes('rules/MapList.mes');
+    var records = readMes('rules/MapList.mes');
 
-        for (var mapId in records) {
-            var mapDir = records[mapId].split(',')[0];
-            LegacyMapList[mapId] = mapDir.toLowerCase();
-        }
+    for (var mapId in records) {
+        var mapDir = records[mapId].split(',')[0];
+        LegacyMapList[mapId] = mapDir.toLowerCase();
+    }
 }
 
 function mangleFilename(filename) {
@@ -241,9 +241,10 @@ function processJumpPoints() {
                 var jumppoint = {
                         name: record[1],
                         map: mapId,
-                        x: Math.round((parseInt(record[3]) + 0.5) * PixelPerWorldTile),
-                        y: 0,
-                        z: Math.round((parseInt(record[4]) + 0.5) * PixelPerWorldTile)
+                        position: [Math.round((parseInt(record[3]) + 0.5) * PixelPerWorldTile),
+                                   0,
+                                   Math.round((parseInt(record[4]) + 0.5) * PixelPerWorldTile)
+                        ]
                 };
 
                 jumppoints[record[0]] = jumppoint;

@@ -59,7 +59,8 @@ SOURCES += \
     bindingpose.cpp \
     animatedmeshstate.cpp \
     modelfilereader.cpp \
-    modelfilechunks.cpp
+    modelfilechunks.cpp \
+    fogofwar.cpp
 HEADERS += \
     mainwindow.h \
     game.h \
@@ -108,7 +109,8 @@ HEADERS += \
     animatedmeshstate.h \
     modelfilereader.h \
     modelfilechunks.h \
-    gamemath_streams.h
+    gamemath_streams.h \
+    fogofwar.h
 OTHER_FILES += \
     resources/schema/materialfile.xsd \
     resources/materials/map_material.xml \
@@ -140,7 +142,8 @@ OTHER_FILES += \
     ../bin/data/scripts/walking.js \
     ../bin/data/scripts/mobileInfo.js \
     resources/materials/shadow.vert \
-    resources/materials/shadow.frag
+    resources/materials/shadow.frag \
+    resources/materials/fog_material.xml
 
 INCLUDEPATH += .
 

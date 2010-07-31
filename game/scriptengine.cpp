@@ -16,6 +16,7 @@
 #include "scenenode.h"
 #include "selectioncircle.h"
 #include "imageuploader.h"
+#include "fogofwar.h"
 
 #include "renderable.h"
 #include "modelinstance.h"
@@ -305,6 +306,7 @@ namespace EvilTemple {
         global.setProperty("Light", engine->newFunction(renderableCtor<Light>));
         global.setProperty("LineRenderable", engine->newFunction(renderableCtor<LineRenderable>));
         global.setProperty("BackgroundMap", engine->newFunction(renderableCtor<BackgroundMap>));
+        global.setProperty("FogOfWar", engine->newFunction(renderableCtor<FogOfWar>));
         global.setProperty("SelectionCircle", engine->newFunction(selectionCircleCtor));
 
         // Register scriptable objects

@@ -39,11 +39,6 @@ var Maps = {
         }
     };
 
-    Maps.getByLegacyId = function(legacyId) {
-        var mapId = legacyIdMapping[legacyId];
-        return Maps.mapsById[mapId];
-    };
-
     /**
      * Searches through all maps to find a mobile with a given GUID.
      *
@@ -98,8 +93,13 @@ var Maps = {
         Maps.maps.forEach(function (map) {
             print("Loading map " + map.id + " from savegame.");
             Maps.mapsById[map.id] = map;
-            map.__proto__ = Map.prototype;
-
+            var mapObj = readJson('maps/' + map.id + '/map.js');
+            if (!mapObj) {
+                throw "Map " + map.id + " in savegame no longer has corresponding map file.";
+            }
+            mapObj.__proto__ = Map.prototype;
+            map.__proto__ = mapObj;
+            
             // Reconnect all mobiles back to their prototypes
             map.mobiles.forEach(connectToPrototype);
             map.mobiles.forEach(function(mobile) {
@@ -155,16 +155,13 @@ var Maps = {
                         continue;
                     }
                     newMapId = jumpPoint.map;
-                    newPosition = [jumpPoint.x, jumpPoint.y, jumpPoint.z]; // TODO Merge this in the jump point table
+                    newPosition = jumpPoint.position;
                 }
 
-                if (mobile.map.id != newMapId && mobile.map.legacyId != newMapId) {
+                if (mobile.map.id != newMapId) {
                     print("Moving mobile " + mobile.getName() + " to " + newPosition + " on map " + newMapId);
 
                     var newMap = Maps.mapsById[newMapId];
-                    if (!newMap)
-                        newMap = Maps.getByLegacyId(newMapId); // TODO: Remove this, use new map ids.
-
                     if (!newMap) {
                         print("Can't move mobile " + mobile.id + " to " + newMapId
                                 + " since the map is unknown.");

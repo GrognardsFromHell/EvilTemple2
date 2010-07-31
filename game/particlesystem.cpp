@@ -114,6 +114,7 @@ namespace EvilTemple {
     enum SpaceType {
         Space_World,
         Space_Bone,
+        Space_Bone_World,
         Space_RandomBone
     };
 
@@ -857,7 +858,7 @@ namespace EvilTemple {
                     particle.position += trans;
                     break;
                 }
-            } else if (mEmitterSpace == Space_Bone) {
+            } else if (mEmitterSpace == Space_Bone || mEmitterSpace == Space_Bone_World) {
                 const Bone *bone = skeleton->bone(mBoneName);
 
                 if (bone) {
@@ -867,7 +868,8 @@ namespace EvilTemple {
                     particle.position += trans;
                 }
             }
-        } else if (mEmitterSpace == Space_RandomBone || mEmitterSpace == Space_Bone) {
+        } else if (mEmitterSpace == Space_RandomBone || mEmitterSpace == Space_Bone
+                    || mEmitterSpace == Space_Bone_World) {
             if (!mWarnedAboutBoneSpace) {
                 qWarning("Emitter %s in particle system %s lacks model instance although it uses bone space.",
                          qPrintable(mName),
@@ -1187,108 +1189,6 @@ namespace EvilTemple {
         }
 
         renderStates.setWorldMatrix(oldWorld);
-
-/*        Matrix4 oldWorld = renderStates.worldMatrix();
-
-        ModelBufferSource bufferSource(mModel->positionBuffer.bufferId(),
-                                       mModel->normalBuffer.bufferId(),
-                                       mModel->texcoordBuffer.bufferId());
-
-        foreach (const Particle &particle, mParticles) {
-            Vector4 origin = oldWorld.mapPosition(particle.position);
-
-            Matrix4 translation = Matrix4::translation(origin.x(), origin.y(), origin.z());
-
-            Matrix4 rotation = Matrix4::rotation(Quaternion::fromAxisAndAngle(0, 1, 0, deg2rad(particle.rotationYaw)))
-                               * Matrix4::rotation(Quaternion::fromAxisAndAngle(1, 0, 0, deg2rad(particle.rotationPitch)))
-                               * Matrix4::rotation(Quaternion::fromAxisAndAngle(0, 0, 1, deg2rad(particle.rotationRoll)));
-
-            Matrix4 world = translation * rotation;
-
-            renderStates.setWorldMatrix(world);
-
-            Vector4 materialColor(particle.colorRed / 255.0f,
-                                  particle.colorGreen / 255.0f,
-                                  particle.colorBlue / 255.0f,
-                                  particle.colorAlpha / 255.0f);
-
-            for (int j = 0; j < mModel->faces; ++j) {
-                FaceGroup &faceGroup = mModel->faceGroups[j];
-
-                ModelDrawStrategy drawStrategy(faceGroup.buffer.bufferId(), faceGroup.indices.size());
-
-                MaterialState *material = faceGroup.material;
-
-                for (int i = 0; i < material->passCount; ++i) {
-                    MaterialPassState &pass = material->passes[i];
-
-                    pass.program->bind();
-
-                    // Bind texture samplers
-                    for (int j = 0; j < pass.textureSamplers.size(); ++j) {
-                        pass.textureSamplers[j].bind();
-                    }
-
-                    // Bind uniforms
-                    for (int j = 0; j < pass.uniforms.size(); ++j) {
-                        pass.uniforms[j]->bind();
-                    }
-
-                    GLint materialColorLocation = pass.program->uniformLocation("materialColor");
-                    if (materialColorLocation != -1) {
-                        glUniform4fv(materialColorLocation, 1, materialColor.data());
-                    }
-
-                    // Bind attributes
-                    for (int j = 0; j < pass.attributes.size(); ++j) {
-                        MaterialPassAttributeState &attribute = pass.attributes[j];
-
-                        GLint bufferId = bufferSource.buffer(attribute);
-
-                        SAFE_GL(glBindBuffer(GL_ARRAY_BUFFER, bufferId));
-
-                        // Assign the attribute
-                        SAFE_GL(glEnableVertexAttribArray(attribute.location));
-                        SAFE_GL(glVertexAttribPointer(attribute.location,
-                                                        attribute.binding.components(),
-                                                        attribute.binding.type(),
-                                                        attribute.binding.normalized(),
-                                                        attribute.binding.stride(),
-                                                        (GLvoid*)attribute.binding.offset()));
-
-                    }
-                    SAFE_GL(glBindBuffer(GL_ARRAY_BUFFER, 0)); // Unbind any previously bound buffers
-
-                    // Set render states
-                    foreach (const SharedMaterialRenderState &state, pass.renderStates) {
-                        state->enable();
-                    }
-
-                    // Draw the actual model
-                    drawStrategy.draw(renderStates, pass);
-
-                    // Reset render states to default
-                    foreach (const SharedMaterialRenderState &state, pass.renderStates) {
-                        state->disable();
-                    }
-
-                    // Unbind textures
-                    for (int j = 0; j < pass.textureSamplers.size(); ++j) {
-                        pass.textureSamplers[j].unbind();
-                    }
-
-                    // Unbind attributes
-                    for (int j = 0; j < pass.attributes.size(); ++j) {
-                        MaterialPassAttributeState &attribute = pass.attributes[j];
-                        SAFE_GL(glDisableVertexAttribArray(attribute.location));
-                    }
-
-                    pass.program->unbind();
-                }
-            }
-        }
-
-        renderStates.setWorldMatrix(oldWorld);*/
     }
 
     void Emitter::renderPoints(RenderStates &renderStates)
@@ -1696,7 +1596,7 @@ namespace EvilTemple {
         } else if (space == "world") {
             mEmitterSpace = Space_World;
         } else if (space == "node pos") {
-            mEmitterSpace = Space_Bone;
+            mEmitterSpace = Space_Bone_World;
             mBoneName = element.attribute("spaceNode").toUtf8();
         } else if (space == "node ypr") {
             mEmitterSpace = Space_Bone;

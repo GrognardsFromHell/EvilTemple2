@@ -7,8 +7,8 @@ Item {
     width: 181
     height: 83
 
-    x: gameView.viewportSize.width - width - 20
-    y: 20
+    x: gameView.viewportSize.width - width - 5
+    y: gameView.viewportSize.height - height - 5
 
     property bool townmapDisabled : false
     property bool journalDisabled : false

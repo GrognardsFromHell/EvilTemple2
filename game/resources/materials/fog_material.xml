@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<material xmlns="http://hartte.de/eviltemple/material.xsd">
+
+  <pass>
+    <shader>
+      <vertexShader>
+        <code>
+          <![CDATA[
+#version 120
+
+uniform mat4 worldViewProjection;
+
+attribute vec4 vertexPosition;
+attribute vec2 vertexTexCoord;
+
+varying vec2 texCoord;
+
+void main() {
+    gl_Position = worldViewProjection * vertexPosition;
+    texCoord = vertexTexCoord * (192.0/256.0);
+}
+]]>
+        </code>
+      </vertexShader>
+
+      <fragmentShader>
+        <code>
+        <![CDATA[
+#version 120
+
+varying vec2 texCoord;
+
+uniform sampler2D foggedSampler;
+
+void main() {
+    float a = texture2D(foggedSampler, texCoord).r;
+
+    gl_FragColor = vec4(0, 0, 0, a);
+}
+]]>
+        </code>
+      </fragmentShader>
+
+      <uniform name="worldViewProjection" semantic="WorldViewProjection" />
+    </shader>
+
+    <depthTest>false</depthTest>
+    <blend>true</blend>
+    <blendFunc src="srcAlpha" dest="oneMinusSrcAlpha" />
+  </pass>
+
+</material>

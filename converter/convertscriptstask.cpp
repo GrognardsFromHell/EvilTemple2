@@ -394,9 +394,12 @@ static void convertScripts(IConversionService *service, IFileWriter *output)
     }
 
     // Process some scripts separately
-    output->addFile("scripts/legacy/utilities.js", convertScript(service, vfs->openFile("scr/utilities.py"), "scr/utilities.py"));
-    output->addFile("scripts/legacy/random_encounter.js", convertScript(service, vfs->openFile("scr/random_encounter.py"), "scr/random_encounter.py"));
-    output->addFile("scripts/legacy/rumor_control.js", convertScript(service, vfs->openFile("scr/rumor_control.py"), "scr/rumor_control.py"));
+    output->addFile("scripts/legacy/utilities.js",
+                    convertScript(service, vfs->openFile("scr/utilities.py"), "scr/utilities.py"));
+    output->addFile("scripts/legacy/random_encounter.js",
+                    convertScript(service, vfs->openFile("scr/random_encounter.py"), "scr/random_encounter.py"));
+    output->addFile("scripts/legacy/rumor_control.js",
+                    convertScript(service, vfs->openFile("scr/rumor_control.py"), "scr/rumor_control.py"));
 
     QJson::Serializer serializer;
     output->addFile("scripts.js", serializer.serialize(scriptFiles));

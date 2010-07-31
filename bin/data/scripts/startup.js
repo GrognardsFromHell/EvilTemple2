@@ -349,7 +349,7 @@ var MapChanger = {
             if (!newMap) {
                 print("JumpPoint " + this.teleportTarget + " links to unknown map: " + jumpPoint.map);
             } else {
-                Maps.goToMap(newMap, [jumpPoint.x, 0, jumpPoint.z]);
+                Maps.goToMap(newMap, jumpPoint.position);
             }
         } else if (event.button == Mouse.RightButton) {
             if (renderState)

@@ -55,7 +55,7 @@ static QVariantMap waypointToMap(const GameObject::Waypoint &waypoint)
     return result;
 }
 
-static QVariantMap standpointToMap(const GameObject::Standpoint &standpoint)
+static QVariantMap standpointToMap(IConversionService *service, const GameObject::Standpoint &standpoint)
 {
     QVariantMap result;
 
@@ -67,7 +67,7 @@ static QVariantMap standpointToMap(const GameObject::Standpoint &standpoint)
         if (standpoint.jumpPoint != -1 && standpoint.jumpPoint != 0) {
             result["jumpPoint"] = standpoint.jumpPoint;
         } else if (standpoint.map != 0) {
-            result["map"] = standpoint.map;
+            result["map"] = service->convertMapId(standpoint.map);
             result["position"] = vectorToList(standpoint.position);
         }
     }
@@ -246,9 +246,9 @@ static QVariant toVariant(IConversionService *service, GameObject *object, QVari
     props.write("charisma", object->charisma);
 
     // Standpoints
-    props.write("standpointDay", standpointToMap(object->dayStandpoint));
-    props.write("standpointNight", standpointToMap(object->nightStandpoint));
-    props.write("standpointScout", standpointToMap(object->scoutStandpoint));
+    props.write("standpointDay", standpointToMap(service, object->dayStandpoint));
+    props.write("standpointNight", standpointToMap(service, object->nightStandpoint));
+    props.write("standpointScout", standpointToMap(service, object->scoutStandpoint));
 
     if (!object->waypoints.isEmpty()) {
         QVariantList waypoints;
@@ -296,9 +296,11 @@ static QVariantList convertLightingKeyframes(const QList<LightKeyframe> &keyfram
 
 void ConvertMapsTask::convertMapObject(ZoneTemplate *zoneTemplate, IFileWriter *writer)
 {
+    Serializer serializer;
+
     QVariantMap mapObject;
 
-    mapObject["name"] = zoneTemplate->name();
+    mapObject["name"] = zoneTemplate->name() + " (" + QString::number(zoneTemplate->id()) + ")";
 
     //mapObject["pathNodes"] = convertPathNodes(zoneTemplate->directory(), service());
 
@@ -311,7 +313,6 @@ void ConvertMapsTask::convertMapObject(ZoneTemplate *zoneTemplate, IFileWriter *
     if (!areaId.isEmpty())
         mapObject["area"] = areaId;
 
-    mapObject["legacyId"] = zoneTemplate->id(); // This is actually legacy...
     if (zoneTemplate->dayBackground()) {
         mapObject["dayBackground"] = getNewBackgroundMapFolder(zoneTemplate->dayBackground()->directory());
     }
@@ -356,7 +357,7 @@ void ConvertMapsTask::convertMapObject(ZoneTemplate *zoneTemplate, IFileWriter *
     globalLightMap["color"] = QVariantList() << globalLight.r / 255.0 << globalLight.g / 255.0 << globalLight.b / 255.0;
     globalLightMap["direction"] = QVariantList() << globalLight.dirX << globalLight.dirY << globalLight.dirZ;
 
-    mapObject["globalLight"] = globalLightMap;
+    mapObject["globalLighting"] = globalLightMap;
 
     QVariantList lightList;
     foreach (const Light &light, zoneTemplate->lights()) {
@@ -378,7 +379,10 @@ void ConvertMapsTask::convertMapObject(ZoneTemplate *zoneTemplate, IFileWriter *
 
         lightList.append(lightMap);
     }
-    mapObject["lights"] = lightList;
+    if (!lightList.isEmpty()) {
+        writer->addFile(zoneTemplate->directory() + "lights.js", serializer.serialize(lightList));
+        mapObject["lights"] = zoneTemplate->directory() + "lights.js";
+    }
 
     QVariantList particleSystemList;
 
@@ -398,11 +402,17 @@ void ConvertMapsTask::convertMapObject(ZoneTemplate *zoneTemplate, IFileWriter *
 
         particleSystemList.append(particleSystemMap);
     }
+    if (!particleSystemList.isEmpty()) {
+        writer->addFile(zoneTemplate->directory() + "particleSystems.js", serializer.serialize(particleSystemList));
+        mapObject["particleSystems"] = zoneTemplate->directory() + "particleSystems.js";
+    }
 
-    mapObject["particleSystems"] = particleSystemList;
+    // Convert dynamic objects. We'll add some object to this list from the static objects.
+    QVariantList dynamicObjects;
 
     QVariantList objectList;
     foreach (GameObject *object, zoneTemplate->staticObjects()) {
+        bool moveToDynamics = false;
 
         /*
          This is a special hack that assigns GUIDs to portals so state for them can be persisted. They're pretty much
@@ -410,12 +420,33 @@ void ConvertMapsTask::convertMapObject(ZoneTemplate *zoneTemplate, IFileWriter *
          transition objects maybe).
          */
         if (object->prototype->type == Portal) {
-            if (object->id.isNull()) {
+            moveToDynamics = true;
+        }
+        /*
+          This is a rather obnoxious property of the ToEE scripts. There are static objects, that
+          are actually referenced and manipulated by the ToEE scripts. One example for this is the
+          minotaur statue on the 2nd temple level. It's deleted, but it's a static object too!
+
+          Solution: Move it over to the dynamic objects and assign it a GUID.
+          */
+        if (object->prototype->internalDescriptionId.isDefined()) {
+            moveToDynamics = true;
+        }
+
+        if (moveToDynamics) {
+            if (object->id.isEmpty())
                 object->id = QUuid::createUuid().toString();
-            }
+
+            dynamicObjects.append(toVariant(service(), object));
+            continue;
         }
 
         objectList.append(toVariant(service(), object));
+    }
+
+    // Now add dynamic objects here
+    foreach (GameObject *object, zoneTemplate->mobiles()) {
+        dynamicObjects.append(toVariant(service(), object));
     }
 
     // Static geometry objects are treated the same way, although they don't have
@@ -438,19 +469,15 @@ void ConvertMapsTask::convertMapObject(ZoneTemplate *zoneTemplate, IFileWriter *
         objectList.append(map);
     }
 
-    mapObject["staticObjects"] = objectList;
-    mapObject["mobiles"] = zoneTemplate->directory() + "mobiles.js";
-
-    objectList.clear();
-
-    Serializer serializer;
+    if (!objectList.isEmpty())
+        mapObject["staticObjects"] = zoneTemplate->directory() + "staticObjects.js";
+    if (!dynamicObjects.isEmpty())
+    mapObject["mobileObjects"] = zoneTemplate->directory() + "mobiles.js";
 
     writer->addFile(zoneTemplate->directory() + "map.js", serializer.serialize(mapObject));
 
-    QVariantList dynamicObjects;
-    foreach (GameObject *object, zoneTemplate->mobiles()) {
-        dynamicObjects.append(toVariant(service(), object));
-    }
+    writer->addFile(zoneTemplate->directory() + "staticObjects.js", serializer.serialize(objectList));
+
     writer->addFile(zoneTemplate->directory() + "mobiles.js", serializer.serialize(dynamicObjects));
 }
 

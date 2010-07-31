@@ -8,6 +8,7 @@ MovableWindow {
 
     signal openInventory;
     signal openAnimations;
+    signal deleteClicked;
 
     ListModel {
         id: listModel
@@ -84,6 +85,19 @@ MovableWindow {
                 y: 4
                 text: 'Animations'
                 onClicked: openAnimations()
+            }
+        }
+
+        Image {
+            source: 'ButtonBackdrop.png'
+            width: deleteButton.width + 8
+            height: deleteButton.height + 8
+            Button {
+                id: deleteButton
+                x: 4
+                y: 4
+                text: 'Delete'
+                onClicked: deleteClicked()
             }
         }
     }

@@ -64,6 +64,10 @@ function showMobileInfo(obj, modelInstance)
     mobileInfoDialog.closeClicked.connect(function() {
         mobileInfoDialog.deleteLater();
     });
+    mobileInfoDialog.deleteClicked.connect(function() {
+        mobileInfoDialog.deleteLater();
+        obj.destroy();
+    });
 
     if (modelInstance) {
         mobileInfoDialog.openAnimations.connect(function() {

@@ -157,13 +157,6 @@ var LegacyScripts = {};
                     + " with args = " + newCallbackArgs);
         },
 
-        /**
-         * Returns whether combat is occurring.
-         */
-        combat_is_active: function() {
-            return false;
-        },
-
         particles: function(partSysId, proxyObject) {
             var renderState = proxyObject.obj.getRenderState();
 
@@ -189,13 +182,6 @@ var LegacyScripts = {};
             obj.createRenderState();
 
             return new CritterWrapper(obj);
-        },
-
-        /**
-         * Updates the utility bar if the can-sleep-safely status has changed.
-         */
-        sleep_status_update: function() {
-            UtilityBarUi.update();
         }
     };
 

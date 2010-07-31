@@ -5,28 +5,19 @@ var Map = function(id) {
     // Read the map once
     var mapObj = readJson('maps/' + id + '/map.js');
 
+    if (!mapObj)
+        throw "Unable to load map " + id;
+
     this.id = id;
     this.visited = false;
-
-    if (!mapObj) {
-        print("Unable to load map " + id);
-        return;
-    }
-
-    /*
-     Store some additional information from the map file, which should be refreshed whenever the savegame is loaded.
-     */
-    this.name = mapObj.name;
-    this.area = mapObj.area;
-    this.legacyId = mapObj.legacyId; // This is *OPTIONAL*
-    this.outdoor = mapObj.outdoor;
-    this.startPosition = mapObj.startPosition; // This is actually only used by the editor
-    this.globalLighting = mapObj.globalLight;
-    this.dayBackground = mapObj.dayBackground;
-    this.nightBackground = mapObj.nightBackground;
+    mapObj.__proto__ = this.__proto__;
+    this.__proto__ = mapObj;
 
     // Load mobiles and link them to their prototypes
-    this.mobiles = readJson(mapObj.mobiles);
+    if (mapObj.mobileObjects)
+        this.mobiles = readJson(mapObj.mobileObjects);
+    else
+        this.mobiles = [];
 
     for (var i = 0; i < this.mobiles.length; ++i) {
         var mobile = this.mobiles[i];
@@ -83,16 +74,16 @@ var Map = function(id) {
 
     /**
      * Loads the static objects from a map object.
-     * @param mapObj The map object loaded from a map's map.js
+     * @param staticObjects A list of static objets to load.
      */
-    function loadStaticObjects(mapObj) {
-        print("Creating " + mapObj.staticObjects.length + " static objects.");
+    function loadStaticObjects(staticObjects) {
+        print("Creating " + staticObjects.length + " static objects.");
 
         var i;
         var obj;
 
-        for (i = 0; i < mapObj.staticObjects.length; ++i) {
-            obj = mapObj.staticObjects[i];
+        for (i = 0; i < staticObjects.length; ++i) {
+            obj = staticObjects[i];
             connectToPrototype(obj);
             obj.createRenderState();
         }
@@ -100,14 +91,15 @@ var Map = function(id) {
 
     /**
      * Loads the lights from a map object.
-     * @param mapObj The map object loaded from a map's map.js
+     * @param map The map object to load lights for.
      */
-    function loadLights(map, mapObj) {
+    function loadLights(map) {
+
         // Create global lighting in form of an infinite-range directional light
         var globalLight = new Light(gameView.scene);
         globalLight.range = 10000000000; // The light should be visible anywhere on the map
         globalLight.type = 'Directional';
-        globalLight.color = mapObj.globalLight.color.slice(0, 3); // The color is actually used
+        globalLight.color = map.globalLighting.color.slice(0, 3); // The color is actually used
         globalLight.direction = [-0.6324094, -0.7746344, 0]; // the direction is fixed for *all* maps, regardless of lighting.
         var sceneNode = gameView.scene.createNode();
 
@@ -116,10 +108,15 @@ var Map = function(id) {
 
         map.renderGlobalLight = globalLight;
 
-        print("Creating " + mapObj.lights.length + " lights.");
+        if (!map.lights)
+            return;
 
-        for (var i = 0; i < mapObj.lights.length; ++i) {
-            var obj = mapObj.lights[i];
+        var lights = readJson(map.lights);
+
+        print("Creating " + lights.length + " lights.");
+
+        for (var i = 0; i < lights.length; ++i) {
+            var obj = lights[i];
 
             sceneNode = gameView.scene.createNode();
             sceneNode.interactive = false;
@@ -152,17 +149,17 @@ var Map = function(id) {
     /**
      * Loads the particle systems from a given map object into the current view.
      *
-     * @param mapObj The map object loaded from a map's map.js
+     * @param particleSystems The particle systems.
      */
-    function loadParticleSystems(mapObj) {
-        print("Creating " + mapObj.particleSystems.length + " particle systems.");
+    function loadParticleSystems(particleSystems) {
+        print("Creating " + particleSystems.length + " particle systems.");
 
         var i;
         var obj;
         var sceneNode;
 
-        for (i = 0; i < mapObj.particleSystems.length; ++i) {
-            obj = mapObj.particleSystems[i];
+        for (i = 0; i < particleSystems.length; ++i) {
+            obj = particleSystems[i];
 
             if (!obj.day)
                 continue;
@@ -183,29 +180,16 @@ var Map = function(id) {
 
         var start = timerReference();
 
-        var mapObj = readJson('maps/' + this.id + '/map.js');
-
-        // Reload some of the flags while we're at it
-        this.name = mapObj.name;
-        this.area = mapObj.area;
-        this.legacyId = mapObj.legacyId; // This is *OPTIONAL*
-        this.outdoor = mapObj.outdoor;
-        this.startPosition = mapObj.startPosition; // This is actually only used by the editor
-        this.globalLighting = mapObj.globalLight;
-
-        gameView.scrollBoxMinX = mapObj.scrollBox[0];
-        gameView.scrollBoxMinY = mapObj.scrollBox[1];
-        gameView.scrollBoxMaxX = mapObj.scrollBox[2];
-        gameView.scrollBoxMaxY = mapObj.scrollBox[3];
-
-        this.dayBackground = mapObj.dayBackground;
-        this.nightBackground = mapObj.nightBackground;
+        gameView.scrollBoxMinX = this.scrollBox[0];
+        gameView.scrollBoxMinY = this.scrollBox[1];
+        gameView.scrollBoxMaxX = this.scrollBox[2];
+        gameView.scrollBoxMaxY = this.scrollBox[3];
 
         var backgroundMap = new BackgroundMap(gameView.scene);
         if (GameTime.isNighttime() && this.nightBackground) {
-            backgroundMap.directory = mapObj.nightBackground;
+            backgroundMap.directory = this.nightBackground;
         } else {
-            backgroundMap.directory = mapObj.dayBackground;
+            backgroundMap.directory = this.dayBackground;
         }
         this.renderBackgroundMap = backgroundMap;
 
@@ -214,13 +198,15 @@ var Map = function(id) {
 
         var scene = gameView.scene;
 
-        gameView.clippingGeometry.load(mapObj.clippingGeometry, scene);
+        gameView.clippingGeometry.load(this.clippingGeometry, scene);
 
         gameView.sectorMap.load('maps/' + this.id + '/regions.dat');
 
-        loadLights(this, mapObj);
-        loadParticleSystems(mapObj);
-        loadStaticObjects(mapObj);
+        loadLights(this);
+        if (this.particleSystems)
+            loadParticleSystems(readJson(this.particleSystems));
+        if (this.staticObjects)
+            loadStaticObjects(readJson(this.staticObjects));
 
         var obj;
         var i;
@@ -232,6 +218,11 @@ var Map = function(id) {
             obj.createRenderState();
         }
 
+        // TODO: Load/Persist FOW state
+        this.renderFog = new FogOfWar(gameView.scene);
+        var fowNode = gameView.scene.createNode();
+        fowNode.attachObject(this.renderFog);
+
         gc();
 
         var elapsed = timerReference() - start;
@@ -241,7 +232,7 @@ var Map = function(id) {
             map.heartbeat();
         });
 
-        SoundController.activate(mapObj.soundSchemes);
+        SoundController.activate(this.soundSchemes);
     };
 
     Map.prototype.entering = function(position) {
@@ -464,14 +455,14 @@ var Map = function(id) {
 
         // Interpolate between 3d colors
         var diff = [ fading3dEndColor[0] - fading3dStartColor[0],
-                     fading3dEndColor[1] - fading3dStartColor[1],
-                     fading3dEndColor[2] - fading3dStartColor[2] ];
+            fading3dEndColor[1] - fading3dStartColor[1],
+            fading3dEndColor[2] - fading3dStartColor[2] ];
 
         Maps.currentMap.renderGlobalLight.color = [
-                                        fading3dStartColor[0] + factor * diff[0],
-                                        fading3dStartColor[1] + factor * diff[1],
-                                        fading3dStartColor[2] + factor * diff[2]
-                                       ];
+            fading3dStartColor[0] + factor * diff[0],
+            fading3dStartColor[1] + factor * diff[1],
+            fading3dStartColor[2] + factor * diff[2]
+        ];
 
         gameView.addVisualTimer(50, mapFade);
     }
@@ -510,7 +501,7 @@ var Map = function(id) {
         var color = interpolateColor(hour, keyframes2d).slice(0);
         color[3] = getForegroundFade();
         this.renderBackgroundMap.color = color;
-        
+
         this.renderGlobalLight.color = interpolateColor(hour, keyframes3d);
     };
 
@@ -579,5 +570,19 @@ var Map = function(id) {
             }
         }
     };
+
+    StartupListeners.add(function() {
+
+        var fogCheck = function() {
+            if (Maps.currentMap) {
+                Maps.currentMap.renderFog.reveal(Party.getLeader().position, 100);
+            }
+
+            gameView.addVisualTimer(100, fogCheck);
+        };
+
+        gameView.addVisualTimer(100, fogCheck);
+
+    });
 
 })();

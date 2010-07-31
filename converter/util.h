@@ -231,9 +231,9 @@ inline QDataStream &operator <<(QDataStream &stream, const Vector4 &vector)
 
 inline QVariantList vectorToList(const QVector3D &vector) {
     QVariantList result;
-    result.append(vector.x());
-    result.append(vector.y());
-    result.append(vector.z());
+    result.append((uint)vector.x());
+    result.append((uint)vector.y());
+    result.append((uint)vector.z());
     return result;
 }
 
