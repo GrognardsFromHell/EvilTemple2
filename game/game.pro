@@ -3,7 +3,6 @@ QT += network \
     opengl \
     script \
     scripttools \
-    webkit \
     xml \
     declarative
 

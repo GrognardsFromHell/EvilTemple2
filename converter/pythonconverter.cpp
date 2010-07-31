@@ -1764,7 +1764,7 @@ static bool process(expr_ty expression, QString &result, int indent, Environment
                     QString newMapId = service->convertMapId(mapId);
                     if (!ok || newMapId.isNull()) {
                         result.append("'invalid-map'");
-                        qWarning("Invalid map id : %s", mapIdString);
+                        qWarning("Invalid map id : %s", qPrintable(mapIdString));
                     } else {
                         result.append("'" + newMapId + "'");
                     }
