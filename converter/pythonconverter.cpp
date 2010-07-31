@@ -1953,15 +1953,15 @@ static bool process(expr_ty expression, QString &result, int indent, Environment
                 convertExpression(right, comparingTo, 0, environment, true);
 
                 if (comparingTo != "0" && comparingTo != "1") {
-                    qWarning("Comparing reputation results against something other than 1 or 0.",
+                    qWarning("Comparing reputation results against something other than 1 or 0: %s",
                              qPrintable(comparingTo));
                     return false;
                 }
 
-                if (op == Eq && comparingTo == "0" || op == NotEq && comparingTo == "1") {
+                if ((op == Eq && comparingTo == "0") || (op == NotEq && comparingTo == "1")) {
                     result.append("!").append(callTo);
                     return true;
-                } else if (op == Eq && comparingTo == "1" || op == NotEq && comparingTo == "0") {
+                } else if ((op == Eq && comparingTo == "1") || (op == NotEq && comparingTo == "0")) {
                     result.append(callTo);
                     return true;
                 } else {
