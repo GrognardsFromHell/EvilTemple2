@@ -6,7 +6,6 @@
 #include <QtDeclarative>
 #include <QtCore>
 #include <QtGui>
-#include <QtWebKit>
 #include <QtScript>
 #include <QtScriptTools>
 

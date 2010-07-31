@@ -95,7 +95,6 @@ SaveGames::SaveGames(const QString &savesPath, QScriptEngine *engine, QObject *p
         if (!mSavesDirectory.mkpath(".")) {
             qWarning("Unable to create savegame directory.");
         }
-
     }
 }
 
@@ -119,7 +118,7 @@ QScriptValue SaveGames::listSaves()
         IndexRecord indexRecord;
 
         if (!readIndexEntry(indexDatPath, &indexRecord)) {
-            qWarning("Unable to read index record file %s.", indexDatPath);
+            qWarning("Unable to read index record file %s.", qPrintable(indexDatPath));
             continue;
         }
 

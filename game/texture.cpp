@@ -151,7 +151,7 @@ bool Texture::loadTga(const QByteArray &tgaImage)
     TargaImage image(tgaImage);
 
     if (!image.load()) {
-        qWarning("TGA loading error: %s", image.error());
+        qWarning("TGA loading error: %s", qPrintable(image.error()));
         return false;
     }
 

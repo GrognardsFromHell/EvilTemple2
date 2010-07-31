@@ -10,6 +10,8 @@
 #include "profiler.h"
 #include "lighting.h"
 
+GAMEMATH_ALIGN GAMEMATH_CONSTANT Box3d emptyBox;
+
 namespace EvilTemple {
 
     ModelInstance::ModelInstance()
@@ -585,8 +587,7 @@ namespace EvilTemple {
     }
 
     const Box3d &ModelInstance::boundingBox()
-    {
-        static Box3d emptyBox;
+    {        
         if (mModel)
             return mModel->boundingBox();
         else
