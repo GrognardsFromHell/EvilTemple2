@@ -238,10 +238,10 @@ namespace Troika {
         bool disableDepthTest;
         bool disableDepthWrite;
         bool linearFiltering;
-        QColor color;
         BlendType mBlendType;
         bool mRecalculateNormals;
         float mSpecularPower;
+        QColor color;
         QString mGlossmap;
 
         TextureStageInfo textureStages[LegacyTextureStages];

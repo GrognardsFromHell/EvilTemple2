@@ -29,21 +29,6 @@ template <int T> bool checkBlack(unsigned char *pixels, int width, int height) {
     return true;
 }
 
-static bool isTileBlack(const QImage &image)
-{
-    for (int y = 0; y < image.height(); ++y) {
-        for (int x = 0; x < image.width(); ++x) {
-            QRgb pixel = image.pixel(x, y);
-            if (qRed(pixel) > 2 || qBlue(pixel) > 2 || qGreen(pixel) > 2) {
-                return false;
-            }
-        }
-    }
-
-    return true;
-}
-
-
     static void decompressJpeg(const QByteArray &input, QByteArray &output, int &width, int &height, int &components) {
         if (!jpegHandle) {
             jpegHandle = tjInitDecompress();

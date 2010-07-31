@@ -121,7 +121,7 @@ struct ProcessedSector {
 };
 
 inline ProcessedSector::ProcessedSector()
-    : anyReachable(false), hasNegativeHeight(false)
+    : hasNegativeHeight(false), anyReachable(false)
 {
     memset(reachable, 0, sizeof(reachable));
     memset(negativeHeight, 0, sizeof(negativeHeight));
@@ -383,7 +383,7 @@ inline void markFlyable(int x, int y, QImage *debugTexture, ProcessedSector *sec
 static void mergeRectangles(QList<QRect> &rectangles, const uint maxIterations = 100)
 {
     bool madeChanges = true;
-    int iteration = 0;
+    uint iteration = 0;
 
     // Second-pass tries to unify more sector polygons
     for (iteration = 0; (iteration < maxIterations) && madeChanges; ++iteration) {

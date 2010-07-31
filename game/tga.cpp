@@ -52,7 +52,7 @@ bool TargaImage::load()
 
     // We don't support interleaved images
     int descriptor = mData[17];
-    if (descriptor & 0xC0 != 0) {
+    if ((descriptor & 0xC0) != 0) {
         mError = QString("Interleaved targa images are not supported.");
         return false;
     }

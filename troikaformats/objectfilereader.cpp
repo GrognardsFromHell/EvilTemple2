@@ -512,19 +512,6 @@ namespace Troika
         "Extraplanar"
     };
 
-    static bool equalFlags(const QStringList &a, const QStringList &b)
-    {
-        if (a.size() != b.size())
-            return false;
-
-        foreach (const QString &elem, a) {
-            if (!b.contains(elem))
-                return false;
-        }
-
-        return true;
-    }
-
     static QVector3D getPosition(uint x, uint y, float xOffset, float yOffset)
     {
         return QVector3D((x + 0.5f) * PixelPerWorldTile + xOffset, 0, (y + 0.5f) * PixelPerWorldTile + yOffset);
@@ -728,7 +715,7 @@ namespace Troika
                 break;
             case Description:
                 stream >> object.descriptionId;
-                if (object.descriptionId.value() == object.prototype->descriptionId)
+                if (object.descriptionId.value() == (int)object.prototype->descriptionId)
                     object.descriptionId.clear();
                 break;
             case SecretDoorFlags:
@@ -977,9 +964,7 @@ namespace Troika
                 stream >> object.portrait;
                 break;
             case CritterDescriptionUnknown:
-                ushort descriptionUnknown;
                 stream >> object.descriptionUnknownId;
-                object.descriptionUnknownId.setValue(descriptionUnknown);
                 break;
             case CritterInventoryNum:
                 stream >> object.critterInventoryNum;
@@ -1213,7 +1198,7 @@ namespace Troika
             float dayXOffset, dayYOffset, nightXOffset, nightYOffset;
 
             // Optional scout standpoint
-            quint32 scoutMap, scoutFlags, scoutX, scoutY, scoutJP;
+            qint32 scoutMap, scoutFlags, scoutX, scoutY, scoutJP;
             float scoutXOffset, scoutYOffset;
 
             // Skip the pre-struct

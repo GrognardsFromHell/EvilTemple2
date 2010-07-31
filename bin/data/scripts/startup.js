@@ -6,7 +6,7 @@ var jumppoints = {};
 var renderStates = {};
 var globalRenderStateId = 0;
 
-var editMode = true;
+var editMode = false;
 
 var tutorialMode = false; // Indicates that the tutorial is running.
 

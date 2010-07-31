@@ -325,7 +325,8 @@ public:
     QList<HashedData> textureList;
 };
 
-HashedData::HashedData(const QByteArray &_data) : data(_data), md5Hash(QCryptographicHash::hash(_data, QCryptographicHash::Md5))
+HashedData::HashedData(const QByteArray &_data) : md5Hash(QCryptographicHash::hash(_data, QCryptographicHash::Md5)),
+        data(_data)
 {
 
 }

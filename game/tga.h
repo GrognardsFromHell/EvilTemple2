@@ -62,7 +62,7 @@ private:
     /**
       Size of targa header without variable length image id field.
       */
-    const static uint TargaHeaderSize = 18;
+    const static int TargaHeaderSize = 18;
 
     uint mWidth;
     uint mHeight;

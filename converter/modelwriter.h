@@ -47,9 +47,9 @@ private:
     void startChunk(uint chunk, bool required);
     void finishChunk();
 
+    uint chunks;
     uint lastChunkStart;
     QDataStream &stream;
-    uint chunks;
     QString mFilename;
 };
 

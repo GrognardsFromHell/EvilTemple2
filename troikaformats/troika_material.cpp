@@ -11,11 +11,11 @@ namespace Troika {
         disableFaceCulling(false),
         disableLighting(false),
         disableDepthTest(false),
-        linearFiltering(false),
         disableDepthWrite(false),
+        linearFiltering(false),
         mBlendType(Alpha),
-        mSpecularPower(50),
         mRecalculateNormals(false),
+        mSpecularPower(50),
         color(255, 255, 255, 255) {
     }
 

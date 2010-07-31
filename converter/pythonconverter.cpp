@@ -470,6 +470,8 @@ static void convertBinaryOp(expr_ty left,
     case FloorDiv:
         qWarning("Floor div is not yet supported.");
         break;
+    default:
+        qFatal("Invalid operation: %d:", op);
     }
 
     if (!isPrimitive(right))
@@ -1495,7 +1497,7 @@ QString PythonConverter::convertDialogAction(const QByteArray &code, const QStri
         for (int i = 0; i < len; ++i)
             convertStatement((stmt_ty)asdl_seq_GET(astRoot->v.Module.body, i), result, 0, &environment);
         break;
-    case Suite_kind:
+    default:
         qFatal("Invalid AST type for dialog action: %d", astRoot->kind);
         break;
     }

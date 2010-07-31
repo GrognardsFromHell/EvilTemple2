@@ -80,6 +80,8 @@ Q_OBJECT
 public:
     static const int maxArchives = 10; // Try ToEE0.dat to ToEE(maxArchives-1).dat
 
+    Converter *converter;
+
     QString mInputPath, mOutputPath;
 
     QScopedPointer<Troika::VirtualFileSystem> vfs;
@@ -98,19 +100,17 @@ public:
 
     bool external;
 
-    uint mTotalWork;
-
-    uint mWorkDone;
-
     // Maps lower-case mesh filenames (normalized separators) to an information structure
     QSet<QString> meshReferences;
-
-    Converter *converter;
 
     int sectionsDone;
     int lastProgressUpdate;
 
     ConversionTask *mCurrentTask;
+
+    uint mWorkDone;
+
+    uint mTotalWork;
 
     ConverterData(Converter *_converter, const QString &inputPath, const QString &outputPath) :
             converter(_converter), mInputPath(inputPath), mOutputPath(outputPath), external(false),

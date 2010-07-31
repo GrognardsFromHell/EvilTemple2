@@ -71,7 +71,7 @@ void ConvertInterfaceTask::convertImage(IFileWriter *writer, const QString &base
                 pixelSize = 3;
             }
 
-            for (int sy = 0; sy < tgaImage.height(); ++sy) {
+            for (uint sy = 0; sy < tgaImage.height(); ++sy) {
                 uchar *destScanline = image.scanLine(destY - tgaImage.height() + sy);
                 destScanline += destX * sizeof(QRgb);
                 uchar *srcScanline = (uchar*)tgaImage.data() + (tgaImage.height() - 1 - sy) * tgaImage.width() * pixelSize;
@@ -174,7 +174,7 @@ void ConvertInterfaceTask::convertTextures(IFileWriter *writer)
             pixelSize = 3;
         }
 
-        for (int sy = 0; sy < tgaImage.height(); ++sy) {
+        for (uint sy = 0; sy < tgaImage.height(); ++sy) {
             uchar *destScanline = image.scanLine(sy);
             uchar *srcScanline = (uchar*)tgaImage.data() + (tgaImage.height() - 1 - sy) * tgaImage.width() * pixelSize;
 

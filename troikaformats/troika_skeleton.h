@@ -273,8 +273,8 @@ namespace Troika
         /**
           The matrices used to transform the bone.
           */
-        QScopedArrayPointer<QMatrix4x4> boneMatrices;
         const Skeleton *_skeleton;
+        QScopedArrayPointer<QMatrix4x4> boneMatrices;
 
         Q_DISABLE_COPY(SkeletonState);
     };

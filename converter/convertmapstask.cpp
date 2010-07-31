@@ -21,20 +21,6 @@ using namespace QJson;
 
 #include <QDir>
 
-static QVariantMap convertPathNodes(const QString &directory, IConversionService *service)
-{
-    PathNodeConverter converter;
-
-    QString filename = directory + "pathnode.pnd";
-
-    if (!converter.load(service->virtualFileSystem()->openFile(filename))) {
-        qWarning("Unable to load pathnode data %s: %s.", qPrintable(filename), qPrintable(converter.error()));
-        return QVariantMap();
-    }
-
-    return converter.convert();
-}
-
 static QVariantMap waypointToMap(const GameObject::Waypoint &waypoint)
 {
     QVariantMap result;

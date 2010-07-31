@@ -269,7 +269,7 @@ namespace Troika
                                      int boneCount,
                                      int _frameCount)
         : _dataStart(dataStart), _boneCount(boneCount),
-        _boneMap(new AnimationBoneState*[boneCount]), stream(data), frameCount(_frameCount), mFilename(filename)
+        _boneMap(new AnimationBoneState*[boneCount]), stream(data), mFilename(filename), frameCount(_frameCount)
     {
         stream.setByteOrder(QDataStream::LittleEndian);
         stream.setFloatingPointPrecision(QDataStream::SinglePrecision);

@@ -32,7 +32,7 @@ namespace Troika
         }
 
         bool operator ==(const Property &value) {
-            return !mDefined && !value.mDefined
+            return (!mDefined && !value.mDefined)
                     || (mDefined == value.mDefined && mValue == value.mValue);
         }
 

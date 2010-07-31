@@ -388,6 +388,8 @@ namespace Troika
         case Trap:
             additionalProperties = new TrapProperties(this);
             break;
+        default:
+            qFatal("Invalid object type encountered: %d", type);
         };
 
         additionalProperties->parse(parts);
@@ -600,7 +602,7 @@ namespace Troika
 
         if (isPartDefined(parts[154])) {
             QStringList factionStrings = parts[154].split(QRegExp("(\\s+|\\,)"), QString::SkipEmptyParts);
-            foreach (QString faction, factionStrings) {               
+            foreach (QString faction, factionStrings) {
                 bool ok;
                 factions.append(faction.toUInt(&ok));
                 Q_ASSERT_X(ok, "read faction", qPrintable(parts[154]));
@@ -894,7 +896,7 @@ namespace Troika
         }
     }
 
-    static const uint eventCount = 43;
+    static const int eventCount = 43;
 
     static const QString eventNames[eventCount] = {
         "OnExamine",
