@@ -1,7 +1,12 @@
 #include "navigationmesh.h"
 
-#include <vector>
+#include <gamemath.h>
+using namespace GameMath;
 
+#include <vector>
+#include <limits.h>
+
+#include <QRect>
 #include <QHash>
 #include <QElapsedTimer>
 
@@ -10,6 +15,372 @@
 namespace EvilTemple {
 
 static uint activeNavigationMeshes = 0;
+
+enum BspNodeType {
+    Bsp_HorizontalSplit,
+    Bsp_VerticalSplit,
+    Bsp_Leaf
+};
+
+struct BspNode {
+
+    BspNodeType type;
+
+    union {
+        struct {
+            // Leaf node
+            int startIndex;
+            int count;
+        };
+
+        struct {
+            // Splitter node
+            int boundary;
+            BspNode *ltNode; // Node for the less-than part
+            BspNode *geNode; // Node for the greater-than-or-equal part
+        };
+    };
+
+};
+
+/**
+  Allows faster access to rectangles via a BSP tree.
+  */
+class RectangleBspTree {
+public:
+    RectangleBspTree();
+    ~RectangleBspTree();
+
+    void build(const QVector<NavMeshRect> &rectangles);
+
+    const NavMeshRect *find(int x, int y) const;
+
+private:
+    QVector<BspNode*> mNodes;
+    QVector<const NavMeshRect*> mItems;
+};
+
+RectangleBspTree::RectangleBspTree()
+{
+}
+
+RectangleBspTree::~RectangleBspTree()
+{
+}
+
+const NavMeshRect *RectangleBspTree::find(int x, int y) const
+{
+    const BspNode *currentNode = mNodes.first();
+
+    int depth = 0;
+
+    forever {
+        switch (currentNode->type) {
+        case Bsp_HorizontalSplit:
+            depth++;
+            if (x < currentNode->boundary)
+                currentNode = currentNode->ltNode;
+            else
+                currentNode = currentNode->geNode;
+            break;
+        case Bsp_VerticalSplit:
+            depth++;
+            if (y < currentNode->boundary)
+                currentNode = currentNode->ltNode;
+            else
+                currentNode = currentNode->geNode;
+            break;
+        case Bsp_Leaf:
+            for (int i = currentNode->startIndex; i < currentNode->startIndex + currentNode->count; ++i) {
+                const NavMeshRect *rect = mItems[i];
+                if (rect->left <= x && rect->top <= y
+                    && rect->right >= x && rect->bottom >= y)
+                    return rect;
+            }
+            return NULL;
+        }
+    }
+}
+
+/**
+  Splits a list of retangles given a horizontal boundary.
+  All rectangles that intersect the left half-space are added
+  to the lessThan list, all rectangles that intersect the right half-space
+  are added to the greaterEqual set. Please note that a rectangle may
+  be added to both sets if it intersects the boundary.
+  */
+static void splitHorizontally(int boundary,
+                const QList<const NavMeshRect*> &rectangles,
+                QList<const NavMeshRect*> &lessThan,
+                QList<const NavMeshRect*> &greaterEqual)
+{
+    QList<const NavMeshRect*>::const_iterator it;
+
+    for (it = rectangles.begin(); it != rectangles.end(); ++it) {
+        const NavMeshRect *rect = *it;
+
+        if (rect->right >= boundary)
+            greaterEqual.append(rect);
+        if (rect->left < boundary)
+            lessThan.append(rect);
+    }
+}
+
+/**
+  This function operates like splitHorizontally, but it interprets the boundary as a positio on the y-axis.
+  */
+static void splitVertically(int boundary,
+                const QList<const NavMeshRect*> &rectangles,
+                QList<const NavMeshRect*> &lessThan,
+                QList<const NavMeshRect*> &greaterEqual)
+{
+    QList<const NavMeshRect*>::const_iterator it;
+
+    for (it = rectangles.begin(); it != rectangles.end(); ++it) {
+        const NavMeshRect *rect = *it;
+
+        if (rect->bottom >= boundary)
+            greaterEqual.append(rect);
+        if (rect->top < boundary)
+            lessThan.append(rect);
+    }
+}
+
+struct BspWorkItem {
+    int left, right, top, bottom; // Extent of the region to be processed
+    QList<const NavMeshRect*> items; // The items for this work item.
+    BspNode *node; // The node this work item operates on
+    bool horizontal; // Indicates splitting direction
+};
+
+static void setBoundingRect(BspWorkItem &item, const QList<const NavMeshRect*> &rectangles)
+{
+    item.left = INT_MAX;
+    item.top = INT_MAX;
+    item.right = INT_MIN;
+    item.bottom = INT_MIN;
+
+    QList<const NavMeshRect*>::const_iterator it;
+
+    for (it = rectangles.begin(); it != rectangles.end(); ++it) {
+        const NavMeshRect *rect = *it;
+
+        if (rect->left < item.left)
+            item.left = rect->left;
+        if (rect->top < item.top)
+            item.top = rect->top;
+        if (rect->right > item.right)
+            item.right = rect->right;
+        if (rect->bottom > item.bottom)
+            item.bottom = rect->bottom;
+    }
+
+    Q_ASSERT(item.left <= item.right);
+    Q_ASSERT(item.top <= item.bottom);
+}
+
+/**
+  Tries to find a near-optimal split boundary on the x axis for a list of rectangles.
+  It attempts to distribute the rectangles evenly among the two resulting sets.
+  */
+static int findHorizontalBoundary(const BspWorkItem &workItem)
+{
+    // Create a set of all the X coordinates that may be used as boundaries
+    QSet<int> canidates;
+
+    foreach (const NavMeshRect *rect, workItem.items) {
+        if (rect->left < workItem.left)
+            canidates << workItem.left;
+        else
+            canidates << rect->left;
+    }
+
+    float quality = 1;
+    int solution = 0;
+
+    // Attempt to split by each of the canidates and choose the result closest to 0.5f distribution
+    foreach (int canidate, canidates) {
+        uint lessThan = 0;
+        uint greaterThan = 0;
+
+        foreach (const NavMeshRect *rect, workItem.items) {
+            if (rect->right >= canidate)
+                greaterThan++;
+            else
+                lessThan++;
+        }
+
+        float canidateQuality = fabs(1 - lessThan / (float)greaterThan);
+        if (canidateQuality < quality) {
+            solution = canidate;
+            quality = canidateQuality;
+        }
+    }
+
+    return solution;
+}
+
+/**
+  Tries to find a near-optimal split boundary on the y axis for a list of work items.
+  */
+static int findVerticalBoundary(const BspWorkItem &workItem)
+{
+    // Create a set of all the X coordinates that may be used as boundaries
+    QSet<int> canidates;
+
+    foreach (const NavMeshRect *rect, workItem.items) {
+        if (rect->top < workItem.top)
+            canidates << workItem.top;
+        else
+            canidates << rect->top;
+    }
+
+    float quality = 1;
+    int solution = 0;
+
+    // Attempt to split by each of the canidates and choose the result closest to 0.5f distribution
+    foreach (int canidate, canidates) {
+        uint lessThan = 0;
+        uint greaterThan = 0;
+
+        foreach (const NavMeshRect *rect, workItem.items) {
+            if (rect->bottom >= canidate)
+                greaterThan++;
+            else
+                lessThan++;
+        }
+
+        float canidateQuality = fabs(1 - lessThan / (float)greaterThan);
+        if (canidateQuality < quality) {
+            solution = canidate;
+            quality = canidateQuality;
+        }
+    }
+
+    return solution;
+}
+
+const uint LeafThreshold = 10; // At most 10 items in a leaf
+
+void RectangleBspTree::build(const QVector<NavMeshRect> &rectangles)
+{
+    QList<BspWorkItem> workQueue;
+
+    BspWorkItem rootItem;
+    for (int i = 0; i < rectangles.size(); ++i)
+        rootItem.items.append(rectangles.data() + i);
+    setBoundingRect(rootItem, rootItem.items);
+    rootItem.node = new BspNode;
+    rootItem.horizontal = true;
+    mNodes.append(rootItem.node);
+
+    workQueue << rootItem;
+
+    QList<const NavMeshRect*> lessSet, greaterEqualSet;
+
+    while (!workQueue.isEmpty()) {
+        BspWorkItem workItem = workQueue.takeFirst();
+
+        // Handle leafs
+        if (workItem.items.size() <= LeafThreshold) {
+            workItem.node->type = Bsp_Leaf;
+            workItem.node->startIndex = mItems.size();
+            workItem.node->count = workItem.items.size();
+            for (int i = 0; i < workItem.items.size(); ++i)
+                mItems.append(workItem.items[i]);
+            continue;
+        }
+
+        lessSet.clear();
+        greaterEqualSet.clear();
+
+        // Handle horizontals
+        if (workItem.horizontal) {
+            int boundary = findHorizontalBoundary(workItem);
+            splitHorizontally(boundary, workItem.items, lessSet, greaterEqualSet);
+
+            // TODO: This could be improved to use a vertical split instead.
+            if (lessSet.isEmpty() || greaterEqualSet.isEmpty()) {
+                workItem.node->type = Bsp_Leaf;
+                workItem.node->startIndex = mItems.size();
+                workItem.node->count = workItem.items.size();
+                for (int i = 0; i < workItem.items.size(); ++i)
+                    mItems.append(workItem.items[i]);
+                continue;
+            }
+
+            BspWorkItem lesserItem;
+            lesserItem.horizontal = false;
+            lesserItem.items = lessSet;
+            lesserItem.node = new BspNode;
+            mNodes.append(lesserItem.node);
+            lesserItem.top = workItem.top;
+            lesserItem.bottom = workItem.bottom;
+            lesserItem.left = workItem.left;
+            lesserItem.right = boundary - 1;
+
+            BspWorkItem greaterItem;
+            greaterItem.horizontal = false;
+            greaterItem.items = greaterEqualSet;
+            greaterItem.node = new BspNode;
+            mNodes.append(greaterItem.node);
+            greaterItem.top = workItem.top;
+            greaterItem.bottom = workItem.bottom;
+            greaterItem.left = boundary;
+            greaterItem.right = workItem.right;
+
+            workQueue << lesserItem << greaterItem;
+
+            workItem.node->type = Bsp_HorizontalSplit;
+            workItem.node->ltNode = lesserItem.node;
+            workItem.node->geNode = greaterItem.node;
+            workItem.node->boundary = boundary;
+            continue;
+        }
+
+        // Must be a vertical split here
+        int boundary = findVerticalBoundary(workItem);
+        splitVertically(boundary, workItem.items, lessSet, greaterEqualSet);
+
+        // TODO: This could be improved to use a horizontal split instead.
+        if (lessSet.isEmpty() || greaterEqualSet.isEmpty()) {
+            workItem.node->type = Bsp_Leaf;
+            workItem.node->startIndex = mItems.size();
+            workItem.node->count = workItem.items.size();
+            for (int i = 0; i < workItem.items.size(); ++i)
+                mItems.append(workItem.items[i]);
+            continue;
+        }
+
+        BspWorkItem lesserItem;
+        lesserItem.horizontal = true;
+        lesserItem.items = lessSet;
+        lesserItem.node = new BspNode;
+        mNodes.append(lesserItem.node);
+        lesserItem.top = workItem.top;
+        lesserItem.bottom = boundary - 1;
+        lesserItem.left = workItem.left;
+        lesserItem.right = workItem.right;
+
+        BspWorkItem greaterItem;
+        greaterItem.horizontal = true;
+        greaterItem.items = greaterEqualSet;
+        greaterItem.node = new BspNode;
+        mNodes.append(greaterItem.node);
+        greaterItem.top = boundary;
+        greaterItem.bottom = workItem.bottom;
+        greaterItem.left = workItem.left;
+        greaterItem.right = workItem.right;
+
+        workQueue << lesserItem << greaterItem;
+
+        workItem.node->type = Bsp_VerticalSplit;
+        workItem.node->ltNode = lesserItem.node;
+        workItem.node->geNode = greaterItem.node;
+        workItem.node->boundary = boundary;
+    }
+
+}
 
 inline static bool westeast_intersect(float z, int left, int right, float xascent, const Vector4 &from, const Vector4 &to, uint minX, uint maxX, Vector4 &intersection)
 {
@@ -54,13 +425,14 @@ inline static bool northsouth_intersect(float x, int top, int bottom, float zasc
     return iz >= top && iz <= bottom;
 }
 
-NavigationMesh::NavigationMesh()
+NavigationMesh::NavigationMesh() : mRectangleBspTree(new RectangleBspTree)
 {
     activeNavigationMeshes++;
 }
 
 NavigationMesh::~NavigationMesh()
 {
+    delete mRectangleBspTree;
     activeNavigationMeshes--;
 }
 
@@ -117,8 +489,8 @@ bool checkLos(const NavMeshRect *losStartRect, const Vector4 &start, const Vecto
     // Check with each of the current rects portals, whether the line intersects
     forever {
         // If the end point lies in the current rectangle, we succeeded
-        if (end.x() >= currentRect->topLeft.x() && end.x() <= currentRect->bottomRight.x()
-            && end.z() >= currentRect->topLeft.z() && end.z() <= currentRect->bottomRight.z())
+        if (end.x() >= currentRect->left && end.x() <= currentRect->right
+            && end.z() >= currentRect->top && end.z() <= currentRect->bottom)
         {
             // TODO: Take dynamic LOS into account?
             return true;
@@ -309,7 +681,7 @@ bool NavigationMesh::hasLineOfSight(const Vector4 &from, const Vector4 &to) cons
 
 const NavMeshRect *NavigationMesh::findRect(const Vector4 &position) const
 {
-    uint x = position.x();
+    /*uint x = position.x();
     uint z = position.z();
 
     const NavMeshRect * const rects = mRectangles.constData();
@@ -317,18 +689,25 @@ const NavMeshRect *NavigationMesh::findRect(const Vector4 &position) const
     for (int i = 0; i < mRectangles.size(); ++i) {
         const NavMeshRect *rect = rects + i;
 
-        if (x >= rect->topLeft.x() && x <= rect->bottomRight.x()
-            && z >= rect->topLeft.z() && z <= rect->bottomRight.z()) {
+        if (x >= rect->left && x <= rect->right
+            && z >= rect->top && z <= rect->bottom) {
             return rect;
         }
     }
 
-    return NULL;
+    return NULL;*/
+
+    return mRectangleBspTree->find(position.x(), position.z());
 }
 
 inline QDataStream &operator >>(QDataStream &stream, NavMeshRect &rect)
 {
-    stream >> rect.topLeft >> rect.bottomRight >> rect.center;
+    Vector4 topLeft, bottomRight;
+    stream >> topLeft >> bottomRight >> rect.center;
+    rect.left = topLeft.x();
+    rect.top = topLeft.z();
+    rect.right = bottomRight.x();
+    rect.bottom = bottomRight.z();
 
     return stream;
 }
@@ -372,12 +751,25 @@ QDataStream &operator >>(QDataStream &stream, NavigationMesh &mesh)
         portal->sideB->portals.append(portal);
     }
 
+    // Build the BSP index of the rectangles in this navigation mesh
+    qDebug("Building BSP tree for %d rectangles.", mesh.mRectangles.size());
+    QElapsedTimer timer;
+    timer.start();
+    mesh.mRectangleBspTree->build(mesh.mRectangles);
+    qDebug("Finished in %d milliseconds.", timer.elapsed());
+
     return stream;
 }
 
 QDataStream &operator >>(QDataStream &stream, TaggedRegion &region)
 {
-    stream >> region.topLeft >> region.bottomRight >> region.center >> region.tag;
+    Vector4 topLeft, bottomRight;
+    stream >> topLeft >> bottomRight >> region.center >> region.tag;
+
+    region.left = topLeft.x();
+    region.top = topLeft.z();
+    region.right = bottomRight.x();
+    region.bottom = bottomRight.z();
 
     return stream;
 }

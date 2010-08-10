@@ -131,10 +131,10 @@ namespace EvilTemple {
                     glColor4f(1, 0, 0, 0.5f);
                 }
 
-                glVertex3f(region.topLeft.x(), 0, region.topLeft.z());
-                glVertex3f(region.topLeft.x(), 0, region.bottomRight.z());
-                glVertex3f(region.bottomRight.x(), 0, region.bottomRight.z());
-                glVertex3f(region.bottomRight.x(), 0, region.topLeft.z());
+                glVertex3f(region.left, 0, region.top);
+                glVertex3f(region.left, 0, region.bottom);
+                glVertex3f(region.right, 0, region.bottom);
+                glVertex3f(region.right, 0, region.top);
             }
             glEnd();
         }
@@ -166,10 +166,11 @@ namespace EvilTemple {
         stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
 
         foreach (const NavMeshRect &rect, mNavigationMesh->rectangles()) {
-            float left = rect.topLeft.x();
-            float top = rect.topLeft.z();
-            float right = rect.bottomRight.x();
-            float bottom = rect.bottomRight.z();
+            // Convert to float for the stream-writing below
+            float left = rect.left;
+            float top = rect.top;
+            float right = rect.right;
+            float bottom = rect.bottom;
 
             const float zero = 0;
 
@@ -326,10 +327,10 @@ namespace EvilTemple {
 
         // Find the rectangle that contains the point
         foreach (const TaggedRegion &region, layer) {
-            if (at.x() >= region.topLeft.x()
-                && at.z() >= region.topLeft.z()
-                && at.x() <= region.bottomRight.x()
-                && at.z() <= region.bottomRight.z())
+            if (at.x() >= region.left
+                && at.z() >= region.top
+                && at.x() <= region.right
+                && at.z() <= region.bottom)
                 return region.tag;
         }
 

@@ -18,8 +18,10 @@ uint getActiveNavigationMeshes();
 struct NavMeshPortal;
 
 struct Region : public AlignedAllocation {
-    Vector4 topLeft;
-    Vector4 bottomRight;
+    int left;
+    int top;
+    int right;
+    int bottom;
     Vector4 center;
 };
 
@@ -51,12 +53,13 @@ struct NavMeshPortal : public AlignedAllocation {
     uint start, end; // The start and end of the portal on the given axis
 };
 
+class RectangleBspTree;
+
 class NavigationMesh
 {
 friend QDataStream &operator >>(QDataStream&, NavigationMesh&);
 public:
     NavigationMesh();
-    NavigationMesh(const QList<NavMeshRect*> &rectangles, const QList<NavMeshPortal*> &portals);
     ~NavigationMesh();
 
     const QVector<NavMeshRect> &rectangles() const;
@@ -71,6 +74,7 @@ public:
 private:
     QVector<NavMeshRect> mRectangles;
     QVector<NavMeshPortal> mPortals;
+    RectangleBspTree *mRectangleBspTree;
 };
 
 QDataStream &operator >>(QDataStream &stream, NavigationMesh &mesh);

@@ -220,6 +220,7 @@ var Map = function(id) {
 
         // TODO: Load/Persist FOW state
         this.renderFog = new FogOfWar(gameView.scene);
+        this.renderFog.sectorMap = gameView.sectorMap;
         var fowNode = gameView.scene.createNode();
         fowNode.attachObject(this.renderFog);
 
@@ -578,10 +579,10 @@ var Map = function(id) {
                 Maps.currentMap.renderFog.reveal(Party.getLeader().position, 100);
             }
 
-            gameView.addVisualTimer(100, fogCheck);
+            gameView.addVisualTimer(500, fogCheck);
         };
 
-        gameView.addVisualTimer(100, fogCheck);
+        gameView.addVisualTimer(500, fogCheck);
 
     });
 

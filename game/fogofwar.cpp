@@ -4,6 +4,8 @@
 
 #include "fogofwar.h"
 
+#include <QPointer>
+
 namespace EvilTemple {
 
 const uint Sidelength = 2880;
@@ -24,7 +26,7 @@ struct FogSectorBitmap {
     }
 
     bool isRevealed(int x, int y) {
-        return bitfield[y * 256 + x];
+        return bitfield[y * 256 + x] == 0;
     }
 
     void unreveal(int x, int y) {
@@ -63,6 +65,8 @@ class FogOfWarData : public AlignedAllocation
 {
 public:
     FogOfWarData();
+
+    QPointer<SectorMap> sectorMap;
 
     Box3d boundingBox;
     SharedMaterialState material;
@@ -136,6 +140,13 @@ static QPoint vectorToTile(const Vector4 &center)
     return QPoint(tileX, tileY);
 }
 
+static Vector4 tileToVector(int x, int y)
+{
+    x *= TileSidelength;
+    y *= TileSidelength;
+    return Vector4(x, 0, y, 1);
+}
+
 void FogOfWar::reveal(const Vector4 &center, float radius)
 {
     // Find center sector
@@ -153,6 +164,7 @@ void FogOfWar::reveal(const Vector4 &center, float radius)
             int ydiff = (tileY - centerY);
             ydiff *= ydiff;
 
+            // Check that the tile is within the radius
             if (xdiff + ydiff > radiusSquare)
                 continue;
 
@@ -161,6 +173,17 @@ void FogOfWar::reveal(const Vector4 &center, float radius)
             if (bitmap) {
                 int subtileX = tileX % SectorSidelength;
                 int subtileY = tileY % SectorSidelength;
+
+                // The LoS check is very expensive, skip it, if the tile is already revealed
+                if (bitmap->isRevealed(subtileX, subtileY))
+                    continue;
+
+                // Check for line of sight from center (TODO: Naive approach)
+                if (d->sectorMap
+                    && !d->sectorMap->hasLineOfSight(center, tileToVector(tileX, tileY)))
+                {
+                    continue;
+                }
 
                 bitmap->reveal(subtileX, subtileY);
             } else {
@@ -235,6 +258,16 @@ void FogOfWar::render(RenderStates &renderStates, MaterialState *overrideMateria
 const Box3d &FogOfWar::boundingBox()
 {
     return d->boundingBox;
+}
+
+SectorMap *FogOfWar::sectorMap() const
+{
+    return d->sectorMap;
+}
+
+void FogOfWar::setSectorMap(SectorMap *sectorMap)
+{
+    d->sectorMap = sectorMap;
 }
 
 }

@@ -4,6 +4,7 @@
 #include <QScopedPointer>
 
 #include "renderable.h"
+#include "sectormap.h"
 
 namespace EvilTemple {
 
@@ -12,6 +13,7 @@ class FogOfWarData;
 class FogOfWar : public Renderable
 {
     Q_OBJECT
+    Q_PROPERTY(EvilTemple::SectorMap *sectorMap READ sectorMap WRITE setSectorMap)
 public:
 
     FogOfWar();
@@ -20,6 +22,9 @@ public:
     void render(RenderStates &renderStates, MaterialState *overrideMaterial);
 
     const Box3d &boundingBox();
+
+    SectorMap *sectorMap() const;
+    void setSectorMap(SectorMap *sectorMap);
 
 signals:
 
