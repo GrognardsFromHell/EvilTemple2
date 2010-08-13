@@ -4,4 +4,6 @@ Item {
     property int maxRadius
 
     property string name : 'Zone Name'
+
+    property string areaId : 'area-id'
 }

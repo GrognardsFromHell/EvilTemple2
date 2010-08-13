@@ -405,7 +405,103 @@ static void convertScripts(IConversionService *service, IFileWriter *output)
     output->addFile("scripts.js", serializer.serialize(scriptFiles));
 }
 
-static QScriptValue readMesFile(QScriptContext *ctx, QScriptEngine *engine, Troika::VirtualFileSystem *vfs) {
+static void convertWorldmapPaths(IConversionService *service, IFileWriter *writer)
+{
+    const QString worldmapPathsFilename = "art/interface/worldmap_ui/worldmap_ui_paths.bin";
+
+    QByteArray worldmapPathsData = service->virtualFileSystem()->openFile(worldmapPathsFilename);
+
+    if (worldmapPathsData.isNull()) {
+        qWarning("Unable to open worldmap paths: %s.", qPrintable(worldmapPathsFilename));
+        return;
+    }
+
+    QDataStream stream(worldmapPathsData);
+    stream.setByteOrder(QDataStream::LittleEndian);
+
+    int count;
+    stream >> count;
+    Q_ASSERT(count >= 0);
+
+    QVariantList paths;
+
+    for (int i = 0; i < count; ++i) {
+        QVariantMap path;
+
+        uint fromX, fromY;
+        uint toX, toY;
+        stream >> fromX >> fromY >> toX >> toY;
+
+        QVariantList from;
+        from << fromX << fromY;
+        path["from"] = from;
+
+        QVariantList to;
+        to << toX << toY;
+        path["to"] = to;
+
+        int elementCount;
+        stream >> elementCount;
+        Q_ASSERT(elementCount >= 0);
+
+        QVariantList pathElements;
+
+        for (int j = 0; j < elementCount; ++j) {
+            uchar element;
+            stream >> element;
+
+            switch (element) {
+            case 5:
+                pathElements << "up";
+                break;
+            case 6:
+                pathElements << "down";
+                break;
+            case 7:
+                pathElements << "left";
+                break;
+            case 8:
+                pathElements << "right";
+                break;
+            case 9:
+                pathElements << "upleft";
+                break;
+            case 10:
+                pathElements << "upright";
+                break;
+            case 11:
+                pathElements << "downleft";
+                break;
+            case 12:
+                pathElements << "downright";
+                break;
+            case 13:
+                pathElements << "stay";
+                break;
+            default:
+                qWarning("Unknown opcode for element %d in worldmap path %d: %02x", j, i, element);
+                break;
+            }
+        }
+
+        // ToEE aligns the paths on 4 byte boundaries
+        if (elementCount % 4 != 0) {
+            stream.skipRawData(4 - (elementCount % 4));
+        }
+
+        path["path"] = pathElements;
+
+        paths << QVariant(path);
+
+        Q_ASSERT(stream.status() == QDataStream::Ok);
+    }
+
+    QJson::Serializer serializer;
+    writer->addFile("worldmapPaths.js", serializer.serialize(paths));
+}
+
+static QScriptValue readMesFile(QScriptContext *ctx, QScriptEngine *engine, Troika::VirtualFileSystem *vfs)
+{
     if (ctx->argumentCount() != 1) {
         return ctx->throwError("readMesFile takes one string argument.");
     }
@@ -423,7 +519,8 @@ static QScriptValue readMesFile(QScriptContext *ctx, QScriptEngine *engine, Troi
     return result;
 }
 
-static QScriptValue addFile(QScriptContext *ctx, QScriptEngine *engine, IFileWriter *writer) {
+static QScriptValue addFile(QScriptContext *ctx, QScriptEngine *engine, IFileWriter *writer)
+{
     if (ctx->argumentCount() != 3) {
         return ctx->throwError("addFile takes three arguments: filename, content, compression.");
     }
@@ -437,7 +534,8 @@ static QScriptValue addFile(QScriptContext *ctx, QScriptEngine *engine, IFileWri
     return QScriptValue(true);
 }
 
-static QScriptValue readTabFile(QScriptContext *ctx, QScriptEngine *engine, Troika::VirtualFileSystem *vfs) {
+static QScriptValue readTabFile(QScriptContext *ctx, QScriptEngine *engine, Troika::VirtualFileSystem *vfs)
+{
     if (ctx->argumentCount() != 1) {
         return ctx->throwError("readTabFile takes one string argument.");
     }
@@ -531,6 +629,8 @@ void ConvertScriptsTask::run()
     convertLegacyMaps(service(), writer.data());
 
     convertSoundSchemes(service(), writer.data());
+
+    convertWorldmapPaths(service(), writer.data());
 
     writer->close();
 }

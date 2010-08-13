@@ -23,12 +23,13 @@ namespace EvilTemple {
         Scene *scene;
         QWeakPointer<Sector> sector;
 
-        SharedNavigationMesh mesh;
+        SharedNavigationMesh walkableMesh;
+        SharedNavigationMesh flyableMesh;
 
         RegionLayers regionLayers;
     };
 
-    SectorMapData::SectorMapData() : mesh(0), scene(0)
+    SectorMapData::SectorMapData() : flyableMesh(0), walkableMesh(0), scene(0)
     {
 
     }
@@ -47,7 +48,8 @@ namespace EvilTemple {
         mColorBuffer(QGLBuffer::VertexBuffer),
         mIndexBuffer(QGLBuffer::IndexBuffer),
         mPortalVertexBuffer(QGLBuffer::VertexBuffer),
-        mBuffersInvalid(true)
+        mBuffersInvalid(true),
+        mBaseColor(1, 0, 0, 0.5f)
     {
         mRenderCategory = Renderable::DebugOverlay;
         mBoundingBox.setToInfinity();
@@ -128,7 +130,7 @@ namespace EvilTemple {
                 } else if (type == "metal") {
                     glColor4f(179 / 255.0, 179 / 255.0, 179 / 255.0, 0.5f);
                 } else {
-                    glColor4f(1, 0, 0, 0.5f);
+                    glColor4fv(mBaseColor.data());
                 }
 
                 glVertex3f(region.left, 0, region.top);
@@ -226,10 +228,10 @@ namespace EvilTemple {
 
     QVector<Vector4> SectorMap::findPath(const Vector4 &start, const Vector4 &end) const
     {
-        if (d->mesh) {
+        if (d->walkableMesh) {
             QElapsedTimer timer;
             timer.start();
-            QVector<Vector4> result = d->mesh->findPath(start, end);
+            QVector<Vector4> result = d->walkableMesh->findPath(start, end);
             qint64 elapsed = timer.elapsed();
             qDebug("Total time for pathfinding: %ld ms.", elapsed);
 
@@ -241,8 +243,8 @@ namespace EvilTemple {
 
     bool SectorMap::hasLineOfSight(const Vector4 &from, const Vector4 &to) const
     {
-        if (d->mesh)
-            return d->mesh->hasLineOfSight(from, to);
+        if (d->flyableMesh)
+            return d->flyableMesh->hasLineOfSight(from, to);
         else
             return false;
     }
@@ -255,16 +257,17 @@ namespace EvilTemple {
             return false;
 
         d->regionLayers.clear();
-        d->mesh.clear();
+        d->walkableMesh.clear();
+        d->flyableMesh.clear();
 
         QDataStream stream(&file);
         stream.setByteOrder(QDataStream::LittleEndian);
         stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
 
-        d->mesh = SharedNavigationMesh(new NavigationMesh);
-        SharedNavigationMesh flyableMesh(new NavigationMesh);
+        d->walkableMesh = SharedNavigationMesh(new NavigationMesh);
+        d->flyableMesh = SharedNavigationMesh(new NavigationMesh);
 
-        stream >> *(d->mesh.data()) >> *(flyableMesh.data());
+        stream >> *(d->walkableMesh.data()) >> *(d->flyableMesh.data());
 
         while (!stream.atEnd()) {
             QString layerName;
@@ -277,21 +280,37 @@ namespace EvilTemple {
                 TaggedRegion &region = layer[i];
                 stream >> region;
             }
+
             qDebug("Loaded region layer %s.", qPrintable(layerName));
             d->regionLayers[layerName] = layer;
         }
 
-        qDebug("Using mesh with %d rectangles and %d portals.", d->mesh->rectangles().size(),
-               d->mesh->portals().size());
+        qDebug("Using walkable mesh with %d rectangles and %d portals.", d->walkableMesh->rectangles().size(),
+               d->walkableMesh->portals().size());
+        qDebug("Using flyable mesh with %d rectangles and %d portals.", d->flyableMesh->rectangles().size(),
+               d->flyableMesh->portals().size());
 
         return true;
     }
 
     bool SectorMap::createDebugView() const
     {
-        if (d->scene && d->mesh) {
+        if (d->scene && d->walkableMesh) {
             Sector *sector = new Sector;
-            sector->setNavigationMesh(d->mesh);
+            sector->setNavigationMesh(d->walkableMesh);
+
+            SceneNode *node = d->scene->createNode();
+            node->attachObject(sector);
+        }
+
+        return true;
+    }
+
+    bool SectorMap::createFlyableDebugView() const
+    {
+        if (d->scene && d->flyableMesh) {
+            Sector *sector = new Sector;
+            sector->setNavigationMesh(d->flyableMesh);
 
             SceneNode *node = d->scene->createNode();
             node->attachObject(sector);
@@ -302,9 +321,15 @@ namespace EvilTemple {
 
     bool SectorMap::createDebugLayer(const QString &layerName) const
     {
+        return createDebugLayer(layerName, Vector4(1, 0, 0, 0.5f));
+    }
+
+    bool SectorMap::createDebugLayer(const QString &layerName, const Vector4 &baseColor) const
+    {
         if (d->scene && d->regionLayers.contains(layerName)) {
             Sector *sector = new Sector;
             sector->setLayer(d->regionLayers[layerName]);
+            sector->setBaseColor(baseColor);
 
             SceneNode *node = d->scene->createNode();
             node->attachObject(sector);

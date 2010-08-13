@@ -12,8 +12,11 @@
 #include "navigationmeshbuilder.h"
 
 GAMEMATH_ALIGNEDTYPE_PRE struct GAMEMATH_ALIGNEDTYPE_MID TaggedRegion : public AlignedAllocation {
-    Vector4 topLeft;
-    Vector4 bottomRight;
+    int left;
+    int top;
+    int right;
+    int bottom;
+
     Vector4 center;
     QVariant tag;
 } GAMEMATH_ALIGNEDTYPE_POST;
@@ -24,43 +27,16 @@ typedef QHash<QString, RegionLayer> RegionLayers;
 struct NavMeshPortal;
 
 GAMEMATH_ALIGNEDTYPE_PRE struct GAMEMATH_ALIGNEDTYPE_MID NavMeshRect : public AlignedAllocation {
-    Vector4 topLeft;
-    Vector4 bottomRight;
     Vector4 center;
 
     // Global coordinates
-    uint left;
-    uint top;
-    uint right;
-    uint bottom;
+    int left;
+    int top;
+    int right;
+    int bottom;
 
     QVector<const NavMeshPortal*> portals;
 
-    GAMEMATH_INLINE void* operator new(size_t size)
-    {
-            void *result = ALIGNED_MALLOC(size);
-            if (!result)
-                    throw std::bad_alloc();
-            return result;
-    }
-
-    GAMEMATH_INLINE void operator delete(void *ptr)
-    {
-            ALIGNED_FREE(ptr);
-    }
-
-    GAMEMATH_INLINE void* operator new[](size_t size)
-    {
-            void *result = ALIGNED_MALLOC(size);
-            if (!result)
-                    throw std::bad_alloc();
-            return result;
-    }
-
-    GAMEMATH_INLINE void operator delete[](void *ptr)
-    {
-            ALIGNED_FREE(ptr);
-    }
 } GAMEMATH_ALIGNEDTYPE_POST;
 
 enum PortalAxis {
@@ -102,6 +78,15 @@ struct ProcessedSector {
     bool walkable[SectorSideLength][SectorSideLength];
     bool flyable[SectorSideLength][SectorSideLength];
     bool cover[SectorSideLength][SectorSideLength];
+
+    /**
+      Information retrieved from the sector SVB files.
+      Relates to line-of-sight calculations
+      */
+    bool visionExtender[SectorSideLength][SectorSideLength];
+    bool visionEnder[SectorSideLength][SectorSideLength];
+    bool visionArchway[SectorSideLength][SectorSideLength];
+    bool visionBase[SectorSideLength][SectorSideLength];
 
     uchar negativeHeight[SectorSideLength][SectorSideLength];
 
@@ -1026,14 +1011,27 @@ static void findNavRectangles(QVector<ProcessedSector> &sectors, QList<NavMeshRe
         rect->top = tileRect.top() * (PixelPerWorldTile / 3);
         rect->bottom = (tileRect.bottom() + 1) * (PixelPerWorldTile / 3);
 
-        rect->topLeft = Vector4(rect->left, 0, rect->top, 1);
-        rect->bottomRight = Vector4(rect->right, 0, rect->bottom, 1);
+        Vector4 topLeft(rect->left, 0, rect->top, 1);
+        Vector4 bottomRight(rect->right, 0, rect->bottom, 1);
 
-        rect->center = 0.5f * (rect->topLeft + rect->bottomRight);
+        rect->center = 0.5f * (topLeft + bottomRight);
         rect->center.setW(1);
 
         rectangles.append(rect);
     }
+}
+
+static void makeTaggedRegion(TaggedRegion &region, const QRect &rect) {
+    region.left = rect.left() * (PixelPerWorldTile / 3);
+    region.right = (rect.right() + 1) * (PixelPerWorldTile / 3);
+    region.top = rect.top() * (PixelPerWorldTile / 3);
+    region.bottom = (rect.bottom() + 1) * (PixelPerWorldTile / 3);
+
+    Vector4 topLeft(region.left, 0, region.top, 1);
+    Vector4 bottomRight(region.right, 0, region.bottom, 1);
+
+    region.center = 0.5f * (topLeft + bottomRight);
+    region.center.setW(1);
 }
 
 template<uchar type>
@@ -1044,20 +1042,9 @@ static void buildSoundRegions(QVector<ProcessedSector> &sectors, RegionLayer &la
     findRectangles< FootstepSoundPredicate<type> >(sectors, rectangles);
 
     foreach (const QRect &rect, rectangles) {
-        uint left = rect.left() * (PixelPerWorldTile / 3);
-        uint right = (rect.right() + 1) * (PixelPerWorldTile / 3);
-        uint top = rect.top() * (PixelPerWorldTile / 3);
-        uint bottom = (rect.bottom() + 1) * (PixelPerWorldTile / 3);
-
         TaggedRegion region;
-        region.topLeft = Vector4(left, 0, top, 1);
-        region.bottomRight = Vector4(right, 0, bottom, 1);
-
-        region.center = 0.5f * (region.topLeft + region.bottomRight);
-        region.center.setW(1);
-
+        makeTaggedRegion(region, rect);
         region.tag = QVariant(QString::fromLatin1(tag));
-
         layer.append(region);
     }
 }
@@ -1076,6 +1063,52 @@ static void buildSoundLayer(QVector<ProcessedSector> &sectors, RegionLayer &laye
     buildSoundRegions<11>(sectors, layer, "marsh");
 }
 
+struct VisionExtenderPredicate
+{
+    static bool include(ProcessedSector *sector, int x, int y)
+    {
+        return sector->visionExtender[x][y];
+    }
+};
+
+struct VisionBasePredicate
+{
+    static bool include(ProcessedSector *sector, int x, int y)
+    {
+        return sector->visionBase[x][y];
+    }
+};
+
+struct VisionArchwayPredicate
+{
+    static bool include(ProcessedSector *sector, int x, int y)
+    {
+        return sector->visionArchway[x][y];
+    }
+};
+
+struct VisionSeparatorPredicate
+{
+    static bool include(ProcessedSector *sector, int x, int y)
+    {
+        return sector->visionEnder[x][y];
+    }
+};
+
+template<typename Predicate>
+static void buildPredicatedRegions(QVector<ProcessedSector> &sectors, RegionLayer &layer)
+{
+    QList<QRect> rectangles;
+
+    findRectangles<Predicate>(sectors, rectangles);
+
+    foreach (const QRect &rect, rectangles) {
+        TaggedRegion region;
+        makeTaggedRegion(region, rect);
+        layer.append(region);
+    }
+}
+
 static void buildNegativeHeightRegions(QVector<ProcessedSector> &sectors, RegionLayer &layer)
 {
     QList<QRect> rectangles;
@@ -1083,20 +1116,9 @@ static void buildNegativeHeightRegions(QVector<ProcessedSector> &sectors, Region
     findHeightZones(sectors, rectangles);
 
     foreach (const QRect &rect, rectangles) {
-        uint left = rect.left() * (PixelPerWorldTile / 3);
-        uint right = (rect.right() + 1) * (PixelPerWorldTile / 3);
-        uint top = rect.top() * (PixelPerWorldTile / 3);
-        uint bottom = (rect.bottom() + 1) * (PixelPerWorldTile / 3);
-
         TaggedRegion region;
-        region.topLeft = Vector4(left, 0, top, 1);
-        region.bottomRight = Vector4(right, 0, bottom, 1);
-
-        region.center = 0.5f * (region.topLeft + region.bottomRight);
-        region.center.setW(1);
-
+        makeTaggedRegion(region, rect);
         region.tag = QVariant(0x22);
-
         layer.append(region);
     }
 }
@@ -1112,7 +1134,7 @@ static void writeNavigationMesh(QDataStream &stream,
     QHash<const NavMeshRect*, uint> rectIndices;
 
     foreach (const NavMeshRect *rect, rectangles) {
-        stream << rect->topLeft << rect->bottomRight << rect->center;
+        stream << rect->left << rect->top << rect->right << rect->bottom << rect->center;
         rectIndices[rect] = index++;
     }
 
@@ -1132,7 +1154,7 @@ static void writeRegionLayer(QDataStream &stream, const QString &layerName, cons
     stream << layerName << layer.size();
 
     foreach (const TaggedRegion &region, layer) {
-        stream << region.topLeft << region.bottomRight << region.center << region.tag;
+        stream << region.left << region.top << region.right << region.bottom << region.center << region.tag;
     }
 }
 
@@ -1199,6 +1221,15 @@ QByteArray NavigationMeshBuilder::build(const Troika::ZoneTemplate *tpl, const Q
                 markFlyable<TILE_FLYOVER_LL>(px    , py + 2, image, sector, bitfield);
                 markFlyable<TILE_FLYOVER_LM>(px + 1, py + 2, image, sector, bitfield);
                 markFlyable<TILE_FLYOVER_LR>(px + 2, py + 2, image, sector, bitfield);
+
+                for (int sx = 0; sx < 3; ++sx) {
+                    for (int sy = 0; sy < 3; ++sy) {
+                        sector->visionExtender[px+sx][py+sy] = troikaSector.tiles[x][y].isVisionExtend(sx, sy);
+                        sector->visionEnder[px+sx][py+sy] = troikaSector.tiles[x][y].isVisionEnd(sx, sy);
+                        sector->visionArchway[px+sx][py+sy] = troikaSector.tiles[x][y].isVisionArchway(sx, sy);
+                        sector->visionBase[px+sx][py+sy] = troikaSector.tiles[x][y].isVisionBase(sx, sy);
+                    }
+                }
 
                 for (int tx = px; tx < px + 3; ++tx) {
                     for (int ty = py; ty < py + 3; ++ty) {
@@ -1268,6 +1299,22 @@ QByteArray NavigationMeshBuilder::build(const Troika::ZoneTemplate *tpl, const Q
     RegionLayer waterLayer;
     buildNegativeHeightRegions(sectors, waterLayer);
     writeRegionLayer(stream, "water", waterLayer);
+
+    RegionLayer visionExtendLayer;
+    buildPredicatedRegions<VisionExtenderPredicate>(sectors, visionExtendLayer);
+    writeRegionLayer(stream, "visionExtend", visionExtendLayer);
+
+    RegionLayer visionSeparatorLayer;
+    buildPredicatedRegions<VisionSeparatorPredicate>(sectors, visionSeparatorLayer);
+    writeRegionLayer(stream, "visionSeparator", visionSeparatorLayer);
+
+    RegionLayer visionBaseLayer;
+    buildPredicatedRegions<VisionBasePredicate>(sectors, visionBaseLayer);
+    writeRegionLayer(stream, "visionBase", visionBaseLayer);
+
+    RegionLayer visionArchwayLayer;
+    buildPredicatedRegions<VisionArchwayPredicate>(sectors, visionArchwayLayer);
+    writeRegionLayer(stream, "visionArchway", visionArchwayLayer);
 
     RegionLayer soundLayer;
     buildSoundLayer(sectors, soundLayer);

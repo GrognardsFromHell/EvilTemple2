@@ -23,6 +23,12 @@ struct FogSectorBitmap {
 
     void fogAll() {
         memset(bitfield, 0xFF, sizeof(bitfield));
+        textureDirty = true;
+    }
+
+    void revealAll() {
+        memset(bitfield, 0, sizeof(bitfield));
+        textureDirty = true;
     }
 
     bool isRevealed(int x, int y) {
@@ -145,6 +151,15 @@ static Vector4 tileToVector(int x, int y)
     x *= TileSidelength;
     y *= TileSidelength;
     return Vector4(x, 0, y, 1);
+}
+
+void FogOfWar::revealAll()
+{
+    for (int x = 0; x < SectorsPerAxis; ++x) {
+        for (int y = 0; y < SectorsPerAxis; ++y) {
+            d->bitmap[x][y].revealAll();
+        }
+    }
 }
 
 void FogOfWar::reveal(const Vector4 &center, float radius)

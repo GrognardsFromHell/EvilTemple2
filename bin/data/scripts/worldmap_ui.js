@@ -7,6 +7,14 @@ var WorldMapUi = {};
 
     var newAreaSinceLastOpened = false;
 
+    var worldMapPaths = null;
+
+    function loadPaths() {
+        if (worldMapPaths == null) {
+            worldMapPaths = readJson('worldmapPaths.js');
+        }
+    }
+
     StartupListeners.add(function() {
         WorldMap.addMarkedNewAreaListener(function() {
             if (worldMapDialog) {
@@ -32,6 +40,15 @@ var WorldMapUi = {};
             playNewAreaSound();
             newAreaSinceLastOpened = false;
         }
+
+        loadPaths();
+        worldMapDialog.travelRequested.connect(function (areaId) {
+            print("Worldmap requested travel to " + areaId);
+            worldMapDialog.travelPath(worldMapPaths[1]);
+        });
+        worldMapDialog.travelFinished.connect(function() {
+            print("Travelling is finished. Arrived at new destination.");
+        });
     };
 
     WorldMapUi.close = function() {

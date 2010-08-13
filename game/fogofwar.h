@@ -32,6 +32,8 @@ public slots:
 
     void reveal(const Vector4 &center, float radius);
 
+    void revealAll();
+
 private:
     QScopedPointer<FogOfWarData> d;
 

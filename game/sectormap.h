@@ -29,6 +29,8 @@ public:
     void setNavigationMesh(const SharedNavigationMesh &navigationMesh);
 
     void setLayer(const RegionLayer &layer);
+
+    void setBaseColor(const Vector4 &baseColor);
 private:
     void buildBuffers();
 
@@ -43,7 +45,14 @@ private:
     QGLBuffer mPortalVertexBuffer;
 
     Box3d mBoundingBox;
+
+    Vector4 mBaseColor; // Used as fallback if no special color is known for the layer
 };
+
+inline void Sector::setBaseColor(const Vector4 &baseColor)
+{
+    mBaseColor = baseColor;
+}
 
 inline void Sector::setLayer(const RegionLayer &layer)
 {
@@ -62,7 +71,11 @@ public slots:
 
     bool createDebugView() const;
 
+    bool createFlyableDebugView() const;
+
     bool createDebugLayer(const QString &layerName) const;
+
+    bool createDebugLayer(const QString &layerName, const Vector4 &baseColor) const;
 
     QVector<Vector4> findPath(const Vector4 &start, const Vector4 &end) const;
 

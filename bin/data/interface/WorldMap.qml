@@ -1,5 +1,6 @@
 import Qt 4.7
-
+import "WorldMapTravel.js" as WorldMapTravel
+import "WorldMap.js" as WorldMap
 
 MovableWindow {
     id: root
@@ -11,54 +12,142 @@ MovableWindow {
 
     property string currentArea : ''
 
-    onKnownAreasChanged: {
-        console.debug("Updating visible areas.");
+    signal travelRequested(string area)
+    signal travelFinished
 
-        if (knownAreas.indexOf('hommlet') != -1) {
-            hommletSouth.visible = true;
-            hommletEast.visible = true;
-            hommletNorth.visible = true;
-        } else {
-            hommletSouth.visible = false;
-            hommletEast.visible = false;
-            hommletNorth.visible = false;
+    property variant areas : [
+        {
+            'name': 'Moathouse',
+            'area': 'moathouse',
+            'center': [277, 454],
+            'radius': 24,
+            'images': [
+                [-64, -64, "../art/interface/WORLDMAP_UI/WorldMap_Moathouse.png"],
+                [-56, -109, "../art/interface/WORLDMAP_UI/WorldMap_Moathouse_Script.png"]
+            ]
+        },
+        {
+            'name': 'Emridy Meadows',
+            'area': 'emridy_meadows',
+            'center': [125, 167],
+            'radius': 32,
+            'images': [
+                [-32, -32, "../art/interface/WORLDMAP_UI/WorldMap_Meadows.png"],
+                [-91, -12, "../art/interface/WORLDMAP_UI/WorldMap_Meadows_Script.png"]
+            ]
+        },
+        {
+            'name': 'Moat House Cave Exit',
+            'area': 'moathouse_secret_exit',
+            'center': [318, 470],
+            'radius': 16,
+            'images': [
+                [-32, -32, "../art/interface/WORLDMAP_UI/WorldMap_MoathouseCave.png"],
+                [-8, -3, "../art/interface/WORLDMAP_UI/WorldMap_MoathouseCave_Script.png"]
+            ]
+        },
+        {
+            'name': 'Nulb',
+            'area': 'nulb',
+            'center': [417, 161],
+            'radius': 20,
+            'images': [
+                [-64, -64, "../art/interface/WORLDMAP_UI/WorldMap_Nulb.png"],
+                [-104, -117, "../art/interface/WORLDMAP_UI/WorldMap_Nulb_Script.png"]
+            ]
+        },
+        {
+            'name': 'Imeryds Run',
+            'area': 'imeryds_run',
+            'center': [435, 106],
+            'radius': 20,
+            'images': [
+                [-32, -32, "../art/interface/WORLDMAP_UI/WorldMap_NulbRiverPool.png"],
+                [-39, -45, "../art/interface/WORLDMAP_UI/WorldMap_NulbRiverPool_Script.png"]
+            ]
+        },
+        {
+            'name': 'Ogre Cave',
+            'area': 'ogre_cave',
+            'center': [251, 175],
+            'radius': 30,
+            'images': [
+                [-64, -64, "../art/interface/WORLDMAP_UI/WorldMap_OgreCave.png"],
+                [-57, -71, "../art/interface/WORLDMAP_UI/WorldMap_OgreCave_Script.png"]
+            ]
+        },
+        {
+            'name': 'Temple of Elemental Evil',
+            'area': 'temple',
+            'center': [436, 237],
+            'radius': 16,
+            'images': [
+                [-42, -42, "../art/interface/WORLDMAP_UI/WorldMap_Temple.png"],
+                [-119, -12, "../art/interface/WORLDMAP_UI/WorldMap_Temple_Script.png"]
+            ]
+        },
+        {
+            'name': 'Burnt Farmhouse',
+            'area': 'temple_secret_exit',
+            'center': [447, 197],
+            'radius': 14,
+            'images': [
+                [-32, -32, "../art/interface/WORLDMAP_UI/WorldMap_TempleWell.png"],
+                [-13, -46, "../art/interface/WORLDMAP_UI/WorldMap_TempleWell_Script.png"]
+            ]
+        },
+        {
+            'name': 'Deklo Grove',
+            'area': 'deklo_grove',
+            'center': [136, 338],
+            'radius': 20,
+            'images': [
+                [-32, -32, "../art/interface/WORLDMAP_UI/WorldMap_DekloTrees.png"],
+                [-49, -63, "../art/interface/WORLDMAP_UI/WorldMap_DekloTrees_Script.png"]
+            ]
+        },
+        {
+            'name': 'Temple Ruined House',
+            'area': 'temple_ruined_house',
+            'center': [408, 206],
+            'radius': 14,
+            'images': [
+                [-25, -25, "../art/interface/WORLDMAP_UI/WorldMap_TempleHouse.png"],
+            ]
+        },
+        {
+            'name': 'Temple Broken Tower',
+            'area': 'temple_tower',
+            'center': [464, 241],
+            'radius': 14,
+            'images': [
+                [-25, -25, "../art/interface/WORLDMAP_UI/WorldMap_TempleTower.png"],
+            ]
+        },
+        {
+            'name': 'Hommlet - South',
+            'area': 'hommlet-south',
+            'center': [133, 474],
+            'radius': 16,
+            'images': []
+        },
+        {
+            'name': 'Hommlet - North',
+            'area': 'hommlet-north',
+            'center': [121, 439],
+            'radius': 16,
+            'images': []
+        },
+        {
+            'name': 'Hommlet - East',
+            'area': 'hommlet-east',
+            'center': [179, 464],
+            'radius': 16,
+            'images': []
         }
+    ]
 
-        nulbButton.visible = knownAreas.indexOf('nulb') != -1;
-        moathouseButton.visible = knownAreas.indexOf('moathouse') != -1;
-        moathouseCaveButton.visible = knownAreas.indexOf('moathouse_secret_exit') != -1;
-        meadowsButton.visible = knownAreas.indexOf('emridy_meadows') != -1;
-        nulbRiverPoolButton.visible = knownAreas.indexOf('imeryds_run') != -1;
-        templeWellButton.visible = knownAreas.indexOf('temple_secret_exit') != -1;
-        ogreCaveButton.visible = knownAreas.indexOf('ogre_cave') != -1;
-        dekloTreesButton.visible = knownAreas.indexOf('deklo_grove') != -1;
-        templeHouseButton.visible = knownAreas.indexOf('temple_ruined_house') != -1;
-        templeTowerButton.visible = knownAreas.indexOf('temple_tower') != -1;
-        templeButton.visible = knownAreas.indexOf('temple') != -1;
-
-        knownAreaModel.clear();
-        knownAreas.forEach(function (area) {
-            if (area == 'hommlet') {
-                knownAreaModel.append({
-                    areaId: 'hommlet-south',
-                    areaName: 'Hommlet South'
-                });
-                knownAreaModel.append({
-                    areaId: 'hommlet-north',
-                    areaName: 'Hommlet North'
-                });
-                knownAreaModel.append({
-                    areaId: 'hommlet-east',
-                    areaName: 'Hommlet East'
-                });
-            } else {
-                knownAreaModel.append({
-                    areaId: area,
-                    areaName: area
-                });
-            }
-        });
-    }
+    onAreasChanged: WorldMap.setAreas(areas)
 
     onCurrentAreaChanged: {
         console.debug("Updating you are here arrow for area: " + currentArea)
@@ -73,7 +162,7 @@ MovableWindow {
             youAreHere.y = 420 - 25;
             return;
         case 'moathouse':
-            centerOn = moathouseButton;
+            // centerOn = moathouseButton;
             break;
         case 'moathouse_secret_exit':
             centerOn = moathouseCaveButton;
@@ -94,6 +183,30 @@ MovableWindow {
 
         console.debug("X: " + youAreHere.x)
         console.debug("Y: " + youAreHere.y)
+    }
+
+    function distance(x1, y1, x2, y2) {
+        var dx = x1 - x2;
+        var dy = y1 - y2;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    /**
+        Travels along a path on the worldmap.
+        The given object is expected to have the following properties:
+        from: [x,y]
+        to: [x,y]
+        path: [e,e,e,e,...]
+      */
+    function travelPath(path) {
+        WorldMapTravel.startTravel(path);
+    }
+
+    Timer {
+        id: travelTimer
+        interval: 20
+        repeat: true
+        onTriggered: WorldMapTravel.doTravelStep()
     }
 
     function refreshHighlight(mouseX, mouseY) {
@@ -143,7 +256,6 @@ MovableWindow {
     }
 
     Button {
-        id: button1
         x: 730
         y: 525
         width: 53
@@ -156,281 +268,6 @@ MovableWindow {
         onClicked: root.closeClicked()
     }
 
-    WorldMapButton {
-        id: meadowsButton
-        x: 93
-        y: 135
-        width: 64
-        height: 64
-        maxRadius: 32
-        Image {
-            anchors.fill: parent
-            source: "../art/interface/WORLDMAP_UI/WorldMap_Meadows.png"
-        }
-        name: 'Emridy Meadows'
-    }
-
-    Image {
-        id: image2
-        x: 34
-        y: 155
-        width: 128
-        height: 64
-        visible: meadowsButton.visible
-        source: "../art/interface/WORLDMAP_UI/WorldMap_Meadows_Script.png"
-    }
-
-    WorldMapButton {
-        id: moathouseButton
-        x: 213
-        y: 390
-        width: 128
-        height: 128
-        maxRadius: 24
-        smooth: false
-        Image {
-            anchors.fill: parent
-            source: "../art/interface/WORLDMAP_UI/WorldMap_Moathouse.png"
-        }
-        name: 'Moat house'
-    }
-
-    Image {
-        id: image4
-        x: 221
-        y: 345
-        width: 64
-        height: 128
-        source: "../art/interface/WORLDMAP_UI/WorldMap_Moathouse_Script.png"
-        visible: moathouseButton.visible
-    }
-
-    WorldMapButton {
-        id: moathouseCaveButton
-        x: 286
-        y: 438
-        width: 64
-        height: 64
-        maxRadius: 16
-        Image {
-            anchors.fill: parent
-            source: "../art/interface/WORLDMAP_UI/WorldMap_MoathouseCave.png"
-        }
-        name: 'Moat House Cave Exit'
-    }
-
-    Image {
-        id: image6
-        x: 310
-        y: 467
-        width: 64
-        height: 64
-        source: "../art/interface/WORLDMAP_UI/WorldMap_MoathouseCave_Script.png"
-        visible: moathouseCaveButton.visible
-    }
-
-    WorldMapButton {
-        id: nulbButton
-        x: 353
-        y: 97
-        width: 128
-        height: 128
-        maxRadius: 20
-        Image {
-            anchors.fill: parent
-            source: "../art/interface/WORLDMAP_UI/WorldMap_Nulb.png"
-        }
-        name: 'Nulb'
-    }
-
-    Image {
-        id: image8
-        x: 313
-        y: 44
-        width: 128
-        height: 128
-        source: "../art/interface/WORLDMAP_UI/WorldMap_Nulb_Script.png"
-        visible: nulbButton.visible
-    }
-
-    WorldMapButton {
-        id: nulbRiverPoolButton
-        x: 403
-        y: 74
-        width: 64
-        height: 64
-        Image {
-            anchors.fill: parent
-            source: "../art/interface/WORLDMAP_UI/WorldMap_NulbRiverPool.png"
-        }
-        maxRadius: 20
-        name: 'Imeryds Run'
-    }
-
-    Image {
-        id: image10
-        x: 396
-        y: 61
-        width: 128
-        height: 64
-        source: "../art/interface/WORLDMAP_UI/WorldMap_NulbRiverPool_Script.png"
-        visible: nulbRiverPoolButton.visible
-    }
-
-    WorldMapButton {
-        id: ogreCaveButton
-        x: 187
-        y: 111
-        width: 128
-        height: 128
-        Image {
-            anchors.fill: parent
-            source: "../art/interface/WORLDMAP_UI/WorldMap_OgreCave.png"
-        }
-        maxRadius: 30
-        name: 'Ogre Cave'
-    }
-
-    Image {
-        id: image12
-        x: 194
-        y: 104
-        width: 128
-        height: 128
-        source: "../art/interface/WORLDMAP_UI/WorldMap_OgreCave_Script.png"
-        visible: ogreCaveButton.visible
-    }
-
-    WorldMapButton {
-        id: templeButton
-        x: 394
-        y: 195
-        width: 84
-        height: 84
-        Image {
-            anchors.fill: parent
-            source: "../art/interface/WORLDMAP_UI/WorldMap_Temple.png"
-        }
-        maxRadius: 16
-        name: 'Temple of Elemental Evil'
-    }
-
-    Image {
-        id: image14
-        x: 317
-        y: 225
-        width: 128
-        height: 64
-        source: "../art/interface/WORLDMAP_UI/WorldMap_Temple_Script.png"
-        visible: templeButton.visible
-    }
-
-    WorldMapButton {
-        id: templeWellButton
-        x: 415
-        y: 165
-        width: 64
-        height: 64
-        Image {
-            anchors.fill: parent
-            source: "../art/interface/WORLDMAP_UI/WorldMap_TempleWell.png"
-        }
-        maxRadius: 14
-        name: 'Burnt Farmhouse'
-    }
-
-    Image {
-        id: image16
-        x: 434
-        y: 151
-        width: 64
-        height: 64
-        source: "../art/interface/WORLDMAP_UI/WorldMap_TempleWell_Script.png"
-        visible: templeWellButton.visible
-    }
-
-    WorldMapButton {
-        id: dekloTreesButton
-        x: 104
-        y: 306
-        width: 64
-        height: 64
-        Image {
-            anchors.fill: parent
-            source: "../art/interface/WORLDMAP_UI/WorldMap_DekloTrees.png"
-        }
-        maxRadius: 20
-        name: 'Deklo Grove'
-    }
-
-    Image {
-        id: image18
-        x: 87
-        y: 275
-        width: 64
-        height: 64
-        source: "../art/interface/WORLDMAP_UI/WorldMap_DekloTrees_Script.png"
-        visible: dekloTreesButton.visible
-    }
-
-    WorldMapButton {
-        id: templeHouseButton
-        x: 383
-        y: 181
-        width: 50
-        height: 50
-        Image {
-            anchors.fill: parent
-            source: "../art/interface/WORLDMAP_UI/WorldMap_TempleHouse.png"
-        }
-        maxRadius: 14
-        name: 'Temple Ruined House'
-    }
-
-    WorldMapButton {
-        id: templeTowerButton
-        x: 439
-        y: 216
-        width: 50
-        height: 50
-        Image {
-            anchors.fill: parent
-            source: "../art/interface/WORLDMAP_UI/WorldMap_TempleTower.png"
-        }
-        maxRadius: 14
-        name: 'Temple Broken Tower'
-    }
-
-    WorldMapButton {
-        id: hommletSouth
-        x: 117
-        y: 458
-        width: 32
-        height: 32
-        maxRadius: 16
-        name: 'Hommlet - South'
-    }
-
-    WorldMapButton {
-        id: hommletNorth
-        x: 105
-        y: 423
-        width: 32
-        height: 32
-        maxRadius: 16
-        name: 'Hommlet - North'
-    }
-
-    WorldMapButton {
-        id: hommletEast
-        x: 163
-        y: 448
-        width: 32
-        height: 32
-        maxRadius: 16
-        name: 'Hommlet - East'
-    }
-
     Image {
         id: highlightOverlay
         x: 383
@@ -439,6 +276,7 @@ MovableWindow {
         height: 100
         opacity: 0
         source: "../art/interface/WORLDMAP_UI/Worldmap_Ring.png"
+        z: 100
 
         states: [
             State {
@@ -472,6 +310,11 @@ MovableWindow {
             var pos = mapToItem(root, mouseX, mouseY);
             root.refreshHighlight(pos.x, pos.y);
         }
+
+        onClicked: {
+            var pos = mapToItem(root, mouseX, mouseY);
+            WorldMap.onClick(pos.x, pos.y);
+        }
     }
 
     Image {
@@ -501,9 +344,21 @@ MovableWindow {
         model: knownAreaModel
         clip: true
         delegate: Text {
-            color: '#FFFFFF'
-            text: areaName
+            color: mouseArea.containsMouse ? '#00a9f8' : '#FFFFFF'
+            text: name
+            font.family: 'Fontin'
+            font.pointSize: 12
+            MouseArea {
+                id: mouseArea
+                anchors.fill: parent
+                hoverEnabled: true
+                onClicked: {
+                    console.log("Travel requested to: " + area);
+                    root.travelRequested(area);
+                }
+            }
         }
+        boundsBehavior: "StopAtBounds"
     }
 
 }

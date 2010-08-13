@@ -258,6 +258,46 @@ namespace Troika
         return new GameObject(reader.getObject());
     }
 
+    static void readSectorVisibility(TileSector &sector, const QString &filename, VirtualFileSystem *vfs)
+    {
+        QByteArray svbData = vfs->openFile(filename);
+
+        if (svbData.isNull()) {
+            for (int ty = 0; ty < SectorSidelength; ++ty)
+                for (int tx = 0; tx < SectorSidelength; ++tx)
+                    memset(sector.tiles[tx][ty].visibility, 0, sizeof(sector.tiles[tx][ty].visibility));
+            return;
+        }
+
+        int i = 0;
+        int j = 0;
+        uchar b;
+
+        for (int y = 0; y < SectorSidelength * 3; ++y)
+        {
+            for (int x = 0; x < SectorSidelength * 3; ++x)
+            {
+                uchar mask;
+
+                if (j == 0) {
+                    b = svbData[i++];
+                    j = 1;
+                    mask = b & 0xFF;
+                } else if (j == 1) {
+                    mask = (b >> 4) & 0xFF;
+                    j = 0;
+                }
+
+                int tx = x / 3;
+                int ty = y / 3;
+                int sx = x % 3;
+                int sy = y % 3;
+
+                sector.tiles[tx][ty].visibility[sx][sy] = mask;
+            }
+        }
+    }
+
     bool ZoneTemplateReader::readSector(const QString &filename)
     {
         QByteArray data = vfs->openFile(filename);
@@ -292,6 +332,12 @@ namespace Troika
 
         if (!readSectorLights(stream) || !readSectorTiles(&sector, stream) || !readSectorObjects(stream))
             return false;
+
+        // Try reading a SVB file for the sector.
+        QString svbFilename = filename;
+        svbFilename.replace(".sec", ".svb");
+
+        readSectorVisibility(sector, svbFilename, vfs);
 
         // Try reading a HSD file for the sector.
         QString hsdFilename = zoneTemplate->directory() + "hsd" + QString::number(sectorId) + ".hsd";

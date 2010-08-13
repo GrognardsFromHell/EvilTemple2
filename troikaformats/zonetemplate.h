@@ -76,6 +76,27 @@ namespace Troika
         quint8 unknown1[3];
         quint32 bitfield;
         quint64 unknown2;
+        uchar visibility[3][3];
+
+        bool isVisionFlagSet(uint sx, uint sy, uint flag) const {
+            return (visibility[sx][sy] & flag) == flag;
+        }
+
+        bool isVisionExtend(uint sx, uint sy) const {
+            return isVisionFlagSet(sx, sy, 1);
+        }
+
+        bool isVisionEnd(uint sx, uint sy) const {
+            return isVisionFlagSet(sx, sy, 2);
+        }
+
+        bool isVisionBase(uint sx, uint sy) const {
+            return isVisionFlagSet(sx, sy, 4);
+        }
+
+        bool isVisionArchway(uint sx, uint sy) const {
+            return isVisionFlagSet(sx, sy, 8);
+        }
     };
 
     class TileSector {

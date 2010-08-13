@@ -702,12 +702,7 @@ const NavMeshRect *NavigationMesh::findRect(const Vector4 &position) const
 
 inline QDataStream &operator >>(QDataStream &stream, NavMeshRect &rect)
 {
-    Vector4 topLeft, bottomRight;
-    stream >> topLeft >> bottomRight >> rect.center;
-    rect.left = topLeft.x();
-    rect.top = topLeft.z();
-    rect.right = bottomRight.x();
-    rect.bottom = bottomRight.z();
+    stream >> rect.left >> rect.top >> rect.right >> rect.bottom >> rect.center;
 
     return stream;
 }
@@ -763,13 +758,7 @@ QDataStream &operator >>(QDataStream &stream, NavigationMesh &mesh)
 
 QDataStream &operator >>(QDataStream &stream, TaggedRegion &region)
 {
-    Vector4 topLeft, bottomRight;
-    stream >> topLeft >> bottomRight >> region.center >> region.tag;
-
-    region.left = topLeft.x();
-    region.top = topLeft.z();
-    region.right = bottomRight.x();
-    region.bottom = bottomRight.z();
+    stream >> region.left >> region.top >> region.right >> region.bottom >> region.center >> region.tag;
 
     return stream;
 }
