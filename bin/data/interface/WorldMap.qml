@@ -17,130 +17,130 @@ MovableWindow {
 
     property variant areas : [
         {
-            'name': 'Moathouse',
-            'area': 'moathouse',
-            'center': [277, 454],
-            'radius': 24,
+            'name': 'Emridy Meadows',
+            'area': 'emridy_meadows',
+            'center': [123, 174],
+            'radius': 30,
             'images': [
-                [-64, -64, "../art/interface/WORLDMAP_UI/WorldMap_Moathouse.png"],
-                [-56, -109, "../art/interface/WORLDMAP_UI/WorldMap_Moathouse_Script.png"]
+                [-31, -29, "../art/interface/WORLDMAP_UI/WorldMap_Meadows.png"],
+                [-80, -9, "../art/interface/WORLDMAP_UI/WorldMap_Meadows_Script.png"]
             ]
         },
         {
-            'name': 'Emridy Meadows',
-            'area': 'emridy_meadows',
-            'center': [125, 167],
-            'radius': 32,
+            'name': 'Moathouse',
+            'area': 'moathouse',
+            'center': [282, 462],
+            'radius': 24,
             'images': [
-                [-32, -32, "../art/interface/WORLDMAP_UI/WorldMap_Meadows.png"],
-                [-91, -12, "../art/interface/WORLDMAP_UI/WorldMap_Meadows_Script.png"]
+                [-60, -62, "../art/interface/WORLDMAP_UI/WorldMap_Moathouse.png"],
+                [-52, -107, "../art/interface/WORLDMAP_UI/WorldMap_Moathouse_Script.png"]
             ]
         },
         {
             'name': 'Moat House Cave Exit',
             'area': 'moathouse_secret_exit',
-            'center': [318, 470],
+            'center': [326, 481],
             'radius': 16,
             'images': [
-                [-32, -32, "../art/interface/WORLDMAP_UI/WorldMap_MoathouseCave.png"],
-                [-8, -3, "../art/interface/WORLDMAP_UI/WorldMap_MoathouseCave_Script.png"]
+                [-31, -33, "../art/interface/WORLDMAP_UI/WorldMap_MoathouseCave.png"],
+                [-7, -4, "../art/interface/WORLDMAP_UI/WorldMap_MoathouseCave_Script.png"]
             ]
         },
         {
             'name': 'Nulb',
             'area': 'nulb',
-            'center': [417, 161],
+            'center': [427, 170],
             'radius': 20,
             'images': [
-                [-64, -64, "../art/interface/WORLDMAP_UI/WorldMap_Nulb.png"],
-                [-104, -117, "../art/interface/WORLDMAP_UI/WorldMap_Nulb_Script.png"]
+                [-65, -63, "../art/interface/WORLDMAP_UI/WorldMap_Nulb.png"],
+                [-105, -116, "../art/interface/WORLDMAP_UI/WorldMap_Nulb_Script.png"]
             ]
         },
         {
             'name': 'Imeryds Run',
             'area': 'imeryds_run',
-            'center': [435, 106],
+            'center': [442, 116],
             'radius': 20,
             'images': [
-                [-32, -32, "../art/interface/WORLDMAP_UI/WorldMap_NulbRiverPool.png"],
-                [-39, -45, "../art/interface/WORLDMAP_UI/WorldMap_NulbRiverPool_Script.png"]
+                [-30, -32, "../art/interface/WORLDMAP_UI/WorldMap_NulbRiverPool.png"],
+                [-37, -45, "../art/interface/WORLDMAP_UI/WorldMap_NulbRiverPool_Script.png"]
             ]
         },
         {
             'name': 'Ogre Cave',
             'area': 'ogre_cave',
-            'center': [251, 175],
+            'center': [261, 184],
             'radius': 30,
             'images': [
-                [-64, -64, "../art/interface/WORLDMAP_UI/WorldMap_OgreCave.png"],
-                [-57, -71, "../art/interface/WORLDMAP_UI/WorldMap_OgreCave_Script.png"]
+                [-65, -63, "../art/interface/WORLDMAP_UI/WorldMap_OgreCave.png"],
+                [-58, -70, "../art/interface/WORLDMAP_UI/WorldMap_OgreCave_Script.png"]
             ]
         },
         {
             'name': 'Temple of Elemental Evil',
             'area': 'temple',
-            'center': [436, 237],
+            'center': [443, 248],
             'radius': 16,
             'images': [
-                [-42, -42, "../art/interface/WORLDMAP_UI/WorldMap_Temple.png"],
-                [-119, -12, "../art/interface/WORLDMAP_UI/WorldMap_Temple_Script.png"]
+                [-40, -43, "../art/interface/WORLDMAP_UI/WorldMap_Temple.png"],
+                [-117, -13, "../art/interface/WORLDMAP_UI/WorldMap_Temple_Script.png"]
             ]
         },
         {
             'name': 'Burnt Farmhouse',
             'area': 'temple_secret_exit',
-            'center': [447, 197],
+            'center': [456, 206],
             'radius': 14,
             'images': [
-                [-32, -32, "../art/interface/WORLDMAP_UI/WorldMap_TempleWell.png"],
-                [-13, -46, "../art/interface/WORLDMAP_UI/WorldMap_TempleWell_Script.png"]
+                [-32, -31, "../art/interface/WORLDMAP_UI/WorldMap_TempleWell.png"],
+                [-13, -45, "../art/interface/WORLDMAP_UI/WorldMap_TempleWell_Script.png"]
             ]
         },
         {
             'name': 'Deklo Grove',
             'area': 'deklo_grove',
-            'center': [136, 338],
+            'center': [144, 350],
             'radius': 20,
             'images': [
-                [-32, -32, "../art/interface/WORLDMAP_UI/WorldMap_DekloTrees.png"],
-                [-49, -63, "../art/interface/WORLDMAP_UI/WorldMap_DekloTrees_Script.png"]
+                [-31, -34, "../art/interface/WORLDMAP_UI/WorldMap_DekloTrees.png"],
+                [-48, -65, "../art/interface/WORLDMAP_UI/WorldMap_DekloTrees_Script.png"]
             ]
         },
         {
             'name': 'Temple Ruined House',
             'area': 'temple_ruined_house',
-            'center': [408, 206],
+            'center': [415, 217],
             'radius': 14,
             'images': [
-                [-25, -25, "../art/interface/WORLDMAP_UI/WorldMap_TempleHouse.png"],
+                [-23, -26, "../art/interface/WORLDMAP_UI/WorldMap_TempleHouse.png"],
             ]
         },
         {
             'name': 'Temple Broken Tower',
             'area': 'temple_tower',
-            'center': [464, 241],
+            'center': [473, 254],
             'radius': 14,
             'images': [
-                [-25, -25, "../art/interface/WORLDMAP_UI/WorldMap_TempleTower.png"],
+                [-25, -28, "../art/interface/WORLDMAP_UI/WorldMap_TempleTower.png"],
             ]
         },
         {
             'name': 'Hommlet - South',
-            'area': 'hommlet-south',
+            'area': 'hommlet',
             'center': [133, 474],
             'radius': 16,
             'images': []
         },
         {
             'name': 'Hommlet - North',
-            'area': 'hommlet-north',
+            'area': 'hommlet',
             'center': [121, 439],
             'radius': 16,
             'images': []
         },
         {
             'name': 'Hommlet - East',
-            'area': 'hommlet-east',
+            'area': 'hommlet',
             'center': [179, 464],
             'radius': 16,
             'images': []
