@@ -218,11 +218,13 @@ var Map = function(id) {
             obj.createRenderState();
         }
 
-        // TODO: Load/Persist FOW state
-        this.renderFog = new FogOfWar(gameView.scene);
-        this.renderFog.sectorMap = gameView.sectorMap;
-        var fowNode = gameView.scene.createNode();
-        fowNode.attachObject(this.renderFog);
+        if (!this.unfogged) {
+            // TODO: Load/Persist FOW state
+            this.renderFog = new FogOfWar(gameView.scene);
+            this.renderFog.sectorMap = gameView.sectorMap;
+            var fowNode = gameView.scene.createNode();
+            fowNode.attachObject(this.renderFog);
+        }
 
         gc();
 
@@ -575,7 +577,7 @@ var Map = function(id) {
     StartupListeners.add(function() {
 
         var fogCheck = function() {
-            if (Maps.currentMap) {
+            if (Maps.currentMap && Maps.currentMap.renderFog) {
                 Maps.currentMap.renderFog.reveal(Party.getLeader().position, 100);
             }
 

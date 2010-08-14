@@ -24,9 +24,9 @@ function addArea(area) {
     var wmb = worldmapButtonComponent.createObject(root);
     wmb.x = area.center[0];
     wmb.y = area.center[1];
-    wmb.maxRadius = area.radius;
+    wmb.radius = area.radius;
     wmb.name = area.name;
-    wmb.areaId = area.area;
+    wmb.buttonId = area.buttonId;
     currentComponents.push(wmb);
 
     // Create all associated images
@@ -56,15 +56,15 @@ function setAreas(areas) {
 }
 
 function onClick(mouseX, mouseY) {
-    var centerX, centerY, maxRadius;
+    var centerX, centerY, radius;
     var worldmapButton;
 
     for (var i = 0; i < children.length; ++i) {
         var child = root.children[i];
 
-        maxRadius = child.maxRadius;
+        radius = child.radius;
 
-        if (!maxRadius || !child.visible)
+        if (!radius || !child.visible)
             continue;
 
         centerX = (child.x + child.width / 2);
@@ -74,14 +74,14 @@ function onClick(mouseX, mouseY) {
         var diffY = mouseY - centerY;
         var distance = Math.sqrt(diffX * diffX + diffY * diffY);
 
-        if (distance <= maxRadius) {
+        if (distance <= radius) {
             worldmapButton = child;
             break;
         }
     }
 
     if (worldmapButton) {
-        console.debug("Requesting travel to " + worldmapButton.areaId);
-        travelRequested(worldmapButton.areaId);
+        console.debug("Requesting travel to " + worldmapButton.buttonId);
+        travelRequested(worldmapButton.buttonId);
     }
 }

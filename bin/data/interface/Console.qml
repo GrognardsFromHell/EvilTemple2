@@ -105,4 +105,9 @@ MovableWindow {
         }
     ]
     title: "Console"
+
+    Component.onCompleted: {
+        commandLine.focus = true;
+        commandLine.text = '';
+    }
 }
