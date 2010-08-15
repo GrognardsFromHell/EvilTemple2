@@ -7,6 +7,40 @@ var MainMenuUi = {};
 
     var mainMenu = null;
 
+    var alignmentMap = {
+        'lg': Alignment.LawfulGood,
+        'ng': Alignment.NeutralGood,
+        'cg': Alignment.ChaoticGood,
+        'ln': Alignment.LawfulNeutral,
+        'n': Alignment.TrueNeutral,
+        'cn': Alignment.ChaoticNeutral,
+        'le': Alignment.LawfulEvil,
+        'ne': Alignment.NeutralEvil,
+        'ce': Alignment.ChaoticEvil
+    };
+
+    function createParty() {
+        // Choose party alignment first
+        var partyAlignment = gameView.showView('interface/ChoosePartyAlignment.qml');
+        partyAlignment.cancelled.connect(function() {
+            partyAlignment.deleteLater();
+            MainMenuUi.show();
+        });
+        partyAlignment.alignmentSelected.connect(function (shortAlignment) {
+            partyAlignment.deleteLater();
+
+            var alignment = alignmentMap[shortAlignment];
+            if (!alignment) {
+                print("Unknown alignment returned by alignment UI.");
+                MainMenuUi.show();
+                return;
+            }
+
+            Party.alignment = alignment;
+            startGame();
+        });
+    }
+
     function startGame() {
         showDebugBar();
         PartyUi.show();
@@ -96,7 +130,7 @@ var MainMenuUi = {};
             mainMenu.deleteLater();
             mainMenu = null;
 
-            startGame();
+            createParty();
         });
         mainMenu.loadGameClicked.connect(function() {
             // TODO: Warning/Unloading of previous game

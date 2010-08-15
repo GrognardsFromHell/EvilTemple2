@@ -1,4 +1,20 @@
 
+function getAbilityModifier(ability) {
+    ability -= 10;
+    return Math.floor(ability / 2);
+}
+
+function rectIntersects(x1, y1, width1, height1, x2, y2, width2, height2) {
+    return (((x1 >= x2 && x1 <= x2 + width2) || (x2 >= x1 && x2 <= x1 + width1)) &&
+            ((y1 >= y2 && y1 <= y2 + height2) || (y2 >= y1 && y2 <= y1 + height1)));
+}
+
+function distance(x1, y1, x2, y2) {
+    var dx = x1 - x2;
+    var dy = y1 - y2;
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
 function getTimePassed(date) {
     var now = new Date(); // Get current date/time
     print(date);

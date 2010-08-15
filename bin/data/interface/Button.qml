@@ -10,6 +10,10 @@ MouseArea {
     property string hoverImage : "art/interface/GENERIC/Accept_Hover.png"
     property string disabledImage : "art/interface/GENERIC/Disabled_Normal.png"
 
+    property int fontSize : 14
+    property string fontFamily : 'Handserif'
+    property bool fontShadow : true
+
     width: image.width
     height: image.height
     hoverEnabled: true
@@ -58,9 +62,24 @@ MouseArea {
         text: 'Button'
         font.bold: true
         anchors.centerIn: image
-        font.family: 'Handserif'
-        font.pointSize: 14
+        font.family: root.fontFamily
+        font.pointSize: root.fontSize
         color: '#FFFFFF'
+        z: 10
+    }
+
+    Text {
+        z: 5
+        width: label.width
+        height: label.height
+        x: label.x + 1
+        y: label.y + 1
+        text: label.text
+        font.bold: label.font.bold
+        font.family: label.font.family
+        font.pointSize: label.font.pointSize
+        color: Qt.darker(Qt.darker(label.color))
+        visible: fontShadow
     }
 
     states: [
