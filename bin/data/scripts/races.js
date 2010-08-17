@@ -80,14 +80,50 @@ var Races = {
             id: 'dwarf',
             playable: true,
             name: translations.get('mes/stat/2001'),
-            description: translations.get('mes/stat/12001')
+            description: translations.get('mes/stat/12001'),
+            maleAppearance: {
+                model: 'meshes/pcs/pc_dwarf_male/pc_dwarf_male.model',
+                materials: {
+                    HEAD: 'meshes/pcs/pc_dwarf_male/dwarf_head.xml',
+                    CHEST: 'meshes/pcs/pc_dwarf_male/dwarf_chest.xml',
+                    GLOVES: 'meshes/pcs/pc_dwarf_male/dwarf_hands.xml',
+                    BOOTS: 'meshes/pcs/pc_dwarf_male/dwarf_feet.xml'
+                }
+            },
+            femaleAppearance: {
+                model: 'meshes/pcs/pc_dwarf_female/pc_dwarf_female.model',
+                materials: {
+                    HEAD: 'meshes/pcs/pc_dwarf_female/female_dwarf_head.xml',
+                    CHEST: 'meshes/pcs/pc_dwarf_female/female_dwarf_chest.xml',
+                    GLOVES: 'meshes/pcs/pc_dwarf_female/female_dwarf_hands.xml',
+                    BOOTS: 'meshes/pcs/pc_dwarf_female/female_dwarf_feet.xml'
+                }
+            }
         });
 
         Races.register({
             id: 'elf',
             playable: true,
             name: translations.get('mes/stat/2002'),
-            description: translations.get('mes/stat/12002')
+            description: translations.get('mes/stat/12002'),
+            maleAppearance: {
+                model: 'meshes/pcs/pc_human_male/pc_human_male.model',
+                materials: {
+                    HEAD: 'meshes/pcs/pc_elf_male/elf_head.xml',
+                    CHEST: 'meshes/pcs/pc_elf_male/elf_chest.xml',
+                    GLOVES: 'meshes/pcs/pc_elf_male/elf_hands.xml',
+                    BOOTS: 'meshes/pcs/pc_elf_male/elf_feet.xml'
+                }
+            },
+            femaleAppearance: {
+                model: 'meshes/pcs/pc_human_female/pc_human_female.model',
+                materials: {
+                    HEAD: 'meshes/pcs/pc_elf_female/female_elf_head.xml',
+                    CHEST: 'meshes/pcs/pc_elf_female/female_elf_chest.xml',
+                    GLOVES: 'meshes/pcs/pc_elf_female/female_elf_hands.xml',
+                    BOOTS: 'meshes/pcs/pc_elf_female/female_elf_feet.xml'
+                }
+            }
         });
 
         Races.register({
@@ -108,7 +144,25 @@ var Races = {
             id: 'halforc',
             playable: true,
             name: translations.get('mes/stat/2005'),
-            description: translations.get('mes/stat/12005')
+            description: translations.get('mes/stat/12005'),
+            maleAppearance: {
+                model: 'meshes/pcs/pc_halforc_male/pc_halforc_male.model',
+                materials: {
+                    HEAD: 'meshes/pcs/pc_halforc_male/halforc_head.xml',
+                    CHEST: 'meshes/pcs/pc_halforc_male/halforc_chest.xml',
+                    GLOVES: 'meshes/pcs/pc_halforc_male/halforc_hands.xml',
+                    BOOTS: 'meshes/pcs/pc_halforc_male/halforc_feet.xml'
+                }
+            },
+            femaleAppearance: {
+                model: 'meshes/pcs/pc_halforc_female/pc_halforc_female.model',
+                materials: {
+                    HEAD: 'meshes/pcs/pc_halforc_female/female_halforc_head.xml',
+                    CHEST: 'meshes/pcs/pc_halforc_female/female_halforc_chest.xml',
+                    GLOVES: 'meshes/pcs/pc_halforc_female/female_halforc_hands.xml',
+                    BOOTS: 'meshes/pcs/pc_halforc_female/female_halforc_feet.xml'
+                }
+            }
         });
 
         Races.register({
