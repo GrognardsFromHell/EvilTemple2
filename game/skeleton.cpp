@@ -60,7 +60,9 @@ Skeleton::Skeleton(const Skeleton &other)
     : mName(other.mName + " (Copy)")
 {
     mBones = new Bone[other.mBonePointers.size()];
-    memcpy(mBones, other.mBones, sizeof(Bone) * other.mBonePointers.size());
+    for (int i = 0; i < other.mBonePointers.size(); ++i) {
+        mBones[i] = other.mBones[i];
+    }
 
     mBonePointers.resize(other.mBonePointers.size());
     mBoneMap.reserve(other.mBoneMap.capacity());
