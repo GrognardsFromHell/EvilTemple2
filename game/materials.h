@@ -1,6 +1,8 @@
 #ifndef MATERIALS_H
 #define MATERIALS_H
 
+#include "gameglobal.h"
+
 #include <QObject>
 #include <QScopedPointer>
 
@@ -11,7 +13,7 @@ namespace EvilTemple {
 
 class MaterialsData;
 
-class Materials : public QObject
+class GAME_EXPORT Materials : public QObject
 {
     Q_OBJECT
 public:

@@ -17,6 +17,7 @@
 #include "selectioncircle.h"
 #include "imageuploader.h"
 #include "fogofwar.h"
+#include "modelviewer.h"
 
 #include "renderable.h"
 #include "modelinstance.h"
@@ -287,6 +288,7 @@ namespace EvilTemple {
         registerQObject<EvilTemple::ParticleSystem>(engine, "ParticleSystem*");
         registerQObject<EvilTemple::SelectionCircle>(engine, "SelectionCircle*");
         registerQObject<EvilTemple::ModelInstance>(engine, "ModelInstance*");
+        registerQObject<EvilTemple::ModelViewer>(engine, "ModelViewer*");
 
         // Add a function to read files
         QScriptValue readFileFn = engine->newFunction(readFile, 1);

@@ -2,6 +2,8 @@
 #ifndef SCENE_H
 #define SCENE_H
 
+#include "gameglobal.h"
+
 #include <QObject>
 #include <QtCore/QScopedPointer>
 
@@ -15,7 +17,7 @@ class Materials;
 /**
   Models a scene that can be drawn by the engine.
   */
-class Scene : public QObject {
+class GAME_EXPORT Scene : public QObject {
 Q_OBJECT
 public:
     Scene(Materials *materials);

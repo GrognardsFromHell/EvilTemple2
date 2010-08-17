@@ -59,7 +59,8 @@ SOURCES += \
     animatedmeshstate.cpp \
     modelfilereader.cpp \
     modelfilechunks.cpp \
-    fogofwar.cpp
+    fogofwar.cpp \
+    modelviewer.cpp
 HEADERS += \
     mainwindow.h \
     game.h \
@@ -109,7 +110,8 @@ HEADERS += \
     modelfilereader.h \
     modelfilechunks.h \
     gamemath_streams.h \
-    fogofwar.h
+    fogofwar.h \
+    modelviewer.h
 OTHER_FILES += \
     resources/schema/materialfile.xsd \
     resources/materials/map_material.xml \

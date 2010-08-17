@@ -1,6 +1,8 @@
 #ifndef SCENENODE_H
 #define SCENENODE_H
 
+#include "gameglobal.h"
+
 #include <QtCore/QObject>
 #include <QtCore/QMetaType>
 #include <QtCore/QSharedPointer>
@@ -18,7 +20,7 @@ namespace EvilTemple {
 class RenderStates;
 class Scene;
 
-class SceneNode : public QObject, public AlignedAllocation
+class GAME_EXPORT SceneNode : public QObject, public AlignedAllocation
 {
 Q_OBJECT
 Q_PROPERTY(Vector4 position READ position WRITE setPosition)

@@ -23,9 +23,6 @@ var Stage = {
     Finished: 14
 };
 
-// Stage of the character creation process.
-var overallStage = Stage.Stats;
-
 function updateButtonState() {
     statsButton.done = overallStage > Stage.Stats;
     raceButton.enabled = overallStage >= Stage.Race;
@@ -49,25 +46,54 @@ function updateButtonState() {
     finishButton.enabled = overallStage >= Stage.Finished;
 }
 
-function finishStage() {
-    overallStage++;
-    updateButtonState();
-}
-
 /**
-    It's possible to "unfinish" a stage by returning to it and
-    putting it into an invalid state.
-*/
-function unfinishStage(stage) {
-    overallStage = stage;
-    updateButtonState();
-}
-
-function setStageCompleted(stage, completed) {
-    if (completed)
-        finishStage(stage);
-    else
-        unfinishStage(stage);
+    Shows the correct panel depending on the active stage.
+  */
+function updateActiveStage() {
+    switch (activeStage) {
+    case Stage.Stats:
+        state = 'stats-roll';
+        break;
+    case Stage.Race:
+        state = 'race';
+        break;
+    case Stage.Gender:
+        state = 'gender';
+        break;
+    case Stage.Height:
+        state = 'height';
+        break;
+    case Stage.Hair:
+        state = 'hair';
+        break;
+    case Stage.Class:
+        state = 'class';
+        break;
+    case Stage.Alignment:
+        state = 'alignment';
+        break;
+    case Stage.Deity:
+        state = 'deity';
+        break;
+    case Stage.Features:
+        state = 'features';
+        break;
+    case Stage.Feats:
+        state = 'feats';
+        break;
+    case Stage.Skills:
+        state = 'skills';
+        break;
+    case Stage.Spells:
+        state = 'spells';
+        break;
+    case Stage.Portrait:
+        state = 'portrait';
+        break;
+    case Stage.VoiceAndName:
+        state = 'voiceAndName';
+        break;
+    }
 }
 
 /**
@@ -75,5 +101,5 @@ function setStageCompleted(stage, completed) {
   */
 function initialize() {
     updateButtonState();
-    state = 'stats-roll';
+    updateActiveStage();
 }

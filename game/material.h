@@ -2,6 +2,8 @@
 #ifndef MATERIAL_H
 #define MATERIAL_H
 
+#include "gameglobal.h"
+
 #include <GL/glew.h>
 
 #include <QtCore/QStringList>
@@ -288,7 +290,7 @@ public:
 
     /**
      * Loads this attribute binding from an XML element.
-     */    
+     */
     bool load(QXmlStreamReader *reader);
 private:
     QString mName;
@@ -503,7 +505,7 @@ inline const MaterialShader &MaterialPass::fragmentShader() const
     return mFragmentShader;
 }
 
-class Material
+class GAME_EXPORT Material
 {
 public:
     Material();
@@ -518,7 +520,7 @@ public:
     const QList<MaterialPass*> &passes() const;
 private:
     bool read(QXmlStreamReader *reader);
-    
+
     QString mError;
     QList<MaterialPass*> mPasses;
 };

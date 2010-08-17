@@ -37,7 +37,8 @@ var MainMenuUi = {};
             }
 
             Party.alignment = alignment;
-            startGame();
+
+            CreateCharacterUi.show(startGame, MainMenuUi.show);
         });
     }
 

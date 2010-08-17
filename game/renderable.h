@@ -2,6 +2,8 @@
 #ifndef RENDERABLE_H
 #define RENDERABLE_H
 
+#include "gameglobal.h"
+
 #include <QObject>
 #include <QMetaType>
 #include <QPair>
@@ -19,7 +21,7 @@ class SceneNode;
 class RenderStates;
 class MaterialState;
 
-class Renderable : public QObject, public AlignedAllocation {
+class GAME_EXPORT Renderable : public QObject, public AlignedAllocation {
 Q_OBJECT
 Q_PROPERTY(Box3d boundingBox READ boundingBox)
 // Q_PROPERTY(Matrix4 worldTransform READ worldTransform)

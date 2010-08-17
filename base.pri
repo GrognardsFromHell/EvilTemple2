@@ -35,7 +35,7 @@ contains(TEMPLE_LIBS,python) {
 }
 
 contains(TEMPLE_LIBS,game) {
-    INCLUDEPATH += ../game
+    INCLUDEPATH += $${PWD}/game
     CONFIG(debug, debug|release) {
         LIBS += -lgame_d
     } else {

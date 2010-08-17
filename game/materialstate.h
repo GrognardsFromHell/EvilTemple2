@@ -2,6 +2,8 @@
 #ifndef MATERIALSTATE_H
 #define MATERIALSTATE_H
 
+#include "gameglobal.h"
+
 #include <QtCore/QString>
 #include <QtCore/QScopedPointer>
 #include <QtCore/QScopedArrayPointer>
@@ -247,7 +249,7 @@ private:
  * Models the runtime state of a material. Especially important for maintaining textures,
  * and shader bindings.
  */
-class MaterialState {
+class GAME_EXPORT MaterialState {
 public:
     MaterialState();
     ~MaterialState();

@@ -2,6 +2,8 @@
 #ifndef MODEL_H
 #define MODEL_H
 
+#include "gameglobal.h"
+
 #include <QtCore/QString>
 #include <QtCore/QSharedPointer>
 #include <QtCore/QScopedArrayPointer>
@@ -38,7 +40,7 @@ namespace EvilTemple {
         QVector<ushort> indices;
     };
 
-    class Model : public AlignedAllocation
+    class GAME_EXPORT Model : public AlignedAllocation
     {
     public:
         Model();

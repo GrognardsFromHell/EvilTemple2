@@ -50,6 +50,7 @@ namespace EvilTemple {
 
         // Create animation state if necessary
         if (mModel->animations().isEmpty()) {
+            mCurrentAnimation = NULL;
             return;
         }
 
@@ -136,7 +137,7 @@ namespace EvilTemple {
             and addmeshes is not known a-priori, making this difficult.
 
             UPDATE:
-            The bone mapping is done by-name. Now the addmeshes don't actually contain a skeleton, which wouldn't 
+            The bone mapping is done by-name. Now the addmeshes don't actually contain a skeleton, which wouldn't
             be used. Instead, they only contain a binding pose, which is mapped to the current skeleton here.
             */
         const Skeleton *curSkeleton = skeleton();
@@ -216,7 +217,7 @@ namespace EvilTemple {
     {
         const Skeleton::Bones &bones = mSkeleton->bones();
         const BindingPose *bindingPose = model->bindingPose();
-        
+
         for (int i = 0; i < model->vertices; ++i) {
             const BoneAttachment &attachment = bindingPose->attachment(i);
 
@@ -227,7 +228,7 @@ namespace EvilTemple {
             }
 
             float weight = attachment.weights()[0];
-            uint boneId = attachment.bones()[0];                        
+            uint boneId = attachment.bones()[0];
             Q_ASSERT(boneId >= 0 && boneId < boneMapping.size());
 
             const Matrix4 &fullWorldInverse = bindingPose->fullWorldInverse(boneId);
@@ -238,7 +239,7 @@ namespace EvilTemple {
             const Matrix4 &firstTransform = bones[boneId]->fullWorld() * fullWorldInverse;
 
             __m128 factor = _mm_set_ps(weight, - weight, weight, weight);
-            
+
             transformedPositions[i] = _mm_mul_ps(factor, firstTransform.mapPosition(model->positions[i]));
             transformedNormals[i] = _mm_mul_ps(factor, firstTransform.mapNormal(model->normals[i]));
 
@@ -251,7 +252,7 @@ namespace EvilTemple {
                 const Matrix4 &fullWorldInverse = bindingPose->fullWorldInverse(boneId);
 
                 boneId = boneMapping.at(boneId);
-                Q_ASSERT(boneId >= 0 && boneId < bones.size());                               
+                Q_ASSERT(boneId >= 0 && boneId < bones.size());
 
                 const Matrix4 &fullTransform = bones[boneId]->fullWorld() * fullWorldInverse;
 
@@ -587,7 +588,7 @@ namespace EvilTemple {
     }
 
     const Box3d &ModelInstance::boundingBox()
-    {        
+    {
         if (mModel)
             return mModel->boundingBox();
         else

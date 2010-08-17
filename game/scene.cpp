@@ -3,8 +3,6 @@
 #include <QFontMetrics>
 #include <QPainterPath>
 
-#include "scriptables.h"
-
 #include "renderqueue.h"
 #include "scene.h"
 #include "lighting.h"

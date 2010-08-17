@@ -3,12 +3,13 @@ import Qt 4.7
 import 'CreateCharacterStats.js' as CreateCharacterStats
 import 'Utilities.js' as Utilities
 
-Item {
+Rectangle {
     id: root
     width: 431
     height: 233
 
-    property bool complete : false
+    color: '#000000'
+
     property int strength : 0
     property int dexterity : 0
     property int constitution : 0
@@ -16,6 +17,8 @@ Item {
     property int wisdom : 0
     property int charisma : 0
     property int rolls : 0
+
+    signal statsChanged
 
     Component.onCompleted: CreateCharacterStats.rollStats(false)
 
@@ -99,6 +102,10 @@ Item {
                                 drag.minimumY = root.mapToItem(box, 0, 0).y;
                                 drag.maximumX = drag.minimumX + root.width - parent.width;
                                 drag.maximumY = drag.minimumY + root.height - parent.height;
+                            }
+                            onDoubleClicked: {
+                                if (statValueText.text != '0')
+                                    CreateCharacterStats.swapWithFreeRolled(modelData)
                             }
                             onMousePositionChanged: {
                                 var centerX = parent.x + parent.width / 2;
@@ -198,6 +205,10 @@ Item {
                             drag.minimumY = root.mapToItem(box, 0, 0).y;
                             drag.maximumX = drag.minimumX + root.width - parent.width;
                             drag.maximumY = drag.minimumY + root.height - parent.height;
+                        }
+                        onDoubleClicked: {
+                            if (parent.text != '0')
+                                CreateCharacterStats.swapWithFreeStat(modelData)
                         }
                         onMousePositionChanged: {
                             var centerX = parent.x + parent.width / 2;

@@ -29,6 +29,7 @@
 #include "models.h"
 #include "imageuploader.h"
 #include "binkplayer.h"
+#include "modelviewer.h"
 
 #include <QPointer>
 
@@ -524,6 +525,8 @@ namespace EvilTemple {
         d->uiEngine.rootContext()->setContextProperty("gameView", this);
         d->uiEngine.rootContext()->setContextProperty("translations", &d->translations);
         d->uiEngine.rootContext()->setContextProperty("imageUploader", new ImageUploader);
+
+        qmlRegisterType<EvilTemple::ModelViewer>("EvilTemple", 1, 0, "ModelViewer");
 
         setMouseTracking(true);
     }

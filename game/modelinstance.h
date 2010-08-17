@@ -1,6 +1,8 @@
 #ifndef MODELINSTANCE_H
 #define MODELINSTANCE_H
 
+#include "gameglobal.h"
+
 #include <QtCore/QString>
 #include <QtCore/QSharedPointer>
 
@@ -27,7 +29,7 @@ struct AddMesh {
     A model instance manages the per-instance state of models. This includes animation state
     and transformed position and normal data.
   */
-class ModelInstance : public Renderable
+class GAME_EXPORT ModelInstance : public Renderable
 {
 Q_OBJECT
 Q_PROPERTY(const SharedModel &model READ model WRITE setModel)
@@ -91,11 +93,11 @@ private:
 
     bool advanceFrame();
 
-    void animateVertices(const SharedModel &model, 
-        Vector4 *transformedPositions, 
-        Vector4 *transformedNormals, 
-        VertexBufferObject *positionBuffer, 
-        VertexBufferObject *normalBuffer, 
+    void animateVertices(const SharedModel &model,
+        Vector4 *transformedPositions,
+        Vector4 *transformedNormals,
+        VertexBufferObject *positionBuffer,
+        VertexBufferObject *normalBuffer,
         const QVector<uint> &boneMapping);
 
     void playIdleAnimation();

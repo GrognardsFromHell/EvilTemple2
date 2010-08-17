@@ -7,6 +7,10 @@ Rectangle {
 
     color: '#000000'
 
+    property variant races : [
+        { 'id': 'human', 'name': 'Human' }
+    ]
+
     Text {
         x: 5
         y: 5
@@ -22,8 +26,6 @@ Rectangle {
 
     property string selectedRace : ''
 
-    property bool complete : false
-
     Flickable {
         anchors.fill: parent
         anchors.margins: 5
@@ -35,19 +37,16 @@ Rectangle {
             id: raceColumn
             anchors.horizontalCenter: parent.horizontalCenter
             Repeater {
-                model: ['human', 'dwarf', 'elf', 'gnome', 'half-elf', 'half-orc', 'halfling', 'deep-dwarf',
-                    'aquatic-elf', 'svirfneblin', 'tallfellow', 'derro', 'drow', 'forest-gnome',
-                'deep-halfling', 'duergar', 'gray-elf', 'mountain-dwarf', 'wild-elf', 'wood-elf']
+                model: races
                 Image {
                     source: '../art/interface/pc_creation/rollbox.png'
                     CreateCharacterButtonRight {
                         x: 5
                         y: 5
-                        active: selectedRace == modelData
-                        text: modelData
+                        active: selectedRace == modelData.id
+                        text: modelData.name
                         onClicked: {
-                            selectedRace = modelData;
-                            complete = true;
+                            selectedRace = modelData.id;
                         }
                     }
                 }

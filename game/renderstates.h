@@ -2,6 +2,8 @@
 #ifndef RENDERSTATES_H
 #define RENDERSTATES_H
 
+#include "gameglobal.h"
+
 #include <QtCore/QString>
 #include <QtCore/QScopedPointer>
 #include <QtCore/QList>
@@ -17,7 +19,7 @@ class Light;
 /**
  * Encapsulates various render state settings that influence the rendering of the scene.
  */
-class RenderStates {
+class GAME_EXPORT RenderStates {
 public:
     RenderStates();
     ~RenderStates();

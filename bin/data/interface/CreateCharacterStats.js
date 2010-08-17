@@ -71,8 +71,7 @@ function updateStatsLabels() {
     wisdom = parseInt(characterStatItems['wis'].statValue);
     charisma = parseInt(characterStatItems['cha'].statValue);
 
-    complete = (strength > 0 && dexterity > 0 && constitution > 0
-        && intelligence > 0 && wisdom > 0 && charisma > 0);
+    statsChanged();
 }
 
 function rollD6() {
@@ -103,4 +102,39 @@ function rollStats(reroll) {
 
     if (reroll)
         rolls++;
+}
+
+function swapWithFreeStat(id) {
+    var canidateIds = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+
+    for (var i = 0; i <= canidateIds.length; ++i) {
+        var canidate = characterStatItems[canidateIds[i]];
+
+        if (canidate.statValue == '0') {
+            var tmp = characterStatItems[id].statValue;
+            characterStatItems[id].statValue = canidate.statValue;
+            canidate.statValue = tmp;
+            break;
+        }
+    }
+
+
+    updateStatsLabels();
+}
+
+function swapWithFreeRolled(id) {
+
+    for (var i = 1; i <= 6; ++i) {
+        var canidate = characterStatItems['roll' + i];
+
+        if (canidate.statValue == '0') {
+            var tmp = characterStatItems[id].statValue;
+            characterStatItems[id].statValue = canidate.statValue;
+            canidate.statValue = tmp;
+            break;
+        }
+    }
+
+
+    updateStatsLabels();
 }
