@@ -33,7 +33,6 @@ Item {
     signal classChosen(string className)
     signal alignmentChosen(string alignment)
     signal deityChosen(string deity)
-
     signal activeStageRequested(string stage)
 
     // The available races
@@ -54,6 +53,11 @@ Item {
     onOverallStageChanged: CreateCharacter.updateButtonState()
 
     onActiveStageChanged: CreateCharacter.updateActiveStage()
+
+    function loadFeaturesPage(url) {
+        featuresLoader.source = url;
+        return featuresLoader.item;
+    }
 
     Image {
         id: background
@@ -266,6 +270,15 @@ Item {
         onSelectedDeityChanged: deityChosen(selectedDeity)
     }
 
+    Loader {
+        id: featuresLoader
+        opacity: 0
+        x: 220
+        y: 51
+        width: 431
+        height: 233
+    }
+
     states: [
         State {
             name: "stats-roll"
@@ -360,6 +373,18 @@ Item {
 
             PropertyChanges {
                 target: deityGroup
+                opacity: 1
+            }
+        },
+        State {
+            name: "features"
+            PropertyChanges {
+                target: featuresButton
+                active: true
+            }
+
+            PropertyChanges {
+                target: featuresLoader
                 opacity: 1
             }
         }

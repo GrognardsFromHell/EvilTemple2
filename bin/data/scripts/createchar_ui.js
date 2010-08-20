@@ -50,6 +50,7 @@ var CreateCharacterUi = {};
 
         if (stage == Stage.Race) {
             currentDialog.races = Races.getAll();
+
         } else if (stage == Stage.Height) {
             race = Races.getById(currentRace);
 
@@ -60,8 +61,10 @@ var CreateCharacterUi = {};
                 currentDialog.minHeight = race.heightFemale[0];
                 currentDialog.maxHeight = race.heightFemale[1];
             }
+
         } else if (stage == Stage.Class) {
             currentDialog.classes = Classes.getAll();
+
         } else if (stage == Stage.Alignment) {
             // Get allowable alignments (from the party alignment and the class)
             var alignments = CompatibleAlignments[Party.alignment].slice(0);
@@ -80,8 +83,39 @@ var CreateCharacterUi = {};
             });
 
             currentDialog.availableAlignments = alignments;
+
         } else if (stage == Stage.Deity) {
-            currentDialog.availableDeities = Deities.getAll();
+            currentDialog.availableDeities = Deities.getAll().filter(function (deity) {
+                return CompatibleAlignments[deity.alignment].indexOf(currentCharacter.alignment) != -1;
+            });
+
+        } else if (stage == Stage.Features) {
+
+            if (currentClass.id == StandardClasses.Cleric) {
+                var features = currentDialog.loadFeaturesPage('CreateCharacterDomains.qml');
+                var deity = Deities.getById(currentCharacter.deity);
+                features.availableDomains = deity.domains.map(Domains.getById);
+                features.domainsSelected.connect(function(domains) {
+                    if (domains.length == 2) {
+                        currentCharacter.domains = domains;
+                        currentDialog.overallStage = Stage.Feats;
+                    } else {
+                        currentDialog.overallStage = Stage.Features;
+                    }
+                });
+
+            } else if (currentClass.id == StandardClasses.Ranger) {
+                // TODO: Ranger favored enemy
+                currentDialog.overallStage = Stage.Feats;
+            } else if (currentClass.id == StandardClasses.Wizard) {
+                // TODO: Wizard specialisation
+                currentDialog.overallStage = Stage.Feats;
+            } else {
+                currentDialog.overallStage = Stage.Feats;
+            }
+
+        } else if (stage == Stage.Feats) {
+            // TODO: set feats
         }
 
         // TODO: Validate/reset stages
@@ -106,7 +140,7 @@ var CreateCharacterUi = {};
 
             if (level > 0) {
                 sheet.level = level;
-                sheet.experiencePoints = currentCharacter.experiencePoints;
+                sheet.experience = currentCharacter.experiencePoints;
                 sheet.fortitudeSave = currentCharacter.getFortitudeSave();
                 sheet.willSave = currentCharacter.getWillSave();
                 sheet.reflexSave = currentCharacter.getReflexSave();
@@ -212,7 +246,7 @@ var CreateCharacterUi = {};
         currentCharacter.height = heightInCm; // This will also affect rendering-scale.
         currentCharacter.weight = weightInLb;
 
-        // TODO: This formula is most definetly wrong.
+        // TODO: This formula is most likely wrong.
         /*
          Attempt at fixing this:
          Assume that the 0cm is scale 0 and the medium height between min/max (0.5f) is scale 1
@@ -257,6 +291,15 @@ var CreateCharacterUi = {};
         currentDialog.overallStage = Stage.Deity;
     }
 
+    function deityChosen(deity) {
+        currentCharacter.deity = deity;
+        currentDialog.overallStage = Stage.Features;
+    }
+    
+    function featsChosen(feats) {
+
+    }
+
     CreateCharacterUi.show = function(_successCallback, _cancelCallback) {
         if (currentDialog) {
             CreateCharacterUi.cancel();
@@ -276,6 +319,8 @@ var CreateCharacterUi = {};
         currentDialog.heightChosen.connect(heightChosen);
         currentDialog.classChosen.connect(classChosen);
         currentDialog.alignmentChosen.connect(alignmentChosen);
+        currentDialog.deityChosen.connect(deityChosen);
+        currentDialog.featsChosen.connect(featsChosen);
 
         // Start with the stats page
         currentDialog.overallStage = Stage.Stats;
