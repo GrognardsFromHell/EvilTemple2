@@ -4,6 +4,13 @@
 var Races = {
 };
 
+/**
+ * Default prototype for races.
+ */
+var Race = function(id) {
+    this.id = id;
+};
+
 (function() {
 
     // This is kept locally to avoid accidental modification from outside this object
@@ -20,6 +27,8 @@ var Races = {
 
         if (racesById[race.id])
             throw "Cannot register race " + race.id + " since it's already registered.";
+
+        var raceObj = new Race(race.id);
 
         racesById[race.id] = race;
         races.push(race);
@@ -56,24 +65,13 @@ var Races = {
             playable: true,
             name: translations.get('mes/stat/2000'),
             description: translations.get('mes/stat/12000'),
-            maleAppearance: {
-                model: 'meshes/pcs/pc_human_male/pc_human_male.model',
-                materials: {
-                    HEAD: 'meshes/pcs/pc_human_male/head.xml',
-                    CHEST: 'meshes/pcs/pc_human_male/chest.xml',
-                    GLOVES: 'meshes/pcs/pc_human_male/hands.xml',
-                    BOOTS: 'meshes/pcs/pc_human_male/feet.xml'
-                }
-            },
-            femaleAppearance: {
-                model: 'meshes/pcs/pc_human_female/pc_human_female.model',
-                materials: {
-                    HEAD: 'meshes/pcs/pc_human_female/head.xml',
-                    CHEST: 'meshes/pcs/pc_human_female/chest.xml',
-                    GLOVES: 'meshes/pcs/pc_human_female/hands.xml',
-                    BOOTS: 'meshes/pcs/pc_human_female/feet.xml'
-                }
-            }
+            prototypeMale: '13000',
+            prototypeFemale: '13001',
+            heightMale: [147, 197],
+            heightFemale: [135, 185],
+            weightMale: [120, 200],
+            weightFemale: [85, 165],
+            landSpeed: 30
         });
 
         Races.register({
@@ -81,24 +79,13 @@ var Races = {
             playable: true,
             name: translations.get('mes/stat/2001'),
             description: translations.get('mes/stat/12001'),
-            maleAppearance: {
-                model: 'meshes/pcs/pc_dwarf_male/pc_dwarf_male.model',
-                materials: {
-                    HEAD: 'meshes/pcs/pc_dwarf_male/dwarf_head.xml',
-                    CHEST: 'meshes/pcs/pc_dwarf_male/dwarf_chest.xml',
-                    GLOVES: 'meshes/pcs/pc_dwarf_male/dwarf_hands.xml',
-                    BOOTS: 'meshes/pcs/pc_dwarf_male/dwarf_feet.xml'
-                }
-            },
-            femaleAppearance: {
-                model: 'meshes/pcs/pc_dwarf_female/pc_dwarf_female.model',
-                materials: {
-                    HEAD: 'meshes/pcs/pc_dwarf_female/female_dwarf_head.xml',
-                    CHEST: 'meshes/pcs/pc_dwarf_female/female_dwarf_chest.xml',
-                    GLOVES: 'meshes/pcs/pc_dwarf_female/female_dwarf_hands.xml',
-                    BOOTS: 'meshes/pcs/pc_dwarf_female/female_dwarf_feet.xml'
-                }
-            }
+            prototypeMale: '13002',
+            prototypeFemale: '13003',
+            heightMale: [114, 129],
+            heightFemale: [109, 134],
+            weightMale: [130, 178],
+            weightFemale: [100, 148],
+            landSpeed: 20
         });
 
         Races.register({
@@ -106,38 +93,41 @@ var Races = {
             playable: true,
             name: translations.get('mes/stat/2002'),
             description: translations.get('mes/stat/12002'),
-            maleAppearance: {
-                model: 'meshes/pcs/pc_human_male/pc_human_male.model',
-                materials: {
-                    HEAD: 'meshes/pcs/pc_elf_male/elf_head.xml',
-                    CHEST: 'meshes/pcs/pc_elf_male/elf_chest.xml',
-                    GLOVES: 'meshes/pcs/pc_elf_male/elf_hands.xml',
-                    BOOTS: 'meshes/pcs/pc_elf_male/elf_feet.xml'
-                }
-            },
-            femaleAppearance: {
-                model: 'meshes/pcs/pc_human_female/pc_human_female.model',
-                materials: {
-                    HEAD: 'meshes/pcs/pc_elf_female/female_elf_head.xml',
-                    CHEST: 'meshes/pcs/pc_elf_female/female_elf_chest.xml',
-                    GLOVES: 'meshes/pcs/pc_elf_female/female_elf_hands.xml',
-                    BOOTS: 'meshes/pcs/pc_elf_female/female_elf_feet.xml'
-                }
-            }
+            prototypeMale: '13004',
+            prototypeFemale: '13005',
+            heightMale: [135, 165],
+            heightFemale: [135, 165],
+            weightMale: [85, 121],
+            weightFemale: [80, 116],
+            landSpeed: 30
         });
 
         Races.register({
             id: 'gnome',
             playable: true,
             name: translations.get('mes/stat/2003'),
-            description: translations.get('mes/stat/12003')
+            description: translations.get('mes/stat/12003'),
+            prototypeMale: '13006',
+            prototypeFemale: '13007',
+            heightMale: [91, 111],
+            heightFemale: [86, 106],
+            weightMale: [40, 48],
+            weightFemale: [35, 43],
+            landSpeed: 20
         });
 
         Races.register({
             id: 'halfelf',
             playable: true,
             name: translations.get('mes/stat/2004'),
-            description: translations.get('mes/stat/12004')
+            description: translations.get('mes/stat/12004'),
+            prototypeMale: '13008',
+            prototypeFemale: '13009',
+            heightMale: [140, 180],
+            heightFemale: [135, 175],
+            weightMale: [100, 164],
+            weightFemale: [80, 144],
+            landSpeed: 30
         });
 
         Races.register({
@@ -145,31 +135,27 @@ var Races = {
             playable: true,
             name: translations.get('mes/stat/2005'),
             description: translations.get('mes/stat/12005'),
-            maleAppearance: {
-                model: 'meshes/pcs/pc_halforc_male/pc_halforc_male.model',
-                materials: {
-                    HEAD: 'meshes/pcs/pc_halforc_male/halforc_head.xml',
-                    CHEST: 'meshes/pcs/pc_halforc_male/halforc_chest.xml',
-                    GLOVES: 'meshes/pcs/pc_halforc_male/halforc_hands.xml',
-                    BOOTS: 'meshes/pcs/pc_halforc_male/halforc_feet.xml'
-                }
-            },
-            femaleAppearance: {
-                model: 'meshes/pcs/pc_halforc_female/pc_halforc_female.model',
-                materials: {
-                    HEAD: 'meshes/pcs/pc_halforc_female/female_halforc_head.xml',
-                    CHEST: 'meshes/pcs/pc_halforc_female/female_halforc_chest.xml',
-                    GLOVES: 'meshes/pcs/pc_halforc_female/female_halforc_hands.xml',
-                    BOOTS: 'meshes/pcs/pc_halforc_female/female_halforc_feet.xml'
-                }
-            }
+            prototypeMale: '130010',
+            prototypeFemale: '13011',
+            heightMale: [147, 208],
+            heightFemale: [135, 195],
+            weightMale: [150, 294],
+            weightFemale: [110, 254],
+            landSpeed: 30
         });
 
         Races.register({
             id: 'halfling',
             playable: true,
             name: translations.get('mes/stat/2006'),
-            description: translations.get('mes/stat/12006')
+            description: translations.get('mes/stat/12006'),
+            prototypeMale: '130012',
+            prototypeFemale: '13013',
+            heightMale: [81, 111],
+            heightFemale: [76, 106],
+            weightMale: [30, 38],
+            weightFemale: [25, 33],
+            landSpeed: 20
         });
 
     }

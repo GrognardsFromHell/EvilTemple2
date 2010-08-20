@@ -21,6 +21,29 @@ var BaseObject = {
     drawBehindWalls: false,
 
     /**
+     * The number of hitpoints this object has. This is not the <i>current</i> amount of health, but rather the
+     * maximum amount.
+     */
+    hitPoints: 1,
+
+    /**
+     * The number of temporary hit points this object has gained through spells or other means. If damage is taken,
+     * this number is reduced until it hits zero, and the damage is avoided.
+     */
+    temporaryHitPoints: 0,
+
+    /**
+     * The damage sustained by this object or critter.
+     */
+    damageTaken: 0,
+
+    /**
+     * The subdual damage taken by this object. Certain objects may be immune to subdual damage (i.e. constructs,
+     * or inanimate objects).
+     */
+    subdualDamageTaken: 0,
+
+    /**
      * Extracts the state of a mobile that needs to be saved.
      * Effectively, this returns a shallow copy of this object with
      * all runtime state (like render state ids) removed.
@@ -373,6 +396,187 @@ var Critter = {
     },
     drawBehindWalls: true,
     killsOnSight: false,
+    classLevels: [],
+    experiencePoints: 0,
+
+    /**
+     * Returns the effective initiative bonus for this character, which includes the effect
+     * from feats such as improved initiative and other influences.
+     */
+    getInitiativeBonus: function() {
+        return getAbilityModifier(this.getEffectiveDexterity());
+    },
+
+    /**
+     * Gets the effective land speed of this character. This uses the character's race as the
+     * base land speed, and then applies any bonuses from the class or spells/effects.
+     */
+    getEffectiveLandSpeed: function() {
+        var landSpeed = 30; // This is a fallback
+
+        // Use the character's race as a base
+        if (this.race) {
+            var race = Races.getById(this.race);
+            landSpeed = race.landSpeed;
+        }
+
+        // Allows a per-creature override of landspeed
+        if (this.landSpeed) {
+            landSpeed = this.landSpeed;
+        }
+
+        // Apply bonuses granted by the class.
+
+        // TODO: Influence land-speed through encumbrance and armor
+
+        return landSpeed;
+    },
+
+    /**
+     * Returns the base attack bonus for this critter.
+     */
+    getBaseAttackBonus: function() {
+        var bonus = 0;
+
+        // This should probably be cached
+        for (var i = 0; i < this.classLevels.length; ++i) {
+            var classObj = Classes.getById(this.classLevels[i].classId);
+            bonus += classObj.getBaseAttackBonus(this.classLevels[i].count);
+        }
+
+        return bonus;
+    },
+
+    /**
+     * Gets the character's effective strength ability, which includes bonuses gained by spells and
+     * other, temporary means.
+     */
+    getEffectiveStrength: function() {
+        return this.strength;
+    },
+
+    /**
+     * Gets the character's effective dexterity ability, which includes bonuses gained by spells and
+     * other, temporary means.
+     */
+    getEffectiveDexterity: function() {
+        return this.dexterity;
+    },
+
+    /**
+     * Gets the character's effective constitution ability, which includes bonuses gained by spells and
+     * other, temporary means.
+     */
+    getEffectiveConstitution: function() {
+        return this.constitution;
+    },
+
+    /**
+     * Gets the character's effective intelligence ability, which includes bonuses gained by spells and
+     * other, temporary means.
+     */
+    getEffectiveIntelligence: function() {
+        return this.intelligence;
+    },
+
+    /**
+     * Gets the character's effective wisdom ability, which includes bonuses gained by spells and
+     * other, temporary means.
+     */
+    getEffectiveWisdom: function() {
+        return this.wisdom;
+    },
+
+    /**
+     * Gets the character's effective charisma ability, which includes bonuses gained by spells and
+     * other, temporary means.
+     */
+    getEffectiveCharisma: function() {
+        return this.charisma;
+    },
+
+    getReflexSave: function() {
+        var bonus = 0;
+
+        // This should probably be cached
+        for (var i = 0; i < this.classLevels.length; ++i) {
+            var classObj = Classes.getById(this.classLevels[i].classId);
+            bonus += classObj.getReflexSave(this.classLevels[i].count);
+        }
+
+        // Add dexterity modifier
+        bonus += getAbilityModifier(this.getEffectiveDexterity());
+
+        return bonus;
+    },
+
+    getWillSave: function() {
+        var bonus = 0;
+
+        // This should probably be cached
+        for (var i = 0; i < this.classLevels.length; ++i) {
+            var classObj = Classes.getById(this.classLevels[i].classId);
+            bonus += classObj.getWillSave(this.classLevels[i].count);
+        }
+
+        // Add dexterity modifier
+        bonus += getAbilityModifier(this.getEffectiveWisdom());
+
+        return bonus;
+    },
+
+    getFortitudeSave: function() {
+        var bonus = 0;
+
+        // This should probably be cached
+        for (var i = 0; i < this.classLevels.length; ++i) {
+            var classObj = Classes.getById(this.classLevels[i].classId);
+            bonus += classObj.getFortitudeSave(this.classLevels[i].count);
+        }
+
+        // Add dexterity modifier
+        bonus += getAbilityModifier(this.getEffectiveConstitution());
+
+        return bonus;
+    },
+
+    /**
+     * Returns the effective level of this character. For now, this is the sum of all class-levels.
+     */
+    getEffectiveCharacterLevel: function() {
+        var sum = 0;
+        for (var i = 0; i < this.classLevels.length; ++i) {
+            sum += this.classLevels[i].count;
+        }
+        return sum;
+    },
+
+    /**
+     * Gets the number of levels this critter has of the given class.
+     * @param classId The class's id.
+     */
+    getClassLevels: function(classId) {
+        var sum = 0;
+        for (var i = 0; i < this.classLevels.length; ++i) {
+            if (this.classLevels[i].classId == classId)
+                sum += this.classLevels[i].count;
+        }
+        return sum;
+    },
+
+    /**
+     * Gets the object representing the levels of a certain class this character has.
+     *
+     * @param classId The class's id.
+     * @returns null if this character doesnt have any levels of that class.
+     */
+    getClassLevel: function(classId) {
+        for (var i = 0; i < this.classLevels.length; ++i) {
+            if (this.classLevels[i].classId == classId)
+                return this.classLevels[i];
+        }
+        return null;
+    },
 
     joinedParty: function() {
         if (this.OnJoin)
@@ -623,8 +827,7 @@ var animEventAnimObjFacade = {
     }
 };
 
-function handleAnimationEvent(type, content)
-{
+function handleAnimationEvent(type, content) {
     // Variable may be used by the eval call below.
     //noinspection UnnecessaryLocalVariableJS
     var game = animEventGameFacade;

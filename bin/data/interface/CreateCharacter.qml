@@ -29,18 +29,27 @@ Item {
                             int intelligence, int wisdom, int charisma)
     signal raceChosen(string race)
     signal genderChosen(string gender)
-    signal heightChosen(int height)
+    signal heightChosen(real height)
+    signal classChosen(string className)
+    signal alignmentChosen(string alignment)
+    signal deityChosen(string deity)
 
     signal activeStageRequested(string stage)
 
     // The available races
     property alias races : raceGroup.races
 
-    // Minimum height for the current race/gender selection in centimeters
-    property int minHeight
+    property alias minHeight : heightGroup.minHeight
 
-    // Maximum height for the current race/gender selection in centimeters
-    property int maxHeight
+    property alias maxHeight : heightGroup.maxHeight
+
+    property alias classes : classGroup.classes
+
+    property alias characterSheet : paperdoll.sheet
+
+    property alias availableAlignments : alignmentGroup.availableAlignments
+
+    property alias availableDeities : deityGroup.availableDeities
 
     onOverallStageChanged: CreateCharacter.updateButtonState()
 
@@ -50,6 +59,12 @@ Item {
         id: background
         source: '../art/interface/pc_creation/background.png'
         anchors.fill: parent
+    }
+
+    CreateCharacterPaperdoll {
+        id: paperdoll
+        x: 21
+        y: 264
     }
 
     ModelViewer {
@@ -217,15 +232,38 @@ Item {
         x: 220
         y: 51
 
-        onChosenHeightChanged: heightChosen(minHeight + chosenHeight * (maxHeight - minHeight))
+        onChosenHeightChanged: heightChosen(chosenHeight)
     }
 
     Item {
         id: hairGroup
     }
 
-    Item {
+    CreateCharacterClass {
         id: classGroup
+        opacity: 0
+        x: 220
+        y: 51
+
+        onSelectedClassChanged: classChosen(selectedClass)
+    }
+
+    CreateCharacterAlignment {
+        id: alignmentGroup
+        opacity: 0
+        x: 220
+        y: 51
+
+        onSelectedAlignmentChanged: alignmentChosen(selectedAlignment)
+    }
+
+    CreateCharacterDeity {
+        id: deityGroup
+        opacity: 0
+        x: 220
+        y: 51
+
+        onSelectedDeityChanged: deityChosen(selectedDeity)
     }
 
     states: [
@@ -300,7 +338,40 @@ Item {
                 target: classGroup
                 opacity: 1
             }
+        },
+        State {
+            name: "alignment"
+            PropertyChanges {
+                target: alignmentButton
+                active: true
+            }
+
+            PropertyChanges {
+                target: alignmentGroup
+                opacity: 1
+            }
+        },
+        State {
+            name: "deity"
+            PropertyChanges {
+                target: deityButton
+                active: true
+            }
+
+            PropertyChanges {
+                target: deityGroup
+                opacity: 1
+            }
         }
+    ]
+
+    transitions: [
+        Transition {
+            from: "*"
+            to: "*"
+            NumberAnimation { properties: "opacity"; duration: 200 }
+        }
+
     ]
 
 }

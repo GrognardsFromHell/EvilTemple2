@@ -36,13 +36,21 @@ function updateButtonState() {
     classButton.enabled = overallStage >= Stage.Class;
     classButton.done = overallStage > Stage.Class;
     alignmentButton.enabled = overallStage >= Stage.Alignment;
+    alignmentButton.done = overallStage > Stage.Alignment;
     deityButton.enabled = overallStage >= Stage.Deity;
+    deityButton.done = overallStage > Stage.Deity;
     featuresButton.enabled = overallStage >= Stage.Features;
+    featuresButton.done = overallStage > Stage.Features;
     featsButton.enabled = overallStage >= Stage.Feats;
+    featsButton.done = overallStage > Stage.Feats;
     skillsButton.enabled = overallStage >= Stage.Skills;
+    skillsButton.done = overallStage > Stage.Skills;
     spellsButton.enabled = overallStage >= Stage.Spells;
+    spellsButton.done = overallStage > Stage.Spells;
     portraitButton.enabled = overallStage >= Stage.Portrait;
+    portraitButton.done = overallStage > Stage.Portrait;
     voiceAndNameButton.enabled = overallStage >= Stage.VoiceAndName;
+    voiceAndNameButton.done = overallStage > Stage.VoiceAndName;
     finishButton.enabled = overallStage >= Stage.Finished;
 }
 

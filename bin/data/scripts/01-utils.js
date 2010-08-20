@@ -1,8 +1,7 @@
 /*
  Reads a JSON file from disk (UTF-8 encoding) and returns the contained top-level object.
  */
-function readJson(filename)
-{
+function readJson(filename) {
     var text = readFile(filename);
     var result;
     try {
@@ -20,8 +19,7 @@ function readJson(filename)
  * @param filename The filename to write to.
  * @param object The object to write.
  */
-function writeJson(filename, object)
-{
+function writeJson(filename, object) {
     var json = JSON.stringify(object);
     writeFile(filename, json);
 }
@@ -93,13 +91,11 @@ var ListenerQueue = function() {
     this.listeners = [];
 };
 
-ListenerQueue.prototype.append = function(callback, thisObject)
-{
+ListenerQueue.prototype.append = function(callback, thisObject) {
     this.listeners.push([callback, thisObject]);
 };
 
-ListenerQueue.prototype.remove = function(callback, thisObject)
-{
+ListenerQueue.prototype.remove = function(callback, thisObject) {
     for (var i = 0; i < this.listeners.length; ++i) {
         var listener = this.listeners[i];
 
@@ -121,6 +117,16 @@ ListenerQueue.prototype.notify = function() {
 function assertTrue(actual, msg) {
     if (!actual)
         throw msg;
+}
+
+/**
+ * Returns the modifier for a given ability value.
+ * I.e. for 18 it returns +4, for 8 -1, etc.
+ *
+ * @param value The ability value.
+ */
+function getAbilityModifier(value) {
+    return Math.floor((value - 10) / 2);
 }
 
 /**
