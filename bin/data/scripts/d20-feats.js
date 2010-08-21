@@ -53,6 +53,7 @@ var StandardFeats = {
     ImprovedInitiative: 'improved-initiative',
     ImprovedOverrun: 'improved-overrun',
     ImprovedShieldBash: 'improved-shield-bash',
+    ImprovedSunder: 'improved-sunder',
     ImprovedTrip: 'improved-trip',
     ImprovedTwoWeaponFighting: 'improved-two-weapon-fighting',
     ImprovedTurning: 'improved-turning',
@@ -98,7 +99,6 @@ var StandardFeats = {
     Stealthy: 'stealthy',
     StillSpell: 'still-spell',
     StunningFist: 'stunning-fist',
-    Sunder: 'sunder',
     Toughness: 'toughness',
     TowerShieldProficiency: 'tower-shield-proficiency',
     Track: 'track',
@@ -561,14 +561,22 @@ var StandardFeatCategories = {
             id: StandardFeats.ImprovedFeint,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/212'),
-            shortDescription: translations.get('mes/feat/5212')
+            shortDescription: translations.get('mes/feat/5212'),
+            requirements: [
+                AbilityRequirement(Abilities.Intelligence, 13),
+                FeatRequirement(StandardFeats.CombatExpertise)
+            ]
         });
 
         Feats.register({
             id: StandardFeats.ImprovedGrapple,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/213'),
-            shortDescription: translations.get('mes/feat/5213')
+            shortDescription: translations.get('mes/feat/5213'),
+            requirements: [
+                AbilityRequirement(Abilities.Dexterity, 13),
+                FeatRequirement(StandardFeats.ImprovedUnarmedStrike)
+            ]
         });
 
         Feats.register({
@@ -582,35 +590,64 @@ var StandardFeatCategories = {
             id: StandardFeats.ImprovedOverrun,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/215'),
-            shortDescription: translations.get('mes/feat/5215')
+            shortDescription: translations.get('mes/feat/5215'),
+            requirements: [
+                AbilityRequirement(Abilities.Strength, 13),
+                FeatRequirement(StandardFeats.PowerAttack)
+            ]
         });
 
         Feats.register({
             id: StandardFeats.ImprovedShieldBash,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/216'),
-            shortDescription: translations.get('mes/feat/5216')
+            shortDescription: translations.get('mes/feat/5216'),
+            requirements: [
+                FeatRequirement(StandardFeats.ShieldProficiency)
+            ]
+        });
+
+        Feats.register({
+            id: StandardFeats.ImprovedSunder,
+            category: StandardFeatCategories.General,
+            name: translations.get('mes/feat/340'),
+            shortDescription: translations.get('mes/feat/5340'),
+            requirements: [
+                FeatRequirement(StandardFeats.PowerAttack)
+            ]
         });
 
         Feats.register({
             id: StandardFeats.ImprovedTrip,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/217'),
-            shortDescription: translations.get('mes/feat/5217')
-        });
-
-        Feats.register({
-            id: StandardFeats.ImprovedTwoWeaponFighting,
-            category: StandardFeatCategories.General,
-            name: translations.get('mes/feat/218'),
-            shortDescription: translations.get('mes/feat/5218')
+            shortDescription: translations.get('mes/feat/5217'),
+            requirements: [
+                AbilityRequirement(Abilities.Intelligence, 13),
+                FeatRequirement(StandardFeats.CombatExpertise)
+            ]
         });
 
         Feats.register({
             id: StandardFeats.ImprovedTurning,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/219'),
-            shortDescription: translations.get('mes/feat/5219')
+            shortDescription: translations.get('mes/feat/5219'),
+            requirements: [
+                TurnOrRebukeRequirement()
+            ]
+        });
+
+        Feats.register({
+            id: StandardFeats.ImprovedTwoWeaponFighting,
+            category: StandardFeatCategories.General,
+            name: translations.get('mes/feat/218'),
+            shortDescription: translations.get('mes/feat/5218'),
+            requirements: [
+                AbilityRequirement(Abilities.Dexterity, 17),
+                FeatRequirement(StandardFeats.TwoWeaponFighting),
+                BaseAttackBonusRequirement(6)
+            ]
         });
 
         Feats.register({
@@ -645,7 +682,10 @@ var StandardFeatCategories = {
             id: StandardFeats.Leadership,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/224'),
-            shortDescription: translations.get('mes/feat/5224')
+            shortDescription: translations.get('mes/feat/5224'),
+            requirements: [
+                CharacterLevelRequirement(6)
+            ]
         });
 
         Feats.register({
@@ -666,7 +706,13 @@ var StandardFeatCategories = {
             id: StandardFeats.Manyshot,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/227'),
-            shortDescription: translations.get('mes/feat/5227')
+            shortDescription: translations.get('mes/feat/5227'),
+            requirements: [
+                AbilityRequirement(Abilities.Dexterity, 17),
+                FeatRequirement(StandardFeats.PointBlankShot),
+                FeatRequirement(StandardFeats.RapidShot),
+                BaseAttackBonusRequirement(6)
+            ]
         });
 
         Feats.register({
@@ -687,28 +733,43 @@ var StandardFeatCategories = {
             id: StandardFeats.Mobility,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/260'),
-            shortDescription: translations.get('mes/feat/5260')
+            shortDescription: translations.get('mes/feat/5260'),
+            requirements: [
+                AbilityRequirement(Abilities.Dexterity, 13),
+                FeatRequirement(StandardFeats.Dodge)
+            ]
         });
 
         Feats.register({
             id: StandardFeats.MountedArchery,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/261'),
-            shortDescription: translations.get('mes/feat/5261')
+            shortDescription: translations.get('mes/feat/5261'),
+            requirements: [
+                SkillRequirement(StandardSkills.Ride, 1),
+                FeatRequirement(StandardFeats.MountedCombat)
+            ]
         });
 
         Feats.register({
             id: StandardFeats.MountedCombat,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/262'),
-            shortDescription: translations.get('mes/feat/5262')
+            shortDescription: translations.get('mes/feat/5262'),
+            requirements: [
+                SkillRequirement(StandardSkills.Ride, 1)
+            ]
         });
 
         Feats.register({
             id: StandardFeats.NaturalSpell,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/263'),
-            shortDescription: translations.get('mes/feat/5263')
+            shortDescription: translations.get('mes/feat/5263'),
+            requirements: [
+                AbilityRequirement(Abilities.Wisdom, 13),
+                WildShapeAbilityRequirement()
+            ]
         });
 
         Feats.register({
@@ -743,21 +804,30 @@ var StandardFeatCategories = {
             id: StandardFeats.PowerAttack,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/268'),
-            shortDescription: translations.get('mes/feat/5268')
+            shortDescription: translations.get('mes/feat/5268'),
+            requirements: [
+                AbilityRequirement(Abilities.Strength, 13)
+            ]
         });
 
         Feats.register({
             id: StandardFeats.PreciseShot,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/269'),
-            shortDescription: translations.get('mes/feat/5269')
+            shortDescription: translations.get('mes/feat/5269'),
+            requirements: [
+                FeatRequirement(StandardFeats.PointBlankShot)
+            ]
         });
 
         Feats.register({
             id: StandardFeats.QuickDraw,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/270'),
-            shortDescription: translations.get('mes/feat/5270')
+            shortDescription: translations.get('mes/feat/5270'),
+            requirements: [
+                BaseAttackBonusRequirement(1)
+            ]
         });
 
         Feats.register({
@@ -768,24 +838,35 @@ var StandardFeatCategories = {
         });
 
         Feats.register({
-            id: StandardFeats.RapidShot,
-            category: StandardFeatCategories.General,
-            name: translations.get('mes/feat/272'),
-            shortDescription: translations.get('mes/feat/5272')
-        });
-
-        Feats.register({
             id: StandardFeats.RapidReload,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/273'),
-            shortDescription: translations.get('mes/feat/5273')
+            shortDescription: translations.get('mes/feat/5273'),
+            requirements: [
+                ProficientWithWeaponRequirement()
+            ]
+        });
+
+        Feats.register({
+            id: StandardFeats.RapidShot,
+            category: StandardFeatCategories.General,
+            name: translations.get('mes/feat/272'),
+            shortDescription: translations.get('mes/feat/5272'),
+            requirements: [
+                AbilityRequirement(Abilities.Dexterity, 13),
+                FeatRequirement(StandardFeats.PointBlankShot)
+            ]
         });
 
         Feats.register({
             id: StandardFeats.RideByAttack,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/274'),
-            shortDescription: translations.get('mes/feat/5274')
+            shortDescription: translations.get('mes/feat/5274'),
+            requirements: [
+                SkillRequirement(StandardSkills.Ride, 1),
+                FeatRequirement(StandardFeats.MountedCombat)
+            ]
         });
 
         Feats.register({
@@ -799,7 +880,10 @@ var StandardFeatCategories = {
             id: StandardFeats.ScribeScroll,
             category: StandardFeatCategories.ItemCreation,
             name: translations.get('mes/feat/276'),
-            shortDescription: translations.get('mes/feat/5276')
+            shortDescription: translations.get('mes/feat/5276'),
+            requirements: [
+                CasterLevelRequirement(CasterLevelRequirement.Any, 1)
+            ]
         });
 
         Feats.register({
@@ -820,7 +904,14 @@ var StandardFeatCategories = {
             id: StandardFeats.ShotOnTheRun,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/279'),
-            shortDescription: translations.get('mes/feat/5279')
+            shortDescription: translations.get('mes/feat/5279'),
+            requirements: [
+                AbilityRequirement(Abilities.Dexterity, 13),
+                FeatRequirement(StandardFeats.Dodge),
+                FeatRequirement(StandardFeats.Mobility),
+                FeatRequirement(StandardFeats.PointBlankShot),
+                BaseAttackBonusRequirement(4)
+            ]
         });
 
         Feats.register({
@@ -848,7 +939,12 @@ var StandardFeatCategories = {
             id: StandardFeats.SnatchArrows,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/324'),
-            shortDescription: translations.get('mes/feat/5324')
+            shortDescription: translations.get('mes/feat/5324'),
+            requirements: [
+                AbilityRequirement(Abilites.Dexterity, 15),
+                FeatRequirement(StandardFeats.DeflectArrows),
+                FeatRequirement(StandardFeats.ImprovedUnarmedStrike)
+            ]
         });
 
         Feats.register({
@@ -862,7 +958,10 @@ var StandardFeatCategories = {
             id: StandardFeats.SpellMastery,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/333'),
-            shortDescription: translations.get('mes/feat/5333')
+            shortDescription: translations.get('mes/feat/5333'),
+            requirements: [
+                ClassLevelRequirement(StandardClasses.Wizard, 1)
+            ]
         });
 
         Feats.register({
@@ -876,14 +975,25 @@ var StandardFeatCategories = {
             id: StandardFeats.SpiritedCharge,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/335'),
-            shortDescription: translations.get('mes/feat/5335')
+            shortDescription: translations.get('mes/feat/5335'),
+            requirements: [
+                SkillRequirement(StandardSkills.Ride, 1),
+                FeatRequirement(StandardFeats.MountedCombat),
+                FeatRequirement(StandardFeats.RideByAttack)
+            ]
         });
 
         Feats.register({
             id: StandardFeats.SpringAttack,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/336'),
-            shortDescription: translations.get('mes/feat/5336')
+            shortDescription: translations.get('mes/feat/5336'),
+            requirements: [
+                AbilityRequirement(Abilities.Dexterity, 13),
+                FeatRequirement(StandardFeats.Dodge),
+                FeatRequirement(StandardFeats.Mobility),
+                BaseAttackBonusRequirement(4)
+            ]
         });
 
         Feats.register({
@@ -904,14 +1014,13 @@ var StandardFeatCategories = {
             id: StandardFeats.StunningFist,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/339'),
-            shortDescription: translations.get('mes/feat/5339')
-        });
-
-        Feats.register({
-            id: StandardFeats.Sunder,
-            category: StandardFeatCategories.General,
-            name: translations.get('mes/feat/340'),
-            shortDescription: translations.get('mes/feat/5340')
+            shortDescription: translations.get('mes/feat/5339'),
+            requirements: [
+                AbilityRequirement(Abilities.Dexterity, 13),
+                AbilityRequirement(Abilities.Wisdom, 13),
+                FeatRequirement(StandardFeats.ImprovedUnarmedStrike),
+                BaseAttackBonusRequirement(8)
+            ]
         });
 
         Feats.register({
@@ -925,7 +1034,10 @@ var StandardFeatCategories = {
             id: StandardFeats.TowerShieldProficiency,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/342'),
-            shortDescription: translations.get('mes/feat/5342')
+            shortDescription: translations.get('mes/feat/5342'),
+            requirements: [
+                FeatRequirement(StandardFeats.ShieldProficiency)
+            ]
         });
 
         Feats.register({
@@ -939,49 +1051,78 @@ var StandardFeatCategories = {
             id: StandardFeats.Trample,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/344'),
-            shortDescription: translations.get('mes/feat/5344')
+            shortDescription: translations.get('mes/feat/5344'),
+            requirements: [
+                FeatRequirement(StandardFeats.MountedCombat)
+            ]
         });
 
         Feats.register({
             id: StandardFeats.TwoWeaponFighting,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/345'),
-            shortDescription: translations.get('mes/feat/5345')
+            shortDescription: translations.get('mes/feat/5345'),
+            requirements: [
+                AbilityRequirement(Abilities.Dexterity, 15)
+            ]
         });
 
         Feats.register({
             id: StandardFeats.TwoWeaponDefense,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/346'),
-            shortDescription: translations.get('mes/feat/5346')
+            shortDescription: translations.get('mes/feat/5346'),
+            requirements: [
+                FeatRequirement(StandardFeats.TwoWeaponFighting)
+            ]
         });
 
         Feats.register({
             id: StandardFeats.WeaponFinesse,
             category: StandardFeatCategories.General,
             name: translations.get('mes/pc_creation/19105'),
-            shortDescription: translations.get('mes/feat/5347')
+            shortDescription: translations.get('mes/feat/5347'),
+            requirements: [
+                BaseAttackBonusRequirement(1)
+            ]
         });
 
         Feats.register({
             id: StandardFeats.WeaponFocus,
             category: StandardFeatCategories.General,
             name: translations.get('mes/pc_creation/19106'),
-            shortDescription: translations.get('mes/feat/5417')
+            shortDescription: translations.get('mes/feat/5417'),
+            requirements: [
+                BaseAttackBonusRequirement(1),
+                ProficientWithWeaponRequirement()
+            ]
         });
 
         Feats.register({
             id: StandardFeats.WeaponSpecialization,
             category: StandardFeatCategories.General,
             name: translations.get('mes/pc_creation/19107'),
-            shortDescription: translations.get('mes/feat/5489')
+            shortDescription: translations.get('mes/feat/5489'),
+            requirements: [
+                FeatRequirement(StandardFeats.WeaponFocus, FeatRequirement.SameArguments),
+                ClassLevelRequirement(StandardClasses.Fighter, 4)
+            ]
         });
 
         Feats.register({
             id: StandardFeats.WhirlwindAttack,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/560'),
-            shortDescription: translations.get('mes/feat/5560')
+            shortDescription: translations.get('mes/feat/5560'),
+            requirements: [
+                AbilityRequirement(Abilities.Dexterity, 13),
+                AbilityRequirement(Abilities.Intelligence, 13),
+                FeatRequirement(StandardFeats.CombatExpertise),
+                FeatRequirement(StandardFeats.Dodge),
+                FeatRequirement(StandardFeats.Mobility),
+                FeatRequirement(StandardFeats.SpringAttack),
+                BaseAttackBonusRequirement(4)
+            ]
         });
 
         Feats.register({

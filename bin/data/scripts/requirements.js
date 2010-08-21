@@ -104,3 +104,36 @@ var ProficientWithWeaponRequirement = function() {
         type: 'proficientWithWeapon'
     }
 };
+
+/**
+ * Require the character to be at least a certain level.
+ * @param level The minimum required level.
+ */
+var CharacterLevelRequirement = function(level) {
+    return {
+        type: 'charLevel',
+        minimum: level
+    };
+};
+
+/**
+ * Requires that the character has the ability to wildshape.
+ */
+var WildShapeAbilityRequirement = function() {
+    return {
+        type: 'wildshape'
+    }
+};
+
+/**
+ * Requires that the character has a minimum number of ranks in a skill.
+ * @param skill
+ * @param rank
+ */
+var SkillRequirement = function(skill, rank) {
+    return {
+        type: 'skill',
+        skillId: skill,
+        minimum: rank
+    }
+};

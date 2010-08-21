@@ -1,0 +1,3 @@
+var StandardSkills = {
+    Ride: 'ride'
+};
