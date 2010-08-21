@@ -101,3 +101,15 @@ var RestingStatus = {
     Impossible: 'impossible',
     Dangerous: 'dangerous'
 };
+
+/**
+ * Defines constants for the ability scores.
+ */
+var Abilities = {
+    Strength: 'strength',
+    Dexterity: 'dexterity',
+    Constitution: 'constitution',
+    Intelligence: 'intelligence',
+    Wisdom: 'wisdom',
+    Charisma: 'charisma'
+};
