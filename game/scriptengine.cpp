@@ -256,6 +256,8 @@ namespace EvilTemple {
         : engine(new QScriptEngine(parent)),
         debugger(NULL)
     {
+        engine->installTranslatorFunctions();
+
         // Debug the script engine if requested by the user
         foreach (const QString &argument, QCoreApplication::instance()->arguments()) {
             if (argument == "-scriptdebugger") {
