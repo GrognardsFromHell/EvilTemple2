@@ -398,6 +398,25 @@ var Critter = {
     killsOnSight: false,
     classLevels: [],
     experiencePoints: 0,
+    feats: [],
+
+    /**
+     * Checks whether this character has a certain feat.
+     *
+     * @param featInstance This is either the id of the feat (if the feat has no arguments)
+     * or an array, which contains the feat id as the first element and subsequently all feat
+     * arguments.
+     */
+    hasFeat: function(featInstance) {
+        if (featInstance instanceof Array) {
+            for (var i = 0; i < this.feats.length; ++i) {
+                if (this.feats[i].equals(featInstance))
+                    return true;
+            }
+            return false;
+        }
+        return this.feats.indexOf(featInstance) != -1;
+    },
 
     /**
      * Returns the effective initiative bonus for this character, which includes the effect

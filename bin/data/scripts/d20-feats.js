@@ -384,6 +384,14 @@ var StandardFeatCategories = {
             shortDescription: translations.get('mes/feat/5028')
         });
 
+        // Build a list of all exotic weapons for the selection box.
+        var exoticWeaponIds = Weapons.getByCategory(StandardWeaponCategories.Exotic).map(function (weapon) {
+            return {
+                id: weapon.id,
+                text: weapon.name
+            }
+        });
+
         Feats.register({
             id: StandardFeats.ExoticWeaponProficiency,
             category: StandardFeatCategories.General,
@@ -391,9 +399,13 @@ var StandardFeatCategories = {
             shortDescription: translations.get('mes/feat/5029'),
             requirements: [
                 BaseAttackBonusRequirement(1),
-                // TODO: Use the proper constants here
-                ConditionalRequirement(['BastardSword'], AbilityRequirement(Abilities.Strength, 13)),
-                ConditionalRequirement(['DwarvenWaraxe'], AbilityRequirement(Abilities.Strength, 13))
+                ConditionalRequirement([StandardWeapons.BastardSword], AbilityRequirement(Abilities.Strength, 13)),
+                ConditionalRequirement([StandardWeapons.DwarvenWaraxe], AbilityRequirement(Abilities.Strength, 13))
+            ],
+            arguments: [
+                FeatArgument(qsTr('Weapon Type'),
+                        qsTr('You will gain proficiency with the weapon type you choose.'),
+                        exoticWeaponIds)
             ]
         });
 
@@ -941,7 +953,7 @@ var StandardFeatCategories = {
             name: translations.get('mes/feat/324'),
             shortDescription: translations.get('mes/feat/5324'),
             requirements: [
-                AbilityRequirement(Abilites.Dexterity, 15),
+                AbilityRequirement(Abilities.Dexterity, 15),
                 FeatRequirement(StandardFeats.DeflectArrows),
                 FeatRequirement(StandardFeats.ImprovedUnarmedStrike)
             ]
@@ -1133,6 +1145,6 @@ var StandardFeatCategories = {
         });
     }
 
-    StartupListeners.add(registerFeats);
+    StartupListeners.add(registerFeats, 'd20-feats', ['d20-weapons']);
 
 })();

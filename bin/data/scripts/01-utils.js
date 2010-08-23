@@ -136,3 +136,15 @@ function getAbilityModifier(value) {
 function rad2deg(radians) {
     return (radians / Math.PI) * 180;
 }
+
+Array.prototype.equals = function(other) {
+    if (other.length != this.length)
+        return false;
+
+    for (var i = 0; i < other.length; ++i) {
+        if (this[i] != other[i])
+            return false;
+    }
+
+    return true;
+};

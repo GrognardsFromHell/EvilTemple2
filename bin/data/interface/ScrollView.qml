@@ -13,6 +13,8 @@ Item {
 
     property alias spacing : listView.spacing
 
+    property alias currentIndex : listView.currentIndex
+
     function refreshScrollbar() {
         if (dontUpdate)
             return;
@@ -28,6 +30,7 @@ Item {
         anchors.fill: parent
         anchors.rightMargin: scrollBar.width
         boundsBehavior: "StopAtBounds"
+        focus: true
 
         onContentYChanged: refreshScrollbar();
         onContentHeightChanged: refreshScrollbar();

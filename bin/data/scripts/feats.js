@@ -4,6 +4,51 @@
 var Feats = {};
 
 var Feat = function() {
+    this.unique = true;
+};
+
+/**
+ * Returns a human-readable name for an instance of the feat.
+ * This is particularily useful for displaying the name of a feat that has arguments.
+ *
+ * So in a character sheet, Weapon Focus (Longsword) gets listed instead of Weapon Focus.
+ */
+Feat.prototype.getName = function(instance) {
+    if (!this.arguments || this.arguments.length == 0) {
+        return this.name;
+    }
+
+    var result = this.name + ' (';
+    for (var i = 0; i < this.arguments.length; ++i) {
+        if (i > 0)
+            result += ', ';
+        // Find the corresponding argument and use it's text property
+        var values = this.arguments[i].values;
+        for (var j = 0; j < values.length; ++j) {
+            if (values[j].id == instance[1 + i]) {
+                result += values[j].text;
+            }
+        }
+    }
+    result += ')';
+
+    return result;
+};
+
+/**
+ * Creates a feat argument.
+ *
+ * @param name The name of the argument. This is for display purposes to the user.
+ * @param description The description part of the argument. This is displayed to the user when he is queried
+ * for the argument upon choosing the feat.
+ * @param values The possible values for the argument. As objects with at least an id and text property each.
+ */
+var FeatArgument = function(name, description, values) {
+    return {
+        name: name,
+        description: description,
+        values: values
+    }
 };
 
 (function() {

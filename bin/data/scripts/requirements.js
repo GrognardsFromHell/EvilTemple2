@@ -1,7 +1,10 @@
 var FeatRequirement = function(feat) {
     // TODO: This is rather hacky at the moment, until it's been decided how to handle this
     if (arguments.length > 1) {
-        feat = arguments.slice(0);
+        feat = [];
+        for (var i = 0; i < arguments.length; ++i) {
+            feat[i] = arguments[i];
+        }
     }
 
     return {

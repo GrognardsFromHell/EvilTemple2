@@ -21,6 +21,10 @@ Item {
         return modelViewer;
     }
 
+    function getFeatsDialog() {
+        return featsGroup;
+    }
+
     property int overallStage : CreateCharacter.Stage.Stats
 
     property int activeStage : CreateCharacter.Stage.Stats
@@ -33,6 +37,7 @@ Item {
     signal classChosen(string className)
     signal alignmentChosen(string alignment)
     signal deityChosen(string deity)
+
     signal activeStageRequested(string stage)
 
     // The available races
@@ -279,6 +284,15 @@ Item {
         height: 233
     }
 
+    CreateCharacterFeats {
+        id: featsGroup
+        opacity: 0
+        x: 220
+        y: 50
+        width: 431
+        height: 234
+    }
+
     states: [
         State {
             name: "stats-roll"
@@ -385,6 +399,18 @@ Item {
 
             PropertyChanges {
                 target: featuresLoader
+                opacity: 1
+            }
+        },
+        State {
+            name: "feats"
+            PropertyChanges {
+                target: featsButton
+                active: true
+            }
+
+            PropertyChanges {
+                target: featsGroup
                 opacity: 1
             }
         }
