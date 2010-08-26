@@ -683,7 +683,6 @@ function startup() {
     print("Loading jump points...");
     jumppoints = eval('(' + readFile('jumppoints.js') + ')');
     loadEquipment();
-    loadPortraits();
     loadInventoryIcons();
     sounds = eval('(' + readFile('sound/sounds.js') + ')');
 

@@ -132,9 +132,9 @@ var MerchantUi = {
         merchantUi.buyItem.connect(this, buyItem);
 
         merchantUi.merchantName = merchant.getName();
-        merchantUi.merchantPortrait = getPortrait(merchant.portrait, Portrait_Medium);
+        merchantUi.merchantPortrait = Portraits.getImage(merchant.portrait, Portrait.Medium);
         merchantUi.playerName = player.getName();
-        merchantUi.playerPortrait = getPortrait(player.portrait, Portrait_Medium);
+        merchantUi.playerPortrait = Portraits.getImage(player.portrait, Portrait.Medium);
 
         this.refresh();
     };

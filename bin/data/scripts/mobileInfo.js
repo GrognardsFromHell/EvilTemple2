@@ -58,7 +58,7 @@ function showMobileInfo(obj, modelInstance)
     var items = [];
     addObjProps(obj, items);
 
-    mobileInfoDialog.setPortrait(getPortrait(obj.portrait, Portrait_Medium));
+    mobileInfoDialog.setPortrait(Portraits.getPortrait(obj.portrait, Portrait.Medium));
     mobileInfoDialog.title = 'Property View';
     mobileInfoDialog.setItems(items);
     mobileInfoDialog.closeClicked.connect(function() {

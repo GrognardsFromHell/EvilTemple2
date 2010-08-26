@@ -57,7 +57,7 @@ var PartyUi = {};
 
     function getModel(critter) {
         return {
-            portrait: getPortrait(critter.portrait, Portrait_Medium),
+            portrait: Portraits.getPortrait(critter.portrait, Portrait.Medium),
             selected: Selection.isSelected(critter)
         };
     }

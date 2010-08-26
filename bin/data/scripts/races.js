@@ -7,9 +7,7 @@ var Races = {
 /**
  * Default prototype for races.
  */
-var Race = function(id) {
-    this.id = id;
-
+var Race = function() {
     /**
      * The number of feats gained at first level.
      */
@@ -33,10 +31,14 @@ var Race = function(id) {
         if (racesById[race.id])
             throw "Cannot register race " + race.id + " since it's already registered.";
 
-        var raceObj = new Race(race.id);
+        var actualObj = new Race;
+        for (var k in race) {
+            if (race.hasOwnProperty(k))
+                actualObj[k] = race[k];
+        }
 
-        racesById[race.id] = race;
-        races.push(race);
+        racesById[actualObj.id] = actualObj;
+        races.push(actualObj);
 
         print("Registered race " + race.name);
     };

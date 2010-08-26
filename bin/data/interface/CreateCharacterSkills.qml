@@ -278,120 +278,133 @@ Rectangle {
         model: skillModel
         delegate: skillDelegate
         width: 220
-        height: 200
         spacing: 5
+        anchors.top: parent.top
+        anchors.bottom: pointsRemainingLabel.top
+        anchors.bottomMargin: 5
         section.delegate: sectionDelegate
         section.property: "section"
     }
 
-    Image {
-        anchors.left: skillView.right
-        anchors.leftMargin: 10
+    Item {
+        id: detailsGroup
+
+        width: childrenRect.width
+        height: childrenRect.height
+
+        anchors.right: parent.right
         anchors.verticalCenter: skillView.verticalCenter
-        source: '../art/interface/pc_creation/skill_breakdown.png'
-        width: 85
-        height: 153
+
+        Image {
+            source: '../art/interface/pc_creation/skill_breakdown.png'
+            width: 85
+            height: 153
+        }
+
+        StandardText {
+            x: 94
+            y: 2
+            text: 'Skill Rank'
+        }
+
+        StandardText {
+            x: 94
+            y: 44
+            text: 'Ability Modifier'
+        }
+
+        StandardText {
+            x: 94
+            y: 84
+            text: 'Misc. Modifier'
+        }
+
+        StandardText {
+            x: 94
+            y: 128
+            text: 'Total Modifier'
+        }
+
+        Text {
+            id: abilityTypeLabel
+            x: -1
+            y: 44
+            width: 40
+            height: 16
+            color: "#ffffff"
+            text: detailsAbility
+            font.bold: true
+            smooth: false
+            horizontalAlignment: "AlignHCenter"
+            verticalAlignment: "AlignVCenter"
+        }
+
+        Text {
+            id: abilityModLabel
+            x: 42
+            y: 41
+            width: 40
+            height: 22
+            color: "#ffffff"
+            text: detailsAbilityMod
+            smooth: false
+            font.bold: true
+            horizontalAlignment: "AlignHCenter"
+            verticalAlignment: "AlignVCenter"
+        }
+
+        Text {
+            id: rankLabel
+            x: 42
+            y: 0
+            width: 40
+            height: 22
+            color: "#ffffff"
+            text: detailsRank
+            smooth: false
+            font.bold: true
+            horizontalAlignment: "AlignHCenter"
+            verticalAlignment: "AlignVCenter"
+        }
+
+        Text {
+            id: miscLabel
+            x: 42
+            y: 82
+            width: 40
+            height: 22
+            color: "#ffffff"
+            text: detailsMiscMod
+            smooth: false
+            font.bold: true
+            horizontalAlignment: "AlignHCenter"
+            verticalAlignment: "AlignVCenter"
+        }
+
+        Text {
+            id: totalBonusLabel
+            x: 41
+            y: 121
+            width: 44
+            height: 32
+            color: "#ffffff"
+            text: detailsTotalMod
+            style: "Normal"
+            font.pointSize: 17
+            smooth: false
+            font.bold: true
+            horizontalAlignment: "AlignHCenter"
+            verticalAlignment: "AlignVCenter"
+        }
+
     }
 
     StandardText {
-        x: 324
-        y: 25
-        text: 'Skill Rank'
-    }
-
-    StandardText {
-        x: 324
-        y: 67
-        text: 'Ability Modifier'
-    }
-
-    StandardText {
-        x: 324
-        y: 107
-        text: 'Misc. Modifier'
-    }
-
-    StandardText {
-        x: 324
-        y: 151
-        text: 'Total Modifier'
-    }
-
-    Text {
-        id: abilityTypeLabel
-        x: 229
-        y: 67
-        width: 40
-        height: 16
-        color: "#ffffff"
-        text: detailsAbility
-        font.bold: true
-        smooth: false
+        id: pointsRemainingLabel
+        anchors.bottom: parent.bottom
+        anchors.left: skillView.left
+        anchors.right: skillView.right
         horizontalAlignment: "AlignHCenter"
-        verticalAlignment: "AlignVCenter"
-    }
-
-    Text {
-        id: abilityModLabel
-        x: 272
-        y: 64
-        width: 40
-        height: 22
-        color: "#ffffff"
-        text: detailsAbilityMod
-        smooth: false
-        font.bold: true
-        horizontalAlignment: "AlignHCenter"
-        verticalAlignment: "AlignVCenter"
-    }
-
-    Text {
-        id: rankLabel
-        x: 272
-        y: 23
-        width: 40
-        height: 22
-        color: "#ffffff"
-        text: detailsRank
-        smooth: false
-        font.bold: true
-        horizontalAlignment: "AlignHCenter"
-        verticalAlignment: "AlignVCenter"
-    }
-
-    Text {
-        id: miscLabel
-        x: 272
-        y: 105
-        width: 40
-        height: 22
-        color: "#ffffff"
-        text: detailsMiscMod
-        smooth: false
-        font.bold: true
-        horizontalAlignment: "AlignHCenter"
-        verticalAlignment: "AlignVCenter"
-    }
-
-    Text {
-        id: totalBonusLabel
-        x: 271
-        y: 144
-        width: 44
-        height: 32
-        color: "#ffffff"
-        text: detailsTotalMod
-        style: "Normal"
-        font.pointSize: 17
-        smooth: false
-        font.bold: true
-        horizontalAlignment: "AlignHCenter"
-        verticalAlignment: "AlignVCenter"
-    }
-
-    StandardText {
-        x: 229
-        y: 0
         text: remainingSkillPoints + " skill points remaining"
     }
 

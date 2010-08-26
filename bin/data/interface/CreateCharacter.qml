@@ -29,9 +29,15 @@ Item {
         return skillsGroup;
     }
 
+    function getPortraitDialog() {
+        return portraitGroup;
+    }
+
     property int overallStage : CreateCharacter.Stage.Stats
 
     property int activeStage : CreateCharacter.Stage.Stats
+
+    property string largePortrait
 
     signal statsDistributed(int strength, int dexterity, int constitution,
                             int intelligence, int wisdom, int charisma)
@@ -86,6 +92,17 @@ Item {
         y: 56
         width: 132
         height: 152
+        visible: activeStage < CreateCharacter.Stage.Portrait
+    }
+
+    Image {
+        id: largePortraitImage
+        x: 49
+        y: 56
+        width: 132
+        height: 152
+        source: '../' + largePortrait
+        visible: largePortrait != '' && activeStage >= CreateCharacter.Stage.Portrait
     }
 
     CreateCharacterButtonRight {
@@ -306,6 +323,15 @@ Item {
         height: 234
     }
 
+    CreateCharacterPortrait {
+        id: portraitGroup
+        opacity: 0
+        x: 220
+        y: 50
+        width: 431
+        height: 234
+    }
+
     states: [
         State {
             name: "stats-roll"
@@ -436,6 +462,18 @@ Item {
 
             PropertyChanges {
                 target: skillsGroup
+                opacity: 1
+            }
+        },
+        State {
+            name: "portrait"
+            PropertyChanges {
+                target: portraitButton
+                active: true
+            }
+
+            PropertyChanges {
+                target: portraitGroup
                 opacity: 1
             }
         }

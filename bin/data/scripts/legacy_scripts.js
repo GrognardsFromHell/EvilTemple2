@@ -983,7 +983,7 @@ var LegacyScripts = {};
         conversationDialog = gameView.addGuiItem("interface/Conversation.qml");
         conversationDialog.npcText = (pc.obj.gender == 'female' && npcLine.femaleText) ? npcLine.femaleText : npcLine.text;
         conversationDialog.npcName = npc.obj.getName(true);
-        conversationDialog.portrait = getPortrait(npc.obj.portrait, Portrait_Medium);
+        conversationDialog.portrait = Portraits.getImage(npc.obj.portrait, Portrait.Medium);
         conversationDialog.answers = answers;
 
         conversationDialog.answered.connect(this, function(line) {

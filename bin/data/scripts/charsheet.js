@@ -9,7 +9,7 @@ function openCharacterSheet(critter) {
     dialog.name = translations.get('mes/description/' + critter.descriptionId);
     
     if (critter.portrait !== undefined)
-        dialog.portrait = getPortrait(critter.portrait, Portrait_Medium);
+        dialog.portrait = Portraits.getImage(critter.portrait, Portrait.Medium);
 
     dialog.strength = critter.strength;
     dialog.dexterity = critter.dexterity;

@@ -18,6 +18,14 @@ Rectangle {
         chosenHeightChanged(); // The position is valid initially
     }
 
+    onMinHeightChanged: {
+        updateSliderPosition();
+    }
+
+    onMaxHeightChanged: {
+        updateSliderPosition();
+    }
+
     Text {
         x: 5
         y: 5
@@ -95,7 +103,9 @@ Rectangle {
         var val = Math.floor(minHeight + (maxHeight - minHeight) * f);
 
         sliderValueLabel.text = val + "cm";
-        chosenHeight = f;
+        if (chosenHeight != f) {
+            chosenHeight = f;
+        }
     }
 
 }

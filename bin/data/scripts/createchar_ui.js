@@ -318,7 +318,7 @@ var CreateCharacterUi = {};
         } else if (stage == Stage.Height) {
             race = Races.getById(currentRace);
 
-            if (currentCharacter.gender == Male) {
+            if (currentCharacter.gender == Gender.Male) {
                 currentDialog.minHeight = race.heightMale[0];
                 currentDialog.maxHeight = race.heightMale[1];
             } else {
@@ -421,6 +421,14 @@ var CreateCharacterUi = {};
                     maximumRank: classSkill ? (ecl + 3) * 2 : (ecl + 3)
                 };
             });
+        } else if (stage == Stage.Portrait) {
+            var portraitDialog = currentDialog.getPortraitDialog();
+            portraitDialog.portraits = Portraits.getAll().filter(function (portrait) {
+                return portrait.gender && portrait.race;
+            });
+            portraitDialog.playerRace = currentCharacter.race;
+            portraitDialog.playerGender = currentCharacter.gender;
+            portraitDialog.selectedPortrait = currentCharacter.portrait; 
         }
 
         // TODO: Validate/reset stages
@@ -536,14 +544,14 @@ var CreateCharacterUi = {};
     function genderChosen(gender) {
         currentGender = gender;
         print("Gender selected: " + gender);
-        currentDialog.overallStage = Stage.Height;
+        heightChosen(0.5); // Default height
         updateModelViewer();
     }
 
     function heightChosen(height) {
         var race = Races.getById(currentRace);
-        var raceWeight = (currentGender == Male) ? race.weightMale : race.weightFemale;
-        var raceHeight = (currentGender == Male) ? race.heightMale : race.heightFemale;
+        var raceWeight = (currentGender == Gender.Male) ? race.weightMale : race.weightFemale;
+        var raceHeight = (currentGender == Gender.Male) ? race.heightMale : race.heightFemale;
 
         var heightInCm = Math.floor(raceHeight[0] + (raceHeight[1] - raceHeight[0]) * height);
         var weightInLb = Math.floor(raceWeight[0] + (raceWeight[1] - raceWeight[0]) * height);
@@ -658,6 +666,16 @@ var CreateCharacterUi = {};
         }
     }
 
+    function portraitChosen() {
+        var portraitDialog = currentDialog.getPortraitDialog();
+        var portraitId = portraitDialog.selectedPortrait;
+
+        print("Set portrait to " + portraitId);
+        currentCharacter.portrait = portraitId;
+        currentDialog.largePortrait = Portraits.getImage(portraitId, Portrait.Large);
+        currentDialog.overallStage = Stage.VoiceAndName;
+    }
+
     CreateCharacterUi.show = function(_successCallback, _cancelCallback) {
         if (currentDialog) {
             CreateCharacterUi.cancel();
@@ -688,6 +706,9 @@ var CreateCharacterUi = {};
         var skillsDialog = currentDialog.getSkillsDialog();
         skillsDialog.requestDetails.connect(requestSkillDetails);
         skillsDialog.skillPointDistributionChanged.connect(skillPointsDistributed);
+
+        var portraitDialog = currentDialog.getPortraitDialog();
+        portraitDialog.selectedPortraitChanged.connect(portraitChosen);
 
         // Start with the stats page
         currentDialog.overallStage = Stage.Stats;
