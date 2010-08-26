@@ -2,6 +2,9 @@
  * Enumerates ids of standard weapon types provided by the D20 SRD. These are used by the weapon profiencies.
  */
 var StandardWeapons = {
+    Ray: 'ray',
+    Grapple: 'grapple',
+
     Gauntlet: 'gauntlet',
     UnarmedStrike: 'unarmed-strike',
     Dagger: 'dagger',

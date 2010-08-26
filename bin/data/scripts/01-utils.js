@@ -138,7 +138,7 @@ function rad2deg(radians) {
 }
 
 Array.prototype.equals = function(other) {
-    if (other.length != this.length)
+    if (!(other instanceof Array) || other.length != this.length)
         return false;
 
     for (var i = 0; i < other.length; ++i) {
@@ -148,3 +148,14 @@ Array.prototype.equals = function(other) {
 
     return true;
 };
+
+/**
+ * Gets a bonus as a string conforming to D20 convention for bonuses. This means that positive
+ * bonuses have an explicit plus sign prepended.
+ *
+ * @param bonus The bonus to convert.
+ */
+function bonusToString(bonus) {
+    return (bonus < 0) ? String.valueOf(bonus) : "+" + bonus;
+}
+

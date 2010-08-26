@@ -3,24 +3,32 @@
  */
 var StandardDeities = {
     Boccob: 'boccob',
-    CorellonLarethian: 'corellon_larethian',
+    CorellonLarethian: 'corellonlarethian',
     Ehlonna: 'ehlonna',
     Erythnul: 'erythnul',
     Fharlanghn: 'fharlanghn',
-    GarlGlittergold: 'garl_glittergold',
+    GarlGlittergold: 'garlglittergold',
     Gruumsh: 'gruumsh',
     Heironeous: 'heironeous',
     Hextor: 'hextor',
     Kord: 'kord',
     Moradin: 'moradin',
     Nerull: 'nerull',
-    ObadHai: 'obad_hai',
+    ObadHai: 'obadhai',
     Olidammara: 'olidammara',
     Pelor: 'pelor',
-    StCuthbert: 'st_cuthbert',
+    StCuthbert: 'stcuthbert',
     Vecna: 'vecna',
-    WeeJas: 'wee_jas',
-    Yondalla: 'yondalla'
+    WeeJas: 'weejas',
+    Yondalla: 'yondalla',
+    OldFaith: 'oldfaith',
+    Zuggtmoy: 'zuggtmoy',
+    Iuz: 'iuz',
+    Lolth: 'lolth',
+    Procan: 'procan',
+    Norebo: 'norebo',
+    Pyremius: 'pyremius',
+    Ralishaz: 'ralishaz'
 };
 
 (function() {

@@ -48,9 +48,9 @@ QVariantMap PrototypeConverter::convertPrototype(Prototype *prototype)
     writer.write("scale", prototype->scale);
     writer.write("internalId", prototype->internalDescriptionId);
     writer.write("descriptionId", prototype->descriptionId);
-    writer.write("size", prototype->objectSize);
+    writer.write("size", prototype->objectSize.toLower());
     writer.write("hitPoints", prototype->hitPoints);
-    writer.write("material", prototype->objectMaterial);
+    writer.write("material", prototype->objectMaterial.toLower());
     writer.write("soundId", prototype->soundId);
     writer.write("categoryId", prototype->categoryId);
     writer.write("rotation", prototype->rotation);
@@ -241,7 +241,7 @@ QVariantMap PrototypeConverter::convertPrototype(Prototype *prototype)
 
         foreach (const ClassLevel &classLevel, critterProps->classLevels) {
             QVariantMap classLevelMap;
-            classLevelMap["class"] = classLevel.name;
+            classLevelMap["classId"] = classLevel.name.toLower();
             classLevelMap["count"] = classLevel.count;
             classLevels << classLevelMap;
         }

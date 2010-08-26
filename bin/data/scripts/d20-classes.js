@@ -16,6 +16,11 @@ var StandardClasses = {
 };
 
 /**
+ * Defines the feat-ids for all the bonus-feats a fighter may take.
+ */
+var FighterBonusFeats = [];
+
+/**
  * Commonly used base attack bonus progressions.
  */
 var BaseAttackBoni = {
@@ -33,11 +38,60 @@ var SavingThrows = {
 };
 
 (function() {
-
     /*
      Register the standard SRD classes.
      */
     function registerClasses() {
+
+        // Sets the standard bonus feats available to a fighter.
+        [
+            StandardFeats.BlindFight,
+            StandardFeats.CombatExpertise,
+            StandardFeats.ImprovedDisarm,
+            StandardFeats.ImprovedFeint,
+            StandardFeats.ImprovedTrip,
+            StandardFeats.WhirlwindAttack,
+            StandardFeats.CombatReflexes,
+            StandardFeats.Dodge,
+            StandardFeats.Mobility,
+            StandardFeats.SpringAttack,
+            StandardFeats.ExoticWeaponProficiency,
+            StandardFeats.ImprovedCritical,
+            StandardFeats.ImprovedInitiative,
+            StandardFeats.ImprovedShieldBash,
+            StandardFeats.ImprovedUnarmedStrike,
+            StandardFeats.DeflectArrows,
+            StandardFeats.ImprovedGrapple,
+            StandardFeats.SnatchArrows,
+            StandardFeats.StunningFist,
+            StandardFeats.PointBlankShot,
+            StandardFeats.FarShot,
+            StandardFeats.PreciseShot,
+            StandardFeats.RapidShot,
+            StandardFeats.Manyshot,
+            StandardFeats.ShotOnTheRun,
+            StandardFeats.ImprovedPreciseShot,
+            StandardFeats.PowerAttack,
+            StandardFeats.Cleave,
+            StandardFeats.GreatCleave,
+            StandardFeats.ImprovedBullRush,
+            StandardFeats.ImprovedOverrun,
+            StandardFeats.ImprovedSunder,
+            StandardFeats.QuickDraw,
+            StandardFeats.RapidReload,
+            StandardFeats.TwoWeaponFighting,
+            StandardFeats.TwoWeaponDefense,
+            StandardFeats.ImprovedTwoWeaponFighting,
+            StandardFeats.GreaterTwoWeaponFighting,
+            StandardFeats.WeaponFinesse,
+            StandardFeats.WeaponFocus,
+            StandardFeats.WeaponSpecialization,
+            StandardFeats.GreaterWeaponFocus,
+            StandardFeats.GreaterWeaponSpecialization
+        ].forEach(function (feat) {
+            FighterBonusFeats.push(feat);
+        });
+
         Classes.register({
             id: StandardClasses.Barbarian,
             name: translations.get('mes/stat/7'),
@@ -53,7 +107,12 @@ var SavingThrows = {
             baseAttackBonus: BaseAttackBoni.Strong,
             fortitudeSave: SavingThrows.Strong,
             reflexSave: SavingThrows.Weak,
-            willSave: SavingThrows.Weak
+            willSave: SavingThrows.Weak,
+            classSkills: [
+                StandardSkills.Intimidate,
+                StandardSkills.Listen,
+                StandardSkills.Survival
+            ]
         });
 
         Classes.register({
@@ -71,7 +130,23 @@ var SavingThrows = {
             baseAttackBonus: BaseAttackBoni.Medium,
             fortitudeSave: SavingThrows.Weak,
             reflexSave: SavingThrows.Strong,
-            willSave: SavingThrows.Strong
+            willSave: SavingThrows.Strong,
+            classSkills: [
+                StandardSkills.Appraise,
+                StandardSkills.Bluff,
+                StandardSkills.Concentration,
+                StandardSkills.Diplomacy,
+                StandardSkills.GatherInformation,
+                StandardSkills.Hide,
+                StandardSkills.Listen,
+                StandardSkills.MoveSilently,
+                StandardSkills.Perform,
+                StandardSkills.SenseMotive,
+                StandardSkills.SleightOfHand,
+                StandardSkills.Spellcraft,
+                StandardSkills.Tumble,
+                StandardSkills.UseMagicDevice
+            ]
         });
 
         Classes.register({
@@ -84,7 +159,26 @@ var SavingThrows = {
             baseAttackBonus: BaseAttackBoni.Medium,
             fortitudeSave: SavingThrows.Strong,
             reflexSave: SavingThrows.Weak,
-            willSave: SavingThrows.Strong
+            willSave: SavingThrows.Strong,
+            classSkills: [
+                StandardSkills.Concentration,
+                StandardSkills.Diplomacy,
+                StandardSkills.Heal,
+                StandardSkills.Spellcraft
+            ],
+            getClassSkills: function(character) {
+                // Domains add extra class-skills (possibly)
+                var result = this.classSkills.slice(0);
+                character.domains.forEach(function (domain) {
+                    if (domain.classSkills) {
+                        domain.classSkills.forEach(function (classSkill) {
+                            if (result.indexOf(classSkill) == -1)
+                                result.push(classSkill);
+                        });
+                    }
+                });
+                return result;
+            }
         });
 
         Classes.register({
@@ -103,8 +197,22 @@ var SavingThrows = {
             baseAttackBonus: BaseAttackBoni.Medium,
             fortitudeSave: SavingThrows.Strong,
             reflexSave: SavingThrows.Weak,
-            willSave: SavingThrows.Strong
+            willSave: SavingThrows.Strong,
+            classSkills: [
+                StandardSkills.Concentration,
+                StandardSkills.Diplomacy,
+                StandardSkills.Heal,
+                StandardSkills.Listen,
+                StandardSkills.Spellcraft,
+                StandardSkills.Spot,
+                StandardSkills.Survival
+            ]
         });
+
+        var fighterBonusFeatEntry = {
+            count: 1,
+            feats: FighterBonusFeats
+        };
 
         Classes.register({
             id: StandardClasses.Fighter,
@@ -116,7 +224,23 @@ var SavingThrows = {
             baseAttackBonus: BaseAttackBoni.Strong,
             fortitudeSave: SavingThrows.Strong,
             reflexSave: SavingThrows.Weak,
-            willSave: SavingThrows.Weak
+            willSave: SavingThrows.Weak,
+            bonusFeats: {
+                1: fighterBonusFeatEntry,
+                2: fighterBonusFeatEntry,
+                4: fighterBonusFeatEntry,
+                6: fighterBonusFeatEntry,
+                8: fighterBonusFeatEntry,
+                10: fighterBonusFeatEntry,
+                12: fighterBonusFeatEntry,
+                14: fighterBonusFeatEntry,
+                16: fighterBonusFeatEntry,
+                18: fighterBonusFeatEntry,
+                20: fighterBonusFeatEntry
+            },
+            classSkills: [
+                StandardSkills.Intimidate
+            ]
         });
 
         Classes.register({
@@ -134,7 +258,18 @@ var SavingThrows = {
             baseAttackBonus: BaseAttackBoni.Medium,
             fortitudeSave: SavingThrows.Strong,
             reflexSave: SavingThrows.Strong,
-            willSave: SavingThrows.Strong
+            willSave: SavingThrows.Strong,
+            classSkills: [
+                StandardSkills.Concentration,
+                StandardSkills.Diplomacy,
+                StandardSkills.Hide,
+                StandardSkills.Listen,
+                StandardSkills.MoveSilently,
+                StandardSkills.Perform,
+                StandardSkills.SenseMotive,
+                StandardSkills.Spot,
+                StandardSkills.Tumble
+            ]
         });
 
         Classes.register({
@@ -152,7 +287,13 @@ var SavingThrows = {
             baseAttackBonus: BaseAttackBoni.Strong,
             fortitudeSave: SavingThrows.Strong,
             reflexSave: SavingThrows.Weak,
-            willSave: SavingThrows.Weak
+            willSave: SavingThrows.Weak,
+            classSkills: [
+                StandardSkills.Concentration,
+                StandardSkills.Diplomacy,
+                StandardSkills.Heal,
+                StandardSkills.SenseMotive
+            ]
         });
 
         Classes.register({
@@ -165,7 +306,17 @@ var SavingThrows = {
             baseAttackBonus: BaseAttackBoni.Strong,
             fortitudeSave: SavingThrows.Strong,
             reflexSave: SavingThrows.Strong,
-            willSave: SavingThrows.Weak
+            willSave: SavingThrows.Weak,
+            classSkills: [
+                StandardSkills.Concentration,
+                StandardSkills.Heal,
+                StandardSkills.Hide,
+                StandardSkills.Listen,
+                StandardSkills.MoveSilently,
+                StandardSkills.Search,
+                StandardSkills.Spot,
+                StandardSkills.Survival
+            ]
         });
 
         Classes.register({
@@ -178,7 +329,26 @@ var SavingThrows = {
             baseAttackBonus: BaseAttackBoni.Medium,
             fortitudeSave: SavingThrows.Weak,
             reflexSave: SavingThrows.Strong,
-            willSave: SavingThrows.Weak
+            willSave: SavingThrows.Weak,
+            classSkills: [
+                StandardSkills.Appraise,
+                StandardSkills.Bluff,
+                StandardSkills.Diplomacy,
+                StandardSkills.DisableDevice,
+                StandardSkills.GatherInformation,
+                StandardSkills.Hide,
+                StandardSkills.Intimidate,
+                StandardSkills.Listen,
+                StandardSkills.MoveSilently,
+                StandardSkills.OpenLock,
+                StandardSkills.Perform,
+                StandardSkills.Search,
+                StandardSkills.SenseMotive,
+                StandardSkills.SleightOfHand,
+                StandardSkills.Spot,
+                StandardSkills.Tumble,
+                StandardSkills.UseMagicDevice
+            ]
         });
 
         Classes.register({
@@ -191,7 +361,12 @@ var SavingThrows = {
             baseAttackBonus: BaseAttackBoni.Weak,
             fortitudeSave: SavingThrows.Weak,
             reflexSave: SavingThrows.Weak,
-            willSave: SavingThrows.Strong
+            willSave: SavingThrows.Strong,
+            classSkills: [
+                StandardSkills.Bluff,
+                StandardSkills.Concentration,
+                StandardSkills.Spellcraft
+            ]
         });
 
         Classes.register({
@@ -204,11 +379,14 @@ var SavingThrows = {
             baseAttackBonus: BaseAttackBoni.Weak,
             fortitudeSave: SavingThrows.Weak,
             reflexSave: SavingThrows.Weak,
-            willSave: SavingThrows.Strong
+            willSave: SavingThrows.Strong,
+            classSkills: [
+                StandardSkills.Concentration,
+                StandardSkills.Spellcraft
+            ]
         });
-
     }
 
-    StartupListeners.add(registerClasses);
+    StartupListeners.add(registerClasses, 'd20-classes', []);
 
 })();

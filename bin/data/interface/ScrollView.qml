@@ -13,7 +13,11 @@ Item {
 
     property alias spacing : listView.spacing
 
+    property alias currentItem : listView.currentItem
+
     property alias currentIndex : listView.currentIndex
+
+    property alias section : listView.section
 
     function refreshScrollbar() {
         if (dontUpdate)

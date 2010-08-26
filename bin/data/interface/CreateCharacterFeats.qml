@@ -29,16 +29,26 @@ Rectangle {
     signal featRemoveRequested(int index)
 
     /**
+      The number of feats the player can still choose.
+      */
+    property int remainingFeats : 0
+
+    /**
+        This number is displayed to the user as the number of bonus feats he can choose.
+      */
+    property int remainingBonusFeats : 0
+
+    /**
       The list of feats to choose from.
       */
     property variant availableFeats: [
-        { id: 'acrobatic', name: 'Acrobatic'},
+        { id: 'acrobatic', name: 'Acrobatic', requires: 'Int 13', disabled: true},
         { id: 'agile', name: 'Agile' },
         { id: 'alertness', name: 'Alertness' },
         { id: 'anima-affinity', name: 'Animal Affinity' },
         { id: 'armor-profiency-light', name: 'Armor Proficiency (light)' },
-        { id: 'armor-profiency-medium', name: 'Armor Proficiency (medium)' },
-        { id: 'armor-profiency-heavy', name: 'Armor Proficiency (heavy)' }
+        { id: 'armor-profiency-medium', name: 'Armor Proficiency (medium)', bonusFeat: true },
+        { id: 'armor-profiency-heavy', name: 'Armor Proficiency (heavy)', requires: 'Dex 15', bonusFeat: true }
     ]
 
     property variant selectedFeats : []
@@ -48,7 +58,10 @@ Rectangle {
         availableFeats.forEach(function (feat) {
             listModel.append({
                 id: feat.id,
-                name: feat.name
+                name: feat.name,
+                requires: feat.requires,
+                disabled: feat.disabled,
+                bonusFeat: feat.bonusFeat
             });
         });
     }
@@ -71,7 +84,7 @@ Rectangle {
 
             property bool isRemoveItem : ListView.view.parent == selectedFeatsList
 
-            height: featName.height + 6
+            height: column.height + 6
             anchors.left: parent.left
             anchors.right: parent.right
 
@@ -93,19 +106,44 @@ Rectangle {
                 gradient: HighlightGradient {}
             }
 
-            Text {
-                id: featName
+            Column {
+                id: column
                 y: 3
                 anchors.left: parent.left
-                anchors.leftMargin: isRemoveItem ? 35 : 5
                 anchors.right: parent.right
-                text: model.name
-                width: parent.width
-                font.pointSize: 12
-                font.family: 'Fontin'
-                font.bold: false
-                color: mouseArea.enabled ? '#FFFFFF' : '#CCCCCC'
-                wrapMode: "WrapAtWordBoundaryOrAnywhere"
+                Text {
+                    id: featName
+                    anchors.left: parent.left
+                    anchors.leftMargin: 5
+                    anchors.right: parent.right
+                    text: model.name
+                    font.pointSize: 12
+                    font.family: 'Fontin'
+                    font.bold: false
+                    color: !model.disabled ? (model.bonusFeat ? 'orange' : 'white') : '#CCCCCC'
+                    wrapMode: "WrapAtWordBoundaryOrAnywhere"
+                }
+
+                Text {
+                    id: featRequirements
+                    anchors.left: parent.left
+                    anchors.leftMargin: 5
+                    anchors.right: parent.right
+                    text: (model.requires ? ("<i>Requires: " + model.requires + "</i>") : '')
+                            + ((model.bonusFeat && model.requires) ? '<br>' : '')
+                            + (model.bonusFeat ? '<i>Available as a bonus feat</i>' : '')
+                    width: parent.width
+                    font.pointSize: 10
+                    font.family: 'Fontin'
+                    font.bold: false
+                    color: !model.disabled ? '#EEEEEE' : '#CCCCCC'
+                    wrapMode: "WrapAtWordBoundaryOrAnywhere"
+                    visible: model.requires || model.bonusFeat
+                    Component.onCompleted: if(!model.requires && !model.bonusFeat) {
+                        featRequirements.visible = false;
+                        featRequirements.height = 0;
+                    }
+                }
             }
 
             MouseArea {
@@ -113,6 +151,9 @@ Rectangle {
                 anchors.fill: parent
                 hoverEnabled: true
                 onDoubleClicked: {
+                    if (model.disabled)
+                        return;
+
                     if (isRemoveItem)
                         featRemoveRequested(index)
                     else
@@ -246,7 +287,8 @@ Rectangle {
             delegate: delegate
             anchors.left: parent.left
             width: parent.width / 2 - 5
-            anchors.bottom: parent.bottom
+            anchors.bottom: bottomBar.top
+            anchors.bottomMargin: 5
             anchors.top: headline.bottom
             anchors.topMargin: 10
             spacing: 10
@@ -259,7 +301,8 @@ Rectangle {
             anchors.left: availableFeatsList.right
             anchors.leftMargin: 5
             anchors.right: parent.right
-            anchors.bottom: parent.bottom
+            anchors.bottom: bottomBar.top
+            anchors.bottomMargin: 5
             anchors.top: headline.bottom
             anchors.topMargin: 10
             spacing: 10
@@ -287,6 +330,40 @@ Rectangle {
             smooth: true
             opacity: 0.75
             z: 1000
+        }
+
+        Rectangle {
+            id: bottomBar
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            height: 25
+            gradient: Gradient {
+                GradientStop {
+                    position: 0
+                    color: "#7f333333"
+                }
+
+                GradientStop {
+                    position: 1
+                    color: "#7f000000"
+                }
+            }
+
+            Row {
+                spacing: 15
+                StandardText {
+                    text: "Remaining:"
+                }
+                StandardText {
+                    text: remainingFeats + " Feats"
+                }
+                StandardText {
+                    text: remainingBonusFeats + " Bonus Feats"
+                    color: 'orange'
+                    visible: remainingBonusFeats > 0
+                }
+            }
         }
 
     }

@@ -42,8 +42,11 @@ var Slot_Lockpicks = 215;
 /*
  Genders.
  */
-var Female = 'female';
-var Male = 'male';
+var Gender = {
+    Female: 'female',
+    Male: 'male',
+    Other: 'other'
+};
 
 /**
  * Keyboard modifiers.

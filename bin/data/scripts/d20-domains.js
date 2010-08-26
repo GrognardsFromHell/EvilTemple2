@@ -144,13 +144,15 @@ var StandardDomains = {
         Domains.register({
             id: StandardDomains.Travel,
             name: translations.get('mes/spell/4019'),
-            description: 'TAG_TRAVEL_D'
+            description: 'TAG_TRAVEL_D',
+            classSkills: [StandardSkills.Survival]
         });
 
         Domains.register({
             id: StandardDomains.Trickery,
             name: translations.get('mes/spell/4020'),
-            description: 'TAG_TRICKERY_D'
+            description: 'TAG_TRICKERY_D',
+            classSkills: [StandardSkills.Bluff, StandardSkills.Hide]
         });
 
         Domains.register({

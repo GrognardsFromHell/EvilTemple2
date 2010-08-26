@@ -25,6 +25,10 @@ Item {
         return featsGroup;
     }
 
+    function getSkillsDialog() {
+        return skillsGroup;
+    }
+
     property int overallStage : CreateCharacter.Stage.Stats
 
     property int activeStage : CreateCharacter.Stage.Stats
@@ -293,6 +297,15 @@ Item {
         height: 234
     }
 
+    CreateCharacterSkills {
+        id: skillsGroup
+        opacity: 0
+        x: 220
+        y: 50
+        width: 431
+        height: 234
+    }
+
     states: [
         State {
             name: "stats-roll"
@@ -411,6 +424,18 @@ Item {
 
             PropertyChanges {
                 target: featsGroup
+                opacity: 1
+            }
+        },
+        State {
+            name: "skills"
+            PropertyChanges {
+                target: skillsButton
+                active: true
+            }
+
+            PropertyChanges {
+                target: skillsGroup
                 opacity: 1
             }
         }

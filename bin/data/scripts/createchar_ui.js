@@ -38,61 +38,165 @@ var CreateCharacterUi = {};
     var currentGender = null; // Normally defined in the prototype
     var currentClass = null; // Currently selected class obj
     var currentFeats = []; // Chosen feats
+    var currentSkillDistribution = {}; // Skill points spent
     var currentCharacter = {
-
+        domains: [],
+        feats: [],
+        skills: {},
+        classLevels: []
     };
 
-    function getNumberOfFeat() {
-        return currentRace == StandardRaces.Human ? 2 : 1;
+    /**
+     * Indicates that a given feat can be chosen again by the user, even if it is unique.
+     * For simple feats, this means the user has not yet chosen the feat, for feats with
+     * an argument, it is checked that at least one option has not yet been chosen.
+     *
+     * @param feat The feat object to check against.
+     */
+    function canFeatBeTakenAgain(feat) {
+
+        if (feat.argument) {
+            // This checks that at least one of the options for this feat was not yet taken.
+            return feat.argument.values.some(function (option) {
+                return !currentCharacter.hasFeat([feat.id, option.id]);
+            });
+        } else {
+            // This is the simple case, the feat itself is either in the list of selected feats or not.
+            return !currentCharacter.hasFeat(feat.id);
+        }
+
+    }
+
+    function getNumberOfAvailableBonusFeats() {
+        var classLevel = currentCharacter.getClassLevels(currentClass.id);
+        var bonusFeats = currentClass.getBonusFeatsAtLevel(classLevel);
+        return bonusFeats ? bonusFeats.count : 0;
+    }
+
+    function getNumberOfAvailableFeats() {
+        var race = Races.getById(currentCharacter.race);
+        return race.startingFeats;
+    }
+
+    /**
+     * Checks if the feat is a bonus-feat valid for the current selection.
+     */
+    function isBonusFeat(featId) {
+        var classLevel = currentCharacter.getClassLevels(currentClass.id);
+        var bonusFeats = currentClass.getBonusFeatsAtLevel(classLevel);
+        if (!bonusFeats)
+            return false;
+        else
+            return bonusFeats.feats.indexOf(featId) != -1;
+    }
+
+    function getNumberOfRemainingBonusFeats() {
+        var remaining = getNumberOfAvailableBonusFeats();
+
+        currentFeats.forEach(function (featInstance) {
+            if (featInstance instanceof Array) {
+                if (isBonusFeat(featInstance[0]))
+                    remaining--;
+            } else if (isBonusFeat(featInstance))
+                remaining--;
+        });
+
+        if (remaining < 0)
+            remaining = 0;
+
+        return remaining;
+    }
+
+    function getNumberOfRemainingFeats() {
+        var remaining = getNumberOfAvailableFeats();
+        var remainingBonus = getNumberOfAvailableBonusFeats();
+
+        currentFeats.forEach(function (featInstance) {
+            var featId = (featInstance instanceof Array) ? featInstance[0] : featInstance;
+
+            // Bonus feats are deducted from the available bonus feats first.
+            if (remainingBonus > 0 && isBonusFeat(featId))
+                remainingBonus--;
+            else
+                remaining--;
+        });
+
+        return remaining;
+    }
+
+    /**
+     * Returns true if all feats have been taken.
+     */
+    function allFeatsTaken() {
+        return getNumberOfRemainingBonusFeats() == 0
+                && getNumberOfRemainingFeats() == 0;
     }
 
     function updateFeatsDialog() {
         var feats = Feats.getAll();
         var featsDialog = currentDialog.getFeatsDialog();
 
-        for (var i = 0; i < feats.length; ++i) {
-            var feat = feats[i];
+        var remainingBonusFeats = getNumberOfRemainingBonusFeats();
+        var remainingFeats = getNumberOfRemainingFeats();
 
-            if (!feat.unique)
-                continue; // Skip the feat if it's selectable multiple times.
+        featsDialog.remainingFeats = remainingFeats;
+        featsDialog.remainingBonusFeats = remainingBonusFeats;
 
-            // Remove all feats the character already has.
-            if (!feat.arguments || feat.arguments.length == 0) {
-                // This is the simple case, the feat itself is either in the list of selected feats or not.
-                if (currentCharacter.feats.indexOf(feat.id) != -1) {
-                    feats.splice(i, 1);
-                    continue;
-                }
-            } else {
-                // This is the more complicated case, here we need to check every possible option of the feat
-                // and only if no options remain, we remove it from the list. Since we assume that the number
-                // of possible instances is much much larger than the number of actually used instances, we
-                // only check how many instances of the feat are actually in use and compare that to the number
-                // of possible instances.
-                var possibleInstances = 1;
-                feat.arguments.forEach(function (featArgument) {
-                    possibleInstances *= featArgument.values.length;
+        /*
+         Build the list of available feats.
+         */
+        var availableFeats = feats.filter(function (feat) {
+            return !feat.unique || canFeatBeTakenAgain(feat);
+        });
+
+        featsDialog.availableFeats = availableFeats.map(function (feat) {
+            var bonusFeat = isBonusFeat(feat.id);
+            var disabled = remainingFeats == 0 && !(bonusFeat && remainingBonusFeats > 0);
+
+            // This disables the extra hints about bonus-feats when no bonus feats remain to be selected
+            if (remainingBonusFeats == 0)
+                bonusFeat = false;
+
+            var requires;
+            if (feat.requirements) {
+                requires = '';
+
+                feat.requirements.forEach(function (requirement) {
+                    // Skip the requirement if it's conditional.
+                    if (requirement instanceof ConditionalRequirement)
+                        return;
+
+                    if (requires != '')
+                        requires += ', ';
+
+                    var requirementMet;
+
+                    if (!feat.argument) {
+                        requirementMet = requirement.isMet(currentCharacter, null)
+                    } else {
+                        // If it is met for a single combination, the feat should still be shown
+                        requirementMet = feat.argument.values.some(function (option) {
+                            return requirement.isMet(currentCharacter, option.id);
+                        });
+                    }
+
+                    if (requirementMet) {
+                        requires += requirement.toString();
+                    } else {
+                        disabled = true;
+                        requires += '<font color="#cc0000">' + requirement.toString() + '</font>'
+                    }
                 });
-                print("Feat " + feat.id + " has " + possibleInstances + " possible instances.");
-
-                // Count the actual number of instances
-                // NOTE: This will break if the uniqueness constraint of a feat is ignored.
-                var actualInstances = 0;
-                currentCharacter.feats.forEach(function (featInstance) {
-                    if (featInstance instanceof Array && featInstance[0] == feat.id)
-                        actualInstances++;
-                });
-
-                if (actualInstances == possibleInstances) {
-                    feats.splice(i, 1);
-                    continue;
-                }
             }
 
-            // TODO: Check whether the feat is "enabled" (requirements met) and "deactivate" it
-        }
-
-        featsDialog.availableFeats = feats;
+            return {
+                id: feat.id,
+                name: feat.name,
+                requires: requires,
+                disabled: disabled,
+                bonusFeat: bonusFeat
+            };
+        });
 
         var selectedFeats = [];
         currentFeats.forEach(function (instance) {
@@ -116,17 +220,43 @@ var CreateCharacterUi = {};
 
     /**
      * Gets the arguments of a feat that are still available.
-     * @param currentFeat The currently built feat.
-     * @param argument
+     * @param feat The feat object.
      */
-    function getAvailableFeatOptions(currentFeat, argument) {
-        print("Character has feats: " + currentCharacter.feats);
+    function getAvailableFeatOptions(feat) {
 
-        return argument.values.filter(function (option) {
-            var resultingFeat = currentFeat.slice(0);
-            resultingFeat.push(option.id);
-            print("Checking if character has feat " + resultingFeat);
-            return !currentCharacter.hasFeat(resultingFeat);
+        // Filter out all the options that were already taken by the character.
+        var availableOptions = feat.argument.values.filter(function (option) {
+            return !currentCharacter.hasFeat([feat.id, option.id]);
+        });
+
+        // Now disable those options that have requirements.
+        return availableOptions.map(function (option) {
+            var requires = '';
+
+            // Go up to the feat and check requirements that are *specific* to this option
+            var allRequirementsMet = feat.requirements.every(function (requirement) {
+                if (requirement instanceof ConditionalRequirement) {
+                    if (requirement.condition == option) {
+                        // Applies to this option only
+                        if (requires != '')
+                            requires += ', ';
+                        requires += requirement.requirement.toString();
+
+                        if (!requirement.requirement.isMet(currentCharacter, option)) {
+                            return false;
+                        }
+                    }
+                }
+
+                return true;
+            });
+
+            return {
+                id: option.id,
+                text: option.text,
+                requires: requires,
+                disabled: !allRequirementsMet
+            };
         });
     }
 
@@ -135,33 +265,20 @@ var CreateCharacterUi = {};
 
         var feat = Feats.getById(featId);
 
-        if (feat.arguments && feat.arguments.length > 0) {
-
-            var currentArg = 0;
-
-            var argument = feat.arguments[currentArg];
-            var featDefinition = [featId];
+        if (feat.argument) {
 
             var dialog = gameView.addGuiItem('interface/CreateCharacterFeatArgument.qml');
-            dialog.headline = argument.description;
-            dialog.availableOptions = getAvailableFeatOptions(featDefinition, argument);
-            dialog.accepted.connect(function (argValue) {
-                featDefinition.push(argValue); // Record the feat argument
+            dialog.headline = feat.argument.description;
+            dialog.availableOptions = getAvailableFeatOptions(feat);
+            dialog.accepted.connect(function (optionId) {
+                dialog.deleteLater();
 
-                // Continue selection if more than one argument
-                currentArg++;
-                if (currentArg < feat.arguments.length) {
-                    argument = feat.arguments[currentArg];
-                    dialog.headline = argument.description;
-                    dialog.availableOptions = getAvailableFeatOptions(featDefinition, argument);
-                } else {
-                    dialog.deleteLater();
+                var featInstance = [featId, optionId];
 
-                    // Finish the argument selection
-                    currentFeats.push(featDefinition);
-                    currentCharacter.feats.push(featDefinition);
-                    updateFeatsDialog();
-                }
+                // Finish the argument selection
+                currentFeats.push(featInstance);
+                currentCharacter.feats.push(featInstance);
+                updateFeatsDialog();
             });
             dialog.cancelled.connect(function() {
                 dialog.deleteLater();
@@ -172,17 +289,20 @@ var CreateCharacterUi = {};
             updateFeatsDialog();
         }
 
-        // TODO: If the feat requires arguments, ask the player about them now, then continue
-        // TODO: Add feat to player
-        // TODO: Check whether all feats have been selected and update the stage
+        if (allFeatsTaken()) {
+            currentDialog.overallStage = Stage.Skills;
+        }
     }
 
     function unselectFeat(index) {
         print("Deselecting feat " + index);
+        currentCharacter.removeFeat(currentFeats[index]);
         currentFeats.splice(index, 1);
         updateFeatsDialog();
-        // TODO: Remove feat from player
-        // TODO: Check whether all feats have been selected and update the stage
+
+        if (!allFeatsTaken()) {
+            currentDialog.overallStage = Stage.Feats;
+        }
     }
 
     /**
@@ -260,6 +380,47 @@ var CreateCharacterUi = {};
 
         } else if (stage == Stage.Feats) {
             updateFeatsDialog();
+        } else if (stage == Stage.Skills) {
+            var skillsDialog = currentDialog.getSkillsDialog();
+            var classSkills = currentClass.getClassSkills(currentCharacter);
+            var ecl = currentCharacter.getEffectiveCharacterLevel();
+
+            var maxSkillPoints = currentClass.skillPoints + getAbilityModifier(currentCharacter.intelligence);
+            if (maxSkillPoints < 1)
+                maxSkillPoints = 1;
+            if (currentRace == StandardRaces.Human)
+                maxSkillPoints += 1;
+            if (ecl == 1)
+                maxSkillPoints *= 4;
+
+            var remainingSkillPoints = maxSkillPoints;
+
+            for (var k in currentSkillDistribution) {
+                if (classSkills.indexOf(k) != -1) {
+                    remainingSkillPoints -= Math.floor(currentSkillDistribution[k] / 2);
+                } else {
+                    remainingSkillPoints -= currentSkillDistribution[k];
+                }
+            }
+
+            skillsDialog.availableSkillPoints = maxSkillPoints;
+            skillsDialog.remainingSkillPoints = remainingSkillPoints;
+            skillsDialog.skills = Skills.getAll().map(function (skill) {
+                var classSkill = classSkills.indexOf(skill.id) != -1;
+                var rank = currentCharacter.skills[skill.id] ? currentCharacter.skills[skill.id] : 0;
+                var currentRank = rank;
+                if (currentSkillDistribution[skill.id])
+                    currentRank += currentSkillDistribution[skill.id];
+
+                return {
+                    id: skill.id,
+                    name: skill.name,
+                    rank: currentRank,
+                    classSkill: classSkill,
+                    minimumRank: rank,
+                    maximumRank: classSkill ? (ecl + 3) * 2 : (ecl + 3)
+                };
+            });
         }
 
         // TODO: Validate/reset stages
@@ -314,9 +475,9 @@ var CreateCharacterUi = {};
         }
 
         var prototypeId;
-        if (currentGender == Male)
+        if (currentGender == Gender.Male)
             prototypeId = race.prototypeMale;
-        else if (currentGender == Female)
+        else if (currentGender == Gender.Female)
             prototypeId = race.prototypeFemale;
         else
             throw "Unknown gender for current character: " + currentGender;
@@ -440,6 +601,63 @@ var CreateCharacterUi = {};
         currentDialog.overallStage = Stage.Features;
     }
 
+    function requestSkillDetails(skillId, skills) {
+        var skillsDialog = currentDialog.getSkillsDialog();
+
+        var skill = Skills.getById(skillId);
+        var rank = Math.floor(skills[skillId] / 2);
+        skillsDialog.detailsRank = rank;
+        var abilityValue;
+        switch (skill.ability) {
+            case Abilities.Strength:
+                skillsDialog.detailsAbility = 'STR';
+                abilityValue = currentCharacter.getEffectiveStrength();
+                break;
+            case Abilities.Dexterity:
+                skillsDialog.detailsAbility = 'DEX';
+                abilityValue = currentCharacter.getEffectiveDexterity();
+                break;
+            case Abilities.Constitution:
+                skillsDialog.detailsAbility = 'CON';
+                abilityValue = currentCharacter.getEffectiveConstitution();
+                break;
+            case Abilities.Intelligence:
+                skillsDialog.detailsAbility = 'INT';
+                abilityValue = currentCharacter.getEffectiveIntelligence();
+                break;
+            case Abilities.Wisdom:
+                skillsDialog.detailsAbility = 'WIS';
+                abilityValue = currentCharacter.getEffectiveWisdom();
+                break;
+            case Abilities.Charisma:
+                skillsDialog.detailsAbility = 'CHA';
+                abilityValue = currentCharacter.getEffectiveCharisma();
+                break;
+        }
+
+        abilityValue = getAbilityModifier(abilityValue);
+        skillsDialog.detailsAbilityMod = abilityValue;
+
+        var skillRanks = {};
+        for (var k in skills) {
+            skillRanks[k] = Math.floor(skills[k] / 2);
+        }
+        var miscMod = skill.getSynergyBonus(skillRanks); // TODO: Synergy and other bonuses
+
+        skillsDialog.detailsMiscMod = miscMod;
+        skillsDialog.detailsTotalMod = rank + miscMod + abilityValue;
+    }
+
+    function skillPointsDistributed() {
+        var skillsDialog = currentDialog.getSkillsDialog();
+        if (skillsDialog.remainingSkillPoints == 0) {
+            currentSkillDistribution = skillsDialog.skillPointDistribution; // Finalize only when finished
+
+            // TODO: Go to spells selection if class has selectable spells (memorization isn't done here)
+            currentDialog.overallStage = Stage.Portrait;
+        }
+    }
+
     CreateCharacterUi.show = function(_successCallback, _cancelCallback) {
         if (currentDialog) {
             CreateCharacterUi.cancel();
@@ -466,6 +684,10 @@ var CreateCharacterUi = {};
         featDialog.helpRequested.connect(showFeatHelp);
         featDialog.featAddRequested.connect(selectFeat);
         featDialog.featRemoveRequested.connect(unselectFeat);
+
+        var skillsDialog = currentDialog.getSkillsDialog();
+        skillsDialog.requestDetails.connect(requestSkillDetails);
+        skillsDialog.skillPointDistributionChanged.connect(skillPointsDistributed);
 
         // Start with the stats page
         currentDialog.overallStage = Stage.Stats;

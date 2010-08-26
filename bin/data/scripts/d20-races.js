@@ -1,4 +1,3 @@
-
 /**
  * Gives constants for the ids of standard D20 races.
  */
@@ -32,7 +31,8 @@ var StandardRaces = {
             heightFemale: [135, 185],
             weightMale: [120, 200],
             weightFemale: [85, 165],
-            landSpeed: 30
+            landSpeed: 30,
+            startingFeats: 2
         });
 
         Races.register({

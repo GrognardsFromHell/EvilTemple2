@@ -125,11 +125,11 @@ MouseArea {
                 target: imageHover
                 opacity: 1
             }
-            StateChangeScript {
+            /*StateChangeScript {
                 script: {
                     gameView.playUiSound('sound/Interface - Hover.wav')
                 }
-            }
+            }*/
        }
     ]
 

@@ -1,4 +1,10 @@
 var Class = function() {
+    /**
+     * A table that defines the bonus feats granted by this class at a given class-level.
+     * Bonus feats are still subject to be chosen by the player, they are not all granted
+     * automatically.
+     */
+    this.bonusFeats = {};
 };
 
 /**
@@ -57,6 +63,26 @@ var HpOnLevelUpSetting = 0;
      */
     Class.prototype.getReflexSave = function(classLevel) {
         return this.reflexSave[classLevel - 1];
+    };
+
+    Class.prototype.getClassSkills = function(character) {
+        return this.classSkills;
+    };
+
+    /**
+     * Returns the bonus feats a character may choose at a given class level.
+     *
+     * The default implementation will simply return the entry from this objects
+     * bonusFeats table or null if no such entry exists for the given classlevel.
+     *
+     * @param classLevel The class level at which the bonus feats apply.
+     * @returns An object with two properties:
+     * count - The number of feats a character may choose from the list of allowed feats.
+     * feats - The list of feat id's from which a character may choose bonus feats.
+     * If no bonus feats are available at that level, null is returned.
+     */
+    Class.prototype.getBonusFeatsAtLevel = function(classLevel) {
+        return this.bonusFeats[classLevel] ? this.bonusFeats[classLevel] : null;
     };
 
     Class.prototype.addClassLevel = function(character) {

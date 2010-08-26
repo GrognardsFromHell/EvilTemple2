@@ -229,9 +229,9 @@ var LegacyScripts = {};
 
         stat_gender: 'gender',
 
-        gender_female: Female,
+        gender_female: Gender.Female,
 
-        gender_male: Male,
+        gender_male: Gender.Male,
 
         OLC_NPC: 'NonPlayerCharacter',
 

@@ -396,9 +396,10 @@ var Critter = {
     },
     drawBehindWalls: true,
     killsOnSight: false,
-    classLevels: [],
+    // classLevels: [], (MUST NOT BE in the prototype, otherwise it's shared by all)
     experiencePoints: 0,
-    feats: [],
+    // feats: [], (MUST NOT BE in the prototype)
+    // domains: [], (MUST NOT be in the prototype)
 
     /**
      * Checks whether this character has a certain feat.
@@ -410,12 +411,34 @@ var Critter = {
     hasFeat: function(featInstance) {
         if (featInstance instanceof Array) {
             for (var i = 0; i < this.feats.length; ++i) {
-                if (this.feats[i].equals(featInstance))
+                if (featInstance.equals(this.feats[i]))
                     return true;
             }
             return false;
         }
         return this.feats.indexOf(featInstance) != -1;
+    },
+
+    removeFeat: function(featInstance) {
+        if (featInstance instanceof Array) {
+            for (var i = 0; i < this.feats.length; ++i) {
+                if (this.feats[i].equals(featInstance)) {
+                    this.feats.splice(i, 1);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        var idx = this.feats.indexOf(featInstance);
+        if (idx != -1)
+            this.feats.splice(idx, 1);
+
+        return idx != -1;
+    },
+    
+    getSkillRank: function(skillId) {
+        return this.skills[skillId] ? Math.floor(this.skills[skillId] / 2) : 0;
     },
 
     /**

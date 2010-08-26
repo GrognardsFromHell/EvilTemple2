@@ -19,7 +19,7 @@ Item {
     property alias headline : headline.text
 
     property variant availableOptions : [
-        { id: 'longsword', text: 'Long Sword' },
+        { id: 'longsword', text: 'Long Sword', requires: 'Str 25', disabled: true },
         { id: 'longsword', text: 'Long Sword' },
         { id: 'longsword', text: 'Long Sword' },
         { id: 'longsword', text: 'Long Sword' },
@@ -41,7 +41,9 @@ Item {
         availableOptions.forEach(function (item) {
             selectionModel.append({
                 id: item.id,
-                text: item.text
+                text: item.text,
+                requires: item.requires,
+                disabled: item.disabled
             });
         });
     }
@@ -58,7 +60,7 @@ Item {
             id: root
             anchors.left: parent.left
             anchors.right: parent.right
-            height: label.height + 10
+            height: label.height + requiresLabel.height + 10
 
             Rectangle {
                 id: selectedHighlight
@@ -77,12 +79,35 @@ Item {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 wrapMode: "WrapAtWordBoundaryOrAnywhere"
+                color: model.disabled ? '#cccccc' : '#ffffff'
+            }
+
+            StandardText {
+                y: label.y + label.height
+                id: requiresLabel
+                text: 'Prerequesite: ' + model.requires
+                font.italic: true
+                font.pointSize: 10
+                color: model.disabled ? '#bbbbbb' : '#eeeeee'
+                anchors.margins: 3
+                anchors.left: parent.left
+                anchors.right: parent.right
+                wrapMode: "WrapAtWordBoundaryOrAnywhere"
             }
 
             MouseArea {
                 anchors.fill: parent
                 onClicked: root.ListView.view.currentIndex = index
-                onDoubleClicked: accepted(availableOptions[selectionView.currentIndex].id)
+                onDoubleClicked: if (!model.disabled) {
+                    accepted(availableOptions[selectionView.currentIndex].id)
+                }
+            }
+
+            Component.onCompleted: {
+                if (!model.requires) {
+                    requiresLabel.visible = false;
+                    requiresLabel.height = 0;
+                }
             }
         }
     }
@@ -99,7 +124,10 @@ Item {
         height: 213
         model: selectionModel
         delegate: textDelegate
-        Keys.onEnterPressed: accepted(availableOptions[selectionView.currentIndex].id)
+        Keys.onEnterPressed: if (selectionView.currentIndex >= 0
+                                 && !availableOptions[selectionView.currentIndex].disabled) {
+            accepted(availableOptions[selectionView.currentIndex].id);
+        }
     }
 
     StandardText {
@@ -116,6 +144,7 @@ Item {
         x: 28
         y: 306
         text: "Accept"
+        enabled: selectionView.currentIndex >= 0 && !availableOptions[selectionView.currentIndex].disabled
         onClicked: accepted(availableOptions[selectionView.currentIndex].id)
     }
 

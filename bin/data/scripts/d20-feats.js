@@ -16,6 +16,7 @@ var StandardFeats = {
     Cleave: 'cleave',
     CombatCasting: 'combat-casting',
     CombatExpertise: 'combat-expertise',
+    CombatReflexes: 'combat-reflexes',
     CraftMagicArmsAndArmor: 'craft-magic-arms-and-armor',
     CraftRod: 'craft-rod',
     CraftStaff: 'craft-staff',
@@ -52,6 +53,7 @@ var StandardFeats = {
     ImprovedGrapple: 'improved-grapple',
     ImprovedInitiative: 'improved-initiative',
     ImprovedOverrun: 'improved-overrun',
+    ImprovedPreciseShot: 'improved-precise-shot',
     ImprovedShieldBash: 'improved-shield-bash',
     ImprovedSunder: 'improved-sunder',
     ImprovedTrip: 'improved-trip',
@@ -68,8 +70,6 @@ var StandardFeats = {
     MartialWeaponProficiency: 'martial-weapon-proficiency',
     MaximizeSpell: 'maximize-spell',
     Mobility: 'mobility',
-    MountedArchery: 'mounted-archery',
-    MountedCombat: 'mounted-combat',
     NaturalSpell: 'natural-spell',
     Negotiator: 'negotiator',
     NimbleFingers: 'nimble-fingers',
@@ -81,7 +81,6 @@ var StandardFeats = {
     QuickenSpell: 'quicken-spell',
     RapidShot: 'rapid-shot',
     RapidReload: 'rapid-reload',
-    RideByAttack: 'ride-by-attack',
     Run: 'run',
     ScribeScroll: 'scribe-scroll',
     SelfSufficient: 'self-sufficient',
@@ -94,7 +93,6 @@ var StandardFeats = {
     SpellFocus: 'spell-focus-abjuration',
     SpellMastery: 'spell-mastery',
     SpellPenetration: 'spell-penetration',
-    SpiritedCharge: 'spirited-charge',
     SpringAttack: 'spring-attack',
     Stealthy: 'stealthy',
     StillSpell: 'still-spell',
@@ -102,7 +100,6 @@ var StandardFeats = {
     Toughness: 'toughness',
     TowerShieldProficiency: 'tower-shield-proficiency',
     Track: 'track',
-    Trample: 'trample',
     TwoWeaponFighting: 'two-weapon-fighting',
     TwoWeaponDefense: 'two-weapon-defense',
     WeaponFinesse: 'weapon-finesse',
@@ -255,6 +252,13 @@ var StandardFeatCategories = {
         });
 
         Feats.register({
+            id: StandardFeats.CombatReflexes,
+            category: StandardFeatCategories.General,
+            name: qsTr('Combat Reflexes'),
+            shortDescription: qsTr('You may make additional attacks of opportunity per round and while you are flat-footed.')
+        });
+
+        Feats.register({
             id: StandardFeats.CraftMagicArmsAndArmor,
             category: StandardFeatCategories.ItemCreation,
             name: translations.get('mes/feat/14'),
@@ -399,14 +403,12 @@ var StandardFeatCategories = {
             shortDescription: translations.get('mes/feat/5029'),
             requirements: [
                 BaseAttackBonusRequirement(1),
-                ConditionalRequirement([StandardWeapons.BastardSword], AbilityRequirement(Abilities.Strength, 13)),
-                ConditionalRequirement([StandardWeapons.DwarvenWaraxe], AbilityRequirement(Abilities.Strength, 13))
+                ConditionalRequirement(StandardWeapons.BastardSword, AbilityRequirement(Abilities.Strength, 13)),
+                ConditionalRequirement(StandardWeapons.DwarvenWaraxe, AbilityRequirement(Abilities.Strength, 13))
             ],
-            arguments: [
-                FeatArgument(qsTr('Weapon Type'),
-                        qsTr('You will gain proficiency with the weapon type you choose.'),
-                        exoticWeaponIds)
-            ]
+            argument: FeatArgument(qsTr('Weapon Type'),
+                    qsTr('You will gain proficiency with the weapon type you choose.'),
+                    exoticWeaponIds)
         });
 
         Feats.register({
@@ -472,7 +474,7 @@ var StandardFeatCategories = {
             name: stripNameExtra(translations.get('mes/feat/55')),
             shortDescription: translations.get('mes/feat/5055'),
             requirements: [
-                FeatRequirement(StandardFeats.SpellFocus, FeatRequirement.SameArguments)
+                FeatRequirement(StandardFeats.SpellFocus, FeatRequirement.SameArgument)
             ]
         });
 
@@ -505,7 +507,7 @@ var StandardFeatCategories = {
             name: translations.get('mes/pc_creation/19108'),
             shortDescription: translations.get('mes/feat/5065'),
             requirements: [
-                FeatRequirement(StandardFeats.WeaponFocus, FeatRequirement.SameArguments),
+                FeatRequirement(StandardFeats.WeaponFocus, FeatRequirement.SameArgument),
                 ClassLevelRequirement(StandardClasses.Fighter, 8)
             ]
         });
@@ -516,8 +518,8 @@ var StandardFeatCategories = {
             name: translations.get('mes/feat/137'),
             shortDescription: translations.get('mes/feat/5137'),
             requirements: [
-                FeatRequirement(StandardFeats.GreaterWeaponFocus, FeatRequirement.SameArguments),
-                FeatRequirement(StandardFeats.WeaponSpecialization, FeatRequirement.SameArguments),
+                FeatRequirement(StandardFeats.GreaterWeaponFocus, FeatRequirement.SameArgument),
+                FeatRequirement(StandardFeats.WeaponSpecialization, FeatRequirement.SameArgument),
                 ClassLevelRequirement(StandardClasses.Fighter, 12)
             ]
         });
@@ -606,6 +608,18 @@ var StandardFeatCategories = {
             requirements: [
                 AbilityRequirement(Abilities.Strength, 13),
                 FeatRequirement(StandardFeats.PowerAttack)
+            ]
+        });
+
+        Feats.register({
+            id: StandardFeats.ImprovedPreciseShot,
+            category: StandardFeatCategories.General,
+            name: qsTr('Improved Precise Shot'),
+            shortDescription: qsTr('Your ranged attacks ignore the AC bonus granted to targets by anything less than total cover, and the miss chance granted to targets by anything less than total concealment.'),
+            requirements: [
+                AbilityRequirement(Abilities.Dexterity, 19),
+                FeatRequirement(StandardFeats.PreciseShot),
+                BaseAttackBonusRequirement(11)
             ]
         });
 
@@ -753,27 +767,6 @@ var StandardFeatCategories = {
         });
 
         Feats.register({
-            id: StandardFeats.MountedArchery,
-            category: StandardFeatCategories.General,
-            name: translations.get('mes/feat/261'),
-            shortDescription: translations.get('mes/feat/5261'),
-            requirements: [
-                SkillRequirement(StandardSkills.Ride, 1),
-                FeatRequirement(StandardFeats.MountedCombat)
-            ]
-        });
-
-        Feats.register({
-            id: StandardFeats.MountedCombat,
-            category: StandardFeatCategories.General,
-            name: translations.get('mes/feat/262'),
-            shortDescription: translations.get('mes/feat/5262'),
-            requirements: [
-                SkillRequirement(StandardSkills.Ride, 1)
-            ]
-        });
-
-        Feats.register({
             id: StandardFeats.NaturalSpell,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/263'),
@@ -867,17 +860,6 @@ var StandardFeatCategories = {
             requirements: [
                 AbilityRequirement(Abilities.Dexterity, 13),
                 FeatRequirement(StandardFeats.PointBlankShot)
-            ]
-        });
-
-        Feats.register({
-            id: StandardFeats.RideByAttack,
-            category: StandardFeatCategories.General,
-            name: translations.get('mes/feat/274'),
-            shortDescription: translations.get('mes/feat/5274'),
-            requirements: [
-                SkillRequirement(StandardSkills.Ride, 1),
-                FeatRequirement(StandardFeats.MountedCombat)
             ]
         });
 
@@ -984,18 +966,6 @@ var StandardFeatCategories = {
         });
 
         Feats.register({
-            id: StandardFeats.SpiritedCharge,
-            category: StandardFeatCategories.General,
-            name: translations.get('mes/feat/335'),
-            shortDescription: translations.get('mes/feat/5335'),
-            requirements: [
-                SkillRequirement(StandardSkills.Ride, 1),
-                FeatRequirement(StandardFeats.MountedCombat),
-                FeatRequirement(StandardFeats.RideByAttack)
-            ]
-        });
-
-        Feats.register({
             id: StandardFeats.SpringAttack,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/336'),
@@ -1060,16 +1030,6 @@ var StandardFeatCategories = {
         });
 
         Feats.register({
-            id: StandardFeats.Trample,
-            category: StandardFeatCategories.General,
-            name: translations.get('mes/feat/344'),
-            shortDescription: translations.get('mes/feat/5344'),
-            requirements: [
-                FeatRequirement(StandardFeats.MountedCombat)
-            ]
-        });
-
-        Feats.register({
             id: StandardFeats.TwoWeaponFighting,
             category: StandardFeatCategories.General,
             name: translations.get('mes/feat/345'),
@@ -1116,7 +1076,7 @@ var StandardFeatCategories = {
             name: translations.get('mes/pc_creation/19107'),
             shortDescription: translations.get('mes/feat/5489'),
             requirements: [
-                FeatRequirement(StandardFeats.WeaponFocus, FeatRequirement.SameArguments),
+                FeatRequirement(StandardFeats.WeaponFocus, FeatRequirement.SameArgument),
                 ClassLevelRequirement(StandardClasses.Fighter, 4)
             ]
         });

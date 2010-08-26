@@ -9,6 +9,11 @@ var Races = {
  */
 var Race = function(id) {
     this.id = id;
+
+    /**
+     * The number of feats gained at first level.
+     */
+    this.startingFeats = 1;
 };
 
 (function() {

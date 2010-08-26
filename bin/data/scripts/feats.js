@@ -14,20 +14,18 @@ var Feat = function() {
  * So in a character sheet, Weapon Focus (Longsword) gets listed instead of Weapon Focus.
  */
 Feat.prototype.getName = function(instance) {
-    if (!this.arguments || this.arguments.length == 0) {
+    if (!this.argument) {
         return this.name;
     }
 
+    var instanceOption = instance[1];
+
     var result = this.name + ' (';
-    for (var i = 0; i < this.arguments.length; ++i) {
-        if (i > 0)
-            result += ', ';
-        // Find the corresponding argument and use it's text property
-        var values = this.arguments[i].values;
-        for (var j = 0; j < values.length; ++j) {
-            if (values[j].id == instance[1 + i]) {
-                result += values[j].text;
-            }
+    // Find the corresponding argument and use it's text property
+    var values = this.argument.values;
+    for (var j = 0; j < values.length; ++j) {
+        if (values[j].id == instanceOption) {
+            result += values[j].text;
         }
     }
     result += ')';
