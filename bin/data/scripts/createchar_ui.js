@@ -305,6 +305,22 @@ var CreateCharacterUi = {};
         }
     }
 
+    function finishCharCreation() {
+
+        // Finish building the character and put it into the vault
+        charactervault.add(currentCharacter);
+
+        // Close the dialog
+        currentDialog.deleteLater();
+        currentDialog = null;
+
+        if (successCallback)
+            successCallback();
+
+        cancelCallback = null;
+        successCallback = null;
+    }
+
     /**
      * Handles requests by the user to change the active stage.
      */
@@ -428,7 +444,22 @@ var CreateCharacterUi = {};
             });
             portraitDialog.playerRace = currentCharacter.race;
             portraitDialog.playerGender = currentCharacter.gender;
-            portraitDialog.selectedPortrait = currentCharacter.portrait; 
+            portraitDialog.selectedPortrait = currentCharacter.portrait;
+        } else if (stage == Stage.VoiceAndName) {
+            var voiceAndNameDialog = currentDialog.getVoiceAndNameDialog();
+            voiceAndNameDialog.name = currentCharacter.name ? currentCharacter.name : '';
+            voiceAndNameDialog.selectedVoice = currentCharacter.voice;
+            voiceAndNameDialog.voices = Voices.getAll().filter(function (voice) {
+                return voice.gender == currentCharacter.gender;
+            }).map(function (voice) {
+                return {
+                    id: voice.id,
+                    name: voice.name
+                }
+            });
+        } else if (stage == Stage.Finished) {
+            finishCharCreation();
+            return;
         }
 
         // TODO: Validate/reset stages
@@ -676,6 +707,34 @@ var CreateCharacterUi = {};
         currentDialog.overallStage = Stage.VoiceAndName;
     }
 
+    function requestVoiceSample(voiceId) {
+        Voices.getById(voiceId).playGeneric(Voice.Acknowledge);
+    }
+
+    function nameChosen() {
+        var voiceAndNameDialog = currentDialog.getVoiceAndNameDialog();
+        currentCharacter.name = voiceAndNameDialog.name;
+        print("Setting name to " + currentCharacter.name);
+
+        if (currentCharacter.voice && currentCharacter.name) {
+            currentDialog.overallStage = Stage.Finished;
+        } else {
+            currentDialog.overallStage = Stage.VoiceAndName;
+        }
+    }
+
+    function voiceChosen() {
+        var voiceAndNameDialog = currentDialog.getVoiceAndNameDialog();
+        currentCharacter.voice = voiceAndNameDialog.selectedVoice;
+        print("Setting voice to " + currentCharacter.voice);
+
+        if (currentCharacter.voice && currentCharacter.name) {
+            currentDialog.overallStage = Stage.Finished;
+        } else {
+            currentDialog.overallStage = Stage.VoiceAndName;
+        }
+    }
+
     CreateCharacterUi.show = function(_successCallback, _cancelCallback) {
         if (currentDialog) {
             CreateCharacterUi.cancel();
@@ -709,6 +768,11 @@ var CreateCharacterUi = {};
 
         var portraitDialog = currentDialog.getPortraitDialog();
         portraitDialog.selectedPortraitChanged.connect(portraitChosen);
+
+        var voiceAndNameDialog = currentDialog.getVoiceAndNameDialog();
+        voiceAndNameDialog.requestVoiceSample.connect(requestVoiceSample);
+        voiceAndNameDialog.nameChanged.connect(nameChosen);
+        voiceAndNameDialog.selectedVoiceChanged.connect(voiceChosen);
 
         // Start with the stats page
         currentDialog.overallStage = Stage.Stats;

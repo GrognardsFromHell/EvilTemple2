@@ -46,20 +46,6 @@ Rectangle {
         });
     }
 
-    function selectPortrait(portraitId) {
-        // TODO: Adjust filters if necessary
-
-        for (var i = 0; i < portraitModel.count; ++i) {
-            var portrait = portraitModel.get(i);
-            if (portrait.id == portraitId) {
-                portraitView.currentIndex = i;
-                return;
-            }
-        }
-
-        console.log("Didn't find suitable Portrait with id " + portraitId);
-    }
-
     GridView {
         id: portraitView
 
@@ -108,9 +94,6 @@ Rectangle {
         boundsBehavior: "StopAtBounds"
         focus: true
         highlightFollowsCurrentItem: true
-        onCurrentIndexChanged: {
-            portraitSelected(portraitModel.get(portraitView.currentIndex).id);
-        }
     }
 
     Row {

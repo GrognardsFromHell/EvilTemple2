@@ -591,6 +591,138 @@ void ConvertScriptsTask::convertPrototypes(IFileWriter *writer, QScriptEngine *e
     }
 }
 
+static QHash<uint,QString> voiceLineMapping;
+static QHash<uint,QString> voiceAreaMapping;
+static QHash<uint,QString> voiceSceneryMapping;
+
+static QVariant getVoiceLine(IConversionService *service, const QString &basePath, uint id, const QString &text) {
+    QString filename = QString("%1%2.mp3").arg(basePath).arg(id);
+
+    QVariantMap result;
+
+    result["text"] = text;
+
+    if (service->virtualFileSystem()->exists(filename)) {
+        result["sound"] = QString::number(id) + ".mp3";
+    }
+
+    return result;
+}
+
+static void convertVoices(IConversionService *service, IFileWriter *writer)
+{
+    voiceLineMapping[0] = "acknowledge";
+    voiceLineMapping[1] = "deny";
+    voiceLineMapping[2] = "encumbered";
+    voiceLineMapping[3] = "death";
+    voiceLineMapping[4] = "criticalHp";
+    voiceLineMapping[5] = "seesDeath";
+    voiceLineMapping[6] = "combat";
+    voiceLineMapping[7] = "criticalHitByParty";
+    voiceLineMapping[8] = "criticalHitOnParty";
+    voiceLineMapping[9] = "criticalMissByParty";
+    voiceLineMapping[10] = "friendlyFire";
+    voiceLineMapping[11] = "valuableLoot";
+    // voiceLineMapping[12] = "areas"; // Receives special handling
+    voiceLineMapping[13] = "bossMonster";
+    // voiceLineMapping[14] = "taggedScenery"; // Special handling
+    voiceLineMapping[15] = "bored";
+
+    // Area key translations
+    voiceAreaMapping[1200] = "default";
+    voiceAreaMapping[1201] = "hommlet";
+    voiceAreaMapping[1202] = "moathouse";
+    voiceAreaMapping[1203] = "nulb";
+    voiceAreaMapping[1204] = "temple";
+    voiceAreaMapping[1205] = "emridy_meadows";
+    voiceAreaMapping[1206] = "imeryds_run";
+    voiceAreaMapping[1207] = "temple_secret_exit";
+    voiceAreaMapping[1208] = "moathouse_secret_exit";
+    voiceAreaMapping[1209] = "ogre_cave";
+    voiceAreaMapping[1210] = "deklo_grove";
+    voiceAreaMapping[1211] = "fire_node";
+    voiceAreaMapping[1212] = "water_node";
+    voiceAreaMapping[1213] = "air_node";
+    voiceAreaMapping[1214] = "earth_node";
+
+    // Secenery key translations
+    voiceSceneryMapping[1400] = "generic";
+    voiceSceneryMapping[1401] = "bronze_doors";
+    voiceSceneryMapping[1402] = "minotaur_statue";
+    voiceSceneryMapping[1403] = "hall_of_statues";
+    voiceSceneryMapping[1404] = "hall_of_verdigris";
+    voiceSceneryMapping[1405] = "lubash_stairs";
+    voiceSceneryMapping[1406] = "thrommels_room";
+    voiceSceneryMapping[1407] = "earth_temple";
+    voiceSceneryMapping[1408] = "fire_temple";
+    voiceSceneryMapping[1409] = "water_temple";
+    voiceSceneryMapping[1410] = "air_temple";
+    voiceSceneryMapping[1411] = "throne";
+    voiceSceneryMapping[1412] = "greater_temple";
+    voiceSceneryMapping[1413] = "zuggtmoys_level";
+
+    QVariantList voicesResult;
+
+    // Open rules/pcvoice.mes and read all registered voice types
+    QHash<uint,QString> voices = service->openMessageFile("rules/pcvoice.mes");
+    QHash<uint,QString> voiceNames = service->openMessageFile("mes/pcvoice.mes");
+
+    foreach (uint voiceId, voices.keys()) {
+        QHash<uint,QString> messages = service->openMessageFile(QString("mes/pcvoice/%1").arg(voices[voiceId]));
+
+        QVariantMap voiceObj;
+
+        QString voiceIdStr = voices[voiceId];
+        voiceIdStr.replace(".mes", "");
+
+        voiceObj["id"] = voiceIdStr;
+        voiceObj["name"] = voiceNames[voiceId];
+        voiceObj["gender"] = voices[voiceId].toLower().startsWith('f') ? "female" : "male";
+
+        QString basePath = QString("sound/speech/pcvoice/%1/").arg(voiceId, 2, 10, QChar('0'));
+        voiceObj["basePath"] = basePath;
+
+        QVariantMap genericTopics;
+        foreach (uint lineKey, voiceLineMapping.keys()) {
+
+            // Gather all lines
+            QVariantList lines;
+            for (uint i = lineKey * 100; i < (lineKey + 1) * 100; ++i) {
+                if (messages.contains(i)) {
+                    lines << getVoiceLine(service, basePath, i, messages[i]);
+                }
+            }
+
+            genericTopics[voiceLineMapping[lineKey]] = lines;
+        }
+
+        voiceObj["generic"] = genericTopics;
+
+        // Reactions to areas
+        QVariantMap areas;
+        foreach (uint areaKey, voiceAreaMapping.keys()) {
+            if (!messages.contains(areaKey))
+                continue;
+            areas[voiceAreaMapping[areaKey]] = getVoiceLine(service, basePath, areaKey, messages[areaKey]);
+        }
+        voiceObj["areas"] = areas;
+
+        QVariantMap sceneryComments;
+        foreach (uint sceneryKey, voiceSceneryMapping.keys()) {
+            if (!messages.contains(sceneryKey))
+                continue;
+            sceneryComments[voiceSceneryMapping[sceneryKey]] = getVoiceLine(service, basePath,
+                                                                            sceneryKey, messages[sceneryKey]);
+        }
+        voiceObj["scenery"] = sceneryComments;
+
+        voicesResult << voiceObj;
+    }
+
+    QJson::Serializer serializer;
+    writer->addFile("voices.js", serializer.serialize(voicesResult));
+}
+
 void ConvertScriptsTask::run()
 {
     QScopedPointer<IFileWriter> writer(service()->createOutput("scripts"));
@@ -631,6 +763,8 @@ void ConvertScriptsTask::run()
     convertSoundSchemes(service(), writer.data());
 
     convertWorldmapPaths(service(), writer.data());
+
+    convertVoices(service(), writer.data());
 
     writer->close();
 }

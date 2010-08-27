@@ -33,6 +33,10 @@ Item {
         return portraitGroup;
     }
 
+    function getVoiceAndNameDialog() {
+        return voiceAndNameGroup;
+    }
+
     property int overallStage : CreateCharacter.Stage.Stats
 
     property int activeStage : CreateCharacter.Stage.Stats
@@ -226,6 +230,7 @@ Item {
         disabledImage: 'art/interface/pc_creation/alignment_button_disabled.png'
         pressedImage: 'art/interface/pc_creation/alignment_button_pressed.png'
         hoverImage:  'art/interface/pc_creation/alignment_button_hovered.png'
+        onClicked: activeStageRequested(CreateCharacter.Stage.Finished)
     }
 
     CreateCharacterStats {
@@ -325,6 +330,15 @@ Item {
 
     CreateCharacterPortrait {
         id: portraitGroup
+        opacity: 0
+        x: 220
+        y: 50
+        width: 431
+        height: 234
+    }
+
+    CreateCharacterVoiceAndName {
+        id: voiceAndNameGroup
         opacity: 0
         x: 220
         y: 50
@@ -474,6 +488,18 @@ Item {
 
             PropertyChanges {
                 target: portraitGroup
+                opacity: 1
+            }
+        },
+        State {
+            name: "voiceAndName"
+            PropertyChanges {
+                target: voiceAndNameButton
+                active: true
+            }
+
+            PropertyChanges {
+                target: voiceAndNameGroup
                 opacity: 1
             }
         }

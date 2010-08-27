@@ -8,6 +8,7 @@
 #include "mainwindow.h"
 #include "scriptengine.h"
 #include "savegames.h"
+#include "charactervault.h"
 
 namespace EvilTemple {
 
@@ -16,6 +17,7 @@ namespace EvilTemple {
         ScriptEngine *scriptEngine;
 
         SaveGames *saveGames;
+        CharacterVault *characterVault;
     };
 
     Game::Game(QObject *parent) :
@@ -24,6 +26,11 @@ namespace EvilTemple {
     {
         d_ptr->scriptEngine = new ScriptEngine(this);
         d_ptr->scriptEngine->setObjectName("scriptEngine");
+
+        d_ptr->characterVault = new CharacterVault("characters/", "userCharacters/",
+                                                   d_ptr->scriptEngine->engine(), this);
+
+        d_ptr->scriptEngine->exposeQObject("charactervault", d_ptr->characterVault);
 
         d_ptr->saveGames = new SaveGames("saves/", d_ptr->scriptEngine->engine(), this);
 

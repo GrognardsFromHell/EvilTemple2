@@ -60,7 +60,8 @@ SOURCES += \
     modelfilereader.cpp \
     modelfilechunks.cpp \
     fogofwar.cpp \
-    modelviewer.cpp
+    modelviewer.cpp \
+    charactervault.cpp
 HEADERS += \
     mainwindow.h \
     game.h \
@@ -111,7 +112,8 @@ HEADERS += \
     modelfilechunks.h \
     gamemath_streams.h \
     fogofwar.h \
-    modelviewer.h
+    modelviewer.h \
+    charactervault.h
 OTHER_FILES += \
     resources/schema/materialfile.xsd \
     resources/materials/map_material.xml \

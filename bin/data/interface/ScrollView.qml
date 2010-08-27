@@ -19,6 +19,10 @@ Item {
 
     property alias section : listView.section
 
+    property alias highlight : listView.highlight
+
+    property alias highlightFollowsCurrentItem : listView.highlightFollowsCurrentItem
+
     function refreshScrollbar() {
         if (dontUpdate)
             return;
