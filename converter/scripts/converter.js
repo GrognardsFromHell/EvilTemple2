@@ -1247,10 +1247,10 @@ function processPortraits() {
         var large = records[k];
         if (large == '')
                 large = null;
-        var medium = records[k + 1];
-        var small = records[k + 2];
-        var smallGray = records[k + 3];
-        var mediumGray = records[k + 4];
+        var medium = records[k + 2];
+        var small = records[k + 1];
+        var smallGray = records[k + 4];
+        var mediumGray = records[k + 3];
 
         var files = [large, medium, small, mediumGray, smallGray];
 

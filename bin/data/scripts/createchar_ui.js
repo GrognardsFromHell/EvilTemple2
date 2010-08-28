@@ -305,7 +305,26 @@ var CreateCharacterUi = {};
         }
     }
 
+    /**
+     * Applies the values in currentSkillDistribution to the current character.
+     * This is non-reversible.
+     */
+    function commitSkills() {
+        if (!currentCharacter.hasOwnProperty("skills")) {
+            currentCharacter.skills = [];
+        }
+
+        for (var k in currentSkillDistribution) {
+            if (!currentCharacter.skills[k]) {
+                currentCharacter.skills[k] = currentSkillDistribution[k];
+            } else {
+                currentCharacter.skills[k] += currentSkillDistribution[k];
+            }
+        }
+    }
+
     function finishCharCreation() {
+        commitSkills();
 
         // Finish building the character and put it into the vault
         charactervault.add(currentCharacter);
@@ -531,6 +550,7 @@ var CreateCharacterUi = {};
         var materials = currentDialog.getModelViewer().materials;
         var model = currentDialog.getModelViewer().modelInstance;
         model.model = models.load(currentCharacter.model);
+        print("Loading model: " + currentCharacter.model);
 
         model.clearOverrideMaterials();
 
@@ -567,14 +587,19 @@ var CreateCharacterUi = {};
 
     function raceChosen(race) {
         currentRace = race;
+        currentCharacter.race = race;
         print("Race selected: " + race);
         currentDialog.overallStage = Stage.Gender;
         updateModelViewer();
+        if (currentCharacter.gender)
+            heightChosen(0.5); // Default height
     }
 
     function genderChosen(gender) {
         currentGender = gender;
+        currentCharacter.gender = gender;
         print("Gender selected: " + gender);
+        updateModelViewer(); // Do it once to get the prototype connected
         heightChosen(0.5); // Default height
         updateModelViewer();
     }
@@ -603,7 +628,9 @@ var CreateCharacterUi = {};
 
         var adjustedHeightFac = minFac + (maxFac - minFac) * height;
 
-        currentDialog.getModelViewer().modelScale = currentCharacter.scale / 100 * adjustedHeightFac;
+        var modelScale = currentCharacter.scale / 100 * adjustedHeightFac;
+        currentDialog.getModelViewer().modelScale = modelScale;
+        print("Set model-viewer scale to " + modelScale);
 
         // Height changing never changes the state unless it is to advance it
         if (currentDialog.overallStage < Stage.Hair)

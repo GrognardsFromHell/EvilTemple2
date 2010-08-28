@@ -15,8 +15,6 @@ Portrait.Small = 'small';
     var portraits = [];
 
     Portraits.register = function(portraitsObj) {
-        print("Registering portrait " + portraitsObj.id + " (" + portraitsObj.name + ")");
-
         if (portraitsObj.id === null || portraitsObj.id === undefined)
             throw "Portrait object has no id property.";
 

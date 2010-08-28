@@ -25,6 +25,8 @@ var equipment = {
 
         var type = obj.race + '-' + obj.gender;
 
+        print("Retrieving render-equipment for " + type);
+
         function processEquipment(id) {
             var record = equipment[id][type];
 

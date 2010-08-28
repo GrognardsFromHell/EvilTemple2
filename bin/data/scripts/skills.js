@@ -20,8 +20,6 @@ Skill.prototype.getSynergyBonus = function(skillRanks, context) {
     var skills = [];
 
     Skills.register = function(skillObj) {
-        print("Registering skill " + skillObj.id + " (" + skillObj.name + ")");
-
         if (!skillObj.id)
             throw "Skill object has no id property.";
 

@@ -56,6 +56,24 @@ private:
     int offset;
 };
 
+class OverrideFileEngine : public QFSFileEngine {
+public:
+    OverrideFileEngine(const QString &filename) : QFSFileEngine(filename) {
+    }
+
+    /**
+      This fixes QFileInfo(path).isRelative() which is used by absoluteFilePath().
+      The problem is that the data file engine converts relative paths to
+      absolute ones silently, if the relative path exists in the data directory.
+
+      This probably needs a better fix, i.e. store the original filename and operate
+      on that, unless setFilename is called to set a new one.
+      */
+    bool isRelativePath() const {
+        return true;
+    }
+};
+
 class DataFileEngineHandlerData
 {
 public:
@@ -113,7 +131,7 @@ public:
             // Look for the file in the data directory.
             engine.setFileName(absoluteDataPath + path);
             if (engine.fileFlags(QAbstractFileEngine::ExistsFlag) & QAbstractFileEngine::ExistsFlag) {
-                return new QFSFileEngine(absoluteDataPath + path);
+                return new OverrideFileEngine(absoluteDataPath + path);
             }
         } else {
             return 0;

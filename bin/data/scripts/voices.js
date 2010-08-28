@@ -44,8 +44,6 @@ Voice.prototype.playGeneric = function(type) {
     var voices = [];
 
     Voices.register = function(voiceObj) {
-        print("Registering voice " + voiceObj.id + " (" + voiceObj.name + ")");
-
         if (voiceObj.id === null || voiceObj.id === undefined)
             throw "Voice object has no id property.";
 

@@ -14,8 +14,6 @@ var Weapon = function() {
     var weapons = [];
 
     Weapons.register = function(weaponsObj) {
-        print("Registering weapon " + weaponsObj.id + " (" + weaponsObj.name + ")");
-
         if (!weaponsObj.id)
             throw "Weapon object has no id property.";
 

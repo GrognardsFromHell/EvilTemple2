@@ -13,22 +13,48 @@ CharacterVault::CharacterVault(const QString &pregeneratedPath,
                                    mEngine(engine),
                                    QObject(parent)
 {
-    QDir parentDir = mPregeneratedDirectory;
-    parentDir.cdUp();
-    if (!parentDir.exists(mPregeneratedDirectory.dirName())) {
-        parentDir.mkdir(mPregeneratedDirectory.dirName());
-    }
+    qDebug("User created character path: %s", qPrintable(userPath));
+    qDebug("Pregenerated character path: %s", qPrintable(pregeneratedPath));
 
-    parentDir = mUserDirectory;
-    parentDir.cdUp();
-    if (!parentDir.exists(mUserDirectory.dirName())) {
-        parentDir.mkdir(mUserDirectory.dirName());
+    if (!mUserDirectory.exists()) {
+        qDebug("Creating user character directory: %s", qPrintable(mUserDirectory.absolutePath()));
+        if (!mUserDirectory.root().mkpath(mUserDirectory.absolutePath())) {
+            qWarning("Unable to create user directory for characters!");
+        }
     }
 }
 
 QScriptValue CharacterVault::list() const
 {
-    return QScriptValue();
+    QScriptValue result = mEngine->newArray();
+    int i = 0;
+
+    QStringList files = mPregeneratedDirectory.entryList(QStringList() << "*.js", QDir::Files);
+    foreach (const QString &filename, files) {
+        QFile file(mPregeneratedDirectory.absoluteFilePath(filename));
+        if (file.open(QIODevice::ReadOnly)) {
+            QScriptValue pregenChar = mEngine->newObject();
+            pregenChar.setProperty("script", QString::fromUtf8(file.readAll()));
+            result.setProperty(i++, pregenChar);
+        } else {
+            qWarning("Unable to open pregen character file: %s", qPrintable(filename));
+        }
+    }
+
+    files = mUserDirectory.entryList(QStringList() << "*.js", QDir::Files);
+    foreach (const QString &filename, files) {
+        QFile file(mUserDirectory.absoluteFilePath(filename));
+        if (file.open(QIODevice::ReadOnly)) {
+            QScriptValue userChar = mEngine->newObject();
+            userChar.setProperty("filename", filename);
+            userChar.setProperty("script", QString::fromUtf8(file.readAll()));
+            result.setProperty(i++, userChar);
+        } else {
+            qWarning("Unable to open user character file: %s", qPrintable(filename));
+        }
+    }
+
+    return result;
 }
 
 static const char *reservedCharacters = "<>:\"/\\|?*";
@@ -70,14 +96,14 @@ QScriptValue CharacterVault::add(const QVariantMap &character)
         }
 
         if (!success) {
-            return mEngine->currentContext()->throwError(QString("Unable to create file: %1").arg(filename));
+            return mEngine->currentContext()->throwError(QString("Unable to find free filename for: %1").arg(filename));
         }
     }
 
-    QFile output(mUserDirectory.filePath(filename));
+    QFile output(mUserDirectory.absoluteFilePath(filename));
 
     if (!output.open(QIODevice::WriteOnly)) {
-        return mEngine->currentContext()->throwError(QString("Unable to create file: %1").arg(filename));
+        return mEngine->currentContext()->throwError(QString("Unable to create file: %1").arg(output.fileName()));
     }
 
     QJson::Serializer serializer;

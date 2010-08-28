@@ -9,8 +9,6 @@ var Deity = function() {
     var deities = [];
 
     Deities.register = function(deityObj) {
-        print("Registering deity " + deityObj.id + " (" + deityObj.name + ")");
-
         if (!deityObj.id)
             throw "Deity object has no id property.";
 

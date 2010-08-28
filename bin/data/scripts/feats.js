@@ -55,8 +55,6 @@ var FeatArgument = function(name, description, values) {
     var feats = [];
 
     Feats.register = function(featObj) {
-        print("Registering feat " + featObj.id + " (" + featObj.name + ")");
-
         if (!featObj.id)
             throw "Feat object has no id property.";
 
