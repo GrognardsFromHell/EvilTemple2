@@ -18,6 +18,7 @@ class ParticleSystems;
 class AudioEngine;
 class SectorMap;
 class Models;
+class Game;
 
 class GameView : public QGraphicsView
 {
@@ -43,7 +44,7 @@ class GameView : public QGraphicsView
 
     Q_PROPERTY(QSize viewportSize READ viewportSize NOTIFY viewportChanged)
 public:
-    explicit GameView(QWidget *parent = 0);
+    explicit GameView(Game *game, QWidget *parent = 0);
     ~GameView();
 
     QDeclarativeEngine *uiEngine();

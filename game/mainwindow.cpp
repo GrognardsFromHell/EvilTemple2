@@ -47,14 +47,14 @@ namespace EvilTemple {
 
     class MainWindowData {
     public:
-        MainWindowData(const Game &_game) : game(_game), gameView(0), profilerDialog(0) {}
+        MainWindowData(Game *_game) : game(_game), gameView(0), profilerDialog(0) {}
 
-        const Game &game;
+        Game *game;
         GameView *gameView;
         ProfilerDialog *profilerDialog;
     };
 
-    MainWindow::MainWindow(const Game &game, QWidget *parent)
+    MainWindow::MainWindow(Game *game, QWidget *parent)
         : QMainWindow(parent),
         d_ptr(new MainWindowData(game))
     {
@@ -100,12 +100,12 @@ namespace EvilTemple {
         while (glGetError() != GL_NO_ERROR) {}
 
         // Create the actual OpenGL widget
-        d_ptr->gameView = new GameView();
+        d_ptr->gameView = new GameView(game);
         d_ptr->gameView->setViewport(glViewport);
         d_ptr->gameView->setMouseTracking(true);
         setCentralWidget(d_ptr->gameView);
 
-        QScriptEngine *engine = game.scriptEngine()->engine();
+        QScriptEngine *engine = game->scriptEngine()->engine();
         engine->globalObject().setProperty("gameView", engine->newQObject(d_ptr->gameView));
         engine->globalObject().setProperty("translations", engine->newQObject(d_ptr->gameView->translations()));
 
@@ -218,7 +218,7 @@ namespace EvilTemple {
         while (err != GL_NO_ERROR)
             err = glGetError();
 
-        d_ptr->game.scriptEngine()->callGlobalFunction("startup");
+        d_ptr->game->scriptEngine()->callGlobalFunction("startup");
 
         glBindBuffer(GL_ARRAY_BUFFER, 0); // TODO: necessity?
     }
@@ -251,14 +251,14 @@ namespace EvilTemple {
                 qDebug("MW %s %s", qPrintable(instance->focusWidget()->objectName()), instance->focusWidget()->metaObject()->className());
             }
 
-            QScriptValue scriptEvent = d_ptr->game.scriptEngine()->engine()->newObject();
+            QScriptValue scriptEvent = d_ptr->game->scriptEngine()->engine()->newObject();
             scriptEvent.setProperty("key", QScriptValue(e->key()));
             scriptEvent.setProperty("text", QScriptValue(e->text()));
 
             QScriptValueList args;
             args << scriptEvent;
 
-            d_ptr->game.scriptEngine()->callGlobalFunction("keyPressed", args);
+            d_ptr->game->scriptEngine()->callGlobalFunction("keyPressed", args);
         }
     }
 

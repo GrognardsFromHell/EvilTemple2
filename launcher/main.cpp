@@ -115,7 +115,7 @@ int main(int argc, char *argv[])
     QCoreApplication::setOrganizationDomain("toee.hartte.de");
     QCoreApplication::setApplicationName("EvilTemple");
 
-    DataFileEngineHandler dataFileHandler("data");
+    DataFileEngineHandler dataFileHandler(a.applicationDirPath() + "/data");
 
     Game game;
 
@@ -123,7 +123,7 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    MainWindow mainWindow(game);
+    MainWindow mainWindow(&game);
     mainWindow.readSettings();
     mainWindow.showFromSettings();
 

@@ -20,7 +20,7 @@ class GAME_EXPORT MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    MainWindow(const Game &game, QWidget *parent = 0);
+    MainWindow(Game *game, QWidget *parent = 0);
     ~MainWindow();
 
 public slots:

@@ -33,7 +33,7 @@ public:
       object is created, this path is automatically set to the data folder in the
       location of the executable file.
       */
-    const QString &dataPath() const;
+    QString dataPath() const;
 
     /**
       Changes the data path used by the game. Calling this method only makes sense
@@ -49,7 +49,7 @@ public:
       On Windows this is relative to the My Documents folder, so it is writeable,
       while on Unix systems, a sub-directory of the home directory is chosen.
       */
-    const QString &userDataPath() const;
+    QString userDataPath() const;
 
     /**
       Changes the per-user data path. Calling this method only makes sense before

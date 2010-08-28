@@ -73,7 +73,7 @@ namespace EvilTemple {
         d->scriptEngine->exposeQObject("savegames", d->saveGames);
 
         qDebug("Loading scripts");
-        scriptEngine()->loadScripts();
+        scriptEngine()->loadScripts(d->dataPath.filePath("scripts"));
 
         return true;
     }
@@ -83,7 +83,7 @@ namespace EvilTemple {
         return d->scriptEngine;
     }
 
-    const QString &Game::dataPath() const
+    QString Game::dataPath() const
     {
         return d->dataPath.absolutePath();
     }
@@ -93,7 +93,7 @@ namespace EvilTemple {
         d->dataPath = dataPath;
     }
 
-    const QString &Game::userDataPath() const
+    QString Game::userDataPath() const
     {
         return d->userDataPath.absolutePath();
     }

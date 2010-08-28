@@ -20,7 +20,7 @@ namespace EvilTemple {
         /**
           Loads user scripts from the scripts directory.
           */
-        bool loadScripts();
+        bool loadScripts(const QString &path);
 
         QScriptEngine *engine() const;
 

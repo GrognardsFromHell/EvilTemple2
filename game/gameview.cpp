@@ -30,6 +30,7 @@
 #include "imageuploader.h"
 #include "binkplayer.h"
 #include "modelviewer.h"
+#include "game.h"
 
 #include <QPointer>
 
@@ -143,7 +144,7 @@ namespace EvilTemple {
     {
     Q_OBJECT
     public:
-        GameViewData(GameView *view)
+        GameViewData(Game *game, GameView *view)
             : q(view),
             clippingGeometry(renderStates), dragging(false), lightDebugger(renderStates),
             materials(renderStates), sectorMap(&scene), models(&materials, renderStates),
@@ -153,8 +154,12 @@ namespace EvilTemple {
             mVideoPlayerThread(&mVideoPlayer),
             wasScrolling(false)
         {
-            connect(&uiEngine, SIGNAL(warnings(QList<QDeclarativeError>)), SLOT(uiWarnings(QList<QDeclarativeError>)));
+			QUrl baseUrl = QUrl::fromLocalFile(game->dataPath() + "/");
+			qDebug("Using QML base url: %s", qPrintable(baseUrl.toString()));
+			uiEngine.setBaseUrl(baseUrl);
 
+            connect(&uiEngine, SIGNAL(warnings(QList<QDeclarativeError>)), SLOT(uiWarnings(QList<QDeclarativeError>)));
+			
             sceneTimer.invalidate();
 
             qDebug("Initializing glew...");
@@ -184,11 +189,11 @@ namespace EvilTemple {
                                                Vector4(0, 1, 0, 0));
 
             // Old: -44
-            Quaternion rot1 = Quaternion::fromAxisAndAngle(1, 0, 0, deg2rad(-44.42700648682643));
+            Quaternion rot1 = Quaternion::fromAxisAndAngle(1, 0, 0, deg2rad(-44.42700648682643f));
             Matrix4 rotate1matrix = Matrix4::transformation(Vector4(1,1,1,0), rot1, Vector4(0,0,0,0));
 
             // Old: 90-135
-            Quaternion rot2 = Quaternion::fromAxisAndAngle(0, 1, 0, deg2rad(135.0000005619373));
+            Quaternion rot2 = Quaternion::fromAxisAndAngle(0, 1, 0, deg2rad(135.0000005619373f));
             Matrix4 rotate2matrix = Matrix4::transformation(Vector4(1,1,1,0), rot2, Vector4(0,0,0,0));
 
             Matrix4 flipZMatrix;
@@ -425,7 +430,7 @@ namespace EvilTemple {
             return;
         }
 
-        float threshold = 0.05; // 5% of the visible area should be sufficient for scrolling
+        float threshold = 0.05f; // 5% of the visible area should be sufficient for scrolling
         float xThreshold = threshold * q->width();
         float yThreshold = threshold * q->height();
 
@@ -498,8 +503,8 @@ namespace EvilTemple {
         }
     }
 
-    GameView::GameView(QWidget *parent) :
-            QGraphicsView(parent), d(new GameViewData(this)), mScrollingBorder(0)
+    GameView::GameView(Game *game, QWidget *parent) :
+            QGraphicsView(parent), d(new GameViewData(game, this)), mScrollingBorder(0)
     {
         QPixmap defaultCursor("art/interface/cursors/MainCursor.png");
         setCursor(QCursor(defaultCursor, 2, 2));
@@ -516,9 +521,6 @@ namespace EvilTemple {
         d->uiScene.setItemIndexMethod(QGraphicsScene::NoIndex);
         viewport()->setFocusPolicy(Qt::NoFocus);
         setFocusPolicy(Qt::StrongFocus);
-
-        QUrl baseUrl = QUrl::fromLocalFile(QDir::currentPath() + QDir::separator() + "data" + QDir::separator());
-        d->uiEngine.setBaseUrl(baseUrl);
 
         d->uiScene.setStickyFocus(true);
 
@@ -680,11 +682,14 @@ namespace EvilTemple {
         return widget;
     }
 
-    QObject *GameView::addGuiItem(const QString &url)
+    QObject *GameView::addGuiItem(const QString &path)
     {
+		QUrl url = QUrl::fromLocalFile(path);
+		qDebug("Adding gui item from %s.", qPrintable(url.toString()));
+
         // Create the console
         QDeclarativeComponent *component = new QDeclarativeComponent(&d->uiEngine, this);
-        component->loadUrl(QUrl::fromLocalFile(url));
+        component->loadUrl(url);
 
         QEventLoop eventLoop;
         while (!component->isReady()) {

@@ -98,16 +98,16 @@ namespace EvilTemple {
         return d->engine;
     }
 
-    bool ScriptEngine::loadScripts()
+    bool ScriptEngine::loadScripts(const QString &directory)
     {
-        QDir scriptDir("data/scripts");
+        QDir scriptDir(directory);
 
         QStringList scriptFileNames = scriptDir.entryList(QStringList() << "*.js",
                                                           QDir::Files|QDir::Readable,
                                                           QDir::Name);
 
         foreach (QString scriptFileName, scriptFileNames) {
-            QString fullFilename = "data/scripts/" + scriptFileName;
+			QString fullFilename = scriptDir.absolutePath() + '/' + scriptFileName;
 
             QFile scriptFile(fullFilename);
 
