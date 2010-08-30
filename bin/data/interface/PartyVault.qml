@@ -334,6 +334,7 @@ Item {
             width: 468
             height: 373
             model: characterModel
+            spacing: 5
             delegate: characterDelegate
             highlight: Rectangle {
                 radius: 5

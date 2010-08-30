@@ -12,6 +12,12 @@ var PartyPoolUi = {};
         var race = Races.getById(character.race).name;
         var compatible = CompatibleAlignments[character.alignment].indexOf(Party.alignment) != -1;
 
+        var classLevelText = '';
+        character.classLevels.forEach(function (classLevel) {
+            classLevelText += Classes.getById(classLevel.classId).name;
+            classLevelText += ' ' + classLevel.count;
+        });
+
         return {
             id: character.id,
             name: character.name,
@@ -19,7 +25,7 @@ var PartyPoolUi = {};
             gender: gender,
             race: race,
             alignment: AlignmentNames[character.alignment],
-            classes: 'Fighter 1 Wizard 2',
+            classes: classLevelText,
             filename: vaultChar.filename,
             compatible: compatible
         };
