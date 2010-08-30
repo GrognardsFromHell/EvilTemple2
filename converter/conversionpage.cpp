@@ -12,7 +12,14 @@
 #include <QAxObject>
 #include <windows.h>
 #include "shobjidl.h"
+
+#include "ntverp.h"
+
+// Only use the taskbar list if the correct minimum platform SDK is installed
+#if VER_PRODUCTBUILD >= 7600
 #define USE_TASKBAR_LIST
+#endif
+
 #endif
 
 static QtMsgHandler oldMsgHandler = NULL;
