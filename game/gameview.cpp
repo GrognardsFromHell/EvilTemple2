@@ -154,12 +154,12 @@ namespace EvilTemple {
             mVideoPlayerThread(&mVideoPlayer),
             wasScrolling(false)
         {
-			QUrl baseUrl = QUrl::fromLocalFile(game->dataPath() + "/");
-			qDebug("Using QML base url: %s", qPrintable(baseUrl.toString()));
-			uiEngine.setBaseUrl(baseUrl);
+                        QUrl baseUrl = QUrl::fromLocalFile(game->dataPath() + "/");
+                        qDebug("Using QML base url: %s", qPrintable(baseUrl.toString()));
+                        uiEngine.setBaseUrl(baseUrl);
 
             connect(&uiEngine, SIGNAL(warnings(QList<QDeclarativeError>)), SLOT(uiWarnings(QList<QDeclarativeError>)));
-			
+
             sceneTimer.invalidate();
 
             qDebug("Initializing glew...");
@@ -684,8 +684,8 @@ namespace EvilTemple {
 
     QObject *GameView::addGuiItem(const QString &path)
     {
-		QUrl url = QUrl::fromLocalFile(path);
-		qDebug("Adding gui item from %s.", qPrintable(url.toString()));
+        QUrl url = QUrl::fromLocalFile(path);
+        qDebug("Adding gui item from %s.", qPrintable(url.toString()));
 
         // Create the console
         QDeclarativeComponent *component = new QDeclarativeComponent(&d->uiEngine, this);

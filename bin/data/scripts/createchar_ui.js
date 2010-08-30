@@ -762,10 +762,27 @@ var CreateCharacterUi = {};
         }
     }
 
+    function resetCharacter() {
+        currentRace = null;
+        currentGender = null;
+        currentClass = null;
+        currentFeats = [];
+        currentSkillDistribution = {};
+        currentCharacter = {
+            id: generateGuid(),
+            domains: [],
+            feats: [],
+            skills: {},
+            classLevels: []
+        };
+    }
+
     CreateCharacterUi.show = function(_successCallback, _cancelCallback) {
         if (currentDialog) {
             CreateCharacterUi.cancel();
         }
+
+        resetCharacter();
 
         successCallback = _successCallback;
         cancelCallback = _cancelCallback;
@@ -800,6 +817,8 @@ var CreateCharacterUi = {};
         voiceAndNameDialog.requestVoiceSample.connect(requestVoiceSample);
         voiceAndNameDialog.nameChanged.connect(nameChosen);
         voiceAndNameDialog.selectedVoiceChanged.connect(voiceChosen);
+
+        currentDialog.cancel.connect(CreateCharacterUi.cancel);
 
         // Start with the stats page
         currentDialog.overallStage = Stage.Stats;

@@ -114,7 +114,8 @@ QScriptValue CharacterVault::add(const QVariantMap &character)
 
 void CharacterVault::remove(const QString &filename)
 {
-
+    // TODO: Ensure that filename is an element of the directory.
+    mUserDirectory.remove(filename);
 }
 
 }

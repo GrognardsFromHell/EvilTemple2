@@ -146,7 +146,8 @@ OTHER_FILES += \
     ../bin/data/scripts/mobileInfo.js \
     resources/materials/shadow.vert \
     resources/materials/shadow.frag \
-    resources/materials/fog_material.xml
+    resources/materials/fog_material.xml \
+    FullScreenCancelButton.qml
 
 INCLUDEPATH += .
 

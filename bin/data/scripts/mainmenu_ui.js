@@ -38,7 +38,7 @@ var MainMenuUi = {};
 
             Party.alignment = alignment;
 
-            CreateCharacterUi.show(startGame, MainMenuUi.show);
+            PartyPoolUi.showCreateParty(startGame, MainMenuUi.show);
         });
     }
 
@@ -49,17 +49,6 @@ var MainMenuUi = {};
 
         // Set up a nice debugging party
         Party.money.addGold(1000); // Start with 1000 gold
-
-        var player1 = {
-            __proto__: PlayerCharacter,
-            id: generateGuid(),
-            prototype: 13000,
-            position: [0, 0, 0],
-            portrait: '151',
-            name: 'Storm'
-        };
-        connectToPrototype(player1);
-        Party.addMember(player1);
 
         var startMap;
 

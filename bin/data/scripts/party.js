@@ -141,7 +141,7 @@ var Party = {};
         PartyUi.update();
         return true;
     };
-
+    
     /**
      * Returns the party leader, which usually is the first player in the party, that is alive.
      */

@@ -3,10 +3,19 @@ import Qt 4.7
 import 'Constants.js' as Constants
 
 Item {
+    id: root
     width: 1024
     height: 768
 
+    signal beginAdventuringClicked
+
     signal closeClicked
+
+    signal createCharacterClicked
+
+    signal viewCharacterClicked(string id)
+
+    signal deleteCharacterClicked(string filename)
 
     property int partySize: 6
 
@@ -19,6 +28,7 @@ Item {
             race: 'Human',
             alignment: 'Lawful Good',
             classes: 'Fighter 1 Wizard 2',
+            filename: 'asdqwd.js',
             compatible: true
         },
         {
@@ -44,17 +54,62 @@ Item {
                 race: character.race,
                 alignment: character.alignment,
                 classes: character.classes,
-                compatible: character.compatible
+                compatible: character.compatible,
+                filename: character.filename
             });
         });
     }
 
-    function updateAddButton() {
-        addButton.enabled = true;
+    property bool validSelection : false
+
+    property bool selectionInParty : false
+
+    property bool selectionIsUserChar : false
+
+    function getPartySelection() {
+        var result = [];
+
+        for (var i = 0; i < selectedParty.count; ++i) {
+            result.push(selectedParty.get(i).id);
+        }
+
+        return result;
+    }
+
+    function setPartySelection(selection) {
+        selectedParty.clear();
+
+        selection.forEach(function (id) {
+            // Find the corresponding entry from the party list
+            for (var i = 0; i < characterModel.count; ++i) {
+                var entry = characterModel.get(i);
+                if (entry.id == id) {
+                    selectedParty.append(entry);
+                    break;
+                }
+            }
+        });
+
+        updateValidSelection();
+    }
+
+    function updateValidSelection() {
+        // Empty list -> invalid selection
+        if (charactersView.currentIndex == -1 || charactersView.count) {
+            selectionIsUserChar = false;
+            selectionInParty = false;
+            validSelection = false;
+            return;
+        }
+
+        validSelection = true;
 
         var entry = characterModel.get(charactersView.currentIndex);
+        selectionInParty = isSelected(entry.id);
+        selectionIsUserChar = (entry.filename !== undefined);
+
         if (!entry.compatible || isSelected(entry.id)) {
-            addButton.enabled = false;
+            validSelection = false;
             return;
         }
     }
@@ -76,6 +131,29 @@ Item {
     function addPartyMember(index) {
         var entry = characterModel.get(index)
         selectedParty.append(entry);
+
+        console.log("Added party member @" + index + " (" + entry.name + "/" + entry.id + ")");
+    }
+
+    Image {
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.margins: 9
+
+        source: '../art/interface/pc_creation/begin_adventure_border.png'
+        Button {
+            x: 14
+            y: 10
+            normalImage: 'art/interface/pc_creation/begin_adventure_normal.png'
+            pressedImage: 'art/interface/pc_creation/begin_adventure_pressed.png'
+            hoverImage: 'art/interface/pc_creation/begin_adventure_hovered.png'
+            disabledImage: 'art/interface/pc_creation/begin_adventure_disabled.png'
+            enabled: selectedParty.count > 0
+
+            text: 'Begin Adventuring'
+
+            onClicked: beginAdventuringClicked()
+        }
     }
 
     Item {
@@ -105,6 +183,7 @@ Item {
             hoverImage: 'art/interface/party_pool/hover.png'
             disabledImage: 'art/interface/party_pool/disable.png'
             text: "Create"
+            onClicked: createCharacterClicked()
         }
 
         Button {
@@ -116,6 +195,11 @@ Item {
             hoverImage: 'art/interface/party_pool/hover.png'
             disabledImage: 'art/interface/party_pool/disable.png'
             text: "Delete"
+            enabled: selectionIsUserChar
+            onClicked: {
+                var entry = characterModel.get(charactersView.currentIndex);
+                deleteCharacterClicked(entry.filename);
+            }
         }
 
         Button {
@@ -127,8 +211,15 @@ Item {
             hoverImage: 'art/interface/party_pool/hover.png'
             disabledImage: 'art/interface/party_pool/disable.png'
             text: "View"
+            onClicked: {
+                var entry = characterModel.get(charactersView.currentIndex);
+                viewCharacterClicked(entry.id);
+            }
         }
 
+        /*
+            This is not implemented yet.
+         */
         Button {
             id: renameButton
             x: 270
@@ -138,6 +229,7 @@ Item {
             hoverImage: 'art/interface/party_pool/hover.png'
             disabledImage: 'art/interface/party_pool/disable.png'
             text: "Rename"
+            enabled: false
         }
 
         Button {
@@ -163,7 +255,12 @@ Item {
             hoverImage: 'art/interface/party_pool/add_hover.png'
             disabledImage: 'art/interface/party_pool/add_disable.png'
             text: "Add"
+            enabled: validSelection
             visible: selectedPartyView.selected == -1
+            onClicked: {
+                addPartyMember(charactersView.currentIndex)
+                updateValidSelection();
+            }
         }
 
         Button {
@@ -176,7 +273,11 @@ Item {
             disabledImage: 'art/interface/party_pool/remove_disable.png'
             text: "Remove"
             visible: selectedPartyView.selected != -1
-            onClicked: removePartyMember(selectedPartyView.selected)
+            onClicked: {
+                removePartyMember(selectedPartyView.selected)
+                selectedPartyView.selected = -1;
+                updateValidSelection();
+            }
         }
 
         ListModel {
@@ -185,32 +286,43 @@ Item {
 
         Component {
             id: characterDelegate
-            Row {
+            Item {
                 anchors.left: parent.left
                 anchors.right: parent.right
-                Item {
-                    height: infoColumn.height
-                    width: infoColumn.height
-                    Image {
-                        source: '../' + model.portrait
-                        anchors.centerIn: parent
+                height: row.height
+
+                Row {
+                    id: row
+
+                    Item {
+                        height: infoColumn.height
+                        width: infoColumn.height
+                        Image {
+                            source: '../' + model.portrait
+                            anchors.centerIn: parent
+                        }
+                    }
+                    Column {
+                        id: infoColumn
+                        StandardText {
+                            text: model.name + (isSelected(model.id) ? ' <span style="color: green; font-weight: bold">(In Party)</span>' : '')
+                            font.bold: true
+                        }
+                        StandardText {
+                            text: model.gender + " " + model.race
+                        }
+                        StandardText {
+                            text: model.classes
+                        }
+                        StandardText {
+                            text: model.alignment + (model.compatible ? '' : ' - <span style="color: red; font-weight: bold">(Incompatible)</span>')
+                        }
                     }
                 }
-                Column {
-                    id: infoColumn
-                    StandardText {
-                        text: model.name
-                        font.bold: true
-                    }
-                    StandardText {
-                        text: model.gender + " " + model.race
-                    }
-                    StandardText {
-                        text: model.classes
-                    }
-                    StandardText {
-                        text: model.alignment
-                    }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: ListView.view.currentIndex = index;
                 }
             }
         }
@@ -225,17 +337,15 @@ Item {
             delegate: characterDelegate
             highlight: Rectangle {
                 radius: 5
-                color: Constants.HighlightColor
+                color: validSelection ? Constants.HighlightColor : 'gray'
                 opacity: 0.75
             }
+            onCurrentIndexChanged: updateValidSelection()
         }
     }
 
     ListModel {
         id: selectedParty
-        ListElement {
-            portrait: 'art/interface/portraits/ELF_1002_s_sorcerer.png'
-        }
     }
 
     Row {

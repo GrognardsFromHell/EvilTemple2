@@ -61,11 +61,14 @@ MouseArea {
         id: label
         text: 'Button'
         font.bold: true
-        anchors.centerIn: image
+        anchors.fill: parent
+        horizontalAlignment: "AlignHCenter"
+        verticalAlignment: "AlignVCenter"
         font.family: root.fontFamily
         font.pointSize: root.fontSize
         color: '#FFFFFF'
         z: 10
+        wrapMode: "WrapAtWordBoundaryOrAnywhere"
     }
 
     Text {
@@ -80,6 +83,9 @@ MouseArea {
         font.pointSize: label.font.pointSize
         color: Qt.darker(Qt.darker(label.color))
         visible: fontShadow
+        horizontalAlignment: "AlignHCenter"
+        verticalAlignment: "AlignVCenter"
+        wrapMode: "WrapAtWordBoundaryOrAnywhere"
     }
 
     states: [

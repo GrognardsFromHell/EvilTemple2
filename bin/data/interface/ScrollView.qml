@@ -1,6 +1,7 @@
 import Qt 4.7
 
 Item {
+    id: root
     width: 320
     height: 240
     clip: true
@@ -42,6 +43,7 @@ Item {
 
         onContentYChanged: refreshScrollbar();
         onContentHeightChanged: refreshScrollbar();
+        onCurrentIndexChanged: root.currentIndexChanged();
     }
 
     Rectangle {

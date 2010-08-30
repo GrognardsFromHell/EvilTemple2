@@ -58,7 +58,16 @@ private:
 
 class OverrideFileEngine : public QFSFileEngine {
 public:
-    OverrideFileEngine(const QString &filename) : QFSFileEngine(filename) {
+
+    OverrideFileEngine(const QString &filename, const QString &originalFilename)
+        : QFSFileEngine(filename), mOriginalFilename(originalFilename)
+    {
+    }
+
+    void setFileName(const QString &file)
+    {
+        QFSFileEngine::setFileName(file);
+        mOriginalFilename = file;
     }
 
     /**
@@ -69,9 +78,14 @@ public:
       This probably needs a better fix, i.e. store the original filename and operate
       on that, unless setFilename is called to set a new one.
       */
-    bool isRelativePath() const {
-        return true;
+    bool isRelativePath() const
+    {
+        QFSFileEngine fileEngine(mOriginalFilename);
+        return fileEngine.isRelativePath();
     }
+
+private:
+    QString mOriginalFilename;
 };
 
 class DataFileEngineHandlerData
@@ -131,7 +145,7 @@ public:
             // Look for the file in the data directory.
             engine.setFileName(absoluteDataPath + path);
             if (engine.fileFlags(QAbstractFileEngine::ExistsFlag) & QAbstractFileEngine::ExistsFlag) {
-                return new OverrideFileEngine(absoluteDataPath + path);
+                return new OverrideFileEngine(absoluteDataPath + path, filename);
             }
         } else {
             return 0;
