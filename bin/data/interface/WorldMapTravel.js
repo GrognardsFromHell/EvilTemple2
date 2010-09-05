@@ -61,7 +61,7 @@ function doTravelStep() {
         console.log('Unknown path opcode: ' + opcode);
     }
 
-    if (distance(lastX, lastY, curX, curY) >= 8) {
+    if (Utilities.distance(lastX, lastY, curX, curY) >= 8) {
         trailIcon = pathStepComponent.createObject(root);
         trailIcon.x = curX;
         trailIcon.y = curY;

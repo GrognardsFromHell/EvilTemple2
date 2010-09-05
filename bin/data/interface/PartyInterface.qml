@@ -19,6 +19,7 @@ Item {
                 PartyPortrait {
                     portrait: modelData.portrait
                     selected: modelData.selected
+                    health: modelData.health
                     onClicked: root.action('select', index);
                     onRightClicked: root.action('charsheet', index)
                     onDoubleClicked: root.action('select_and_center', index)
@@ -41,6 +42,7 @@ Item {
                 PartyPortrait {
                     portrait: modelData.portrait
                     selected: modelData.selected
+                    health: modelData.health
                     onClicked: root.action('select', 10000 + index);
                     onRightClicked: root.action('charsheet', 10000 + index)
                     onDoubleClicked: root.action('select_and_center', 10000 + index)

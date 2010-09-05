@@ -118,7 +118,7 @@ public:
 
         GLenum error = glGetError();
         if (error != GL_NO_ERROR) {
-            qWarning("Unable to bind value to uniform location %d: %s.", location, gluErrorString(error));
+            qWarning("Unable to bind ref value to uniform location %d: %s.", location, gluErrorString(error));
         }
     }
 private:

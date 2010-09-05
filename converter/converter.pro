@@ -34,7 +34,8 @@ SOURCES += converter.cpp \
     pythonconverter.cpp \
     mapareamapping.cpp \
     convertmoviestask.cpp \
-    qdirvfshandler.cpp
+    qdirvfshandler.cpp \
+    converthairtask.cpp
 
 HEADERS += \
     util.h \
@@ -64,7 +65,8 @@ HEADERS += \
     pythonconverter.h \
     mapareamapping.h \
     convertmoviestask.h \
-    qdirvfshandler.h
+    qdirvfshandler.h \
+    converthairtask.h
 
 win32:SOURCES += basepathfinder_win32.cpp
 else:SOURCES += basepathfinder.cpp

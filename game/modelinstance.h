@@ -78,6 +78,15 @@ public slots:
     bool clearOverrideMaterial(const QByteArray &name);
     void clearOverrideMaterials();
 
+    /**
+      Overrides material properties by name. This feature may be used to specify
+      uniform values for materials. A specific use case is the specification of
+      skin or hair colors, that may subsequently be used by the material shaders
+      to color hair and skin properly.
+      */
+    void setMaterialPropertyFloat(const QString &name, float value);
+    void setMaterialPropertyVec4(const QString &name, const Vector4 &value);
+
     bool playAnimation(const QByteArray &name, bool loop = false);
     void stopAnimation();
 
@@ -141,8 +150,21 @@ private:
     // These relate to mModel->placeholders()
     QVector<SharedMaterialState> mReplacementMaterials;
 
+    QHash<QByteArray, Vector4> mMaterialPropertiesVec4;
+    QHash<QByteArray, float> mMaterialPropertiesFloat;
+
     Q_DISABLE_COPY(ModelInstance);
 };
+
+inline void ModelInstance::setMaterialPropertyFloat(const QString &name, float value)
+{
+    mMaterialPropertiesFloat[name.toLatin1()] = value;
+}
+
+inline void ModelInstance::setMaterialPropertyVec4(const QString &name, const Vector4 &value)
+{
+    mMaterialPropertiesVec4[name.toLatin1()] = value;
+}
 
 inline const SharedModel &ModelInstance::model() const
 {

@@ -146,6 +146,17 @@ var Map = function(id) {
         }
     }
 
+    function makeParticleSystemTestModel(particleSystem, sceneNode) {
+        var testModel = gameView.models.load('meshes/scenery/misc/mirror.model');
+        var modelInstance = new ModelInstance(gameView.scene);
+        modelInstance.model = testModel;
+        sceneNode.interactive = true;
+        modelInstance.mousePressed.connect(function() {
+            print(particleSystem.name);
+        });
+        sceneNode.attachObject(modelInstance);
+    }
+
     /**
      * Loads the particle systems from a given map object into the current view.
      *
@@ -220,10 +231,10 @@ var Map = function(id) {
 
         if (!this.unfogged) {
             // TODO: Load/Persist FOW state
-            this.renderFog = new FogOfWar(gameView.scene);
-            this.renderFog.sectorMap = gameView.sectorMap;
-            var fowNode = gameView.scene.createNode();
-            fowNode.attachObject(this.renderFog);
+            //this.renderFog = new FogOfWar(gameView.scene);
+            //this.renderFog.sectorMap = gameView.sectorMap;
+            //var fowNode = gameView.scene.createNode();
+            //fowNode.attachObject(this.renderFog);
         }
 
         gc();
@@ -307,7 +318,7 @@ var Map = function(id) {
             if (!this.hasOwnProperty(k) || this[k] instanceof Function)
                 continue; // Skip prototype properties and functions
 
-            if (k == 'renderGlobalLight' || k == 'renderBackgroundMap')
+            if (k == 'renderGlobalLight' || k == 'renderBackgroundMap' || k == 'renderFog')
                 continue; // Render states should be skipped
 
             if (k == 'mobiles')
@@ -572,6 +583,40 @@ var Map = function(id) {
                 gameView.addVisualTimer(50, mapFade);
             }
         }
+    };
+
+    /**
+     * Retrieve objects of a given type from the map around a location.
+     *
+     * @param position The center of the retrieval range.
+     * @param range The radius in which objects should be returned.
+     * @param prototype Only objects that have this prototype object in their prototype chain will be returned.
+     */
+    Map.prototype.vicinity = function(position, range, prototype) {
+
+        var result = this.mobiles.filter(function (mobile) {
+            var proto = mobile.__proto__;
+            var found = false;
+
+            while (proto) {
+                if (proto === prototype) {
+                    found = true;
+                    break;
+                }
+                proto = proto.__proto__;
+            }
+
+            if (!found)
+                return false;
+
+            // check distance
+            return distance(position, mobile.position) <= range;
+        });
+
+        print("Found " + result.length);
+
+        return result;
+
     };
 
     StartupListeners.add(function() {

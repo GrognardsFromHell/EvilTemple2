@@ -61,7 +61,8 @@ SOURCES += \
     modelfilechunks.cpp \
     fogofwar.cpp \
     modelviewer.cpp \
-    charactervault.cpp
+    charactervault.cpp \
+    geometryrenderables.cpp
 HEADERS += \
     mainwindow.h \
     game.h \
@@ -113,7 +114,8 @@ HEADERS += \
     gamemath_streams.h \
     fogofwar.h \
     modelviewer.h \
-    charactervault.h
+    charactervault.h \
+    geometryrenderables.h
 OTHER_FILES += \
     resources/schema/materialfile.xsd \
     resources/materials/map_material.xml \
@@ -147,7 +149,8 @@ OTHER_FILES += \
     resources/materials/shadow.vert \
     resources/materials/shadow.frag \
     resources/materials/fog_material.xml \
-    FullScreenCancelButton.qml
+    FullScreenCancelButton.qml \
+    resources/materials/movement_indicator_circle.xml
 
 INCLUDEPATH += .
 

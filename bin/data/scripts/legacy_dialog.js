@@ -188,7 +188,7 @@ var LegacyDialog = {};
                             result.text = translations.get('mes/gd_rce_m2m/' + randomRange(4000, 4017));
                     }
                     break;
-                case Reaction.Worst:
+                case Reaction.Hostile:
                     if (firstConversation) {
                         if (!replaceLine(11002))
                             result.text = translations.get('mes/gd_rce_m2m/' + randomRange(3000, 3009));

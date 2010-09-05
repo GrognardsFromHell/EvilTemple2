@@ -1,9 +1,29 @@
 var Equipment = {};
 
-var equipment = {
-};
-
 (function() {
+
+    var equipment = {
+    };
+
+    /**
+     * Registers new equipment definition records.
+     *
+     * @param entries An object that contains one key-value mapping for each equipment record.
+     */
+    Equipment.register = function(entries) {
+
+        var registered = 0;
+
+        for (var k in entries) {
+            if (entries.hasOwnProperty(k)) {
+                equipment[k] = entries[k];
+                registered++;
+            }
+        }
+
+        print("Registered " + registered + " equipment records.");
+
+    };
 
     /**
      * Returns a map of the override materials and addmeshes required to render an object's
@@ -25,20 +45,17 @@ var equipment = {
 
         var type = obj.race + '-' + obj.gender;
 
-        print("Retrieving render-equipment for " + type);
-
         function processEquipment(id) {
-            var record = equipment[id][type];
-
-            if (!record) {
-                print('Unknown wear mesh id: ' + id + ' or type: ' + type);
+            if (!equipment[id] || !equipment[id][type]) {
+                print('Unknown equipment id: ' + id + ' or type: ' + type);
                 return;
             }
 
+            var record = equipment[id][type];
+
             if (record.materials) {
-                for (var k in record.materials) {
+                for (var k in record.materials)
                     result.materials[k] = record.materials[k];
-                }
             }
 
             if (record.meshes) {
@@ -48,105 +65,76 @@ var equipment = {
             }
         }
 
-        // Naked "equipment" (should be merged)
-        processEquipment(0);
-        processEquipment(2);
-        processEquipment(5);
-        processEquipment(8);
+        // Add all naked "equipment" to the result.
+        processEquipment("naked");
+
+        // Add hair next
+        if (obj.hairType) {
+            processEquipment("hair-" + obj.hairType);
+            // Hair-color is "added" below in addRenderEquipment
+        }
 
         if (obj.content) {
             // Check all the equipment the object has
             obj.content.forEach(function (childObj) {
                 connectToPrototype(childObj);
 
-                if (childObj.wearMeshId > 0) {
-                    processEquipment(childObj.wearMeshId);
+                if (childObj.equipmentId) {
+                    processEquipment(childObj.equipmentId);
                 }
+            });
+        }
+
+        // Add explicitly requested addmeshes
+        if (obj.addMeshes) {
+            obj.addMeshes.forEach(function(filename) {
+                result.meshes.push(filename);
             });
         }
 
         return result;
     };
-})();
 
-function loadEquipment() {
-    equipment = eval('(' + readFile('equipment.js') + ')');
-}
+    /**
+     * Adds all the necessary equipment and material overrides to a model instance, needed to correctly
+     * display a given object.
+     *
+     * @param obj The object.
+     * @param modelInstance The model instance.
+     * @param materials The material source to use for loading replacement materials. Defaults to gameView.materials
+     * @param models The model source to use for loading models. Defaults to gameView.models
+     */
+    Equipment.addRenderEquipment = function(obj, modelInstance, materials, models) {
 
-function updateEquipment(obj, modelInstance) {
-    var type = null;
+        if (!materials)
+            materials = gameView.materials;
 
-    if (obj.race && obj.gender) {
-        type = obj.race + '-' + obj.gender;
-    }
+        if (!models)
+            models = gameView.models;
 
-    if (type !== undefined) {
-        var materials = {
-            'HEAD': '',
-            'GLOVES': '',
-            'CHEST': '',
-            'BOOTS': ''
-        };
+        modelInstance.clearOverrideMaterials();
 
-        function processEquipment(id) {
-            var record = equipment[id][type];
+        var equipment = Equipment.getRenderEquipment(obj);
 
-            if (record === undefined) {
-                print('Unknown wear mesh id: ' + id);
-                return;
-            }
-
-            if (record.materials !== undefined) {
-                for (var k in record.materials) {
-                    materials[k] = record.materials[k];
-                }
-            }
-
-            if (record.meshes !== undefined) {
-                for (var i = 0; i < record.meshes.length; ++i) {
-                    modelInstance.addMesh(models.load(record.meshes[i]));
-                }
-            }
+        for (var materialId in equipment.materials) {
+            var filename = equipment.materials[materialId];
+            modelInstance.overrideMaterial(materialId, materials.load(filename));
         }
 
-        // Naked "equipment" (should be merged)
-        processEquipment(0);
-        processEquipment(2);
-        processEquipment(5);
-        processEquipment(8);
-
-        if (obj.content !== undefined) {
-            // Check all the equipment the object has
-            for (var i = 0; i < obj.content.length; ++i) {
-                var childObj = obj.content[i];
-                connectToPrototype(childObj);
-
-                if (childObj.wearMeshId > 0) {
-                    processEquipment(childObj.wearMeshId);
-                }
-            }
-        }
-
-        for (var placeholder in materials) {
-            modelInstance.overrideMaterial(placeholder, gameView.materials.load(materials[placeholder]));
-        }
-
-        if (obj.hairType !== undefined && obj.hairColor !== undefined) {
-            var gender = 'male'; // obj.gender;
-            var genderShort = (gender == 'male') ? 'm' : 'f';
-
-            var style = obj.hairType;
-            var color = obj.hairColor;
-
-            var filename = 'meshes/hair/' + gender + '/s' + style + '/hu_' + genderShort + '_s' + style + '_c' + color + '_small.model';
-            modelInstance.addMesh(models.load(filename));
-        }
-    }
-
-    // Add explicitly requested addmeshes
-    if (obj.addMeshes !== undefined) {
-        obj.addMeshes.forEach(function(filename) {
+        equipment.meshes.forEach(function (filename) {
             modelInstance.addMesh(models.load(filename));
         });
+
+        // Set the hair-color override
+        if (obj.hairColor) {
+            modelInstance.setMaterialPropertyVec4("hairColor", obj.hairColor);
+        }
+    };
+
+    function load() {
+        Equipment.register(readJson('equipment.js'));
     }
-}
+
+    StartupListeners.add(load, 'toee-equipment', []);
+
+})();

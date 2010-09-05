@@ -134,8 +134,8 @@ QVariantMap PrototypeConverter::convertPrototype(Prototype *prototype)
         writer.write("inventoryGroundMesh", itemProps->inventoryGroundMesh);
         writer.write("unidentifiedDescriptionId", itemProps->unidentifiedDescriptionId);
         writer.write("chargesLeft", itemProps->chargesLeft);
-        writer.write("wearFlags", itemProps->wearFlags);
-        writer.write("wearMeshId", itemProps->wearMeshId);
+        writer.write("equipmentFlags", itemProps->wearFlags);
+        writer.write("equipmentId", itemProps->wearMeshId);
     }
 
     WeaponProperties *weaponProps = qobject_cast<WeaponProperties*>(prototype->additionalProperties);

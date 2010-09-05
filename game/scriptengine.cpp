@@ -18,6 +18,7 @@
 #include "imageuploader.h"
 #include "fogofwar.h"
 #include "modelviewer.h"
+#include "geometryrenderables.h"
 
 #include "renderable.h"
 #include "modelinstance.h"
@@ -204,7 +205,8 @@ namespace EvilTemple {
         return engine->newQObject(result);
     }
 
-    static QScriptValue selectionCircleCtor(QScriptContext *context, QScriptEngine *engine)
+    template<typename T>
+    static QScriptValue renderableWithMaterialsCtor(QScriptContext *context, QScriptEngine *engine)
     {
         if (!context->isCalledAsConstructor()) {
             return context->throwError(QScriptContext::SyntaxError, "Please call this function as a "
@@ -215,11 +217,11 @@ namespace EvilTemple {
         Materials *materials = qobject_cast<Materials*>(context->argument(1).toQObject());
 
         if (!scene || !materials) {
-            return context->throwError(QScriptContext::SyntaxError, "A selectioncircle constructor requires the "
+            return context->throwError(QScriptContext::SyntaxError, "This renderable constructor requires the "
                                        "scene as its first argument and materials as its second");
         }
 
-        SelectionCircle *result = new SelectionCircle(materials);
+        T *result = new T(materials);
         result->setParent(scene);
         return engine->newQObject(result);
     }
@@ -312,7 +314,8 @@ namespace EvilTemple {
         global.setProperty("LineRenderable", engine->newFunction(renderableCtor<LineRenderable>));
         global.setProperty("BackgroundMap", engine->newFunction(renderableCtor<BackgroundMap>));
         global.setProperty("FogOfWar", engine->newFunction(renderableCtor<FogOfWar>));
-        global.setProperty("SelectionCircle", engine->newFunction(selectionCircleCtor));
+        global.setProperty("SelectionCircle", engine->newFunction(renderableWithMaterialsCtor<SelectionCircle>));
+        global.setProperty("MovementIndicator", engine->newFunction(renderableWithMaterialsCtor<MovementIndicator>));
 
         // Register scriptable objects
         Vector4Scriptable::registerWith(engine);

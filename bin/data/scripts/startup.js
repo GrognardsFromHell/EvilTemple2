@@ -1,5 +1,3 @@
-var models; // Will be aliased to gameView.models
-
 var jumppoints = {};
 
 // Registry for render states.
@@ -11,6 +9,7 @@ var editMode = false;
 var tutorialMode = false; // Indicates that the tutorial is running.
 
 var currentTooltip = null;
+var currentMouseOver = null;
 
 // Base object for all prototypes
 //noinspection JSUnusedLocalSymbols
@@ -42,6 +41,10 @@ var BaseObject = {
      * or inanimate objects).
      */
     subdualDamageTaken: 0,
+
+    getCurrentHp: function() {
+        return this.hitPoints + this.temporaryHitPoints - this.damageTaken - this.subdualDamageTaken;
+    },
 
     /**
      * Extracts the state of a mobile that needs to be saved.
@@ -137,12 +140,12 @@ var BaseObject = {
         var scale = this.scale / 100.0;
         sceneNode.scale = [scale, scale, scale];
 
-        var modelObj = models.load(this.model);
+        var modelObj = gameView.models.load(this.model);
 
         var modelInstance = new ModelInstance(gameView.scene);
         modelInstance.model = modelObj;
         modelInstance.drawBehindWalls = this.drawBehindWalls;
-        updateEquipment(this, modelInstance);
+        Equipment.addRenderEquipment(this, modelInstance);
         modelInstance.animationEvent.connect(this, handleAnimationEvent);
         if (this.prototype == 'StaticGeometry') {
             modelInstance.renderCategory = 'StaticGeometry';
@@ -224,6 +227,19 @@ var BaseObject = {
         modelInstance.mouseLeave.connect(this, this.mouseLeave);
     },
 
+    getTooltipText: function() {
+        var result = '<b>' + this.getName() + '</b>';
+        if (this.damageTaken)
+            result += qsTr("<br><i>Damage: %1</i>").arg(this.damageTaken);
+        return result;
+    },
+
+    updateTooltip: function() {
+        if (currentMouseOver === this && currentTooltip) {
+            currentTooltip.text = this.getTooltipText();
+        }
+    },
+
     mouseEnter: function(event) {
         var renderState = this.getRenderState();
 
@@ -240,12 +256,12 @@ var BaseObject = {
         }
 
         var screenPos = gameView.screenFromWorld(this.position);
-        print(screenPos);
 
-        currentTooltip.text = this.getName();
+        currentTooltip.text = this.getTooltipText();
         currentTooltip.x = screenPos[0] - currentTooltip.width / 2;
         currentTooltip.y = screenPos[1];
         currentTooltip.shown = true;
+        currentMouseOver = this;
     },
 
     mouseLeave: function(event) {
@@ -255,6 +271,7 @@ var BaseObject = {
         if (this.OnDialog)
             gameView.currentCursor = 'art/interface/cursors/maincursor.png';
         currentTooltip.shown = false;
+        currentMouseOver = null;
     },
 
     setSelected: function(selected) {
@@ -264,6 +281,12 @@ var BaseObject = {
     },
 
     clicked: function(event) {
+
+        if (Combat.isActive()) {
+            CombatUi.objectClicked(this, event);
+            return;
+        }
+
         /**
          * Shows a mobile info dialog if right-clicked on, selects the mobile
          * if left-clicked on.
@@ -289,10 +312,122 @@ var BaseObject = {
     },
 
     doubleClicked: function(event) {
+
+        if (Combat.isActive()) {
+            CombatUi.objectDoubleClicked(this, event);
+            return;
+        }
+
     },
 
     getReactionColor: function() {
         return [0.5, 0.5, 0.5]; // Neutral color
+    },
+
+    /**
+     * Plays an animation once.
+     * @param id The animation id, use constants provided by the Animation object.
+     */
+    playAnimation: function(id) {
+        var renderState = this.getRenderState();
+
+        if (renderState) {
+            var model = renderState.modelInstance;
+
+            if (model.model.hasAnimation(id))
+                model.playAnimation(id);
+            else
+                model.playAnimation('unarmed_unarmed_' + id);
+        }
+    },
+
+    /**
+     * If this object has a render-state, this sets the correct idle animation based
+     * on this objedts state.
+     */
+    updateIdleAnimation: function() {
+        var renderState = this.getRenderState();
+
+        if (!renderState || !renderState.modelInstance)
+            return;
+
+        var model = renderState.modelInstance.model;
+        var idleAnimation;
+
+        if (this.isUnconscious() && model.hasAnimation('dead_idle')) {
+            idleAnimation = 'dead_idle';
+        } else if (model.hasAnimation('item_idle')) {
+            idleAnimation = 'item_idle';
+        } else {
+            idleAnimation = 'unarmed_unarmed_idle';
+        }
+
+        if (renderState.modelInstance.idleAnimation != idleAnimation)
+            renderState.modelInstance.idleAnimation = idleAnimation;
+
+    },
+
+    isUnconscious: function() {
+        // TODO: Incorrect formula
+        return (this.getCurrentHp() < 0);
+    },
+
+    /**
+     * Deals damage to this object.
+     * @param damage The amount of damage dealt.
+     * @param source The damage source. May be null or undefined if damage is environmental.
+     */
+    dealDamage: function(damage, source) {
+
+        var alreadyDead = this.isUnconscious();
+
+        var temporaryRemove = Math.min(damage, this.temporaryHitPoints);
+
+        this.temporaryHitPoints -= temporaryRemove;
+        damage -= temporaryRemove;
+
+        this.damageTaken += damage;
+
+        // Invoke death / disabled effects
+        if (!alreadyDead) {
+            if (this.damageTaken >= this.hitPoints) {
+
+                // The event *can* prevent the death, upon which we will reduce
+                // the damage taken until we remain @ 1 hp.
+                if (this.OnDying) {
+                    if (LegacyScripts.OnDying(this.OnDying, this, source)) {
+                        this.damageTaken = this.hitPoints - 1;
+                        print("Death averted by script for " + this.id);
+                        this.updateTooltip();
+                        return;
+                    }
+                }
+
+                print("DEATH");
+                this.playAnimation(Animations.Death);
+                this.updateIdleAnimation();
+            } else {
+                this.playAnimation(Animations.GetHitFront);
+            }
+        }
+
+        this.updateTooltip();
+
+    },
+
+    /**
+     * Deals subdual damage to this object.
+     * @param damage The amount of damage dealt.
+     * @param source The damage source, may be null or undefined if damage is environmental.
+     */
+    dealSubdualDamage: function(damage, source) {
+        this.subdualDamageTaken += damage;
+
+        if (this.subdualDamageTaken + this.damageTaken >= this.temporaryHitPoints + this.hitPoints) {
+            print("UNCONSCIOUS");
+        }
+
+        this.updateTooltip();
     }
 };
 
@@ -300,6 +435,12 @@ var Item = {
     __proto__: BaseObject,
 
     doubleClicked: function(event) {
+
+        if (Combat.isActive()) {
+            CombatUi.objectDoubleClicked(this, event);
+            return;
+        }
+
         if (event.button == Mouse.LeftButton) {
             if (this.OnUse) {
                 LegacyScripts.OnUse(this.OnUse, this);
@@ -322,6 +463,12 @@ var Container = {
     money: 0,
 
     clicked: function(event) {
+
+        if (Combat.isActive()) {
+            CombatUi.objectClicked(this, event);
+            return;
+        }
+
         if (event.button == Mouse.LeftButton) {
             showInventory(this);
         } else if (event.button == Mouse.RightButton) {
@@ -337,6 +484,12 @@ var Portal = {
     interactive: true,
     open: false, // All doors are shut by default
     clicked: function(event) {
+
+        if (Combat.isActive()) {
+            CombatUi.objectClicked(this, event);
+            return;
+        }
+
         var renderState = this.getRenderState();
 
         if (event.button == Mouse.LeftButton) {
@@ -363,6 +516,12 @@ var MapChanger = {
     __proto__: BaseObject,
     interactive: true,
     clicked: function(event) {
+
+        if (Combat.isActive()) {
+            CombatUi.objectClicked(this, event);
+            return;
+        }
+
         var renderState = this.getRenderState();
         if (event.button == Mouse.LeftButton) {
             var jumpPoint = jumppoints[this.teleportTarget];
@@ -384,6 +543,7 @@ var MapChanger = {
 var Critter = {
     __proto__: BaseObject,
     concealed: false,
+
     getReactionColor: function() {
         if (this.killsOnSight) {
             return [1, 0, 0]; // Friendly
@@ -391,15 +551,29 @@ var Critter = {
             return [0.33, 1, 0]; // Friendly
         }
     },
+
     getReaction: function() {
         return Reaction.Neutral;
     },
+
     drawBehindWalls: true,
     killsOnSight: false,
     // classLevels: [], (MUST NOT BE in the prototype, otherwise it's shared by all)
     experiencePoints: 0,
     // feats: [], (MUST NOT BE in the prototype)
     // domains: [], (MUST NOT be in the prototype)
+
+    /**
+     * Checks for line-of-sight and other visibility modifiers.
+     * @param object The target object.
+     */
+    canSee: function(object) {
+        // Objects are not on the same map -> can never see each other
+        if (object.map !== this.map)
+            return false;
+
+        return gameView.sectorMap.hasLineOfSight(this.position, object.position);
+    },
 
     /**
      * Checks whether this character has a certain feat.
@@ -436,7 +610,7 @@ var Critter = {
 
         return idx != -1;
     },
-    
+
     getSkillRank: function(skillId) {
         return this.skills[skillId] ? Math.floor(this.skills[skillId] / 2) : 0;
     },
@@ -628,6 +802,13 @@ var Critter = {
     leftParty: function() {
         if (this.OnDisband)
             LegacyScripts.OnDisband(this.OnDisband, this);
+    },
+
+    rollInitiative: function() {
+        var dice = new Dice(Dice.D20);
+        dice.bonus = this.getInitiativeBonus();
+        // TODO: Dice Log
+        return dice.roll();
     }
 };
 
@@ -649,6 +830,12 @@ var NonPlayerCharacter = {
     reaction: 50,
 
     doubleClicked: function(event) {
+
+        if (Combat.isActive()) {
+            CombatUi.objectDoubleClicked(this, event);
+            return;
+        }
+
         /*
          If there's a OnDialog script associated, trigger the event in the legacy script system.
          */
@@ -658,7 +845,10 @@ var NonPlayerCharacter = {
 
     getReaction: function() {
         // TODO: This should keep track of the reaction value and return the status accordingly
-        return Reaction.Neutral;
+        if (this.killsOnSight)
+            return Reaction.Hostile;
+        else
+            return Reaction.Neutral;
     }
 };
 
@@ -670,8 +860,6 @@ var prototypes;
 var sounds;
 
 function startup() {
-    models = gameView.models;
-
     print("Calling startup hooks.");
     StartupListeners.call();
 
@@ -682,7 +870,6 @@ function startup() {
     };
     print("Loading jump points...");
     jumppoints = eval('(' + readFile('jumppoints.js') + ')');
-    loadEquipment();
     loadInventoryIcons();
     sounds = eval('(' + readFile('sound/sounds.js') + ')');
 
@@ -736,6 +923,12 @@ function setupWorldClickHandler() {
             var callback = worldClickCallback;
             worldClickCallback = null;
             callback(worldPosition);
+            return;
+        }
+
+        // In case combat is active, all world click events are forwarded to the combat ui
+        if (Combat.isActive()) {
+            CombatUi.worldClicked(event, worldPosition);
             return;
         }
 
@@ -889,17 +1082,6 @@ function handleAnimationEvent(type, content) {
      which are the most often used by the animation events.
      */
     eval(content);
-}
-
-function makeParticleSystemTestModel(particleSystem, sceneNode) {
-    var testModel = models.load('meshes/scenery/misc/mirror.model');
-    var modelInstance = new ModelInstance(gameView.scene);
-    modelInstance.model = testModel;
-    sceneNode.interactive = true;
-    modelInstance.mousePressed.connect(function() {
-        print(particleSystem.name);
-    });
-    sceneNode.attachObject(modelInstance);
 }
 
 function connectToPrototype(obj) {

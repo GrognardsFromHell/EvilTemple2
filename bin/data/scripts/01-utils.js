@@ -68,6 +68,19 @@ function distance(pointA, pointB) {
 }
 
 /**
+ * Computes the squared distance between two points.  
+ * @param pointA
+ * @param pointB
+ */
+function distanceSquared(pointA, pointB) {
+    var dx = pointA[0] - pointB[0];
+    var dy = pointA[1] - pointB[1];
+    var dz = pointA[2] - pointB[2];
+
+    return dx * dx + dy * dy + dz * dz;
+}
+
+/**
  * Converts an object deeply into a string, by resolving objects and arrays.
  * @param value The object to convert.
  */

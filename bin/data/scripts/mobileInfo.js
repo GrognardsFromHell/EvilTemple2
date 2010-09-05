@@ -4,8 +4,10 @@ function addObjProps(obj, items)
     var proto = obj.__proto__;
 
     for (var k in obj) {
-        if (k == 'selectionCircle')
+        if (k == 'selectionCircle' || k == 'map') {
+            items.push([k, '[hidden]']);
             continue;
+        }
 
         // Content is handled by inventory
         if (k == 'content')

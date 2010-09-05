@@ -23,6 +23,7 @@
 #include "converter.h"
 
 #include "conversiontask.h"
+#include "converthairtask.h"
 #include "convertmapstask.h"
 #include "convertscriptstask.h"
 #include "convertparticlesystemstask.h"
@@ -263,14 +264,15 @@ public:
         mInternalDescription = openMessageFile("oemes/oname.mes");
 
         QList<ConversionTask*> tasks;
-        tasks << new ConvertScriptsTask(this)
-              << new ConvertParticleSystemsTask(this)
+        tasks << new ConvertHairTask(this)
+              << new ConvertScriptsTask(this)
+              /*<< new ConvertParticleSystemsTask(this)
               << new ConvertTranslationsTask(this)
-              // << new ConvertMapsTask(this)
-              //<< new ConvertSoundsTask(this)
-              //<< new ConvertMoviesTask(this)
-              //<< new ConvertInterfaceTask(this)
-              //<< new ConvertModelsTask(this)
+              << new ConvertMapsTask(this)
+              << new ConvertSoundsTask(this)
+              << new ConvertMoviesTask(this)
+              << new ConvertInterfaceTask(this)
+              << new ConvertModelsTask(this)*/
               ;
 
         // Sum up total work over all tasks

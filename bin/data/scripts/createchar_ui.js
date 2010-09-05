@@ -549,18 +549,10 @@ var CreateCharacterUi = {};
 
         var materials = currentDialog.getModelViewer().materials;
         var model = currentDialog.getModelViewer().modelInstance;
-        model.model = models.load(currentCharacter.model);
+        model.model = gameView.models.load(currentCharacter.model);
         print("Loading model: " + currentCharacter.model);
 
-        model.clearOverrideMaterials();
-
-        var renderProperties = Equipment.getRenderEquipment(currentCharacter);
-
-        // Set override materials
-        for (var placeholder in renderProperties.materials) {
-            var filename = renderProperties.materials[placeholder];
-            model.overrideMaterial(placeholder, materials.load(filename));
-        }
+        Equipment.addRenderEquipment(currentCharacter, model, materials, null);
     }
 
     function statsDistributed(str, dex, con, intl, wis, cha) {

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<material xmlns="http://hartte.de/eviltemple/material.xsd">
+
+  <pass>
+    <shader>
+      <vertexShader>
+        <code>
+          <![CDATA[
+#version 120
+
+uniform mat4 worldViewProjection;
+
+attribute vec4 vertexPosition;
+attribute vec2 vertexTexCoord;
+
+varying vec2 texCoord;
+
+void main() {
+  gl_Position = worldViewProjection * vertexPosition;
+  texCoord = vertexTexCoord;
+}
+]]>
+        </code>
+      </vertexShader>
+
+      <fragmentShader>
+        <code>
+          <![CDATA[
+#version 120
+
+uniform vec4 circleColor = vec4(1,1,1,1);
+uniform vec4 fillColor = vec4(1,1,1,1);
+uniform float circleWidth = 2;
+uniform float radius = 1;
+
+varying vec2 texCoord;
+
+void main() {
+
+    float distance = length(texCoord - vec2(0.5, 0.5)) * 2;
+
+    if (distance <= radius) {
+        gl_FragColor = fillColor;
+    } else if (distance >= radius && distance <= radius + circleWidth) {
+        gl_FragColor = circleColor;
+    } else {
+        discard;
+    }
+
+}
+]]>
+        </code>
+      </fragmentShader>
+
+      <attribute name="vertexPosition" buffer="positions" />
+      <attribute name="vertexTexCoord" buffer="texCoords" components="2" />
+
+      <uniform name="worldViewProjection" semantic="WorldViewProjection" />
+    </shader>
+
+    <blend>true</blend>
+    <blendFunc src="srcAlpha" dest="oneMinusSrcAlpha" />
+    <cullFace>false</cullFace>
+    <depthTest>false</depthTest>
+    <depthWrite>false</depthWrite>
+  </pass>
+
+</material>

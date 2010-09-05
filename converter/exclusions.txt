@@ -8,3 +8,6 @@ art/meshes/scenery/foliage/tree1.*
 
 # The name says it all, uses variations (unsupported)
 art\meshes\particle\test.skm
+
+# Exclude all hair from automatic conversion. We'll do it manually.
+art\meshes\hair\

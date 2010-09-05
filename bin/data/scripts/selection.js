@@ -36,10 +36,15 @@ var Selection = {};
     /**
      * Adds critters to the current selection if they're not already selected.
      *
+     * If combat is active, this method will immediately return false.
+     *
      * @param critters The critters to add. Only party members that are not already selected will be added.
      * @return True if at least one critter was selected.
      */
     Selection.add = function(critters) {
+        if (Combat.isActive())
+            return false;
+
         var added = [];
 
         // Filter out non-selectable critters.
@@ -75,7 +80,6 @@ var Selection = {};
     Selection.remove = function(critters) {
         var removed = [];
 
-        // Filter out non-selectable critters.
         critters.forEach(function(critter) {
             var index = currentSelection.indexOf(critter);
 
@@ -96,6 +100,7 @@ var Selection = {};
 
     /**
      * Checks whether a critter is selected or not.
+     *
      * @param critter The critter to check.
      */
     Selection.isSelected = function(critter) {
@@ -104,6 +109,7 @@ var Selection = {};
 
     /**
      * Gets a copy of the current selection.
+     *
      * @returns A list of the currently selected mobiles.
      */
     Selection.get = function() {
@@ -167,6 +173,7 @@ var Selection = {};
         SaveGames.addLoadingListener(load);
         SaveGames.addSavingListener(save);
         SaveGames.addLoadedListener(afterLoad);
+        Combat.addCombatStartListener(Selection.clear);
     })
 
 })();

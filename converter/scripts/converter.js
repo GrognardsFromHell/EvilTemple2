@@ -29,28 +29,32 @@ processors.register(money, ['7000', '7001', '7002', '7003']);
 processors.register(teleportIcon, ['2011', '2012', '2013', '2014', '2015', '2035', '2036', '2037', '2038', '2039']);
 
 var hairTypes = {
-        "Longhair (m/f)": 0,
-        "Ponytail (m/f)": 1,
-        "Shorthair (m/f)": 2,
-        "Topknot (m/f)": 3,
-        "Mullet (m)": 4,
-        "Pigtails (f)": 5,
-        "Bald (m)": 6,
-        "Braids (f)": 7,
-        "Mohawk (m/f)": 8,
-        "Medium (m)": 9,
-        "Ponytail2 (f)": 10
+        "Longhair (m/f)": 'long',
+        "Ponytail (m/f)": 'ponytail',
+        "Shorthair (m/f)": 'short',
+        "Topknot (m/f)": 'topknot',
+        "Mullet (m)": 'mullet',
+        "Pigtails (f)": 'pigtails',
+        "Bald (m)": 'bald',
+        "Braids (f)": 'braids',
+        "Mohawk (m/f)": 'mohawk',
+        "Medium (m)": 'medium',
+        "Ponytail2 (f)": 'ponytail2'
 };
 
+function convertColor(color) {
+    return color / 255.0;
+}
+
 var hairColors = {
-        "Black": 0,
-        "Blonde": 1,
-        "Blue": 2,
-        "Brown": 3,
-        "Light Brown": 4,
-        "Pink": 5,
-        "Red": 6,
-        "White": 7
+    "Black": [24, 22, 30].map(convertColor),
+    "Blonde": [255, 224, 146].map(convertColor),
+    "Blue": [68, 146, 192].map(convertColor),
+    "Brown": [115, 75, 67].map(convertColor),
+    "Light Brown": [207, 144, 102].map(convertColor),
+    "Pink": [223, 158, 205].map(convertColor),
+    "Red": [217, 131, 75].map(convertColor),
+    "White": [251, 251, 251].map(convertColor)
 };
 
 var AlignmentMap = {
@@ -992,8 +996,8 @@ function postprocess(prototypes) {
         }
 
         // Generic post-processing
-        if (proto['wearMeshId'] !== undefined) {
-            proto['wearMeshId'] /= 100; // the last two digits are the specific model-types, but we organize differently
+        if (proto['equipmentId'] !== undefined) {
+            proto['equipmentId'] /= 100; // the last two digits are the specific model-types, but we organize differently
         }
         if (proto['hairType'] !== undefined) {
             var hairId = hairTypes[proto['hairType']];
@@ -1174,6 +1178,46 @@ function processAddMeshes() {
                         equipment[id][typeId].materials = {};
                 equipment[id][typeId].materials[slot] = material;
         }
+
+        // Merge the naked equipment (slots 0, 2, 5, 8)
+        var nakedEquipment = {};
+        [0, 2, 5, 8].forEach(function (id) {
+
+            var entry = equipment[id];
+
+            for (var typeId in entry) {
+                if (!entry.hasOwnProperty(typeId))
+                    continue;
+
+                if (!nakedEquipment[typeId])
+                    nakedEquipment[typeId] = {};
+
+                var fromType = entry[typeId];
+                var toType = nakedEquipment[typeId];
+
+                // A merge is necessary
+                if (fromType.materials) {
+                    if (!toType.materials)
+                        toType.materials = {};
+
+                    for (var k in fromType.materials)
+                        toType.materials[k] = fromType.materials[k];
+                }
+
+                if (fromType.meshes) {
+                    if (!toType.meshes)
+                        toType.meshes = [];
+
+                    fromType.meshes.forEach(function (mesh) {
+                        toType.meshes.push(mesh);
+                    });
+                }
+            }
+
+            delete equipment[id];
+        });
+
+        equipment['naked'] = nakedEquipment;
 
         var result = JSON.stringify(equipment);
         addFile('equipment.js', result, 9);

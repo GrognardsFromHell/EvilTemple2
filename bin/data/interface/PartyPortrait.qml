@@ -8,6 +8,8 @@ Image {
     // Whether this character is part of the selection
     property bool selected : false
 
+    property real health : 0.5
+
     signal clicked
     signal doubleClicked
     signal rightClicked
@@ -24,7 +26,7 @@ Image {
         y: 11
         width: 80
         height: 70
-        smooth: false
+        smooth: true
         fillMode: "PreserveAspectFit"
         source: '../' + portrait
 
@@ -52,6 +54,14 @@ Image {
                             frame.rightClicked()
 
             onDoubleClicked: frame.doubleClicked()
+        }
+
+        Rectangle {
+            x: 0
+            y: 74
+            color: 'red'
+            width: health * 80
+            height: 6
         }
     }
 

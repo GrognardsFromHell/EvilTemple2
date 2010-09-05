@@ -149,17 +149,7 @@ namespace EvilTemple {
                 }
             }
 
-            /*
-                        return mValueStream[mSize - 1];
-                        No visual difference was perceived between clamping (the line above) and interpolating
-                        back to the starting frame. So we interpolate back to the starting frame if we're behind
-                        the last keyframe.
-                */
-
-            // Interpolate between the last and first frame (TODO: is this really a good idea?)
-            FT lastKeyFrame = mFrameStream[mSize - 1];
-            float delta = (frame - lastKeyFrame) / (float)(totalFrames - lastKeyFrame);
-            return lerp<T>(mValueStream[mSize - 1], mValueStream[0], delta);
+            return mValueStream[mSize - 1];
         }
 
     private:

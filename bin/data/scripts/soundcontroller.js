@@ -177,6 +177,8 @@ var SoundController = {};
         GameTime.addHourChangedListener(updatePlaying);
         gameView.addVisualTimer(heartbeatInterval, ambientSoundHeartbeat);
         // TODO: Combat Enter/Leave needs to trigger switch to combat music
+
+        Combat.addCombatStartListener(playCombatIntro);
     });
 
 })();

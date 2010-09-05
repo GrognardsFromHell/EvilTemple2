@@ -345,20 +345,42 @@ namespace EvilTemple {
     }
 
     struct ModelInstanceDrawStrategy : public ModelDrawStrategy {
-        ModelInstanceDrawStrategy(GLint bufferId, int elementCount, bool drawShadows)
-            : ModelDrawStrategy(bufferId, elementCount), mDrawShadows(drawShadows)
+
+        ModelInstanceDrawStrategy(GLint bufferId,
+                                  int elementCount,
+                                  const QHash<QByteArray, Vector4> &propertiesVec4,
+                                  const QHash<QByteArray, float> &propertiesFloat)
+            : ModelDrawStrategy(bufferId, elementCount),
+            mPropertiesVec4(propertiesVec4),
+            mPropertiesFloat(propertiesFloat)
         {
+        }
+
+        template<typename T>
+        inline void bindProperties(const QHash<QByteArray, T> &properties, const GLSLProgram *program) const
+        {
+            QHash<QByteArray, T>::const_iterator it = properties.begin();
+
+            while (it != properties.end()) {
+                int location = program->uniformLocation(it.key());
+
+                if (location != -1)
+                    bindUniform(location, it.value());
+
+                it++;
+            }
         }
 
         inline void draw(const RenderStates &renderStates, MaterialPassState &state) const
         {
-            if (state.id > 0 && !mDrawShadows)
-                return;
+            bindProperties(mPropertiesVec4, state.program.data());
+            bindProperties(mPropertiesFloat, state.program.data());
 
             ModelDrawStrategy::draw(renderStates, state);
         }
 
-        bool mDrawShadows;
+        const QHash<QByteArray, Vector4> &mPropertiesVec4;
+        const QHash<QByteArray, float> &mPropertiesFloat;
     };
 
     void ModelInstance::render(RenderStates &renderStates, MaterialState *overrideMaterial)
@@ -377,7 +399,7 @@ namespace EvilTemple {
             mCurrentFrameChanged = false;
         }
 
-        DrawHelper<ModelDrawStrategy, ModelBufferSource> drawHelper;
+        DrawHelper<ModelInstanceDrawStrategy, ModelBufferSource> drawHelper;
         ModelBufferSource bufferSource(mCurrentAnimation ? mPositionBuffer.bufferId() : model->positionBuffer.bufferId(),
                                        mCurrentAnimation ? mNormalBuffer.bufferId() : model->normalBuffer.bufferId(),
                                        model->texcoordBuffer.bufferId());
@@ -396,7 +418,10 @@ namespace EvilTemple {
                 material = overrideMaterial;
 
             if (material) {
-                ModelDrawStrategy drawStrategy(faceGroup.buffer.bufferId(), faceGroup.indices.size());
+                ModelInstanceDrawStrategy drawStrategy(faceGroup.buffer.bufferId(),
+                                                       faceGroup.indices.size(),
+                                                       mMaterialPropertiesVec4,
+                                                       mMaterialPropertiesFloat);
                 drawHelper.draw(renderStates, material, drawStrategy, bufferSource);
             }
         }
@@ -418,7 +443,10 @@ namespace EvilTemple {
                     material = overrideMaterial;
 
                 if (material) {
-                    ModelDrawStrategy drawStrategy(faceGroup.buffer.bufferId(), faceGroup.indices.size());
+                    ModelInstanceDrawStrategy drawStrategy(faceGroup.buffer.bufferId(),
+                                                           faceGroup.indices.size(),
+                                                           mMaterialPropertiesVec4,
+                                                           mMaterialPropertiesFloat);
                     drawHelper.draw(renderStates, material, drawStrategy, bufferSource);
                 }
             }

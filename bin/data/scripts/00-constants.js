@@ -16,7 +16,8 @@ var Reaction = {
     Good: 1,
     Neutral: 2,
     Bad: 3,
-    Worst: 4
+    Worst: 4,
+    Hostile: 5
 };
 
 /*
@@ -115,4 +116,12 @@ var Abilities = {
     Intelligence: 'intelligence',
     Wisdom: 'wisdom',
     Charisma: 'charisma'
+};
+
+var Animations = {
+    GetHitFront: 'fhit',
+    GetHitBack: 'bhit',
+    GetHitLeft: 'lhit',
+    GetHitRight: 'rhit',
+    Death: 'death'
 };

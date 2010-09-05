@@ -62,6 +62,8 @@ var Dice;
         return result + this.bonus;
     };
 
+    Dice.D20 = '1d20';
+
 })();
 
 new Dice('1d6');

@@ -119,8 +119,7 @@ var LegacyScripts = {};
          * @param callbackArgs The arguments to the function.
          * @param timeout The timeout value.
          */
-        timeevent_add: function(callback, callbackArgs, timeout)
-        {
+        timeevent_add: function(callback, callbackArgs, timeout) {
             var callbackName;
 
             // Find the callback on the script object.
@@ -256,7 +255,7 @@ var LegacyScripts = {};
         OF_OFF: 'disabled',
 
         /*
-            Tutorial text constants.
+         Tutorial text constants.
          */
         TAG_TUT_MEMORIZE_SPELLS: 'TAG_TUT_MEMORIZE_SPELLS',
         TAG_TUT_ARIEL_KILL: 'TAG_TUT_ARIEL_KILL',
@@ -279,7 +278,7 @@ var LegacyScripts = {};
          Standpoint constants.
          */
         STANDPOINT_NIGHT: 'standpointNight',
-        STANDPOINT_DAY: 'standpointDay',       
+        STANDPOINT_DAY: 'standpointDay',
 
         // This imports all functions from the utility module into the "this" context.
         __proto__: UtilityModule,
@@ -1054,6 +1053,32 @@ var LegacyScripts = {};
         try {
             script.pushCall("OnDialog", attachedTo);
             return script.san_dialog(new CritterWrapper(attachedTo), new CritterWrapper(getTriggerer()));
+        } finally {
+            script.popCall();
+        }
+    };
+
+    /**
+     * Triggers the OnDying event for a legacy script.
+     * @param attachedScript The legacy script. This is a JavaScript object with at least a 'script' property giving
+     *                 the id of the legacy script.
+     * @param attachedTo The object the script is attached to.
+     * @param triggerer The object that triggered the death event, in this case, the object that dealt the damage.
+     * This may be null in case the death resulted from environmental damage.
+     * @returns True if the legacy script handled the event and the default event should be skipped. False otherwise.
+     */
+    LegacyScripts.OnDying = function(attachedScript, attachedTo, triggerer) {
+        var script = getScript(attachedScript.script);
+
+        if (!script) {
+            print("Unknown legacy script: " + attachedScript.script);
+            return false;
+        }
+
+        try {
+            script.pushCall("OnDying", attachedTo);
+            // TODO: Currently we assume that there is only a *critter* that can trigger the event
+            return script.san_dying(new CritterWrapper(attachedTo), new CritterWrapper(triggerer));
         } finally {
             script.popCall();
         }
