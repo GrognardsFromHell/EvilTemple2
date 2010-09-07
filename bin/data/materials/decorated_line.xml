@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<material xmlns="http://hartte.de/eviltemple/material.xsd">
+
+  <pass>
+    <shader>
+      <vertexShader>
+        <code>
+          <![CDATA[
+#version 120
+
+uniform mat4 worldViewProjection;
+
+attribute vec4 vertexPosition;
+attribute vec2 vertexTexCoord;
+
+varying vec2 texCoord;
+
+void main() {
+
+  gl_Position = worldViewProjection * vertexPosition;
+  texCoord = vertexTexCoord;
+}
+]]>
+        </code>
+      </vertexShader>
+
+      <fragmentShader>
+        <code>
+          <![CDATA[
+#version 120
+
+uniform vec4 color = vec4(1,1,1,1);
+
+uniform sampler2D lineSampler;
+
+varying vec2 texCoord;
+
+void main() {
+  gl_FragColor = texture2D(lineSampler, texCoord);
+  gl_FragColor *= color;
+}
+]]>
+        </code>
+      </fragmentShader>
+
+      <attribute name="vertexPosition" buffer="positions" />
+      <attribute name="vertexTexCoord" buffer="texCoords" components="2" />
+
+      <uniform name="lineSampler" semantic="Texture0" />
+      <uniform name="worldViewProjection" semantic="WorldViewProjection" />
+    </shader>
+
+    <textureSampler texture="art/interface/intgame_select/line.png" wrapU="wrap" wrapV="wrap" />
+
+    <blend>true</blend>
+    <blendFunc src="srcAlpha" dest="oneMinusSrcAlpha" />
+    <cullFace>false</cullFace>
+    <depthTest>false</depthTest>
+    <depthWrite>false</depthWrite>
+  </pass>
+
+</material>

@@ -68,7 +68,7 @@ function distance(pointA, pointB) {
 }
 
 /**
- * Computes the squared distance between two points.  
+ * Computes the squared distance between two points.
  * @param pointA
  * @param pointB
  */
@@ -148,6 +148,21 @@ function getAbilityModifier(value) {
  */
 function rad2deg(radians) {
     return (radians / Math.PI) * 180;
+}
+
+/**
+ * Retrieve the length of a path.
+ *
+ * @param path An array of positions.
+ */
+function pathLength(path) {
+    var length = 0;
+
+    for (var i = 0; i < path.length - 1; ++i) {
+        length += distance(path[i], path[i + 1]);
+    }
+
+    return length;
 }
 
 Array.prototype.equals = function(other) {

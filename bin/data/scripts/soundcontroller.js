@@ -11,7 +11,7 @@ var SoundController = {};
 
     var activeSounds = [];
 
-    var heartbeatInterval = 2000;
+    var heartbeatInterval = 5000;
 
     function isActive(record) {
         var currentHour = GameTime.getHourOfDay();

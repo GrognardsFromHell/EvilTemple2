@@ -315,6 +315,7 @@ namespace EvilTemple {
         global.setProperty("BackgroundMap", engine->newFunction(renderableCtor<BackgroundMap>));
         global.setProperty("FogOfWar", engine->newFunction(renderableCtor<FogOfWar>));
         global.setProperty("SelectionCircle", engine->newFunction(renderableWithMaterialsCtor<SelectionCircle>));
+        global.setProperty("DecoratedLineRenderable", engine->newFunction(renderableWithMaterialsCtor<DecoratedLineRenderable>));
         global.setProperty("MovementIndicator", engine->newFunction(renderableWithMaterialsCtor<MovementIndicator>));
 
         // Register scriptable objects

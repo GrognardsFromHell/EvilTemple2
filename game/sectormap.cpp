@@ -233,7 +233,8 @@ namespace EvilTemple {
             timer.start();
             QVector<Vector4> result = d->walkableMesh->findPath(start, end);
             qint64 elapsed = timer.elapsed();
-            qDebug("Total time for pathfinding: %ld ms.", elapsed);
+            if (elapsed > 10)
+                qDebug("Total time for pathfinding: %ld ms.", elapsed);
 
             return result;
         }

@@ -19,13 +19,85 @@ var Maps = {
 };
 
 (function() {
-    var legacyIdMapping = readJson('legacy_maps.js');
+
+    var mouseClickListener = new ListenerQueue;
+    var mouseDoubleClickListener = new ListenerQueue;
+    var mouseMoveListener = new ListenerQueue;
+    var mouseEnterListener = new ListenerQueue;
+    var mouseLeaveListener = new ListenerQueue;
+
+    Maps.addMouseClickListener = function(listener, thisObject) {
+        mouseClickListener.append(listener, thisObject);
+    };
+
+    Maps.removeMouseClickListener = function(listener, thisObject) {
+        mouseClickListener.remove(listener, thisObject);
+    };
+
+    Maps.addMouseDoubleClickListener = function(listener, thisObject) {
+        mouseDoubleClickListener.append(listener, thisObject);
+    };
+
+    Maps.removeMouseDoubleClickListener = function(listener, thisObject) {
+        mouseDoubleClickListener.remove(listener, thisObject);
+    };
+
+    Maps.addMouseMoveListener = function(listener, thisObject) {
+        mouseMoveListener.append(listener, thisObject);
+    };
+
+    Maps.removeMouseMoveListener = function(listener, thisObject) {
+        mouseMoveListener.remove(listener, thisObject);
+    };
+
+    Maps.addMouseEnterListener = function(listener, thisObject) {
+        mouseEnterListener.append(listener, thisObject);
+    };
+
+    Maps.removeMouseEnterListener  = function(listener, thisObject) {
+        mouseEnterListener.remove(listener, thisObject);
+    };
+
+    Maps.addMouseLeaveListener = function(listener, thisObject) {
+        mouseLeaveListener.append(listener, thisObject);
+    };
+
+    Maps.removeMouseLeaveListener = function(listener, thisObject) {
+        mouseLeaveListener.remove(listener, thisObject);
+    };
+
+    Maps.mouseReleased = function(event) {
+        var worldPos = gameView.worldFromScreen(event.x, event.y);
+        mouseClickListener.notify(event, worldPos);
+    };
+
+    Maps.mouseDoubleClicked = function(event) {
+        var worldPos = gameView.worldFromScreen(event.x, event.y);
+        mouseDoubleClickListener.notify(event, worldPos);
+    };
+
+    Maps.mouseMoved = function(event) {
+        var worldPos = gameView.worldFromScreen(event.x, event.y);
+        mouseMoveListener.notify(event, worldPos);
+    };
+
+    Maps.mouseEnter = function(event) {
+        var worldPos = gameView.worldFromScreen(event.x, event.y);
+        mouseEnterListener.notify(event, worldPos);
+    };
+
+    Maps.mouseLeave = function(event) {
+        var worldPos = gameView.worldFromScreen(event.x, event.y);
+        mouseLeaveListener.notify(event, worldPos);
+    };
 
     /**
      * This is a rather odd function. In this case, it loads all mobiles from all maps on initial startup and
      * creates several data-structures for holding them.
      */
     Maps.load = function() {
+        var legacyIdMapping = readJson('legacy_maps.js');
+
         /*
          Automatically load available zones. This should probably be refactored into some sort of "campaign" / "module"
          structure, which means maps only get loaded in module packages.

@@ -34,6 +34,8 @@ public:
     void setColor(const Vector4 &color);
     const Vector4 &color() const;
 
+    IntersectionResult intersect(const Ray3d &ray) const;
+
 private:
     QScopedPointer<BackgroundMapData> d;
     Q_DISABLE_COPY(BackgroundMap)

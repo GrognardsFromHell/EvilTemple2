@@ -125,3 +125,11 @@ var Animations = {
     GetHitRight: 'rhit',
     Death: 'death'
 };
+
+/**
+ * The filenames for various cursor types.
+ */
+var Cursors = {
+    Default: 'art/interface/cursors/MainCursor.png'
+        
+};

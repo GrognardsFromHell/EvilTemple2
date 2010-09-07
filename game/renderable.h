@@ -63,6 +63,7 @@ public:
     virtual void mousePressEvent(QMouseEvent *mouseEvent);
     virtual void mouseReleaseEvent(QMouseEvent *mouseEvent);
     virtual void mouseEnterEvent(QMouseEvent *mouseEvent);
+    virtual void mouseMoveEvent(QMouseEvent *mouseEvent);
     virtual void mouseLeaveEvent(QMouseEvent *mouseEvent);
     virtual void mouseDoubleClickEvent(QMouseEvent *mouseEvent);
 
@@ -81,6 +82,7 @@ signals:
     void mouseDoubleClicked(QMouseEvent *event);
     void mouseEnter(QMouseEvent *event);
     void mouseLeave(QMouseEvent *event);
+    void mouseMove(QMouseEvent *event);
 
 protected:
     SceneNode *mParentNode;
@@ -133,28 +135,6 @@ inline void Renderable::setRenderCategory(Category category)
     Q_ASSERT(category >= Default && category <= Count);
     mRenderCategory = category;
 }
-
-/**
-  A renderable that will draw a list of lines (in model space).
-  The main use of this renderable is to show debugging information.
-  */
-class LineRenderable : public Renderable
-{
-Q_OBJECT
-public:
-    void render(RenderStates &renderStates, MaterialState *overrideMaterial = NULL);
-
-    const Box3d &boundingBox();
-
-public slots:
-    void addLine(const Vector4 &start, const Vector4 &end);
-
-private:
-    typedef QPair<Vector4,Vector4> Line;
-
-    QVector<Line> mLines;
-    Box3d mBoundingBox;
-};
 
 uint getActiveRenderables();
 

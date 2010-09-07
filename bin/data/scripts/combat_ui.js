@@ -4,6 +4,8 @@ var CombatUi = {};
 
     var combatBarDialog = null;
     var initiativeBarDialog = null;
+    var movementIndicatorNode = null;
+    var movementIndicatorRootNode = null;
 
     /**
      * Make the combat UI visible.
@@ -36,27 +38,32 @@ var CombatUi = {};
      * @param event The mouse event that triggered the function call.
      * @param worldPosition The position in the world that was clicked.
      */
-    CombatUi.worldClicked = function(event, worldPosition) {
+    function worldClicked(event, worldPosition) {
         print("World click @ " + worldPosition);
 
         var participant = Combat.getActiveParticipant();
 
-        if (!participant || !Party.isMember(participant))
-            return;
+        if (participant && Party.isMember(participant) && !participant.isBusy()) {
+            var path = gameView.sectorMap.findPath(participant.position, worldPosition);
 
-        var sceneNode = gameView.scene.createNode();
-        sceneNode.position = worldPosition;
+            if (path.length > 0) {
+                var movementGoal = new MovementGoal(path, true);
+                var sayHelloGoal = {
+                    advance: function() {
+                        gameView.scene.addTextOverlay(worldPosition, "I am there!", [0.9, 0, 0, 0.9]);
+                        this.finished = true;
+                    },
+                    isFinished: function() {
+                        return this.finished;
+                    },
+                    cancel: function() {
+                    }
+                };
 
-        var indicator = new MovementIndicator(gameView.scene, gameView.materials);
-        indicator.radius = participant.radius;
-        indicator.circleWidth = 3;
-        sceneNode.attachObject(indicator);
-
-        gameView.addVisualTimer(5000, function() {
-            print("Removing scene node.");
-            gameView.scene.removeNode(sceneNode);
-        });
-    };
+                participant.setGoal(new GoalSequence(movementGoal, sayHelloGoal));
+            }
+        }
+    }
 
     /**
      * Notifies the combat UI of an object being clicked.
@@ -67,16 +74,28 @@ var CombatUi = {};
     CombatUi.objectClicked = function(object, event) {
 
         if (event.button == Mouse.RightButton) {
+
             var renderState = object.getRenderState();
             if (renderState)
                 showMobileInfo(object, renderState.modelInstance);
+
         } else if (event.button == Mouse.LeftButton) {
 
-            var activeParticipant = Combat.getActiveParticipant();
+            var participant = Combat.getActiveParticipant();
 
-            if (Party.isMember(activeParticipant)) {
-                object.dealDamage(2, activeParticipant);
+            if (Party.isMember(participant) && !participant.isBusy()) {
+
+                var path = gameView.sectorMap.findPath(participant.position, object.position);
+
+                if (path.length > 0) {
+                    var movementGoal = new MovementGoal(path, true);
+                    var meleeAttackGoal = new MeleeAttackGoal(object);
+
+                    participant.setGoal(new GoalSequence(movementGoal, meleeAttackGoal));
+                }
+
             }
+
         }
 
     };
@@ -134,6 +153,8 @@ var CombatUi = {};
     }
 
     function participantChanged(previousParticipant) {
+        hideMovementIndicator();
+
         updateInitiative();
         updateCombatBar();
 
@@ -141,18 +162,97 @@ var CombatUi = {};
             previousParticipant.setSelected(false);
 
         var activeParticipant = Combat.getActiveParticipant();
-        activeParticipant.setSelected(true); // Show on the battlefield who is acting       
+        activeParticipant.setSelected(true); // Show on the battlefield who is acting
     }
 
-    function hideUi() {
+    function mouseMoved(event, worldPos) {
+        hideMovementIndicator();
+
+        var participant = Combat.getActiveParticipant();
+
+        if (participant && Party.isMember(participant) && !participant.isBusy()) {
+            movementIndicatorNode = gameView.scene.createNode();
+            movementIndicatorNode.position = worldPos;
+
+            var indicator = new MovementIndicator(gameView.scene, gameView.materials);
+            indicator.radius = participant.radius;
+            indicator.circleWidth = 3;
+            movementIndicatorNode.attachObject(indicator);
+
+            var path = gameView.sectorMap.findPath(participant.position, worldPos);
+
+            if (path.length == 0) {
+                indicator.fillColor = [1, 0, 0, 0.5];
+                return;
+            }
+
+            var length = pathLength(path);
+
+            movementIndicatorRootNode = gameView.scene.createNode();
+
+            for (var i = 0; i < path.length; ++i) {
+                if (i + 1 < path.length) {
+                    var line = new DecoratedLineRenderable(gameView.scene, gameView.materials);
+                    if (length > 250)
+                        line.color = [1, 0, 0, 1];
+                    else
+                        line.color = [0, 1, 0, 1];
+                    line.addLine(path[i], path[i + 1]);
+                    movementIndicatorRootNode.attachObject(line);
+                }
+            }
+        }
+    }
+
+    function hideMovementIndicator() {
+        if (movementIndicatorNode) {
+            gameView.scene.removeNode(movementIndicatorNode);
+            movementIndicatorNode = null;
+        }
+        if (movementIndicatorRootNode) {
+            gameView.scene.removeNode(movementIndicatorRootNode);
+            movementIndicatorRootNode = null;
+        }
+    }
+
+    function goalCompleted(critter, goal) {
+
+        if (!Combat.isActive() || !combatBarDialog)
+            return;
+
+        var participant = Combat.getActiveParticipant();
+
+        if (participant && Party.isMember(participant) && critter === participant) {
+            combatBarDialog.enabled = true;
+        }
+    }
+
+    function goalStarted(critter, goal) {
+
+        if (!Combat.isActive() || !combatBarDialog)
+            return;
+
+        var participant = Combat.getActiveParticipant();
+
+        if (participant && Party.isMember(participant) && critter === participant) {
+            combatBarDialog.enabled = false;
+            hideMovementIndicator();
+        }
 
     }
 
     function initialize() {
+        EventBus.addListener(EventTypes.GoalStarted, goalStarted);
+        EventBus.addListener(EventTypes.GoalFinished, goalCompleted);
+
         Combat.addCombatStartListener(CombatUi.show);
         Combat.addCombatStartListener(updateInitiative);
         Combat.addCombatEndListener(CombatUi.hide);
         Combat.addActiveParticipantChangedListener(participantChanged);
+
+        Maps.addMouseClickListener(worldClicked);
+        Maps.addMouseMoveListener(mouseMoved);
+        Maps.addMouseLeaveListener(hideMovementIndicator);
     }
 
     StartupListeners.add(initialize, 'combat-ui', ['combat']);

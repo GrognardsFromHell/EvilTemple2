@@ -15,6 +15,15 @@ inline QDataStream &operator >>(QDataStream &stream, GameMath::Matrix4 &matrix) 
         return stream;
 }
 
+inline QDataStream &operator <<(QDataStream &stream, GameMath::Vector4 &vector) {
+#if Q_BYTE_ORDER == Q_LITTLE_ENDIAN
+    stream.writeRawData(reinterpret_cast<char*>(vector.data()), sizeof(float) * 4);
+#else
+    stream << vector.data()[0] << vector.data()[1] << vector.data()[2] << vector.data()[3];
+#endif
+    return stream;
+}
+
 inline QDataStream &operator >>(QDataStream &stream, GameMath::Vector4 &vector) {
 #if Q_BYTE_ORDER == Q_LITTLE_ENDIAN
     stream.readRawData(reinterpret_cast<char*>(vector.data()), sizeof(float) * 4);

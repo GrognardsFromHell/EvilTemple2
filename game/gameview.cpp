@@ -761,15 +761,27 @@ namespace EvilTemple {
                 evt->accept();
             }
         } else {
-            Renderable *renderable = d->pickObject(evt->pos());
-            Renderable *lastMouseOver = d->lastMouseOverRenderable;
-
-            if (renderable != lastMouseOver) {
+            // It's possible that we've hovered a GUI element, then we have to
+            // trigger the mouseLeft event
+            if (d->uiScene.itemAt(evt->posF())) {
+                Renderable *lastMouseOver = d->lastMouseOverRenderable;
+                d->lastMouseOverRenderable = NULL;
                 if (lastMouseOver)
                     lastMouseOver->mouseLeaveEvent(evt);
+            } else {
+                Renderable *renderable = d->pickObject(evt->pos());
+                Renderable *lastMouseOver = d->lastMouseOverRenderable;
+
+                if (renderable != lastMouseOver) {
+                    if (lastMouseOver)
+                        lastMouseOver->mouseLeaveEvent(evt);
+                    if (renderable)
+                        renderable->mouseEnterEvent(evt);
+                    d->lastMouseOverRenderable = renderable;
+                }
+
                 if (renderable)
-                    renderable->mouseEnterEvent(evt);
-                d->lastMouseOverRenderable = renderable;
+                    renderable->mouseMoveEvent(evt);
             }
         }
 
@@ -1098,6 +1110,11 @@ namespace EvilTemple {
                        (1 - (projPos.y() / 2 + 0.5f)) * d->viewportSize.height(),
                        0,
                        1);
+    }
+
+    Vector4 GameView::worldFromScreen(uint x, uint y) const
+    {
+        return d->worldPositionFromScreen(QPoint(x, y));
     }
 
 }

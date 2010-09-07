@@ -127,6 +127,42 @@ var BaseObject = {
         return 0;
     },
 
+    /**
+     * Returns true if this object has a goal queued.
+     */
+    isBusy: function() {
+        return this.goal !== undefined;
+    },
+
+    /**
+     * Sets the given goal for this object, this cancels any currently performing goals.
+     *
+     * @param goal The new goal to follow.
+     */
+    setGoal: function(goal) {
+        if (this.goal)
+            this.goal.cancel(this);
+
+        this.goal = goal;
+
+        EventBus.notify(EventTypes.GoalStarted, this, goal);
+
+        var obj = this;
+        var updateTimer = function(time) {
+            if (obj.goal === goal) {
+                goal.advance(obj, time / 1000);
+
+                if (!goal.isFinished()) {
+                    gameView.addVisualTimer(20, updateTimer);
+                } else {
+                    EventBus.notify(EventTypes.GoalFinished, obj, goal);
+                    delete obj.goal;
+                }
+            }
+        };
+        gameView.addVisualTimer(20, updateTimer);
+    },
+
     createRenderState: function() {
         if (this.dontDraw || this.disabled)
             return;
@@ -327,17 +363,31 @@ var BaseObject = {
     /**
      * Plays an animation once.
      * @param id The animation id, use constants provided by the Animation object.
+     * @param stopHandler A callback that is called when the action was performed. This callback cannot be persisted,
+     *          so the caller is responsible for restoring the state in case a savegame was loaded. If the
+     *          object is not drawn on screen, the stop handler will be called automatically.
      */
-    playAnimation: function(id) {
+    playAnimation: function(id, stopHandler) {
         var renderState = this.getRenderState();
 
         if (renderState) {
             var model = renderState.modelInstance;
 
-            if (model.model.hasAnimation(id))
-                model.playAnimation(id);
-            else
-                model.playAnimation('unarmed_unarmed_' + id);
+            if (!model.model.hasAnimation(id))
+                id = 'unarmed_unarmed_' + id;
+
+            model.playAnimation(id);
+
+            if (stopHandler) {
+                var eventHandler = function (animationId, canceled) {
+                    model.animationFinished.disconnect(eventHandler);
+                    stopHandler(animationId, canceled);
+                };
+                model.animationFinished.connect(eventHandler);
+            }
+        } else {
+            if (stopHandler)
+                stopHandler(); // Call immediately
         }
     },
 
@@ -1070,6 +1120,19 @@ function handleAnimationEvent(type, content) {
         obj: this
     };
     anim_obj.__proto__ = animEventAnimObjFacade;
+
+    /**
+     * Type 1 seems to be used to signify the frame on which an action should actually occur.
+     * Examle: For the weapon-attack animations, event type 1 is triggered, when the weapon
+     * would actually hit the opponent, so a weapon-hit-sound can be emitted at exactly
+     * the correct time.
+     */
+    if (type == 1) {
+        if (this.goal) {
+            this.goal.animationAction(this, content);
+        }
+        return;
+    }
 
     if (type != 0) {
         print("Skipping unknown animation event type: " + type);

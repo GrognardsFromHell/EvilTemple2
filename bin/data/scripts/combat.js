@@ -140,7 +140,11 @@ var Combat = {
      * Returns the mobile that is currently taking it's turn at combat.
      */
     Combat.getActiveParticipant = function() {
-        return participants[activeParticipant].mobile;
+        var participant = participants[activeParticipant];
+        if (!participant)
+            return null;
+        else
+            return participants[activeParticipant].mobile;
     };
 
     /**

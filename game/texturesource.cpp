@@ -2,6 +2,7 @@
 #include <QtCore/QFile>
 #include <QtCore/QDir>
 #include <QtCore/QCryptographicHash>
+#include <QtGui/QImage>
 
 #include "texture.h"
 #include "texturesource.h"
@@ -24,7 +25,16 @@ namespace EvilTemple {
             } else {
                 QByteArray textureData = file.readAll();
                 texture = SharedTexture(new Texture);
-                texture->loadTga(textureData);
+                if (name.toLower().endsWith(".tga")) {
+                    texture->loadTga(textureData);
+                } else {
+                    QImage image;
+                    if (!image.loadFromData(textureData)) {
+                        qWarning("Unable to open texture: %s (using QImage codec)", qPrintable(name));
+                    } else {
+                        texture->load(image);
+                    }
+                }
                 file.close();
             }
 

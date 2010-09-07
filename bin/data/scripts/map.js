@@ -203,8 +203,24 @@ var Map = function(id) {
             backgroundMap.directory = this.dayBackground;
         }
         this.renderBackgroundMap = backgroundMap;
+        backgroundMap.mouseMove.connect(function(event) {
+            Maps.mouseMoved(event);
+        });
+        backgroundMap.mouseReleased.connect(function(event) {
+            Maps.mouseReleased(event);
+        });
+        backgroundMap.mouseDoubleClicked.connect(function(event) {
+            Maps.mouseDoubleClicked(event);
+        });
+        backgroundMap.mouseEnter.connect(function(event) {
+            Maps.mouseEnter(event);
+        });
+        backgroundMap.mouseLeave.connect(function(event) {
+            Maps.mouseLeave(event);
+        });
 
         var backgroundMapNode = gameView.scene.createNode();
+        backgroundMapNode.interactive = true;
         backgroundMapNode.attachObject(backgroundMap);
 
         var scene = gameView.scene;
@@ -296,6 +312,7 @@ var Map = function(id) {
 
         delete this['renderBackgroundMap'];
         delete this['renderGlobalLight'];
+        delete this['renderFog'];
 
         gameView.scene.clear();
         renderStates = {}; // Clear render states

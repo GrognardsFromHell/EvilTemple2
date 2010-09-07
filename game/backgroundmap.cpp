@@ -1,4 +1,6 @@
 
+#define NOMINMAX // I *hate* windows headers
+
 #include "materialstate.h"
 
 #include <QtCore/QFile>
@@ -10,6 +12,8 @@
 
 #include "backgroundmap.h"
 #include "renderstates.h"
+
+#include <limits>
 
 inline uint qHash(const QPoint &key)
 {
@@ -375,6 +379,17 @@ void BackgroundMap::render(RenderStates &renderStates, MaterialState *overrideMa
 const Box3d &BackgroundMap::boundingBox()
 {
     return d->boundingBox;
+}
+
+/**
+  The background map intersects everything at the farthest possible distance.
+  */
+IntersectionResult BackgroundMap::intersect(const Ray3d &ray) const
+{
+    IntersectionResult result;
+    result.distance = std::numeric_limits<float>::max();
+    result.intersects = true;
+    return result;
 }
 
 }

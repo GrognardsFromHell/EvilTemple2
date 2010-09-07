@@ -152,6 +152,12 @@ public slots:
       */
     Vector4 screenFromWorld(const Vector4 &position) const;
 
+    /**
+      Gets the world coordinates from the given screen coordinates (relative
+      to the current viewport).
+      */
+    Vector4 worldFromScreen(uint x, uint y) const;
+
 protected:
     void resizeEvent(QResizeEvent *event);
     void mouseMoveEvent(QMouseEvent *event);

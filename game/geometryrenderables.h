@@ -227,8 +227,93 @@ inline const Box3d &MovementIndicator::boundingBox()
     return mBoundingBox;
 }
 
+/**
+  A renderable that will draw a list of lines (in model space).
+  The main use of this renderable is to show debugging information.
+  */
+class LineRenderable : public Renderable
+{
+Q_OBJECT
+public:
+    void render(RenderStates &renderStates, MaterialState *overrideMaterial = NULL);
+
+    const Box3d &boundingBox();
+
+public slots:
+    void addLine(const Vector4 &start, const Vector4 &end);
+
+private:
+    typedef QPair<Vector4,Vector4> Line;
+
+    QVector<Line> mLines;
+    Box3d mBoundingBox;
+};
+
+/**
+  A renderable that will draw a list of lines (in model space).
+  The main use of this renderable is to show debugging information.
+  */
+class DecoratedLineRenderable : public Renderable
+{
+Q_OBJECT
+Q_PROPERTY(Vector4 color READ color WRITE setColor)
+Q_PROPERTY(float lineWidth READ lineWidth WRITE setLineWidth)
+public:
+    DecoratedLineRenderable(Materials *materials);
+
+    void render(RenderStates &renderStates, MaterialState *overrideMaterial = NULL);
+
+    const Box3d &boundingBox();
+
+    const Vector4 &color() const;
+    void setColor(const Vector4 &color);
+
+    float lineWidth() const;
+    void setLineWidth(float width);
+
+public slots:
+    void addLine(const Vector4 &start, const Vector4 &end);
+
+private:
+    typedef QPair<Vector4,Vector4> Line;
+
+    bool mBuffersInvalid;
+    VertexBufferObject mVertices;
+    VertexBufferObject mTexCoords;
+    SharedMaterialState mMaterial;
+
+    float mLineWidth;
+    Vector4 mColor;
+    QVector<Line> mLines;
+    Box3d mBoundingBox;
+
+    void updateBuffers();
+};
+
+inline float DecoratedLineRenderable::lineWidth() const
+{
+    return mLineWidth;
 }
 
+inline void DecoratedLineRenderable::setLineWidth(float width)
+{
+    mLineWidth = width;
+    mBuffersInvalid = true;
+}
+
+inline const Vector4 &DecoratedLineRenderable::color() const
+{
+    return mColor;
+}
+
+inline void DecoratedLineRenderable::setColor(const Vector4 &color)
+{
+    mColor = color;
+}
+
+}
+
+Q_DECLARE_METATYPE(EvilTemple::LineRenderable*)
 Q_DECLARE_METATYPE(EvilTemple::MovementIndicator*)
 
 #endif // GEOMETRYRENDERABLES_H
