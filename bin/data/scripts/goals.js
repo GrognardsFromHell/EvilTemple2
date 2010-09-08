@@ -190,23 +190,31 @@ MovementGoal.prototype.isFinished = function(character) {
     return this.currentPathNode + 1 > this.path.length;
 };
 
-var MeleeAttackGoal = function(target) {
-    this.target = target;
+var ActionGoal = function(action) {
+    this.action = action;
 };
 
-MeleeAttackGoal.prototype = new Goal;
+ActionGoal.prototype = new Goal;
 
-MeleeAttackGoal.prototype.advance = function(critter, time) {
+ActionGoal.prototype.advance = function(critter, time) {
+
+    if (!this.action.animation) {
+        this.action.perform(critter);
+        this.actionPerformed = true;
+        this.finished = true;
+        return;
+    }
 
     if (!this.animated) {
         var goal = this;
-        critter.playAnimation('rattack', function() {
+        critter.playAnimation(this.action.animation, function() {
             /*
              Always perform the action, even if the animation has no corresponding event, in this case
              we perform the action after the animation has stopped playing.
              */
             if (!goal.actionPerformed) {
-                goal.performAction(critter);
+                this.action.perform(critter);
+                this.actionPerformed = true;
             }
             goal.finished = true;
         });
@@ -215,22 +223,18 @@ MeleeAttackGoal.prototype.advance = function(critter, time) {
 
 };
 
-MeleeAttackGoal.prototype.cancel = function(critter) {
-    var renderState = critter.getRenderState();
-    renderState.modelInstance.stopAnimation();
+ActionGoal.prototype.cancel = function(critter) {
+    if (this.animation) {
+        var renderState = critter.getRenderState();
+        renderState.modelInstance.stopAnimation();
+    }
 };
 
-MeleeAttackGoal.prototype.isFinished = function(critter) {
+ActionGoal.prototype.isFinished = function(critter) {
     return this.finished;
 };
 
-MeleeAttackGoal.prototype.animationAction = function(critter, event) {
-    this.performAction(critter);
-};
-
-MeleeAttackGoal.prototype.performAction = function(critter, event) {
-
-    this.target.dealDamage(2, critter);
-
+ActionGoal.prototype.animationAction = function(critter, event) {
+    this.action.perform(critter);
     this.actionPerformed = true;
 };

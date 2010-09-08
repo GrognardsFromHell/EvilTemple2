@@ -478,6 +478,16 @@ var BaseObject = {
         }
 
         this.updateTooltip();
+    },
+
+    /**
+     * Returns the default action that a given user (which is also an instance of baseobject) would perform
+     * on this object.
+     *
+     * @param forUser The user for which the default action should be returned.
+     */
+    getDefaultAction: function(forUser) {
+        return null;
     }
 };
 
@@ -526,7 +536,18 @@ var Container = {
             if (renderState)
                 showMobileInfo(this, renderState.modelInstance);
         }
+    },
+
+    /**
+     * Returns the default action that a given user (which is also an instance of baseobject) would perform
+     * on this object.
+     *
+     * @param forUser The user for which the default action should be returned.
+     */
+    getDefaultAction: function(forUser) {
+        return new OpenContainerAction(this);
     }
+
 };
 
 var Portal = {
@@ -587,6 +608,14 @@ var MapChanger = {
             if (renderState)
                 showMobileInfo(this, renderState.modelInstance);
         }
+    },
+
+    getDefaultAction: function(forUser) {
+        if (Combat.isActive()) {
+            gameView.scene.addTextOverlay(this.position, "You cannot use this in combat.", [1, 0, 0, 1]);            
+        }
+
+        return null;
     }
 };
 
@@ -859,6 +888,10 @@ var Critter = {
         dice.bonus = this.getInitiativeBonus();
         // TODO: Dice Log
         return dice.roll();
+    },
+
+    getDefaultAction: function(forWhom) {
+        return new MeleeAttackAction(this);
     }
 };
 

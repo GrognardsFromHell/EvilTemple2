@@ -85,13 +85,18 @@ var CombatUi = {};
 
             if (Party.isMember(participant) && !participant.isBusy()) {
 
+                var action = object.getDefaultAction(participant);
+
+                if (!action)
+                    return;
+
                 var path = gameView.sectorMap.findPath(participant.position, object.position);
 
                 if (path.length > 0) {
                     var movementGoal = new MovementGoal(path, true);
-                    var meleeAttackGoal = new MeleeAttackGoal(object);
+                    var secondaryGoal = new ActionGoal(action);
 
-                    participant.setGoal(new GoalSequence(movementGoal, meleeAttackGoal));
+                    participant.setGoal(new GoalSequence(movementGoal, secondaryGoal));
                 }
 
             }

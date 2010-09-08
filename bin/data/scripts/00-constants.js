@@ -123,7 +123,8 @@ var Animations = {
     GetHitBack: 'bhit',
     GetHitLeft: 'lhit',
     GetHitRight: 'rhit',
-    Death: 'death'
+    Death: 'death',
+    UseObject: 'magichands'
 };
 
 /**
