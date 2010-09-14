@@ -187,3 +187,6 @@ function bonusToString(bonus) {
     return (bonus < 0) ? String.valueOf(bonus) : "+" + bonus;
 }
 
+function vec_add(a, b) {
+    
+};

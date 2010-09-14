@@ -273,6 +273,7 @@ public:
 
 public slots:
     void addLine(const Vector4 &start, const Vector4 &end);
+    void clearLines();
 
 private:
     typedef QPair<Vector4,Vector4> Line;

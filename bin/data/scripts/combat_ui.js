@@ -44,10 +44,10 @@ var CombatUi = {};
         var participant = Combat.getActiveParticipant();
 
         if (participant && Party.isMember(participant) && !participant.isBusy()) {
-            var path = gameView.sectorMap.findPath(participant.position, worldPosition);
+            var path = new Path(participant.position, worldPosition);
 
-            if (path.length > 0) {
-                var movementGoal = new MovementGoal(path, true);
+            if (!path.isEmpty()) {
+                var movementGoal = new MovementGoal(path, false);
                 var sayHelloGoal = {
                     advance: function() {
                         gameView.scene.addTextOverlay(worldPosition, "I am there!", [0.9, 0, 0, 0.9]);
@@ -90,9 +90,9 @@ var CombatUi = {};
                 if (!action)
                     return;
 
-                var path = gameView.sectorMap.findPath(participant.position, object.position);
+                var path = new Path(participant.position, object.position);
 
-                if (path.length > 0) {
+                if (!path.isEmpty()) {
                     var movementGoal = new MovementGoal(path, true);
                     var secondaryGoal = new ActionGoal(action);
 

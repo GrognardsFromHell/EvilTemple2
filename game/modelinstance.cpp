@@ -772,6 +772,9 @@ namespace EvilTemple {
     void ModelInstance::setIdleAnimation(const QByteArray &idleAnimation)
     {
         mIdleAnimation = idleAnimation;
+        if (mIdling) {
+            playIdleAnimation();
+        }
     }
 
     const QByteArray &ModelInstance::idleAnimation() const

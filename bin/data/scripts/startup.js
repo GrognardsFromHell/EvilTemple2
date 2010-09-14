@@ -194,6 +194,8 @@ var BaseObject = {
         };
         this.setRenderState(renderState);
 
+        this.updateIdleAnimation();
+
         if (editMode || this.interactive) {
             var selectionCircle = new SelectionCircle(gameView.scene, gameView.materials);
             renderState.selectionCircle = selectionCircle;
@@ -408,10 +410,12 @@ var BaseObject = {
             idleAnimation = 'dead_idle';
         } else if (model.hasAnimation('item_idle')) {
             idleAnimation = 'item_idle';
+        } else if (model.hasAnimation('unarmed_unarmed_combatidle')) {
+            idleAnimation = 'unarmed_unarmed_combatidle';
         } else {
             idleAnimation = 'unarmed_unarmed_idle';
         }
-
+        
         if (renderState.modelInstance.idleAnimation != idleAnimation)
             renderState.modelInstance.idleAnimation = idleAnimation;
 
@@ -612,7 +616,7 @@ var MapChanger = {
 
     getDefaultAction: function(forUser) {
         if (Combat.isActive()) {
-            gameView.scene.addTextOverlay(this.position, "You cannot use this in combat.", [1, 0, 0, 1]);            
+            gameView.scene.addTextOverlay(this.position, "You cannot use this in combat.", [1, 0, 0, 1]);
         }
 
         return null;

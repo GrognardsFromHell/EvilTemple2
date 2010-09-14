@@ -86,45 +86,18 @@ Goal.prototype.animationAction = function(critter, event) {
 var MovementGoal = function(path, walking) {
     this.path = path;
     this.walking = walking;
-    this.currentPathNode = 0;
-    this.path = path;
-    this.driven = 0;
 };
 
 MovementGoal.prototype = new Goal;
 
-MovementGoal.prototype.beginPathSegment = function(critter) {
-
-    var from = this.path[this.currentPathNode];
-    var to = this.path[this.currentPathNode + 1];
-
-    var renderState = critter.getRenderState();
-    var sceneNode = renderState.sceneNode;
-
-    // Build a directional vector from the start pointing to the target
-    var x = to[0] - from[0];
-    var y = to[1] - from[1];
-    var z = to[2] - from[2];
-
-    var l = Math.sqrt((x * x) + (y * y) + (z * z));
-
-    print("Pathlength: " + l + " Direction: " + x + "," + y + "," + z);
-
-    this.length = l;
-    this.direction = [x, y, z];
+MovementGoal.prototype.updateRotation = function(critter) {
 
     // Normal view-direction
-    var nx = 0;
-    var ny = 0;
-    var nz = -1;
+    var rotOrigin = [0, 0, -1];
+    var direction = this.path.currentDirection();
 
-    x /= l;
-    y /= l;
-    z /= l;
-
-    var rot = Math.acos(nx * x + ny * y + nz * z);
-
-    if (x > 0) {
+    var rot = Math.acos(V3.dot(rotOrigin, direction));
+    if (direction[0] > 0) {
         rot = - rot;
     }
 
@@ -133,6 +106,9 @@ MovementGoal.prototype.beginPathSegment = function(critter) {
     if (needed > 1) {
         // TODO: We do need to rotate "visibly" using the correct turning animation.
     }
+
+    var renderState = critter.getRenderState();
+    var sceneNode = renderState.sceneNode;
 
     critter.rotation = rad2deg(rot);
     sceneNode.rotation = [0, Math.sin(rot / 2), 0, Math.cos(rot / 2)];
@@ -148,37 +124,27 @@ MovementGoal.prototype.advance = function(critter, time) {
 
     if (!this.initialized) {
         this.initialized = true;
-        modelInstance.playAnimation('unarmed_unarmed_run', true);
-        this.speed = modelInstance.model.animationDps('unarmed_unarmed_run'); // Pixel per second
-
-        this.beginPathSegment(critter);
+        var animation = this.walking ? 'unarmed_unarmed_walk' : 'unarmed_unarmed_run';
+        modelInstance.playAnimation(animation, true);
+        this.speed = modelInstance.model.animationDps(animation); // Movement speed is dictated by the animation data
+        this.updateRotation(critter);
     }
 
-    var driven = this.speed * time;
-    modelInstance.elapseDistance(driven);
-    this.driven += driven;
+    if (!this.path.isEmpty()) {
+        this.updateRotation(critter);
 
-    var completion = this.driven / this.length;
+        var driven = this.speed * time;
+        modelInstance.elapseDistance(driven);
 
-    if (completion < 1) {
-        var pos = this.path[this.currentPathNode];
-        var dx = this.direction[0] * completion;
-        var dz = this.direction[2] * completion;
-
-        var position = [pos[0] + dx, 0, pos[2] + dz];
+        var position = this.path.advance(driven);
         critter.position = position.slice(0); // Assign a copy, since position will be modified further
+
         position[1] -= critter.getWaterDepth(); // Depth is DISPLAY ONLY
         sceneNode.position = position;
-    } else {
-        this.currentPathNode += 1;
-        if (this.currentPathNode + 1 >= this.path.length) {
-            modelInstance.stopAnimation();
-            return;
-        }
-        this.driven = 0;
-
-        this.beginPathSegment(critter);
     }
+
+    if (this.path.isEmpty())
+        modelInstance.stopAnimation();
 };
 
 MovementGoal.prototype.cancel = function(character) {
@@ -187,7 +153,52 @@ MovementGoal.prototype.cancel = function(character) {
 };
 
 MovementGoal.prototype.isFinished = function(character) {
-    return this.currentPathNode + 1 > this.path.length;
+    return this.path.isEmpty();
+};
+
+/**
+ * Moves a critter in range of an object.
+ * @param target The object to move into range of.
+ * @param range The range to move into.
+ */
+var MoveInRangeGoal = function(target, range) {
+    this.target = target;
+    this.range = range;
+};
+
+MoveInRangeGoal.prototype.advance = function(critter, time) {
+
+    var distanceToTarget = distance(critter.position, target.position);
+    var gapRemaining = distanceToTarget - target.radius - critter.radius;
+
+    if (gapRemaining < range) {
+        this.finished = true;
+    } else {
+        // Calculate a path to the target and advance on it until we are within range.
+        var path = gameView.sectorMap.findPath(critter.position, this.target.position);
+
+        if (path.length < 2) {
+            this.finished = true; // Pathing is impossible.
+            return;
+        }
+
+        // Advance on the path
+
+    }
+
+};
+
+MoveInRangeGoal.prototype.cancel = function(character) {
+    var renderState = character.getRenderState();
+    renderState.modelInstance.stopAnimation();
+};
+
+MoveInRangeGoal.prototype.isFinished = function(character) {
+    /**
+     * Do NOT test if the character is in range here. The walk-animation may still be playing if
+     * the caller never calls advance again (in case this method returns true).
+     */
+    return this.finished;
 };
 
 var ActionGoal = function(action) {
