@@ -23,9 +23,7 @@
 #include "boxrenderable.h"
 #include "profiler.h"
 #include "materials.h"
-#include "translations.h"
 #include "audioengine.h"
-#include "sectormap.h"
 #include "models.h"
 #include "imageuploader.h"
 #include "binkplayer.h"
@@ -147,7 +145,7 @@ namespace EvilTemple {
         GameViewData(Game *game, GameView *view)
             : q(view),
             clippingGeometry(renderStates), dragging(false), lightDebugger(renderStates),
-            materials(renderStates), sectorMap(&scene), models(&materials, renderStates),
+            materials(renderStates), models(&materials, renderStates),
             particleSystems(&models, &materials), scene(&materials), lastAudioEnginePosition(0, 0, 0, 1),
             scrollingDisabled(false),
             mPlayingVideo(false),
@@ -172,10 +170,6 @@ namespace EvilTemple {
 
             if (!particleSystems.loadTemplates()) {
                 qWarning("Unable to load particle system templates: %s.", qPrintable(particleSystems.error()));
-            }
-
-            if (!translations.load("translation.dat")) {
-                qFatal("Unable to load translations.");
             }
 
             if (!audioEngine.open()) {
@@ -341,11 +335,7 @@ namespace EvilTemple {
 
         ClippingGeometry clippingGeometry;
 
-        Translations translations;
-
         AudioEngine audioEngine;
-
-        SectorMap sectorMap;
 
         Models models;
 
@@ -525,7 +515,7 @@ namespace EvilTemple {
         d->uiScene.setStickyFocus(true);
 
         d->uiEngine.rootContext()->setContextProperty("gameView", this);
-        d->uiEngine.rootContext()->setContextProperty("translations", &d->translations);
+        d->uiEngine.rootContext()->setContextProperty("translations", game->translations());
         d->uiEngine.rootContext()->setContextProperty("imageUploader", new ImageUploader);
 
         qmlRegisterType<EvilTemple::ModelViewer>("EvilTemple", 1, 0, "ModelViewer");
@@ -891,19 +881,9 @@ namespace EvilTemple {
         return d->viewportSize;
     }
 
-    Translations *GameView::translations() const
-    {
-        return &d->translations;
-    }
-
     AudioEngine *GameView::audioEngine() const
     {
         return &d->audioEngine;
-    }
-
-    SectorMap *GameView::sectorMap() const
-    {
-        return &d->sectorMap;
     }
 
     Models *GameView::models() const

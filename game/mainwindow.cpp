@@ -106,8 +106,7 @@ namespace EvilTemple {
         setCentralWidget(d_ptr->gameView);
 
         QScriptEngine *engine = game->scriptEngine()->engine();
-        engine->globalObject().setProperty("gameView", engine->newQObject(d_ptr->gameView));
-        engine->globalObject().setProperty("translations", engine->newQObject(d_ptr->gameView->translations()));
+        game->scriptEngine()->exposeQObject("gameView", d_ptr->gameView);
 
         // Ensure constant updates
         QTimer *animTimer = new QTimer(this);

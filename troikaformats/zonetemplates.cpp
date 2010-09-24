@@ -247,8 +247,8 @@ namespace Troika
         }
     };
 
-    ZoneTemplates::ZoneTemplates(VirtualFileSystem *vfs, Prototypes *prototypes) :
-        d_ptr(new ZoneTemplatesData(vfs, prototypes))
+    ZoneTemplates::ZoneTemplates(VirtualFileSystem *vfs, Prototypes *prototypes, QObject *parent)
+        : QObject(parent), d_ptr(new ZoneTemplatesData(vfs, prototypes))
     {
     }
 

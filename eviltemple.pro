@@ -4,11 +4,12 @@ TEMPLATE = subdirs
 CONFIG += ordered
 
 SUBDIRS += 3rdparty
+SUBDIRS += common
 SUBDIRS += troikaformats
+SUBDIRS += conversion
 SUBDIRS += converter
 SUBDIRS += audioengine
-SUBDIRS += audioenginetests
 SUBDIRS += binkplayer
-SUBDIRS += binkplayertests
 SUBDIRS += game
 SUBDIRS += launcher
+SUBDIRS += tests

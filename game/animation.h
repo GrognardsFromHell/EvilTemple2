@@ -127,6 +127,7 @@ namespace EvilTemple {
 
         inline T interpolate(FT frame, FT totalFrames) const
         {
+            Q_UNUSED(totalFrames);
             Q_ASSERT(mSize > 0);
 
             if (mSize == 1)

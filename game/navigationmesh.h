@@ -55,6 +55,14 @@ struct NavMeshPortal : public AlignedAllocation {
 
 class RectangleBspTree;
 
+struct DynamicObstacle : public AlignedAllocation
+{
+    Vector4 position;
+    uint radius;
+    QString id;
+    bool blocksVision;
+};
+
 class NavigationMesh
 {
 friend QDataStream &operator >>(QDataStream&, NavigationMesh&);
@@ -71,7 +79,12 @@ public:
 
     const NavMeshRect *findRect(const Vector4 &position) const;
 
+    void addDynamicObstacle(const QString &id, const Vector4 &position, uint radius, bool blocksVision);
+    void changeDynamicObstacle(const QString &id, const Vector4 &position, uint radius, bool blocksVision);
+    void removeDynamicObstacle(const QString &id);
+
 private:
+    QHash<QString, DynamicObstacle> mObstacles;
     QVector<NavMeshRect> mRectangles;
     QVector<NavMeshPortal> mPortals;
     RectangleBspTree *mRectangleBspTree;

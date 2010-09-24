@@ -12,8 +12,9 @@ TARGET = game
 
 CONFIG += dll
 
-TEMPLE_LIBS += qt3d minizip glew jpeg audioengine qjson binkplayer
+TEMPLE_LIBS += qt3d glew jpeg audioengine qjson binkplayer
 include(../3rdparty/game-math/game-math.pri)
+include(../common/common.pri)
 
 DEFINES += GAME_LIBRARY
 
@@ -30,7 +31,6 @@ SOURCES += \
     glslprogram.cpp \
     gameview.cpp \
     backgroundmap.cpp \
-    tga.cpp \
     clippinggeometry.cpp \
     particlesystem.cpp \
     modelinstance.cpp \
@@ -62,7 +62,9 @@ SOURCES += \
     fogofwar.cpp \
     modelviewer.cpp \
     charactervault.cpp \
-    geometryrenderables.cpp
+    geometryrenderables.cpp \
+    tileinfo.cpp \
+    pathfinder.cpp
 HEADERS += \
     mainwindow.h \
     game.h \
@@ -80,7 +82,6 @@ HEADERS += \
     glslprogram.h \
     gameview.h \
     backgroundmap.h \
-    tga.h \
     clippinggeometry.h \
     particlesystem.h \
     modelinstance.h \
@@ -115,7 +116,9 @@ HEADERS += \
     fogofwar.h \
     modelviewer.h \
     charactervault.h \
-    geometryrenderables.h
+    geometryrenderables.h \
+    tileinfo.h \
+    pathfinder.h
 OTHER_FILES += \
     resources/schema/materialfile.xsd \
     resources/materials/map_material.xml \

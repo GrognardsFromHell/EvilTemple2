@@ -19,6 +19,8 @@
 #include "fogofwar.h"
 #include "modelviewer.h"
 #include "geometryrenderables.h"
+#include "tileinfo.h"
+#include "pathfinder.h"
 
 #include "renderable.h"
 #include "modelinstance.h"
@@ -86,11 +88,13 @@ namespace EvilTemple {
     void ScriptEngine::callGlobalFunction(const QString &name, const QScriptValueList &arguments)
     {
         QScriptValue func = d->engine->globalObject().property(name);
+
         if (!func.isNull()) {
             func.call(QScriptValue(), arguments);
         } else {
             qWarning("Global function %s not found.", qPrintable(name));
         }
+
         handleUncaughtException();
     }
 
@@ -294,6 +298,8 @@ namespace EvilTemple {
         registerQObject<EvilTemple::SelectionCircle>(engine, "SelectionCircle*");
         registerQObject<EvilTemple::ModelInstance>(engine, "ModelInstance*");
         registerQObject<EvilTemple::ModelViewer>(engine, "ModelViewer*");
+        registerQObject<EvilTemple::TileInfo>(engine, "TileInfo*");
+        registerQObject<EvilTemple::Pathfinder>(engine, "Pathfinder*");
 
         // Add a function to read files
         QScriptValue readFileFn = engine->newFunction(readFile, 1);
@@ -308,6 +314,9 @@ namespace EvilTemple {
         global.setProperty("timerReference", timerReferenceFn);
 
         global.setProperty("generateGuid", engine->newFunction(generateGuid, 0));
+
+        global.setProperty("TileInfo", engine->newQMetaObject(&TileInfo::staticMetaObject));
+        global.setProperty("Pathfinder", engine->newQMetaObject(&Pathfinder::staticMetaObject));
 
         global.setProperty("ModelInstance", engine->newFunction(renderableCtor<ModelInstance>));
         global.setProperty("Light", engine->newFunction(renderableCtor<Light>));

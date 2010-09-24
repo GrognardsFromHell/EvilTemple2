@@ -11,6 +11,7 @@
 #include "scriptengine.h"
 #include "savegames.h"
 #include "charactervault.h"
+#include "translations.h"
 
 namespace EvilTemple {
 
@@ -20,6 +21,7 @@ namespace EvilTemple {
 
         SaveGames *saveGames;
         CharacterVault *characterVault;
+        Translations translations;
 
         QDir dataPath;
         QDir userDataPath;
@@ -59,6 +61,11 @@ namespace EvilTemple {
         qDebug("Initializing script engine.");
         d->scriptEngine = new ScriptEngine(this);
         d->scriptEngine->setObjectName("scriptEngine");
+
+        if (!d->translations.load("translation.dat")) {
+            qFatal("Unable to load translations.");
+        }
+        d->scriptEngine->exposeQObject("translations", &d->translations);
 
         qDebug("Initializing character vault");
         QString systemCharacters = "data/characters/"; // This path should be relative to enable lookup in the ZIPs
@@ -101,6 +108,11 @@ namespace EvilTemple {
     void Game::setUserDataPath(const QString &userDataPath)
     {
         d->userDataPath = userDataPath;
+    }
+
+    const Translations *Game::translations() const
+    {
+        return &d->translations;
     }
 
 }

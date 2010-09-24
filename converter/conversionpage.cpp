@@ -4,9 +4,10 @@
 #include <QUuid>
 #include <QDir>
 
+#include <conversion/converter.h>
+
 #include "conversionpage.h"
 #include "ui_conversionpage.h"
-#include "converter.h"
 
 #if defined(Q_OS_WIN32) && defined(Q_CC_MSVC)
 #include <QAxObject>

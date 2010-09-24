@@ -5,7 +5,7 @@
 #include <QtCore/QWaitCondition>
 
 #include "turbojpeg.h"
-#include "tga.h"
+#include <common/tga.h>
 
 static tjhandle turboJpeg; // TODO: Clean up this handle
 

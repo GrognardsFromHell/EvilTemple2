@@ -12,7 +12,6 @@ using namespace GameMath;
 #include <QQuaternion>
 #include <QVector3D>
 
-
 class QBox3D;
 
 namespace Troika
@@ -68,6 +67,38 @@ namespace Troika
         Light light;
         quint32 hash;
         quint32 id;
+    };
+
+    enum TileFlags
+    {
+        TILE_BLOCKS = 1 << 0,
+        TILE_SINKS = 1 << 1,
+        TILE_CAN_FLY_OVER = 1 << 2,
+        TILE_ICY = 1 << 3,
+        TILE_NATURAL = 1 << 4,
+        TILE_SOUNDPROOF = 1 << 5,
+        TILE_INDOOR = 1 << 6,
+        TILE_REFLECTIVE = 1 << 7,
+        TILE_BLOCKS_VISION = 1 << 8,
+        TILE_BLOCKS_UL = 1 << 9,
+        TILE_BLOCKS_UM = 1 << 10,
+        TILE_BLOCKS_UR = 1 << 11,
+        TILE_BLOCKS_ML = 1 << 12,
+        TILE_BLOCKS_MM = 1 << 13,
+        TILE_BLOCKS_MR = 1 << 14,
+        TILE_BLOCKS_LL = 1 << 15,
+        TILE_BLOCKS_LM = 1 << 16,
+        TILE_BLOCKS_LR = 1 << 17,
+        TILE_FLYOVER_UL = 1 << 18,
+        TILE_FLYOVER_UM = 1 << 19,
+        TILE_FLYOVER_UR = 1 << 20,
+        TILE_FLYOVER_ML = 1 << 21,
+        TILE_FLYOVER_MM = 1 << 22,
+        TILE_FLYOVER_MR = 1 << 23,
+        TILE_FLYOVER_LL = 1 << 24,
+        TILE_FLYOVER_LM = 1 << 25,
+        TILE_FLYOVER_LR = 1 << 26,
+        TILE_FLYOVER_COVER = 1 << 27,
     };
 
     struct SectorTile

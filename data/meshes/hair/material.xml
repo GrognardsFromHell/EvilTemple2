@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<material xmlns="http://hartte.de/eviltemple/material.xsd">
+
+  <pass>
+    <shader>
+      <vertexShader version="120">
+        
+        <include file=":/material/lighting.vert" />
+        
+        
+        <code>
+          <![CDATA[
+uniform mat4 worldViewMatrix;
+uniform mat4 worldViewProjectionMatrix;
+uniform mat4 worldViewInverseTransposeMatrix;
+uniform mat4 worldInverseMatrix;
+uniform mat4 worldViewInverseMatrix;
+uniform mat4 viewMatrix;
+
+attribute vec4 vertexPosition;
+attribute vec2 vertexTexCoord;
+
+varying vec2 texCoord;
+
+
+attribute vec4 vertexNormal;
+
+
+void main() {
+
+        lighting(vertexPosition, vertexNormal, worldViewMatrix, viewMatrix);
+
+
+        
+
+        gl_Position = worldViewProjectionMatrix * vertexPosition;
+        texCoord = vertexTexCoord; // Pass through texture coordinates
+}
+]]>
+        </code>
+      </vertexShader>
+
+      <fragmentShader version="120">
+        
+        <include file=":/material/lighting.frag" />
+        
+        
+        
+
+        <code>
+        <![CDATA[
+varying vec2 texCoord;
+
+
+
+uniform vec4 hairColor;
+
+uniform sampler2D texSampler0;
+
+
+void main(void)
+{
+   gl_FragColor = hairColor;
+vec4 texel;
+texel = texture2D(texSampler0, texCoord);
+gl_FragColor = gl_FragColor * texel;
+gl_FragColor.xyz *= lighting().xyz;
+
+
+
+    if (gl_FragColor.a == 0)
+        discard;
+
+}
+]]>
+        </code>
+      </fragmentShader>
+
+      <attribute name="vertexPosition" buffer="positions" />
+      
+      <attribute name="vertexNormal" buffer="normals" />
+      
+      <attribute name="vertexTexCoord" buffer="texCoords" components="2" />
+      <uniform name="worldViewProjectionMatrix" semantic="WorldViewProjection" />
+      <uniform name="hairColor">
+      <!--
+      This color will only be used when the actual hair color is *not* set by the game.
+      It is a default of sorts.
+      -->
+        <float4 r="1" g="1" b="1" a="1" />
+      </uniform>
+      <uniform name="shininess">
+        <int value="50" />
+      </uniform>
+      
+      <uniform name="viewMatrix" semantic="View" />
+      <uniform name="worldViewMatrix" semantic="WorldView" />
+      
+      
+      
+      <uniform name="texSampler0" semantic="Texture0" />
+    </shader>
+
+    <textureSampler texture="meshes/hair/hair.tga"/>
+
+
+    <cullFace>false</cullFace>
+    <blend>true</blend>
+    <blendFunc src="srcAlpha" dest="oneMinusSrcAlpha" />
+    <depthWrite>true</depthWrite>
+    <depthTest>true</depthTest>
+  </pass>
+
+
+<!--
+    Shadow pass
+-->
+  <pass>
+    <shader>
+      <vertexShader>
+        <include file=":/material/shadow.vert" />
+        <code></code>
+      </vertexShader>
+
+      <fragmentShader>
+        <include file=":/material/shadow.frag" />
+          <code></code>
+      </fragmentShader>
+
+      <attribute name="vertexPosition" buffer="positions" />
+      <uniform name="viewProjectionMatrix" semantic="ViewProjection" />
+      <uniform name="worldMatrix" semantic="World" />
+    </shader>
+
+    <blend>true</blend>
+    <blendFunc src="srcAlpha" dest="oneMinusSrcAlpha" />
+    <depthTest>true</depthTest>
+    <depthWrite>false</depthWrite>
+    <clearStencil value="1" />
+    <stencilTest>true</stencilTest>
+    <stencilFunc reference="0" function="notequal" />
+    <stencilOp stencilFail="keep" depthFail="keep" depthPass="replace" />
+  </pass>
+
+
+</material>

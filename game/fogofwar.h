@@ -5,6 +5,7 @@
 
 #include "renderable.h"
 #include "sectormap.h"
+#include "tileinfo.h"
 
 namespace EvilTemple {
 
@@ -13,7 +14,7 @@ class FogOfWarData;
 class FogOfWar : public Renderable
 {
     Q_OBJECT
-    Q_PROPERTY(EvilTemple::SectorMap *sectorMap READ sectorMap WRITE setSectorMap)
+    Q_PROPERTY(EvilTemple::TileInfo *tileInfo READ tileInfo WRITE setTileInfo)
 public:
 
     FogOfWar();
@@ -23,8 +24,8 @@ public:
 
     const Box3d &boundingBox();
 
-    SectorMap *sectorMap() const;
-    void setSectorMap(SectorMap *sectorMap);
+    TileInfo *tileInfo() const;
+    void setTileInfo(TileInfo *tileinfo);
 
 signals:
 

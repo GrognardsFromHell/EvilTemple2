@@ -19,3 +19,5 @@ interface/art
 interface/fonts
 ui_*.h
 *.o
+art
+bin

@@ -664,8 +664,8 @@ namespace Troika
 
         // NOTE: global.lit direction is entirely ignored by ToEE and replaced by a hardcoded sunlight direction
         // This is the normalized form of it:
-        globalLight.dirX = -0.6324093645670703858428703903848;
-        globalLight.dirY = -0.77463436252716949786709498111783;
+        globalLight.dirX = -0.6324093645670703858428703903848f;
+        globalLight.dirY = -0.77463436252716949786709498111783f;
         globalLight.dirZ = 0;
 
         if (globalLight.type != 3) {

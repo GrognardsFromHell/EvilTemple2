@@ -12,6 +12,7 @@ namespace EvilTemple {
 class GameData;
 class Camera;
 class ScriptEngine;
+class Translations;
 
 /*
     Base class for the game itself. It controls startup of the game
@@ -57,6 +58,11 @@ public:
       if it doesn't exist.
       */
     void setUserDataPath(const QString &userDataPath);
+
+    /**
+      Returns the collection of translated strings.
+      */
+    const Translations *translations() const;
 
 public slots:
     bool start();

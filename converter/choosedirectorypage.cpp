@@ -1,9 +1,10 @@
 
 #include <QFileDialog>
 
+#include <conversion/basepathfinder.h>
+
 #include "choosedirectorypage.h"
 #include "ui_choosedirectorypage.h"
-#include "basepathfinder.h"
 
 ChooseDirectoryPage::ChooseDirectoryPage(QWidget *parent) :
     QWizardPage(parent),

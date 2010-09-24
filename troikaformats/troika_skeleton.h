@@ -12,7 +12,7 @@ namespace Troika
     class Skeleton;
     class SkeletonData;
     class MeshModel;
-    class Vertex;
+    struct Vertex;
 
     /**
       Models a single bone in a skeleton.

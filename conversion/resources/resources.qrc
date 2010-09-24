@@ -1,0 +1,11 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="exclusions.txt">exclusions.txt</file>
+        <file alias="material_template.xml">material_template.xml</file>
+        <file alias="shadow_caster.txt">shadow_caster.txt</file>
+        <file alias="particlefiles.txt">particlefiles.txt</file>
+        <file alias="map_exclusions.txt">map_exclusions.txt</file>
+        <file alias="converter.js">converter.js</file>
+        <file alias="map_area_mapping.txt">map_area_mapping.txt</file>
+    </qresource>
+</RCC>

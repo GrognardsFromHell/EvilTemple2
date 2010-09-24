@@ -1,6 +1,9 @@
 
 CONFIG += debug_and_release
-DESTDIR = $${PWD}/bin/
+
+include($${PWD}/buildroot.pri)
+
+DESTDIR = $$BUILD_ROOT/bin
 
 CONFIG(debug, debug|release) {
  TARGET = $$join(TARGET,,,_d)
@@ -10,11 +13,11 @@ CONFIG(debug, debug|release) {
 }
 
 # All libraries reside in the target dir
-LIBS += -L$${PWD}/bin/
+LIBS += -L$$DESTDIR
 
 # Add game libraries
 contains(TEMPLE_LIBS,qt3d) {
-    INCLUDEPATH += ../3rdparty/qt3d/math3d/ ../3rdparty/qt3d/enablers/
+    INCLUDEPATH += $${PWD}/3rdparty/qt3d/math3d/ $${PWD}/3rdparty/qt3d/enablers/
     CONFIG(debug, debug|release) {
         LIBS += -lqt3d_d
     } else {
@@ -23,7 +26,11 @@ contains(TEMPLE_LIBS,qt3d) {
 }
 
 contains(TEMPLE_LIBS,python) {
-    win32 {
+    win32:CONFIG(debug, debug|release) {
+        INCLUDEPATH += C:/python-2.7/Include/
+        INCLUDEPATH += C:/python-2.7/PC/
+        LIBS += -LC:/Python-2.7/PCbuild
+    } else {
         INCLUDEPATH += C:/python26/include/
         LIBS += -LC:/python26/libs/ -lpython26
     }
@@ -43,17 +50,11 @@ contains(TEMPLE_LIBS,game) {
     }
 }
 
-contains(TEMPLE_LIBS,sfmt) {
-    INCLUDEPATH += $${PWD}/3rdparty/SFMT-src-1.3.3
-    SOURCES += $${PWD}/3rdparty/SFMT-src-1.3.3/SFMT.c
-}
-
-
 # It's possible we should instead use the system libjpeg here on unix
 contains(TEMPLE_LIBS,jpeg) {
     INCLUDEPATH += $${PWD}/3rdparty/libjpeg-turbo/include
     win32:LIBS += $${PWD}/3rdparty/libjpeg-turbo/lib/turbojpeg.lib
-    else:LIBS += -L$${PWD}/bin/ -lturbojpeg
+    else:LIBS += -lturbojpeg
 }
 
 contains(TEMPLE_LIBS,glew) {
@@ -70,25 +71,11 @@ contains(TEMPLE_LIBS,glew) {
 }
 
 contains(TEMPLE_LIBS,troikaformats) {
-    INCLUDEPATH += $${PWD}/troikaformats
-    CONFIG(debug, debug|release) {
-        LIBS += -ltroikaformats_d
-    } else {
-        LIBS += -ltroikaformats
-    }
-}
-
-contains(TEMPLE_LIBS,minizip) {
-    INCLUDEPATH += ../3rdparty/minizip
-    CONFIG(debug, debug|release) {
-        LIBS += -lminizip_d
-    } else {
-        LIBS += -lminizip
-    }
+    include($${PWD}/troikaformats/troikaformats.pri)
 }
 
 contains(TEMPLE_LIBS,audioengine) {
-    INCLUDEPATH += ../audioengine
+    INCLUDEPATH += $${PWD}/audioengine
     CONFIG(debug, debug|release) {
         LIBS += -laudioengine_d
     } else {
@@ -126,7 +113,7 @@ contains(TEMPLE_LIBS,qjson) {
 
 # Add game libraries
 contains(TEMPLE_LIBS,binkplayer) {
-    INCLUDEPATH += ../binkplayer/
+    INCLUDEPATH += $${PWD}/binkplayer/
     CONFIG(debug, debug|release) {
         LIBS += -lbinkplayer_d
     } else {
@@ -138,8 +125,8 @@ contains(TEMPLE_LIBS,binkplayer) {
 
 contains(TEMPLE_LIBS,openal) {
     win32 {
-        INCLUDEPATH += ../3rdparty/openal-1.1/include
-        LIBS += ../3rdparty/openal-1.1/libs/Win32/OpenAL32.lib
+        INCLUDEPATH += $${PWD}/3rdparty/openal-1.1/include
+        LIBS += $${PWD}/3rdparty/openal-1.1/libs/Win32/OpenAL32.lib
     } else {
         LIBS += -lopenal
     }
@@ -150,6 +137,3 @@ win32-msvc2008:QMAKE_CXXFLAGS_RELEASE += -Zi
 win32-msvc2008:QMAKE_LFLAGS_RELEASE += /DEBUG /INCREMENTAL:NO /OPT:REF /OPT:ICF
 win32-msvc2010:QMAKE_CXXFLAGS_RELEASE += -Zi
 win32-msvc2010:QMAKE_LFLAGS_RELEASE += /DEBUG /INCREMENTAL:NO /OPT:REF /OPT:ICF
-
-OTHER_FILES += \
-    ../bin/data/scripts/mobileInfo.js

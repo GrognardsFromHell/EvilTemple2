@@ -13,10 +13,11 @@ namespace Troika {
     class Prototypes;
     class ZoneTemplatesData;
 
-    class TROIKAFORMATS_EXPORT ZoneTemplates
+    class TROIKAFORMATS_EXPORT ZoneTemplates : public QObject
     {
+    Q_OBJECT
     public:
-        ZoneTemplates(VirtualFileSystem *vfs, Prototypes *prototypes);
+        ZoneTemplates(VirtualFileSystem *vfs, Prototypes *prototypes, QObject *parent = NULL);
         ~ZoneTemplates();
 
         ZoneTemplate *load(quint32 id);

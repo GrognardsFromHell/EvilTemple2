@@ -5,7 +5,8 @@
 #include <QVBoxLayout>
 #include <QAbstractButton>
 
-#include "converter.h"
+#include <conversion/converter.h>
+
 #include "converterwizard.h"
 #include "choosedirectorypage.h"
 #include "conversionpage.h"

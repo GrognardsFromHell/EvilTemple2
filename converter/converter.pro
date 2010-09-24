@@ -6,90 +6,31 @@ TARGET = converter
 QT += xml opengl xmlpatterns script
 CONFIG += qaxcontainer
 
-TEMPLE_LIBS += troikaformats qt3d minizip jpeg qjson glew python
+TEMPLE_LIBS += troikaformats qt3d jpeg qjson glew
 
 win32:RC_FILE = icon.rc
 
-SOURCES += converter.cpp \
-    collada.cpp \
-    materialconverter.cpp \
-    modelwriter.cpp \
-    exclusions.cpp \
-    mapconverter.cpp \
-    prototypeconverter.cpp \
-    converterwizard.cpp \
+SOURCES += converterwizard.cpp \
     choosedirectorypage.cpp \
-    conversionpage.cpp \
-    pathnodeconverter.cpp \
-    navigationmeshbuilder.cpp \
-    conversiontask.cpp \
-    convertmapstask.cpp \
-    convertscriptstask.cpp \
-    converttranslationstask.cpp \
-    convertparticlesystemstask.cpp \
-    convertinterfacetask.cpp \
-    convertsoundstask.cpp \
-    convertmodelstask.cpp \
-    ../game/tga.cpp \
-    pythonconverter.cpp \
-    mapareamapping.cpp \
-    convertmoviestask.cpp \
-    qdirvfshandler.cpp \
-    converthairtask.cpp
+    conversionpage.cpp
 
-HEADERS += \
-    util.h \
-    collada.h \
-    converter.h \
-    materialconverter.h \
-    modelwriter.h \
-    exclusions.h \
-    mapconverter.h \
-    basepathfinder.h \
-    prototypeconverter.h \
-    stable.h \
-    converterwizard.h \
+HEADERS += converterwizard.h \
     choosedirectorypage.h \
-    conversionpage.h \
-    pathnodeconverter.h \
-    navigationmeshbuilder.h \
-    conversiontask.h \
-    convertmapstask.h \
-    convertscriptstask.h \
-    converttranslationstask.h \
-    convertparticlesystemstask.h \
-    convertinterfacetask.h \
-    convertsoundstask.h \
-    convertmodelstask.h \
-    ../game/tga.h \
-    pythonconverter.h \
-    mapareamapping.h \
-    convertmoviestask.h \
-    qdirvfshandler.h \
-    converthairtask.h
-
-win32:SOURCES += basepathfinder_win32.cpp
-else:SOURCES += basepathfinder.cpp
+    conversionpage.h
 
 win32:LIBS += -ladvapi32
 
 include(../base.pri)
 include(../3rdparty/game-math/game-math.pri)
 
-RESOURCES += \
+include(../conversion/conversion.pri)
+
+RESOURCES += resources.qrc \
     resources.qrc
 
-OTHER_FILES += exclusions.txt \
-    material_template.xml \
-    shadow_caster.txt \
-    particlefiles.txt \
-    scripts/converter.js \
-    icon.rc \
-    map_exclusions.txt \
-    map_area_mapping.txt
+OTHER_FILES += icon.rc
 
-PRECOMPILED_HEADER = stable.h
-
-FORMS += \
-    choosedirectorypage.ui \
+FORMS += choosedirectorypage.ui \
     conversionpage.ui
+
+include(../common/common.pri)

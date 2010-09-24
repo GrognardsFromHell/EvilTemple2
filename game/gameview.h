@@ -6,7 +6,6 @@
 
 #include "clippinggeometry.h"
 #include "modelfile.h"
-#include "translations.h"
 
 namespace EvilTemple {
 
@@ -16,7 +15,6 @@ class ClippingGeometry;
 class Materials;
 class ParticleSystems;
 class AudioEngine;
-class SectorMap;
 class Models;
 class Game;
 
@@ -28,7 +26,6 @@ class GameView : public QGraphicsView
     Q_PROPERTY(Materials *materials READ materials)
     Q_PROPERTY(ParticleSystems* particleSystems READ particleSystems)
     Q_PROPERTY(AudioEngine* audioEngine READ audioEngine)
-    Q_PROPERTY(SectorMap* sectorMap READ sectorMap)
     Q_PROPERTY(Models* models READ models)
 
     Q_PROPERTY(int scrollBoxMinX READ scrollBoxMinX WRITE setScrollBoxMinX)
@@ -54,7 +51,6 @@ public:
     Materials *materials() const;
     ParticleSystems *particleSystems() const;
     AudioEngine *audioEngine() const;
-    SectorMap *sectorMap() const;
 
     int scrollBoxMinX() const {
         return mScrollBoxMinX;
@@ -97,8 +93,6 @@ public:
     }
 
     const QSize &viewportSize() const;
-
-    Translations *translations() const;
 
     Models *models() const;
 
@@ -178,5 +172,7 @@ private:
 };
 
 }
+
+Q_DECLARE_METATYPE(EvilTemple::GameView*)
 
 #endif // GAMEVIEW_H

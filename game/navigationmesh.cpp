@@ -768,4 +768,29 @@ uint getActiveNavigationMeshes()
     return activeNavigationMeshes;
 }
 
+void NavigationMesh::addDynamicObstacle(const QString &id, const Vector4 &position, uint radius, bool blocksVision)
+{
+    DynamicObstacle obstacle;
+    obstacle.id = id;
+    obstacle.position = position;
+    obstacle.radius = radius;
+    obstacle.blocksVision = blocksVision;
+
+    mObstacles[id] = obstacle;
+}
+
+void NavigationMesh::changeDynamicObstacle(const QString &id, const Vector4 &position, uint radius, bool blocksVision)
+{
+    DynamicObstacle &obstacle = mObstacles[id];
+    obstacle.id = id;
+    obstacle.position = position;
+    obstacle.radius = radius;
+    obstacle.blocksVision = blocksVision;
+}
+
+void NavigationMesh::removeDynamicObstacle(const QString &id)
+{
+    mObstacles.remove(id);
+}
+
 }

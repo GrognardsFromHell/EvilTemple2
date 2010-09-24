@@ -3,6 +3,7 @@
 #include "materialstate.h"
 
 #include "fogofwar.h"
+#include "pathfinder.h"
 
 #include <QPointer>
 
@@ -65,6 +66,7 @@ struct FogSectorBitmap {
         textureDirty = false;
     }
 
+
 };
 
 class FogOfWarData : public AlignedAllocation
@@ -72,7 +74,8 @@ class FogOfWarData : public AlignedAllocation
 public:
     FogOfWarData();
 
-    QPointer<SectorMap> sectorMap;
+    QPointer<TileInfo> tileInfo;
+    Pathfinder pathfinder;
 
     Box3d boundingBox;
     SharedMaterialState material;
@@ -84,6 +87,9 @@ public:
     void initialize(RenderStates &renderStates);
 
     FogSectorBitmap *getSector(int x, int y);
+
+    bool hasLineOfSight(const Vector4 &from, const Vector4 &to) const;
+
 };
 
 FogOfWarData::FogOfWarData() : initialized(false)
@@ -124,6 +130,61 @@ void FogOfWarData::initialize(RenderStates &renderStates)
     if (!material->createFromFile(":/material/fog_material.xml", renderStates)) {
         qFatal("Unable to load fog of war material: %s", qPrintable(material->error()));
     }
+}
+
+bool FogOfWarData::hasLineOfSight(const Vector4 &from, const Vector4 &to) const
+{
+    if (!tileInfo) {
+        return false;
+    }
+
+    QPoint startTile(from.x() / TileInfo::PixelPerSubtile, from.z() / TileInfo::PixelPerSubtile);
+    QPoint endTile(to.x() / TileInfo::PixelPerSubtile, to.z() / TileInfo::PixelPerSubtile);
+
+    int x0 = startTile.x();
+    int y0 = startTile.y();
+    int x1 = endTile.x();
+    int y1 = endTile.y();
+
+    bool steep = abs(y1 - y0) > abs(x1 - x0);
+    if (steep) {
+        std::swap(x0, y0);
+        std::swap(x1, y1);
+    }
+    if (x0 > x1) {
+        std::swap(x0, x1);
+        std::swap(y0, y1);
+    }
+    int deltax = x1 - x0;
+    int deltay = abs(y1 - y0);
+    float error = 0;
+    float deltaerr = 0;
+    if (deltax != 0)
+        deltaerr = deltay / deltax;
+    int ystep;
+    int y = y0;
+    if (y0 < y1)
+        ystep = 1;
+    else
+        ystep = -1;
+
+    for (int x = x0; x <= x1; ++x) {
+        if (steep) {
+            if (tileInfo->isVisionEnd(y, x))
+                return false;
+        } else {
+            if (tileInfo->isVisionEnd(x, y))
+                return false;
+        }
+
+        error += deltaerr;
+        if (error >= 0.5) {
+            y = y + ystep;
+            error = error - 1.0;
+        }
+    }
+
+    return true;
 }
 
 FogOfWar::FogOfWar() : d(new FogOfWarData)
@@ -194,11 +255,8 @@ void FogOfWar::reveal(const Vector4 &center, float radius)
                     continue;
 
                 // Check for line of sight from center (TODO: Naive approach)
-                if (d->sectorMap
-                    && !d->sectorMap->hasLineOfSight(center, tileToVector(tileX, tileY)))
-                {
+                if (!d->hasLineOfSight(center, tileToVector(tileX, tileY)))
                     continue;
-                }
 
                 bitmap->reveal(subtileX, subtileY);
             } else {
@@ -275,14 +333,15 @@ const Box3d &FogOfWar::boundingBox()
     return d->boundingBox;
 }
 
-SectorMap *FogOfWar::sectorMap() const
+TileInfo *FogOfWar::tileInfo() const
 {
-    return d->sectorMap;
+    return d->tileInfo;
 }
 
-void FogOfWar::setSectorMap(SectorMap *sectorMap)
+void FogOfWar::setTileInfo(TileInfo *tileInfo)
 {
-    d->sectorMap = sectorMap;
+    d->tileInfo = tileInfo;
+    d->pathfinder.setTileInfo(tileInfo);
 }
 
 }

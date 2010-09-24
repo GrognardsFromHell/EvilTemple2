@@ -57,4 +57,5 @@ RESOURCES += \
     resources.qrc
 
 OTHER_FILES += \
-    prototypes_flags.txt
+    prototypes_flags.txt \
+    troikaformats.pri
