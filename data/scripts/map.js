@@ -21,7 +21,7 @@ var Map = function(id) {
 
     for (var i = 0; i < this.mobiles.length; ++i) {
         var mobile = this.mobiles[i];
-        connectToPrototype(mobile);
+        Prototypes.reconnect(mobile);
         mobile.map = this;
     }
 };
@@ -84,7 +84,7 @@ var Map = function(id) {
 
         for (i = 0; i < staticObjects.length; ++i) {
             obj = staticObjects[i];
-            connectToPrototype(obj);
+            Prototypes.reconnect(obj);
             obj.createRenderState();
         }
     }

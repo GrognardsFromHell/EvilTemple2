@@ -110,7 +110,7 @@ namespace EvilTemple {
 
         // Subdirectories are loaded first
         QStringList subdirectoryNames = scriptDir.entryList(QStringList(),
-                                                          QDir::Dirs|QDir::Readable,
+                                                          QDir::Dirs|QDir::Readable|QDir::NoDotAndDotDot,
                                                           QDir::Name);
 
         foreach (const QString &subdirectoryName, subdirectoryNames) {
@@ -127,7 +127,7 @@ namespace EvilTemple {
 
             QFile scriptFile(fullFilename);
 
-            qDebug("Loading script file %s (%ld byte).", qPrintable(fullFilename), (long int)scriptFile.size());
+            qDebug("Loading script file %s (%ld byte).", qPrintable(scriptFileName), (long int)scriptFile.size());
 
             if (!scriptFile.open(QIODevice::ReadOnly|QIODevice::Text)) {
                 qWarning("Unable to read script file %s: %s", qPrintable(scriptFile.fileName()),

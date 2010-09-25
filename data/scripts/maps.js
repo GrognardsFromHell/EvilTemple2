@@ -173,8 +173,8 @@ var Maps = {
             map.__proto__ = mapObj;
             
             // Reconnect all mobiles back to their prototypes
-            map.mobiles.forEach(connectToPrototype);
             map.mobiles.forEach(function(mobile) {
+                Prototypes.reconnect(mobile);
                 mobile.map = map;
             });
         });

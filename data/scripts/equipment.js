@@ -77,7 +77,7 @@ var Equipment = {};
         if (obj.content) {
             // Check all the equipment the object has
             obj.content.forEach(function (childObj) {
-                connectToPrototype(childObj);
+                Prototypes.reconnect(childObj);
 
                 if (childObj.equipmentId) {
                     processEquipment(childObj.equipmentId);

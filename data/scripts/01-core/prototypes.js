@@ -84,6 +84,27 @@ var Prototypes = (function() {
             object.__proto__ = prototype;
 
             return object;
+        },
+
+        /**
+         * Reconnects an existing object to its prototype, based on its prototype property.
+         * This also makes some assumptions about the object structure and reconnects nested objects
+         * that also have a prototype property.
+         *
+         * @param object The object that will be reconnected.
+         */
+        reconnect: function(object) {
+
+            if (object.prototype !== undefined) {
+                object.__proto__ = prototypes[object.prototype];
+            } else {
+                object.__proto__ = BaseObject;
+            }
+
+            if (object.content !== undefined) {
+                object.content.forEach(Prototypes.reconnect);
+            }
+
         }
     };
 

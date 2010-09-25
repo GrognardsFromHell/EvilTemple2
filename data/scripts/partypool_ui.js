@@ -70,8 +70,8 @@ var PartyPoolUi = {};
                     if (characters[i].id != id)
                         continue;
 
-                    var instance = characters[i]; // The instances *are* fresh due to being eval'd above
-                    connectToPrototype(instance);
+                    var instance = characters[i]; // The instances are *fresh* due to being eval'd above
+                    Prototypes.reconnect(instance);
                     Party.addMember(instance);
                     found = true;
                     break;

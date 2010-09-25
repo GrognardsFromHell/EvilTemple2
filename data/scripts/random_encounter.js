@@ -21,7 +21,7 @@ var RandomEncounter = {};
 
     };
 
-    var legacyScript = eval('(' + readFile('scripts/legacy/random_encounter.js') + ')');
+    var legacyScript = eval('(' + readFile('legacy/scripts/random_encounter.js') + ')');
 
     legacyScript.__proto__ = LegacyRandomEncounterPrototype;
 

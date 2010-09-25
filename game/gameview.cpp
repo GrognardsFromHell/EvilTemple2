@@ -8,6 +8,8 @@
 #include <QtOpenGL/QGLContext>
 #include <QtGui/QImage>
 
+#include <common/paths.h>
+
 #include "gameview.h"
 
 #include "renderstates.h"
@@ -152,9 +154,9 @@ namespace EvilTemple {
             mVideoPlayerThread(&mVideoPlayer),
             wasScrolling(false)
         {
-                        QUrl baseUrl = QUrl::fromLocalFile(game->dataPath() + "/");
-                        qDebug("Using QML base url: %s", qPrintable(baseUrl.toString()));
-                        uiEngine.setBaseUrl(baseUrl);
+            QUrl baseUrl = QUrl::fromLocalFile(game->paths()->installationPath() + "data/");
+            qDebug("Using QML base url: %s", qPrintable(baseUrl.toString()));
+            uiEngine.setBaseUrl(baseUrl);
 
             connect(&uiEngine, SIGNAL(warnings(QList<QDeclarativeError>)), SLOT(uiWarnings(QList<QDeclarativeError>)));
 

@@ -1,5 +1,5 @@
 
-INCLUDEPATH += $${PWD} $${PWD}/../3rdparty/minizip/ $${PWD}/../3rdparty/SFMT-src-1.3.3/SFMT
+INCLUDEPATH += $${PWD}/include $${PWD}/../3rdparty/minizip/ $${PWD}/../3rdparty/SFMT-src-1.3.3/SFMT
 
 include($$PWD/../buildroot.pri)
 

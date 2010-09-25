@@ -4,6 +4,7 @@
 #include <QUuid>
 #include <QDir>
 
+#include <common/paths.h>
 #include <conversion/converter.h>
 
 #include "conversionpage.h"
@@ -188,6 +189,12 @@ void ConversionPage::updateProgress(int value, int max, const QString &operation
 #endif
 }
 
+static QString getOutputDirectory() {
+    EvilTemple::Paths paths;
+
+    return paths.generatedDataPath();
+}
+
 void ConversionPage::initializePage()
 {
     updateProgress(0, 100, "Starting conversion");
@@ -208,7 +215,8 @@ void ConversionPage::initializePage()
     connect(conversionThread, SIGNAL(finished()), SLOT(threadStopped()));
 
     conversionThread->setDataPath(field("installationPath").toString());
-    conversionThread->setOutputPath(QApplication::applicationDirPath() + QDir::separator() + "data" + QDir::separator());
+
+    conversionThread->setOutputPath(getOutputDirectory());
     conversionThread->setConversionPage(this);
 
     conversionThread->start();

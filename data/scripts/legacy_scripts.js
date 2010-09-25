@@ -169,13 +169,10 @@ var LegacyScripts = {};
             renderState.sceneNode.attachObject(particleSystem);
         },
 
-        obj_create: function(prototype, location) {
-            var obj = {};
-            obj.id = generateGuid();
-            obj.prototype = prototype;
+        obj_create: function(prototypeId, location) {
+            var obj = Prototypes.createObject(prototypeId);
             obj.position = location;
             obj.map = Maps.currentMap;
-            connectToPrototype(obj);
 
             Maps.currentMap.mobiles.push(obj);
             obj.createRenderState();

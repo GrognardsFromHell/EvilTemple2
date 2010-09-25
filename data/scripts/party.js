@@ -153,7 +153,7 @@ var Party = {};
     // Loads a member from the savegame payload
     function loadMember(member) {
         // Re-use the given object
-        connectToPrototype(member);
+        Prototypes.reconnect(member);
         return member;
     }
 

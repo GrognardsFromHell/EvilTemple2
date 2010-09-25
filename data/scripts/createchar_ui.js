@@ -543,7 +543,7 @@ var CreateCharacterUi = {};
         print("Setting prototype of new character to " + prototypeId);
 
         currentCharacter.prototype = prototypeId;
-        connectToPrototype(currentCharacter);
+        Prototypes.reconnect(currentCharacter);
 
         currentDialog.getModelViewer().modelRotation = -120;
 

@@ -1,7 +1,7 @@
 #ifndef DATAFILEENGINE_H
 #define DATAFILEENGINE_H
 
-#include "gameglobal.h"
+#include "common/global.h"
 
 #include <QAbstractFileEngineHandler>
 #include <QScopedPointer>
@@ -17,7 +17,7 @@ class DataFileEngineHandlerData;
   it is checked whether the file or directory exist in one of the registered archives.
   If that is the case, a handler that accesses the file in the ZIP file is used instead.
   */
-class GAME_EXPORT DataFileEngineHandler : public QAbstractFileEngineHandler
+class COMMON_EXPORT DataFileEngineHandler : public QAbstractFileEngineHandler
 {
 public:
     /**
@@ -25,6 +25,18 @@ public:
       */
     DataFileEngineHandler(const QString &dataPath);
     ~DataFileEngineHandler();
+
+    /**
+      Adds a ZIP archive to the virtual file system.
+      @return True if the archive has been added successfully.
+      */
+    bool addArchive(const QString &filename);
+
+    /**
+      Adds all ZIP Files in the given directory to the virtual file system.
+      @return The number of archives that have been added.
+      */
+    int addArchives(const QString &directory);
 
     QAbstractFileEngine *create(const QString &fileName) const;
 private:

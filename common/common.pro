@@ -3,12 +3,18 @@ TEMPLATE = lib
 
 TARGET = common
 
-HEADERS += common/quadtree.h \
-    common/tga.h \
-    common/global.h \
+INCLUDEPATH += include/ ../3rdparty/minizip/
+
+HEADERS += include/common/quadtree.h \
+    include/common/tga.h \
+    include/common/global.h \
+    include/common/paths.h \
+    include/common/datafileengine.h \
     ../3rdparty/SFMT-src-1.3.3/SFMT.h
 
-SOURCES += tga.cpp \
+SOURCES += src/tga.cpp \
+           src/paths.cpp \
+           src/datafileengine.cpp \
            ../3rdparty/SFMT-src-1.3.3/SFMT.c
 
 DEFINES += MINIZIP_LIBRARY

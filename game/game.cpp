@@ -6,6 +6,8 @@
 #include <QFileDialog>
 #include <QFontDatabase>
 
+#include <common/paths.h>
+
 #include "game.h"
 #include "mainwindow.h"
 #include "scriptengine.h"
@@ -22,22 +24,21 @@ namespace EvilTemple {
         SaveGames *saveGames;
         CharacterVault *characterVault;
         Translations translations;
+        const Paths *paths;
 
         QDir dataPath;
-        QDir userDataPath;
     };
 
-    Game::Game(QObject *parent) :
-        QObject(parent),
-        d(new GameData)
+    Game::Game(const Paths *paths, QObject *parent) :
+        QObject(parent), d(new GameData)
     {
-        // Deduce the data path
-        QCoreApplication *app = QCoreApplication::instance();
-        d->dataPath = app->applicationDirPath();
-        d->dataPath.cd("data");
+        d->paths = paths;
 
-        QDir documentsDir = QDesktopServices::storageLocation(QDesktopServices::DocumentsLocation);
-        d->userDataPath = documentsDir.absoluteFilePath("EvilTemple");
+        // Deduce the data path
+        d->dataPath = d->paths->installationDir();
+        if (!d->dataPath.cd("data")) {
+            qWarning("Data directory in installation directory not found.");
+        }
     }
 
     Game::~Game()
@@ -47,16 +48,6 @@ namespace EvilTemple {
     bool Game::start()
     {
         qDebug("Using data path: %s.", qPrintable(d->dataPath.absolutePath()));
-
-        // Create user data path if it doesn't exist
-        if (!d->userDataPath.exists()) {
-            qDebug("Creating the user data path: %s", qPrintable(d->userDataPath.absolutePath()));
-
-            QDir root = d->userDataPath.root();
-            root.mkpath(d->userDataPath.absolutePath());
-        } else {
-            qDebug("Using user data path: %s", qPrintable(d->userDataPath.absolutePath()));
-        }
 
         qDebug("Initializing script engine.");
         d->scriptEngine = new ScriptEngine(this);
@@ -69,12 +60,11 @@ namespace EvilTemple {
 
         qDebug("Initializing character vault");
         QString systemCharacters = "data/characters/"; // This path should be relative to enable lookup in the ZIPs
-        qDebug("%s", qPrintable(d->userDataPath.absoluteFilePath("characters")));
-        QString userCharacters = d->userDataPath.absoluteFilePath("characters");
+        QString userCharacters = d->paths->userDataDir().absoluteFilePath("characters");
         d->characterVault = new CharacterVault(systemCharacters, userCharacters, d->scriptEngine->engine(), this);
         d->scriptEngine->exposeQObject("charactervault", d->characterVault);
 
-        QString savePath = d->userDataPath.absoluteFilePath("saves") + QDir::separator();
+        QString savePath = d->paths->userDataDir().absoluteFilePath("saves") + QDir::separator();
         qDebug("Initializing savegames (%s)", qPrintable(savePath));
         d->saveGames = new SaveGames(savePath, d->scriptEngine->engine(), this);
         d->scriptEngine->exposeQObject("savegames", d->saveGames);
@@ -90,29 +80,14 @@ namespace EvilTemple {
         return d->scriptEngine;
     }
 
-    QString Game::dataPath() const
-    {
-        return d->dataPath.absolutePath();
-    }
-
-    void Game::setDataPath(const QString &dataPath)
-    {
-        d->dataPath = dataPath;
-    }
-
-    QString Game::userDataPath() const
-    {
-        return d->userDataPath.absolutePath();
-    }
-
-    void Game::setUserDataPath(const QString &userDataPath)
-    {
-        d->userDataPath = userDataPath;
-    }
-
     const Translations *Game::translations() const
     {
         return &d->translations;
+    }
+
+    const Paths *Game::paths() const
+    {
+        return d->paths;
     }
 
 }

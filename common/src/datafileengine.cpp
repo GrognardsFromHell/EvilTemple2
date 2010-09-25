@@ -6,9 +6,10 @@
 #include <QFSFileEngine>
 #include <QDateTime>
 
-#include "datafileengine.h"
-#include "unzip.h"
 #include <QMessageBox>
+
+#include "unzip.h"
+#include "common/datafileengine.h"
 
 namespace EvilTemple {
 
@@ -109,8 +110,6 @@ public:
         }
 
         absoluteDataPath = QDir::toNativeSeparators(absoluteDataPath);
-
-        addArchives();
     }
 
     ~DataFileEngineHandlerData()
@@ -215,54 +214,34 @@ public:
         }
     }
 
-private:
-    QDir dataDir;
-    QString absoluteDataPath;
-
-    QList<unzFile> archiveHandles; // Close archives when done
-
-    struct ArchiveEntry {
-        unzFile handle;
-        unz64_file_pos position;
-        size_t uncompressedSize;
-        size_t compressedSize;
-        size_t compressionMethod;
-    };
-
-    typedef QHash<QString, ArchiveEntry> ArchiveEntries;
-
-    ArchiveEntries archiveEntries; // Archive entries (lowercase filename -> archive pos)
-
     /**
       Loads all ZIP files in the data path.
+      @returns The number of zip files that have been loaded.
       */
-    void addArchives()
+    int addArchives(const QDir &archiveDir)
     {
-        qDebug("Loading archives in %s.", qPrintable(dataDir.absolutePath()));
+        QStringList zipEntries = archiveDir.entryList(QStringList() << "*.zip", QDir::Files);
 
-        QStringList zipEntries = dataDir.entryList(QStringList() << "*.zip", QDir::Files);
+        qDebug("Loading %d archives in %s.", zipEntries.size(), qPrintable(archiveDir.absolutePath()));
 
-        if (zipEntries.isEmpty()) {
-            QMessageBox::critical(NULL, "Error", "It seems like you didn't run the converter. No ZIP files could "
-                                     "be found in the data directory. Please run converter.exe in the same "
-                                     "directory as this file to convert existing Temple of Elemental Evil "
-                                     "data files to the format used by this application.");
-
-        }
+        int count = 0;
 
         foreach (const QString &zipEntry, zipEntries) {
-            QString archiveFilename = dataDir.absoluteFilePath(zipEntry);
-            addArchive(archiveFilename);
+            QString archiveFilename = archiveDir.absoluteFilePath(zipEntry);
+            if (addArchive(archiveFilename))
+                count++;
         }
+
+        return count;
     }
 
-    void addArchive(const QString &archiveFilename)
+    bool addArchive(const QString &archiveFilename)
     {
         unzFile archiveHandle = unzOpen64(qPrintable(archiveFilename));
 
         if (!archiveHandle) {
             qWarning("Unable to open ZIP archive %s.", qPrintable(archiveFilename));
-            return;
+            return false;
         }
 
         archiveHandles.append(archiveHandle); // Ensures closing of archives
@@ -275,7 +254,7 @@ private:
 
         if (error != UNZ_OK)  {
             qWarning("Unable to retrieve global information from zip archive %s.", qPrintable(archiveFilename));
-            return;
+            return false;
         }
 
         qDebug("Loading ZIP archive %s (%lu entries).", qPrintable(archiveFilename), archiveInfo.number_entry);
@@ -284,7 +263,7 @@ private:
 
         if (error != UNZ_OK) {
             qWarning("Unable to seek to first file in ZIP archive %s.", qPrintable(archiveFilename));
-            return;
+            return false;
         }
 
         // Small performance optimization to resize the hashtable ahead of time
@@ -336,9 +315,29 @@ private:
 
         if (error != UNZ_END_OF_LIST_OF_FILE) {
             qWarning("Unable to seek to next file in ZIP archive %s.", qPrintable(archiveFilename));
-            return;
+            return false;
         }
+
+        return true;
     }
+
+private:
+    QDir dataDir;
+    QString absoluteDataPath;
+
+    QList<unzFile> archiveHandles; // Close archives when done
+
+    struct ArchiveEntry {
+        unzFile handle;
+        unz64_file_pos position;
+        size_t uncompressedSize;
+        size_t compressedSize;
+        size_t compressionMethod;
+    };
+
+    typedef QHash<QString, ArchiveEntry> ArchiveEntries;
+
+    ArchiveEntries archiveEntries; // Archive entries (lowercase filename -> archive pos)
 
 };
 
@@ -351,6 +350,16 @@ DataFileEngineHandler::DataFileEngineHandler(const QString &dataPath)
 
 DataFileEngineHandler::~DataFileEngineHandler()
 {
+}
+
+bool DataFileEngineHandler::addArchive(const QString &filename)
+{
+    return d_ptr->addArchive(filename);
+}
+
+int DataFileEngineHandler::addArchives(const QString &directory)
+{
+    return d_ptr->addArchives(directory);
 }
 
 QAbstractFileEngine *DataFileEngineHandler::create(const QString &fileName) const

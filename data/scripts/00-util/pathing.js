@@ -19,7 +19,7 @@ var Path = function(object, to) {
 
     /**
      * Forces this path to be updated.
-     * @param from The starting point for the path.
+     * @param object The object that should be moved along the path. Used to access position and radius.
      * @param to The target point for the path.
      */
     Path.prototype.update = function(object, to) {

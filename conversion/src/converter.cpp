@@ -8,6 +8,7 @@
 #include <QBuffer>
 #include <QScriptEngine>
 #include <QSet>
+#include <QXmlStreamWriter>
 
 #include <iostream>
 
@@ -21,7 +22,6 @@
 
 #include "conversion/util.h"
 #include "conversion/converter.h"
-
 #include "conversion/conversiontask.h"
 #include "conversion/converthairtask.h"
 #include "conversion/convertmapstask.h"
@@ -32,7 +32,7 @@
 #include "conversion/convertsoundstask.h"
 #include "conversion/convertmoviestask.h"
 #include "conversion/convertmodelstask.h"
-
+#include "conversion/version.h"
 #include "conversion/qdirvfshandler.h"
 
 class ZipWriterHolder : public IFileWriter
@@ -79,8 +79,6 @@ void ZipWriterHolder::close()
 class ConverterData : public QObject, public IConversionService {
 Q_OBJECT
 public:
-    static const int maxArchives = 10; // Try ToEE0.dat to ToEE(maxArchives-1).dat
-
     Converter *converter;
 
     QString mInputPath, mOutputPath;
@@ -204,8 +202,8 @@ public:
             vfs->add(new QDirVfsHandler(moduleDir));
         }
 
-        // Add base archives
-        for (int i = 0; i < maxArchives; ++i) {
+        // Add base archives (ToEE1.dat to ToEE4.dat)
+        for (int i = 1; i <= 4; ++i) {
             QString archivePath = QString("%1ToEE%2.dat").arg(mInputPath).arg(i);
 
             if (QFile::exists(archivePath)) {
@@ -302,12 +300,34 @@ public:
             mCurrentTask = NULL;
         }
 
+        // Write a conversion report
+        writeConversionReport();
+
         return true;
     }
 
     QString convertMapId(uint mapId) const
     {
         return mMapIds[mapId];
+    }
+
+    void writeConversionReport()
+    {
+        QFile output(mOutputPath + "conversion.xml");
+
+        if (!output.open(QIODevice::WriteOnly|QIODevice::Truncate)) {
+            qWarning("Unable to write conversion report file: %s", qPrintable(output.errorString()));
+            return;
+        }
+
+        QXmlStreamWriter writer(&output);
+
+        writer.writeStartDocument();
+
+        writer.writeStartElement("conversion");
+        writer.writeAttribute("version", QString::number(DataFormatVersion));
+
+        writer.writeEndDocument();
     }
 
 public slots:
@@ -347,6 +367,11 @@ void Converter::cancel()
 {
     if (d_ptr->mCurrentTask)
         d_ptr->mCurrentTask->abort();
+}
+
+int Converter::version() const
+{
+    return DataFormatVersion;
 }
 
 #include "converter.moc"

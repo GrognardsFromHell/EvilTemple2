@@ -22,7 +22,6 @@ SOURCES += \
     mainwindow.cpp \
     game.cpp \
     scriptengine.cpp \
-    datafileengine.cpp \
     material.cpp \
     renderstates.cpp \
     modelfile.cpp \
@@ -71,7 +70,6 @@ HEADERS += \
     stable.h \
     util.h \
     scriptengine.h \
-    datafileengine.h \
     gameglobal.h \
     material.h \
     renderstates.h \

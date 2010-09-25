@@ -31,7 +31,17 @@ int main(int argc, char **argv) {
     ConverterWizard wizard;
     wizard.show();
 
-    return app.exec();
+    int result = app.exec();
+
+    // If there's an error code already, return that
+    if (result < 0)
+        return result;
+
+    // Otherwise, return -1 if the user cancelled.
+    if (wizard.result() == QWizard::Rejected)
+        return -1;
+
+    return result;
 
     /*
     std::cout << "Conversion utility for Temple of Elemental Evil." << std::endl;
