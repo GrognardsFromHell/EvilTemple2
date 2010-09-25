@@ -132,5 +132,5 @@ var Animations = {
  */
 var Cursors = {
     Default: 'art/interface/cursors/MainCursor.png'
-        
+
 };

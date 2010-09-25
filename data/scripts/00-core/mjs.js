@@ -33,7 +33,7 @@
 
 /*
  * Constant: MJS_VERSION
- * 
+ *
  * mjs version number aa.bb.cc, encoded as an integer of the form:
  * 0xaabbcc.
  */
@@ -41,9 +41,9 @@ const MJS_VERSION = 0x000000;
 
 /*
  * Constant: MJS_DO_ASSERT
- * 
+ *
  * Enables or disables runtime assertions.
- * 
+ *
  * For potentially more performance, the assert methods can be
  * commented out in each place where they are called.
  */
@@ -53,7 +53,7 @@ const MJS_DO_ASSERT = true;
  * Constant: MJS_FLOAT_ARRAY_TYPE
  *
  * The base float array type.  By default, WebGLFloatArray.
- * 
+ *
  * mjs can work with any array-like elements, but if an array
  * creation is requested, it will create an array of the type
  * MJS_FLOAT_ARRAY_TYPE.  Also, the builtin constants such as (M4x4.I)

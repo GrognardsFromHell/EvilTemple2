@@ -178,6 +178,24 @@ Array.prototype.equals = function(other) {
 };
 
 /**
+ * Returns the number of direct properties of an object.
+ * Prototype properties are not counted.
+ *
+ * @param object An object.
+ */
+function countProperties(object) {
+    if (typeof(object) !== 'object')
+        throw "countKeys can only work on JavaScript objects.";
+
+    var c = 0;
+    for (var k in object)
+        if (object.hasOwnProperty(k))
+            c++;
+
+    return c;
+}
+
+/**
  * Gets a bonus as a string conforming to D20 convention for bonuses. This means that positive
  * bonuses have an explicit plus sign prepended.
  *
@@ -187,6 +205,16 @@ function bonusToString(bonus) {
     return (bonus < 0) ? String.valueOf(bonus) : "+" + bonus;
 }
 
-function vec_add(a, b) {
-    
-};
+function connectToPrototype(obj) {
+    if (obj.prototype !== undefined) {
+        obj.__proto__ = prototypes[obj.prototype];
+    } else {
+        obj.__proto__ = BaseObject;
+    }
+
+    if (obj.content !== undefined) {
+        for (var i = 0; i < obj.content.length; ++i) {
+            connectToPrototype(obj.content[i]);
+        }
+    }
+}

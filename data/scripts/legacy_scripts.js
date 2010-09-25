@@ -323,18 +323,7 @@ var LegacyScripts = {};
 
         create_item_in_inventory: function(prototypeId, receiver) {
 
-            var prototype = prototypes[prototypeId];
-
-            if (!prototype) {
-                print("Unknown prototype: " + prototype);
-                return;
-            }
-
-            var item = {
-                id: generateGuid(),
-                prototype: prototypeId
-            };
-            connectToPrototype(item);
+            var item = Prototypes.createObject(prototypeId);
 
             if (!receiver.obj.content) {
                 receiver.obj.content = [];

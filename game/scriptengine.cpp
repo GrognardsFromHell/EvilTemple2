@@ -108,6 +108,16 @@ namespace EvilTemple {
         QDir scriptDir(QDir::toNativeSeparators(directory));
         qDebug("Loading scripts from %s.", qPrintable(scriptDir.absolutePath()));
 
+        // Subdirectories are loaded first
+        QStringList subdirectoryNames = scriptDir.entryList(QStringList(),
+                                                          QDir::Dirs|QDir::Readable,
+                                                          QDir::Name);
+
+        foreach (const QString &subdirectoryName, subdirectoryNames) {
+            qDebug("Loading scripts from directory %s.", qPrintable(subdirectoryName));
+            loadScripts(scriptDir.absolutePath() + '/' + subdirectoryName);
+        }
+
         QStringList scriptFileNames = scriptDir.entryList(QStringList() << "*.js",
                                                           QDir::Files|QDir::Readable,
                                                           QDir::Name);

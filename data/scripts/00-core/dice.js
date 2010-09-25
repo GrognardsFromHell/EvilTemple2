@@ -65,5 +65,3 @@ var Dice;
     Dice.D20 = '1d20';
 
 })();
-
-new Dice('1d6');
