@@ -52,6 +52,8 @@ var Combat = {
         // Look for the *current* id
         var currentIdx = initiative.indexOf(activeParticipant);
 
+        // TODO: Find the next VALID participant, this currently doesn't ignore dead creatures
+
         var participant = null;
         if (currentIdx == -1 || currentIdx + 1 >= initiative.length) {
             print("Start of first round or end of round reached, continuing @ participant 0");
@@ -168,10 +170,21 @@ var Combat = {
         });
 
         if (endCombat) {
+            if (activeParticipant) {
+                participants[activeParticipant].mobile.setSelected(false);
+            }
+
+            var prevParticipants = participants;
+
             participants = {};
             activeParticipant = '';
             active = false;
             combatEndListeners.notify();
+
+            // Update the idle animation of every participant
+            for (var k in prevParticipants) {
+                prevParticipants[k].mobile.updateIdleAnimation();
+            }
         }
 
         return endCombat;
@@ -231,6 +244,14 @@ var Combat = {
         Party.getMembers().forEach(Combat.checkCombatConditionsForPlayer);
     };
 
+    /**
+     * Tests whether a given critter is participating in combat.
+     * @param critter The critter to test for. 
+     */
+    Combat.isParticipant = function(critter) {
+        return participants[critter.id] !== undefined;
+    };
+
     Combat.addCombatStartListener = function(listener) {
         combatStartListeners.append(listener);
     };
@@ -243,12 +264,18 @@ var Combat = {
         activeParticipantChangedListener.append(listener);
     };
 
+    function critterDied(critter, damage, source) {
+        Combat.checkEndConditions();
+    }
+
     function initialize() {
         var check = function() {
             Combat.checkCombatConditions();
             gameView.addVisualTimer(1000, check);
         };
         gameView.addVisualTimer(1000, check);
+
+        EventBus.addListener(EventTypes.CritterDied, critterDied);
     }
 
     StartupListeners.add(initialize, "combat");

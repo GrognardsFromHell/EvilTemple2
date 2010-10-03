@@ -810,9 +810,6 @@ namespace EvilTemple {
 
                 if (renderable) {
                     renderable->mouseReleaseEvent(evt);
-                } else {
-                    Vector4 worldPosition = d->worldPositionFromScreen(evt->pos());
-                    emit worldClicked(evt, worldPosition);
                 }
             }
             d->dragging = false;
@@ -836,9 +833,6 @@ namespace EvilTemple {
 
             if (renderable) {
                 renderable->mouseDoubleClickEvent(evt);
-            } else {
-                Vector4 worldPosition = d->worldPositionFromScreen(evt->pos());
-                emit worldDoubleClicked(evt, worldPosition);
             }
         }
     }

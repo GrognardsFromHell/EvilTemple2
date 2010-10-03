@@ -138,8 +138,8 @@ bool FogOfWarData::hasLineOfSight(const Vector4 &from, const Vector4 &to) const
         return false;
     }
 
-    QPoint startTile(from.x() / TileInfo::PixelPerSubtile, from.z() / TileInfo::PixelPerSubtile);
-    QPoint endTile(to.x() / TileInfo::PixelPerSubtile, to.z() / TileInfo::PixelPerSubtile);
+    QPoint startTile(from.x() / TileInfo::UnitsPerTile, from.z() / TileInfo::UnitsPerTile);
+    QPoint endTile(to.x() / TileInfo::UnitsPerTile, to.z() / TileInfo::UnitsPerTile);
 
     int x0 = startTile.x();
     int y0 = startTile.y();

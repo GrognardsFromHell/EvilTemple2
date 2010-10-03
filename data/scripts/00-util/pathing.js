@@ -27,7 +27,16 @@ var Path = function(object, to) {
         this.radius = object.radius;
 
         this.segments = [];
-        var points = Maps.currentMap.findPath(object, to);
+
+        var points;
+
+        if (to instanceof Array) {
+            print("Moving using array");
+            points = Maps.currentMap.findPath(object, to);
+        } else {
+            points = Maps.currentMap.findPathIntoRange(object, to, 25);
+        }
+
         for (var i = 0; i < points.length - 1; ++i) {
             var d = V3.sub(points[i + 1], points[i]);
             var l = V3.length(d);

@@ -243,7 +243,7 @@ void vectorOfVector4FromScriptValue(const QScriptValue &object, QVector<Vector4>
 
 void Vector4Scriptable::registerWith(QScriptEngine *engine)
 {
-    qScriptRegisterMetaType< QVector<Vector4> >(engine, vectorOfVector4ToScriptValue, vectorOfVector4FromScriptValue);
+    qScriptRegisterMetaType<QVector<Vector4> >(engine, vectorOfVector4ToScriptValue, vectorOfVector4FromScriptValue);
     qScriptRegisterMetaType<Vector4>(engine, float4ToScriptValue<Vector4>, float4FromScriptValue<Vector4>);
 }
 

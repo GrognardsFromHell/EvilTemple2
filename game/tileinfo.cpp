@@ -28,6 +28,6 @@ bool TileInfo::load(const QString &filename)
     return stream.status() == QDataStream::Ok;
 }
 
-const float TileInfo::PixelPerSubtile = 28.2842703f / 3;
+const float TileInfo::UnitsPerTile = 28.2842703f / 3;
 
 }

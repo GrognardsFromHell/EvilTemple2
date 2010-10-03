@@ -14,17 +14,17 @@ Pathfinder::Pathfinder(QObject *parent) :
 }
 
 static Vector4 tileToPosition(const QPoint &tile) {
-    return Vector4(tile.x() * TileInfo::PixelPerSubtile,
+    return Vector4(tile.x() * TileInfo::UnitsPerTile,
                    0,
-                   tile.y() * TileInfo::PixelPerSubtile,
+                   tile.y() * TileInfo::UnitsPerTile,
                    1);
 }
 
 static QPoint positionToTile(const Vector4 &position) {
-    return QPoint(position.x() / TileInfo::PixelPerSubtile, position.z() / TileInfo::PixelPerSubtile);
+    return QPoint(position.x() / TileInfo::UnitsPerTile, position.z() / TileInfo::UnitsPerTile);
 }
 
-inline static bool canStandAt(const TileInfo *tileInfo, const QPoint &pos, int radius)
+inline static bool canStandAtTile(const TileInfo *tileInfo, const QPoint &pos, int radius)
 {
     int sqradius = radius * radius;
 
@@ -82,9 +82,10 @@ QVector<Vector4> Pathfinder::findPath(const Vector4 &start, const Vector4 &end, 
 
     QPoint startTile = positionToTile(start);
     QPoint endTile = positionToTile(end);
-    int actorRadiusTiles = (int)ceil(actorRadius / TileInfo::PixelPerSubtile);
+    int actorRadiusTiles = (int)ceil(actorRadius / TileInfo::UnitsPerTile);
 
-    if (!canStandAt(tileInfo, startTile, actorRadiusTiles) || !canStandAt(tileInfo, endTile, actorRadiusTiles))
+    if (!canStandAtTile(tileInfo, startTile, actorRadiusTiles)
+            || !canStandAtTile(tileInfo, endTile, actorRadiusTiles))
         return result;
 
     int touchedNodes = 0;
@@ -142,6 +143,130 @@ QVector<Vector4> Pathfinder::findPath(const Vector4 &start, const Vector4 &end, 
     return result;
 }
 
+inline static int tileDistanceSquared(const QPoint &a, const QPoint &b) {
+    QPoint d = b - a;
+    return d.x() * d.x() + d.y() * d.y();
+}
+
+QVector<Vector4> Pathfinder::findPathIntoRange(const Vector4 &start,
+                                               const Vector4 &target,
+                                               float actorRadius,
+                                               float targetRadius)
+{
+
+    float maxDistance = actorRadius + targetRadius;
+
+    // We are a bit more lenient here
+    int maxTileDistance = ceil(maxDistance / TileInfo::UnitsPerTile);
+    int maxTileDistanceSquared = maxTileDistance * maxTileDistance;
+
+    TileInfo *tileInfo = mTileInfo;
+    QVector<Vector4> result;
+
+    if (!tileInfo) {
+        qWarning("Called Pathfinder::findPath without setting the tile info property first.");
+        return result;
+    }
+
+    QPoint startTile = positionToTile(start);
+    QPoint targetTile = positionToTile(target);
+    int actorRadiusTiles = (int)ceil(actorRadius / TileInfo::UnitsPerTile);
+
+    if (!canStandAtTile(tileInfo, startTile, actorRadiusTiles))
+        return result;
+
+    int touchedNodes = 0;
+
+    QList<AStarNodeFast*> openSet;
+
+    // Add all the portals accessible from the start position with correct cost
+    AStarNodeFast *startNode = new AStarNodeFast;
+    startNode->comingFrom = NULL;
+    startNode->tile = startTile;
+    startNode->inOpenSet = true;
+    startNode->inClosedSet = false;
+    startNode->costFromStart = 0;
+    startNode->costToGoal = getDistanceHeuristic(startTile, targetTile);
+    startNode->totalCost = startNode->costToGoal;
+    openSet << startNode;
+
+    AStarNodeFast *lastNode = NULL;
+
+    QHash<QPoint,AStarNodeFast*> state;
+    state[startTile] = startNode;
+
+    while (!openSet.isEmpty()) {
+        AStarNodeFast *node = openSet.takeFirst();
+        node->inOpenSet = false;
+
+        touchedNodes++;
+
+        if (tileDistanceSquared(node->tile, targetTile) <= maxTileDistanceSquared) {
+            lastNode = node;
+            break; // Reached end successfully.
+        }
+
+        addNeighbourNodes(node, tileInfo, actorRadiusTiles, targetTile, state, openSet);
+
+        node->inClosedSet = true;
+    }
+
+    if (lastNode) {
+        const AStarNodeFast *node = lastNode;
+        if (node) {
+            while (node->comingFrom) {
+                result.prepend(tileToPosition(node->tile));
+                node = node->comingFrom;
+            }
+        }
+
+        result.prepend(start);
+    }
+
+    qDeleteAll(state.values());
+
+    return result;
+}
+
+bool Pathfinder::isPathValid(const QVector<Vector4> &points, float actorRadius) const
+{
+
+    const TileInfo *tileInfo = mTileInfo;
+
+    if (!tileInfo) {
+        qWarning("Called Pathfinder::isPathValid without setting the tileInfo property first.");
+        return false;
+    }
+
+    int actorRadiusTiles = actorRadius / TileInfo::UnitsPerTile;
+
+    // TODO: This ignores obstacles between two points.
+
+    foreach (const Vector4 &point, points) {
+        QPoint tile = positionToTile(point);
+
+        if (!canStandAtTile(tileInfo, tile, actorRadiusTiles))
+            return false;
+    }
+
+    return true;
+}
+
+bool Pathfinder::canStandAt(const Vector4 &position, float actorRadius) const
+{
+    const TileInfo *tileInfo = mTileInfo;
+
+    if (!tileInfo) {
+        qWarning("Called Pathfinder::canStandAt without setting the tileInfo property first.");
+        return false;
+    }
+
+    QPoint tile = positionToTile(position);
+    int tileRadius = ceil(actorRadius / TileInfo::UnitsPerTile);
+
+    return canStandAtTile(tileInfo, tile, tileRadius);
+}
+
 void addNeighbourNodes(const AStarNodeFast *node,
                        const TileInfo *tileInfo,
                        int radius,
@@ -185,7 +310,7 @@ void addNeighbourNodes(const AStarNodeFast *node,
              a path finding operation, we can assume that finding the state for
              a tile means the tile is walkable.
              */
-            if (!canStandAt(tileInfo, neighbourTile, radius))
+            if (!canStandAtTile(tileInfo, neighbourTile, radius))
                 continue;
 
             otherNode = new AStarNodeFast;

@@ -19,11 +19,10 @@ var Map = function(id) {
     else
         this.mobiles = [];
 
-    for (var i = 0; i < this.mobiles.length; ++i) {
-        var mobile = this.mobiles[i];
+    this.mobiles.forEach(function (mobile) {
         Prototypes.reconnect(mobile);
         mobile.map = this;
-    }
+    }, this);
 };
 
 (function() {
@@ -245,10 +244,9 @@ var Map = function(id) {
 
         print("Creating " + this.mobiles.length + " dynamic objects.");
 
-        for (i = 0; i < this.mobiles.length; ++i) {
-            obj = this.mobiles[i];
-            obj.createRenderState();
-        }
+        this.mobiles.forEach(function (mobile) {
+            mobile.createRenderState();
+        });
 
         if (!this.unfogged) {
             // TODO: Load/Persist FOW state
@@ -277,6 +275,17 @@ var Map = function(id) {
         }
 
         return this.pathfinder.findPath(object.position, target, object.radius);
+    };
+
+    Map.prototype.findPathIntoRange = function(object, target, range) {
+        if (!this.pathfinder) {
+            print("Trying to find a path but Map is not active.");
+            return [];
+        }
+
+        var targetRange = target.radius + range;
+
+        return this.pathfinder.findPathIntoRange(object.position, target.position, object.radius, targetRange);
     };
 
     Map.prototype.material = function(position) {
@@ -643,28 +652,10 @@ var Map = function(id) {
      */
     Map.prototype.vicinity = function(position, range, prototype) {
 
-        var result = this.mobiles.filter(function (mobile) {
-            var proto = mobile.__proto__;
-            var found = false;
-
-            while (proto) {
-                if (proto === prototype) {
-                    found = true;
-                    break;
-                }
-                proto = proto.__proto__;
-            }
-
-            if (!found)
-                return false;
-
-            // check distance
-            return distance(position, mobile.position) <= range;
+        return this.mobiles.filter(function (mobile) {
+            return mobile instanceof prototype
+                     && distance(position, mobile.position) <= range;
         });
-
-        print("Found " + result.length);
-
-        return result;
 
     };
 

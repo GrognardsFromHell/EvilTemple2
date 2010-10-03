@@ -106,10 +106,6 @@ signals:
 
     void viewportChanged();
 
-    void worldClicked(QMouseEvent *event, const Vector4 &position);
-
-    void worldDoubleClicked(QMouseEvent *event, const Vector4 &position);
-
 public slots:
 
     QObject *showView(const QString &url);

@@ -17,7 +17,7 @@ class TileInfo : public QObject
 public:
     Q_INVOKABLE explicit TileInfo(QObject *parent = 0);
 
-    static const float PixelPerSubtile;
+    static const float UnitsPerTile;
 
 public slots:
 
@@ -50,7 +50,7 @@ private:
 
 inline QPoint TileInfo::convertPosition(const Vector4 &position)
 {
-    return QPoint(position.x() / PixelPerSubtile, position.z() / PixelPerSubtile);
+    return QPoint(position.x() / UnitsPerTile, position.z() / UnitsPerTile);
 }
 
 inline bool TileInfo::isWalkable(const Vector4 &position) const

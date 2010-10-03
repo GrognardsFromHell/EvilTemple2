@@ -20,9 +20,6 @@ function startup() {
         throw "Error Loading Maps: " + e;
     }
 
-    // Accept clicks from the game view
-    setupWorldClickHandler();
-
     print("Showing main menu.");
     MainMenuUi.show();
 }

@@ -66,6 +66,51 @@ var CombatUi = {};
         }
     }
 
+    CombatUi.objectMouseEnter = function(object, event) {
+        hideMovementIndicator();
+
+        var participant = Combat.getActiveParticipant();
+
+        if (participant && Party.isMember(participant) && !participant.isBusy()) {
+            movementIndicatorNode = gameView.scene.createNode();
+            movementIndicatorNode.position = object.position;
+
+            var indicator = new MovementIndicator(gameView.scene, gameView.materials);
+            indicator.radius = participant.radius;
+            indicator.circleWidth = 3;
+            movementIndicatorNode.attachObject(indicator);
+
+            var path = Maps.currentMap.findPathIntoRange(participant, object, 25);
+
+            if (path.length == 0) {
+                indicator.fillColor = [1, 0, 0, 0.5];
+                return;
+            }
+
+            movementIndicatorNode.position = path[path.length - 1];
+
+            var length = pathLength(path);
+
+            movementIndicatorRootNode = gameView.scene.createNode();
+
+            for (var i = 0; i < path.length; ++i) {
+                if (i + 1 < path.length) {
+                    var line = new DecoratedLineRenderable(gameView.scene, gameView.materials);
+                    if (length > 250)
+                        line.color = [1, 0, 0, 1];
+                    else
+                        line.color = [0, 1, 0, 1];
+                    line.addLine(path[i], path[i + 1]);
+                    movementIndicatorRootNode.attachObject(line);
+                }
+            }
+        }
+    };
+
+    CombatUi.objectMouseLeave = function(object, event) {
+        return false;
+    };
+
     /**
      * Notifies the combat UI of an object being clicked.
      *
@@ -91,7 +136,13 @@ var CombatUi = {};
                 if (!action)
                     return;
 
-                var path = new Path(participant, object.position);
+                if (!action.combat) {
+                    // TODO: Notify the user
+                    print("Cannot perform this action during combat.");
+                    return;
+                }
+
+                var path = new Path(participant, object);
 
                 if (!path.isEmpty()) {
                     var movementGoal = new MovementGoal(path, false);

@@ -201,9 +201,12 @@ MoveInRangeGoal.prototype.isFinished = function(character) {
     return this.finished;
 };
 
-var ActionGoal = function(action) {
+function ActionGoal(action) {
+    if (!(action instanceof Action))
+        throw "An action goal requires an action to work.";
+
     this.action = action;
-};
+}
 
 ActionGoal.prototype = new Goal;
 
@@ -224,8 +227,8 @@ ActionGoal.prototype.advance = function(critter, time) {
              we perform the action after the animation has stopped playing.
              */
             if (!goal.actionPerformed) {
-                this.action.perform(critter);
-                this.actionPerformed = true;
+                goal.action.perform(critter);
+                goal.actionPerformed = true;
             }
             goal.finished = true;
         });
@@ -246,6 +249,8 @@ ActionGoal.prototype.isFinished = function(critter) {
 };
 
 ActionGoal.prototype.animationAction = function(critter, event) {
-    this.action.perform(critter);
-    this.actionPerformed = true;
+    if (!this.actionPerformed) {
+        this.action.perform(critter);
+        this.actionPerformed = true;
+    }
 };

@@ -28,25 +28,25 @@ var Prototypes = (function() {
         for (var k in prototypes) {
             switch (prototypes[k].type) {
                 case 'MapChanger':
-                    prototypes[k].__proto__ = MapChanger;
+                    prototypes[k].__proto__ = MapChanger.prototype;
                     break;
                 case 'Portal':
-                    prototypes[k].__proto__ = Portal;
+                    prototypes[k].__proto__ = Portal.prototype;
                     break;
                 case 'Container':
-                    prototypes[k].__proto__ = Container;
+                    prototypes[k].__proto__ = Container.prototype;
                     break;
                 case 'Scenery':
-                    prototypes[k].__proto__ = Scenery;
+                    prototypes[k].__proto__ = Scenery.prototype;
                     break;
                 case 'NonPlayerCharacter':
-                    prototypes[k].__proto__ = NonPlayerCharacter;
+                    prototypes[k].__proto__ = NonPlayerCharacter.prototype;
                     break;
                 case 'PlayerCharacter':
-                    prototypes[k].__proto__ = PlayerCharacter;
+                    prototypes[k].__proto__ = PlayerCharacter.prototype;
                     break;
                 default:
-                    prototypes[k].__proto__ = BaseObject;
+                    prototypes[k].__proto__ = BaseObject.prototype;
                     break;
             }
         }
@@ -76,11 +76,6 @@ var Prototypes = (function() {
                 prototype: prototypeId
             };
 
-            /*
-             TODO Fix this so the constructor property is set correctly. 
-             This uses JavaScriptCore specific functionality and in its current state will not allow the use
-             of instanceof.
-             */
             object.__proto__ = prototype;
 
             return object;
@@ -98,7 +93,7 @@ var Prototypes = (function() {
             if (object.prototype !== undefined) {
                 object.__proto__ = prototypes[object.prototype];
             } else {
-                object.__proto__ = BaseObject;
+                object.__proto__ = BaseObject.prototype;
             }
 
             if (object.content !== undefined) {

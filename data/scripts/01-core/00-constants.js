@@ -124,13 +124,15 @@ var Animations = {
     GetHitLeft: 'lhit',
     GetHitRight: 'rhit',
     Death: 'death',
-    UseObject: 'magichands'
+    UseObject: 'magichands',
+    AttackRight: 'rattack'
 };
 
 /**
  * The filenames for various cursor types.
  */
 var Cursors = {
-    Default: 'art/interface/cursors/MainCursor.png'
-
+    Default: 'art/interface/cursors/MainCursor.png',
+    Sword: 'art/interface/cursors/Sword.png',
+    Hand:  'art/interface/cursors/Map_GrabHand_Open.png' 
 };

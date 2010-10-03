@@ -17,7 +17,6 @@ EventBus.registerEvent = function(type, description) {
         if (listeners[type])
             throw "Event type is already registered: " + type;
 
-
         listeners[type] = new ListenerQueue;
         descriptions[type] = description;
     }
@@ -66,7 +65,8 @@ EventBus.notify = function(type) {
 
 var EventTypes = {
     GoalStarted: 'goal_started',
-    GoalFinished: 'goal_finished'
+    GoalFinished: 'goal_finished',
+    CritterDied: 'critter_died'
 };
 
 for (var k in EventTypes)
